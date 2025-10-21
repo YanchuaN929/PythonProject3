@@ -326,12 +326,13 @@ class WindowManager:
         功能增强：
         1. 完整显示所有数据（不再限制20行）
         2. 添加垂直和水平滚动条
+        3. 支持多选和复制功能（Ctrl+C或右键菜单）
         """
         parent.columnconfigure(0, weight=1)
         parent.rowconfigure(1, weight=1)
         
-        # 创建Treeview用于Excel预览
-        viewer = ttk.Treeview(parent)
+        # 创建Treeview用于Excel预览，设置为extended模式支持多选
+        viewer = ttk.Treeview(parent, selectmode='extended')
         viewer.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # 添加垂直滚动条
@@ -343,6 +344,13 @@ class WindowManager:
         h_scrollbar = ttk.Scrollbar(parent, orient="horizontal", command=viewer.xview)
         h_scrollbar.grid(row=2, column=0, sticky=(tk.W, tk.E))
         viewer.configure(xscrollcommand=h_scrollbar.set)
+        
+        # 绑定Ctrl+C快捷键复制选中内容
+        viewer.bind('<Control-c>', lambda e: self._copy_selected_rows(viewer))
+        viewer.bind('<Control-C>', lambda e: self._copy_selected_rows(viewer))
+        
+        # 创建右键菜单
+        self._create_context_menu(viewer)
         
         # 存储viewer引用
         self.viewers[tab_id] = viewer
@@ -560,32 +568,39 @@ class WindowManager:
     
     def _create_optimized_display(self, df, tab_name):
         """
-        创建优化的显示数据（仅显示关键列）
+        创建优化的显示数据（仅显示接口号列）
         
-        根据不同文件类型选择关键列显示
+        根据不同文件类型选择对应的接口号列：
+        - 内部需打开接口：A列
+        - 内部需回复接口：R列
+        - 外部需打开接口：C列
+        - 外部需回复接口：E列
+        - 三维提资接口：E列
+        - 收发文函：E列
         """
         try:
-            if tab_name == "内部需打开接口" and len(df.columns) >= 13:
-                # A=0, B=1, H=7, K=10, M=12
-                key_indices = [0, 1, 7, 10, 12]
-                return self._extract_columns(df, key_indices)
+            # 定义接口号列映射（使用列索引）
+            interface_column_index = {
+                "内部需打开接口": 0,   # A列 = 索引0
+                "内部需回复接口": 17,  # R列 = 索引17
+                "外部需打开接口": 2,   # C列 = 索引2
+                "外部需回复接口": 4,   # E列 = 索引4
+                "三维提资接口": 4,     # E列 = 索引4
+                "收发文函": 4          # E列 = 索引4
+            }
             
-            elif tab_name == "内部需回复接口" and len(df.columns) >= 28:
-                # A=0, I=8, M=12, N=13, F=5, AB=27
-                key_indices = [0, 8, 12, 13, 5, 27]
-                return self._extract_columns(df, key_indices)
+            # 获取对应文件类型的接口号列索引
+            if tab_name in interface_column_index:
+                col_idx = interface_column_index[tab_name]
+                
+                # 检查列索引是否有效
+                if col_idx < len(df.columns):
+                    # 只显示接口号列，重命名为"接口号"
+                    interface_col = df.iloc[:, col_idx:col_idx+1].copy()
+                    interface_col.columns = ["接口号"]
+                    return interface_col
             
-            elif tab_name == "外部需打开接口" and len(df.columns) >= 38:
-                # C=2, L=11, Q=16, M=12, T=19, I=8, AF=31, N=13
-                key_indices = [2, 11, 16, 12, 19, 8, 31, 13]
-                return self._extract_columns(df, key_indices)
-            
-            elif tab_name == "外部需回复接口" and len(df.columns) >= 32:
-                # A=0, I=8, M=12, O=14, H=7, AF=31
-                key_indices = [0, 8, 12, 14, 7, 31]
-                return self._extract_columns(df, key_indices)
-            
-            # 其他情况返回原始数据
+            # 如果没有匹配或出错，返回原始数据
             return df
             
         except Exception as e:
@@ -658,4 +673,70 @@ class WindowManager:
         """设置导出路径"""
         if self.export_path_var:
             self.export_path_var.set(path)
+    
+    def _copy_selected_rows(self, viewer):
+        """
+        复制Treeview中选中的行到剪贴板
+        支持多选，格式：列之间用制表符分隔，行之间用换行分隔
+        """
+        try:
+            selection = viewer.selection()
+            if not selection:
+                return
+            
+            # 获取列定义
+            columns = viewer["columns"]
+            if not columns:
+                return
+            
+            # 收集选中行的数据
+            copied_data = []
+            for item_id in selection:
+                values = viewer.item(item_id)['values']
+                if values:
+                    # 将所有值转换为字符串并用制表符连接
+                    row_text = '\t'.join(str(v) for v in values)
+                    copied_data.append(row_text)
+            
+            # 将数据复制到剪贴板
+            if copied_data:
+                text_to_copy = '\n'.join(copied_data)
+                self.root.clipboard_clear()
+                self.root.clipboard_append(text_to_copy)
+                print(f"已复制 {len(copied_data)} 行数据到剪贴板")
+        except Exception as e:
+            print(f"复制失败: {e}")
+    
+    def _create_context_menu(self, viewer):
+        """
+        为Treeview创建右键菜单
+        """
+        menu = tk.Menu(viewer, tearoff=0)
+        menu.add_command(label="复制选中行 (Ctrl+C)", 
+                        command=lambda: self._copy_selected_rows(viewer))
+        menu.add_separator()
+        menu.add_command(label="全选 (Ctrl+A)", 
+                        command=lambda: self._select_all_rows(viewer))
+        
+        def show_menu(event):
+            try:
+                menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                menu.grab_release()
+        
+        viewer.bind("<Button-3>", show_menu)  # Windows/Linux右键
+        viewer.bind("<Button-2>", show_menu)  # Mac右键（备用）
+        
+        # 绑定Ctrl+A全选
+        viewer.bind('<Control-a>', lambda e: self._select_all_rows(viewer))
+        viewer.bind('<Control-A>', lambda e: self._select_all_rows(viewer))
+    
+    def _select_all_rows(self, viewer):
+        """选中Treeview中的所有行"""
+        try:
+            all_items = viewer.get_children()
+            if all_items:
+                viewer.selection_set(all_items)
+        except Exception as e:
+            print(f"全选失败: {e}")
 

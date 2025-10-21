@@ -2978,8 +2978,20 @@ class ExcelProcessorApp:
                     combined_message += f"• 文件已按项目号自动分文件夹存放\n"
                     combined_message += f"• 各项目的结果文件在对应的\"项目号结果文件\"文件夹中"
 
+                # 手动导出时也使用汇总弹窗显示结果
                 if self._should_show_popup():
-                   messagebox.showinfo("批量导出完成", combined_message)
+                    # 等待txt文件生成后显示汇总弹窗
+                    def show_summary_after_export():
+                        try:
+                            txt_path = getattr(self, 'last_summary_written_path', None)
+                            if txt_path and os.path.exists(txt_path):
+                                self._show_summary_popup(txt_path)
+                            else:
+                                # 如果txt文件未生成，使用传统弹窗
+                                messagebox.showinfo("批量导出完成", combined_message)
+                        except Exception:
+                            messagebox.showinfo("批量导出完成", combined_message)
+                    self.root.after(1500, show_summary_after_export)
             
             # 重置手动操作标志
             self._manual_operation = False

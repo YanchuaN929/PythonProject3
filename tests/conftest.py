@@ -5,10 +5,46 @@ pytest配置文件和共享fixtures
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock, MagicMock, patch
 import tkinter as tk
 from tkinter import ttk
 import pandas as pd
+
+
+# 自动为所有ExcelProcessorApp实例设置默认姓名并禁止弹窗
+@pytest.fixture(autouse=True)
+def setup_default_user_name(monkeypatch):
+    """自动为ExcelProcessorApp设置默认姓名并禁止测试时弹窗"""
+    # 1. Mock所有messagebox调用，避免测试时弹窗
+    try:
+        from unittest.mock import Mock
+        import tkinter.messagebox
+        monkeypatch.setattr(tkinter.messagebox, 'showinfo', Mock())
+        monkeypatch.setattr(tkinter.messagebox, 'showwarning', Mock())
+        monkeypatch.setattr(tkinter.messagebox, 'showerror', Mock())
+        monkeypatch.setattr(tkinter.messagebox, 'askyesno', Mock(return_value=True))
+    except ImportError:
+        pass
+    
+    # 2. Patch ExcelProcessorApp的初始化，提前设置姓名
+    original_init = None
+    
+    def patched_init(self, auto_mode=False):
+        # 在调用原始__init__之前，先设置一个临时config
+        self.config = {"user_name": "王丹丹"}
+        # 调用原始初始化
+        original_init(self, auto_mode)
+        # 确保姓名被设置（以防被覆盖）
+        self.config["user_name"] = "王丹丹"
+    
+    try:
+        from base import ExcelProcessorApp
+        original_init = ExcelProcessorApp.__init__
+        monkeypatch.setattr(ExcelProcessorApp, '__init__', patched_init)
+    except ImportError:
+        pass  # base模块未导入时跳过
+    
+    yield
 
 
 @pytest.fixture

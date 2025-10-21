@@ -152,8 +152,19 @@ def write_export_summary(
             return ""
 
     # 重组为：科室 -> 文件类型 -> 项目 -> 接口时间
-    # 构建聚合映射：dept -> category -> pid -> time_key -> count
-    dept_map: Dict[str, Dict[str, Dict[str, Dict[str, int]]]] = {}
+    # 构建聚合映射：dept -> category -> pid -> time_key -> {'count': int, 'interface_ids': list}
+    dept_map: Dict[str, Dict[str, Dict[str, Dict[str, Dict]]]] = {}
+    
+    # 定义接口号列映射
+    interface_column_map = {
+        "内部需打开接口": "A",
+        "内部需回复接口": "R", 
+        "外部需打开接口": "C",
+        "外部需回复接口": "E",
+        "三维提资接口": "E",  # 假设三维提资也用E列
+        "收发文函": "E"
+    }
+    
     for category_name, category_results in file_categories:
         if not category_results:
             continue
@@ -177,13 +188,26 @@ def write_export_summary(
                     ]
                 else:
                     time_series = ["未知"] * len(df)
+                
+                # 确定接口号列
+                interface_col = interface_column_map.get(category_name, "A")
+                if interface_col in getattr(df, 'columns', []):
+                    interface_series = [
+                        (str(v).strip() if v is not None and str(v).strip() else "")
+                        for v in df[interface_col].tolist()
+                    ]
+                else:
+                    interface_series = [""] * len(df)
 
-                # 累计计数
-                for dept_value, time_key in zip(dept_series, time_series):
+                # 累计计数和接口号
+                for dept_value, time_key, interface_id in zip(dept_series, time_series, interface_series):
                     dept_entry = dept_map.setdefault(dept_value, {})
                     cat_entry = dept_entry.setdefault(category_name, {})
                     pid_entry = cat_entry.setdefault(pid, {})
-                    pid_entry[time_key] = pid_entry.get(time_key, 0) + 1
+                    time_entry = pid_entry.setdefault(time_key, {'count': 0, 'interface_ids': []})
+                    time_entry['count'] += 1
+                    if interface_id:  # 只添加非空的接口号
+                        time_entry['interface_ids'].append(interface_id)
             except Exception:
                 continue
 
@@ -210,15 +234,26 @@ def write_export_summary(
                 cat_entry = dept_map[dept][category_name]
                 for pid in sorted(cat_entry.keys()):
                     lines.append(f"    {_pid_display(pid)}项目：")
-                    time_counts = cat_entry[pid]
+                    time_data = cat_entry[pid]
                     action_word = "需打开" if category_name in ("内部需打开接口", "外部需打开接口", "三维提资接口") else "需回复"
-                    # 按时间排序逐条输出：mm.dd + 动词 + 数量 + 时间提醒
-                    for t in sorted(time_counts.keys(), key=_sort_key):
-                        cnt = time_counts[t]
+                    # 按时间排序逐条输出：mm.dd + 动词 + 数量 + 时间提醒 + 接口号列表
+                    for t in sorted(time_data.keys(), key=_sort_key):
+                        entry = time_data[t]
+                        cnt = entry['count']
+                        interface_ids = entry['interface_ids']
                         tag = _warn_tag(t)
+                        
+                        # 基本信息行
                         lines.append(f"      {t}{action_word}{cnt}个{tag}")
+                        
+                        # 接口号详情（如果有）
+                        if interface_ids:
+                            # 将接口号用逗号分隔，每行最多显示10个
+                            interface_str = "、".join(interface_ids)
+                            lines.append(f"        接口号：{interface_str}")
+                    
                     # 明确标注排序规则
-                    if time_counts:
+                    if time_data:
                         lines.append("      （按时间排序）")
 
     # 仍保留一个分割线用于视觉提示（现在收发文函已并入上方层级明细）

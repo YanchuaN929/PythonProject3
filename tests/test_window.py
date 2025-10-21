@@ -328,7 +328,7 @@ class TestOptimizedDisplay:
     """测试优化显示功能"""
     
     def test_create_optimized_display_file1(self, mock_root):
-        """测试文件1的优化显示"""
+        """测试文件1的优化显示（仅显示接口号列）"""
         # 创建足够列数的DataFrame
         columns = [f'Col{i}' for i in range(20)]
         df = pd.DataFrame([[i] * 20 for i in range(5)], columns=columns)
@@ -336,9 +336,11 @@ class TestOptimizedDisplay:
         wm = WindowManager(mock_root)
         result = wm._create_optimized_display(df, "内部需打开接口")
         
-        # 文件1应该只显示A,B,H,K,M列（索引0,1,7,10,12）
-        # 由于我们有20列，应该成功提取
-        assert len(result.columns) == 5
+        # 内部需打开接口应该只显示A列（索引0），重命名为"接口号"
+        assert len(result.columns) == 1
+        assert result.columns[0] == "接口号"
+        # 验证数据来自第0列
+        assert list(result["接口号"]) == [0, 1, 2, 3, 4]
     
     def test_create_optimized_display_unknown_type(self, mock_root):
         """测试未知类型返回原始数据"""
