@@ -235,6 +235,66 @@ class TestManualOperationFlagManagement:
             assert app._manual_operation == False
 
 
+class TestManualOperationWrappers:
+    """测试手动操作包装器"""
+    
+    def test_on_manual_start_processing_wrapper(self):
+        """测试：_on_manual_start_processing包装器正确设置标志"""
+        with patch('base.WindowManager'):
+            from base import ExcelProcessorApp
+            
+            app = ExcelProcessorApp(auto_mode=True)
+            
+            # 初始状态
+            assert app._manual_operation == False
+            
+            # 模拟调用包装器（模拟start_processing不执行实际逻辑）
+            with patch.object(app, 'start_processing'):
+                app._on_manual_start_processing()
+                
+                # 验证标志被设置
+                assert app._manual_operation == True
+                # 验证start_processing被调用
+                app.start_processing.assert_called_once()
+    
+    def test_on_manual_export_results_wrapper(self):
+        """测试：_on_manual_export_results包装器正确设置标志"""
+        with patch('base.WindowManager'):
+            from base import ExcelProcessorApp
+            
+            app = ExcelProcessorApp(auto_mode=True)
+            
+            # 初始状态
+            assert app._manual_operation == False
+            
+            # 模拟调用包装器（模拟export_results不执行实际逻辑）
+            with patch.object(app, 'export_results'):
+                app._on_manual_export_results()
+                
+                # 验证标志被设置
+                assert app._manual_operation == True
+                # 验证export_results被调用
+                app.export_results.assert_called_once()
+    
+    def test_auto_run_calls_start_processing_directly(self):
+        """测试：自动运行直接调用start_processing，不设置手动标志"""
+        with patch('base.WindowManager'):
+            from base import ExcelProcessorApp
+            
+            app = ExcelProcessorApp(auto_mode=True)
+            
+            # 自动运行场景：直接调用start_processing
+            # 不调用包装器，_manual_operation保持False
+            assert app._manual_operation == False
+            
+            # 在这种情况下，弹窗不应显示，应自动导出
+            should_show_popup = app._should_show_popup()
+            should_auto_export = (app.auto_mode and not app._manual_operation)
+            
+            assert should_show_popup == False
+            assert should_auto_export == True
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
 

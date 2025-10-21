@@ -167,8 +167,8 @@ class ExcelProcessorApp:
             'on_browse_folder': self.browse_folder,
             'on_browse_export_folder': self.browse_export_folder,
             'on_refresh_files': self.refresh_file_list,
-            'on_start_processing': self.start_processing,
-            'on_export_results': self.export_results,
+            'on_start_processing': self._on_manual_start_processing,  # 使用手动操作包装器
+            'on_export_results': self._on_manual_export_results,      # 使用手动操作包装器
             'on_open_folder': self.open_selected_folder,
             'on_open_monitor': self.open_monitor,
             'on_settings_menu': self.show_settings_menu,
@@ -358,6 +358,16 @@ class ExcelProcessorApp:
                 print(f"项目号筛选: 忽略项目{project_id}的{file_type_name} - {os.path.basename(file_path)}")
         
         return filtered, ignored
+    
+    def _on_manual_start_processing(self):
+        """手动点击"开始处理"按钮的包装器"""
+        self._manual_operation = True
+        self.start_processing()
+    
+    def _on_manual_export_results(self):
+        """手动点击"导出结果"按钮的包装器"""
+        self._manual_operation = True
+        self.export_results()
 
     def setup_window(self):
         """设置主窗口属性"""
@@ -2071,9 +2081,6 @@ class ExcelProcessorApp:
     def start_processing(self):
         """开始处理Excel文件"""
         
-        # 标记为手动操作（用于弹窗控制）
-        self._manual_operation = True
-        
         # 姓名必填校验
         try:
             if (not self.config.get("user_name", "").strip()) and self._should_show_popup():
@@ -2724,9 +2731,6 @@ class ExcelProcessorApp:
             messagebox.showinfo("处理完成", f"收发文函数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【收发文函】选项卡中更新显示。")
 
     def export_results(self):
-        # 标记为手动操作（用于弹窗控制）
-        self._manual_operation = True
-        
         current_tab = self.notebook.index(self.notebook.select())
         # 姓名必填校验
         try:
