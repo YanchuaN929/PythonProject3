@@ -1,0 +1,661 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+窗口管理模块 - 负责GUI界面的创建、布局和数据显示
+职责单一：仅处理UI展示，与业务逻辑解耦
+"""
+
+import tkinter as tk
+from tkinter import ttk
+import tkinter.scrolledtext as scrolledtext
+import pandas as pd
+import os
+import sys
+
+
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径，兼容开发环境和打包环境"""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    else:
+        return os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path)
+
+
+class WindowManager:
+    """窗口管理器 - 负责所有GUI相关的创建、布局和显示"""
+    
+    def __init__(self, root, callbacks=None):
+        """
+        初始化窗口管理器
+        
+        参数:
+            root: Tkinter根窗口对象
+            callbacks: 回调函数字典，用于与业务逻辑交互
+                {
+                    'on_browse_folder': 浏览文件夹回调,
+                    'on_browse_export_folder': 浏览导出文件夹回调,
+                    'on_refresh_files': 刷新文件列表回调,
+                    'on_start_processing': 开始处理回调,
+                    'on_export_results': 导出结果回调,
+                    'on_open_folder': 打开文件夹回调,
+                    'on_open_monitor': 打开监控器回调,
+                    'on_settings_menu': 设置菜单回调,
+                }
+        """
+        self.root = root
+        self.callbacks = callbacks or {}
+        
+        # 存储UI组件引用
+        self.path_var = None
+        self.export_path_var = None
+        self.file_info_text = None
+        self.notebook = None
+        
+        # 存储6个选项卡的viewer引用
+        self.viewers = {
+            'tab1': None,  # 内部需打开接口
+            'tab2': None,  # 内部需回复接口
+            'tab3': None,  # 外部需打开接口
+            'tab4': None,  # 外部需回复接口
+            'tab5': None,  # 三维提资接口
+            'tab6': None,  # 收发文函
+        }
+        
+        # 存储选项卡frame引用
+        self.tab_frames = {}
+        
+        # 存储选项卡索引
+        self.tabs = {
+            'tab1': 0,
+            'tab2': 1,
+            'tab3': 2,
+            'tab4': 3,
+            'tab5': 4,
+            'tab6': 5,
+        }
+        
+        # 存储勾选框变量
+        self.process_vars = {}
+        
+        # 存储按钮引用（供外部控制状态）
+        self.buttons = {}
+        
+    def setup(self, config_data, process_vars, project_vars=None):
+        """
+        一键初始化完整窗口
+        
+        参数:
+            config_data: 配置数据字典 {'folder_path': ..., 'export_folder_path': ...}
+            process_vars: 处理勾选框变量字典 {'tab1': BooleanVar, ...}
+            project_vars: 项目号筛选变量字典 {'1818': BooleanVar, ...}
+        """
+        self.process_vars = process_vars
+        self.project_vars = project_vars or {}
+        self.setup_window()
+        self.create_widgets(config_data)
+        
+    def setup_window(self):
+        """设置主窗口属性"""
+        self.root.title("接口筛选程序")
+        self.setup_window_size()
+        self.root.minsize(1200, 800)
+        
+        # 设置窗口图标
+        try:
+            icon_path = get_resource_path("ico_bin/tubiao.ico")
+            if os.path.exists(icon_path):
+                self.root.iconbitmap(icon_path)
+        except Exception as e:
+            print(f"设置窗口图标失败: {e}")
+    
+    def setup_window_size(self):
+        """设置窗口大小以适配不同分辨率"""
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        
+        print(f"检测到屏幕分辨率: {screen_width}x{screen_height}")
+        
+        if screen_width >= 1920 and screen_height >= 1080:
+            # 1920x1080或更高 - 全屏
+            self.root.state('zoomed')
+        elif screen_width >= 1600 and screen_height >= 900:
+            # 1600x900 - 90%屏幕空间
+            width = int(screen_width * 0.9)
+            height = int(screen_height * 0.9)
+            x = (screen_width - width) // 2
+            y = (screen_height - height) // 2
+            self.root.geometry(f"{width}x{height}+{x}+{y}")
+        elif screen_width >= 1366 and screen_height >= 768:
+            # 1366x768 - 85%屏幕空间
+            width = int(screen_width * 0.85)
+            height = int(screen_height * 0.85)
+            x = (screen_width - width) // 2
+            y = (screen_height - height) // 2
+            self.root.geometry(f"{width}x{height}+{x}+{y}")
+        else:
+            # 更小分辨率 - 最小推荐尺寸
+            width = min(1200, screen_width - 100)
+            height = min(800, screen_height - 100)
+            x = (screen_width - width) // 2
+            y = (screen_height - height) // 2
+            self.root.geometry(f"{width}x{height}+{x}+{y}")
+        
+        self.root.update_idletasks()
+        self.center_window_if_needed()
+    
+    def center_window_if_needed(self):
+        """如果窗口超出屏幕，则居中显示"""
+        try:
+            window_width = self.root.winfo_width()
+            window_height = self.root.winfo_height()
+            screen_width = self.root.winfo_screenwidth()
+            screen_height = self.root.winfo_screenheight()
+            
+            x = (screen_width - window_width) // 2
+            y = (screen_height - window_height) // 2
+            
+            if x < 0 or y < 0:
+                self.root.geometry(f"+{max(0, x)}+{max(0, y)}")
+        except Exception as e:
+            print(f"窗口居中失败: {e}")
+    
+    def create_widgets(self, config_data):
+        """创建所有GUI组件"""
+        # 主框架
+        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # 配置网格权重
+        self.root.columnconfigure(0, weight=1)
+        self.root.rowconfigure(0, weight=1)
+        main_frame.columnconfigure(1, weight=1)
+        main_frame.rowconfigure(3, weight=1)  # 修正：tabs在row=3（path=0, info=1, project_filter=2, tabs=3）
+        
+        # 创建各个区域
+        self.create_path_section(main_frame, config_data)
+        self.create_info_section(main_frame)
+        self.create_tabs_section(main_frame)
+        self.create_button_section(main_frame)
+        
+        # 右下角水印
+        try:
+            watermark = ttk.Label(main_frame, text="——by 建筑结构所,王任超", foreground="gray")
+            watermark.grid(row=5, column=2, sticky=tk.E, padx=(0, 4), pady=(6, 2))
+        except Exception:
+            pass
+    
+    def create_path_section(self, parent, config_data):
+        """创建路径选择区域"""
+        path_frame = ttk.Frame(parent)
+        path_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        path_frame.columnconfigure(1, weight=1)
+        
+        # 文件夹路径
+        ttk.Label(path_frame, text="文件夹路径:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10))
+        
+        self.path_var = tk.StringVar(value=config_data.get("folder_path", ""))
+        path_entry = ttk.Entry(path_frame, textvariable=self.path_var, width=60)
+        path_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(0, 10))
+        
+        browse_btn = ttk.Button(
+            path_frame, 
+            text="浏览", 
+            command=lambda: self._trigger_callback('on_browse_folder')
+        )
+        browse_btn.grid(row=0, column=2, sticky=tk.W)
+        
+        # 设置菜单按钮
+        settings_btn = ttk.Button(
+            path_frame, 
+            text="⚙", 
+            command=lambda: self._trigger_callback('on_settings_menu')
+        )
+        settings_btn.grid(row=0, column=3, sticky=tk.E, padx=(20, 0))
+        
+        # 导出结果位置
+        ttk.Label(path_frame, text="导出结果位置:").grid(
+            row=1, column=0, sticky=tk.W, padx=(0, 10), pady=(8, 0)
+        )
+        
+        self.export_path_var = tk.StringVar(value=config_data.get("export_folder_path", ""))
+        export_entry = ttk.Entry(path_frame, textvariable=self.export_path_var, width=60)
+        export_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=(0, 10), pady=(8, 0))
+        
+        export_browse_btn = ttk.Button(
+            path_frame, 
+            text="浏览", 
+            command=lambda: self._trigger_callback('on_browse_export_folder')
+        )
+        export_browse_btn.grid(row=1, column=2, sticky=tk.W, pady=(8, 0))
+    
+    def create_info_section(self, parent):
+        """创建文件信息显示区域"""
+        info_frame = ttk.LabelFrame(parent, text="Excel文件信息", padding="5")
+        info_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 0))
+        info_frame.columnconfigure(0, weight=1)
+        
+        # 根据屏幕高度调整文本区域高度（调整为原来的2倍）
+        screen_height = self.root.winfo_screenheight()
+        if screen_height >= 1080:
+            text_height = 12  # 原6 → 12
+        elif screen_height >= 900:
+            text_height = 10  # 原5 → 10
+        else:
+            text_height = 8   # 原4 → 8
+        
+        self.file_info_text = scrolledtext.ScrolledText(
+            info_frame, 
+            height=text_height, 
+            state='disabled'
+        )
+        self.file_info_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # 项目号筛选框（紧凑布局）
+        project_filter_frame = ttk.LabelFrame(parent, text="项目号筛选", padding="2")
+        project_filter_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 0))
+        
+        # 获取项目号变量（从回调参数传入）
+        project_vars = getattr(self, 'project_vars', {})
+        
+        # 创建6个项目号复选框，横向排列
+        projects = [
+            ('1818', project_vars.get('1818')),
+            ('1907', project_vars.get('1907')),
+            ('1916', project_vars.get('1916')),
+            ('2016', project_vars.get('2016')),
+            ('2026', project_vars.get('2026')),
+            ('2306', project_vars.get('2306'))
+        ]
+        
+        for idx, (project_id, var) in enumerate(projects):
+            if var:
+                cb = ttk.Checkbutton(
+                    project_filter_frame,
+                    text=f"项目 {project_id}",
+                    variable=var
+                )
+                cb.grid(row=0, column=idx, padx=5, pady=2, sticky=tk.W)
+    
+    def create_tabs_section(self, parent):
+        """创建选项卡区域"""
+        self.notebook = ttk.Notebook(parent)
+        self.notebook.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        
+        # 创建6个选项卡
+        self.create_tabs()
+    
+    def create_tabs(self):
+        """创建6个选项卡"""
+        tab_configs = [
+            ('tab1', "内部需打开接口"),
+            ('tab2', "内部需回复接口"),
+            ('tab3', "外部需打开接口"),
+            ('tab4', "外部需回复接口"),
+            ('tab5', "三维提资接口"),
+            ('tab6', "收发文函"),
+        ]
+        
+        for tab_id, tab_text in tab_configs:
+            frame = ttk.Frame(self.notebook)
+            self.notebook.add(frame, text=tab_text)
+            frame.columnconfigure(0, weight=1)
+            frame.rowconfigure(1, weight=1)
+            
+            # 添加勾选框
+            if tab_id in self.process_vars:
+                check = ttk.Checkbutton(
+                    frame, 
+                    text=f"处理{tab_text}", 
+                    variable=self.process_vars[tab_id]
+                )
+                check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
+            
+            # 创建Excel预览控件
+            self.create_excel_viewer(frame, tab_id, tab_text)
+            
+            # 保存frame引用
+            self.tab_frames[tab_id] = frame
+        
+        # 绑定选项卡切换事件
+        self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed_internal)
+    
+    def create_excel_viewer(self, parent, tab_id, tab_name):
+        """
+        为选项卡创建Excel预览控件（带滚动条）
+        
+        功能增强：
+        1. 完整显示所有数据（不再限制20行）
+        2. 添加垂直和水平滚动条
+        """
+        parent.columnconfigure(0, weight=1)
+        parent.rowconfigure(1, weight=1)
+        
+        # 创建Treeview用于Excel预览
+        viewer = ttk.Treeview(parent)
+        viewer.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # 添加垂直滚动条
+        v_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=viewer.yview)
+        v_scrollbar.grid(row=1, column=1, sticky=(tk.N, tk.S))
+        viewer.configure(yscrollcommand=v_scrollbar.set)
+        
+        # 添加水平滚动条
+        h_scrollbar = ttk.Scrollbar(parent, orient="horizontal", command=viewer.xview)
+        h_scrollbar.grid(row=2, column=0, sticky=(tk.W, tk.E))
+        viewer.configure(xscrollcommand=h_scrollbar.set)
+        
+        # 存储viewer引用
+        self.viewers[tab_id] = viewer
+        
+        # 默认显示提示信息
+        self.show_empty_message(viewer, f"等待{tab_name}...")
+    
+    def create_button_section(self, parent):
+        """创建按钮区域"""
+        button_frame = ttk.Frame(parent)
+        button_frame.grid(row=4, column=0, columnspan=3, pady=(10, 0))
+        
+        # 开始处理按钮
+        process_btn = ttk.Button(
+            button_frame,
+            text="开始处理",
+            command=lambda: self._trigger_callback('on_start_processing'),
+            style="Accent.TButton"
+        )
+        process_btn.pack(side=tk.LEFT, padx=(0, 20))
+        self.buttons['process'] = process_btn
+        
+        # 导出结果按钮
+        export_btn = ttk.Button(
+            button_frame,
+            text="导出结果",
+            command=lambda: self._trigger_callback('on_export_results'),
+            state='disabled'
+        )
+        export_btn.pack(side=tk.LEFT)
+        self.buttons['export'] = export_btn
+        
+        # 打开文件位置按钮
+        open_folder_btn = ttk.Button(
+            button_frame,
+            text="打开文件位置",
+            command=lambda: self._trigger_callback('on_open_folder')
+        )
+        open_folder_btn.pack(side=tk.LEFT, padx=(10, 0))
+        self.buttons['open_folder'] = open_folder_btn
+        
+        # 刷新文件列表按钮
+        refresh_btn = ttk.Button(
+            button_frame,
+            text="刷新文件列表",
+            command=lambda: self._trigger_callback('on_refresh_files')
+        )
+        refresh_btn.pack(side=tk.LEFT, padx=(20, 0))
+        self.buttons['refresh'] = refresh_btn
+        
+        # 打开监控按钮
+        monitor_btn = ttk.Button(
+            button_frame,
+            text="打开监控",
+            command=lambda: self._trigger_callback('on_open_monitor')
+        )
+        monitor_btn.pack(side=tk.LEFT, padx=(10, 0))
+        self.buttons['monitor'] = monitor_btn
+    
+    def show_empty_message(self, viewer, message):
+        """在viewer中显示提示信息"""
+        # 清空现有内容
+        for item in viewer.get_children():
+            viewer.delete(item)
+        
+        # 创建默认列
+        default_columns = ["A列", "B列", "H列", "K列", "M列"]
+        viewer["columns"] = default_columns
+        viewer["show"] = "tree headings"
+        
+        # 配置序号列
+        viewer.column("#0", width=60, minwidth=60, anchor='center')
+        viewer.heading("#0", text="行号")
+        
+        # 配置数据列
+        for col in default_columns:
+            viewer.heading(col, text=col)
+            viewer.column(col, width=120, minwidth=100, anchor='center')
+        
+        # 插入提示信息
+        empty_values = [message] + [""] * (len(default_columns) - 1)
+        viewer.insert("", "end", text="", values=empty_values)
+    
+    def display_excel_data(self, viewer, df, tab_name, show_all=False, original_row_numbers=None):
+        """
+        在viewer中显示Excel数据
+        
+        功能增强：
+        1. 支持显示全部数据（show_all=True）
+        2. 自动配置滚动条
+        3. 支持原始行号显示
+        
+        参数:
+            viewer: Treeview控件
+            df: pandas DataFrame数据
+            tab_name: 选项卡名称
+            show_all: 是否显示全部数据（True=全部，False=仅前20行）
+            original_row_numbers: 原始Excel行号列表（可选）
+        """
+        # 清空现有内容
+        for item in viewer.get_children():
+            viewer.delete(item)
+        
+        if df is None or df.empty:
+            self.show_empty_message(viewer, f"无{tab_name}数据")
+            return
+        
+        # 优化显示列（仅显示关键列）
+        display_df = self._create_optimized_display(df, tab_name)
+        columns = list(display_df.columns)
+        
+        viewer["columns"] = columns
+        viewer["show"] = "tree headings"
+        
+        # 配置序号列
+        viewer.column("#0", width=60, minwidth=60)
+        viewer.heading("#0", text="行号")
+        
+        # 配置数据列（自动计算列宽）
+        column_widths = self.calculate_column_widths(display_df, columns)
+        
+        for i, col in enumerate(columns):
+            col_width = column_widths[i] if i < len(column_widths) else 100
+            viewer.heading(col, text=str(col))
+            viewer.column(col, width=col_width, minwidth=col_width, anchor='center')
+        
+        # 添加数据行
+        max_rows = len(display_df) if show_all else min(20, len(display_df))
+        
+        for index in range(max_rows):
+            row = display_df.iloc[index]
+            
+            # 处理数据显示格式
+            display_values = []
+            for val in row:
+                if pd.isna(val):
+                    display_values.append("")
+                elif isinstance(val, (int, float)):
+                    if isinstance(val, float) and val.is_integer():
+                        display_values.append(str(int(val)))
+                    else:
+                        display_values.append(str(val))
+                else:
+                    display_values.append(str(val))
+            
+            # 确定行号显示
+            if original_row_numbers and index < len(original_row_numbers):
+                row_number_display = original_row_numbers[index]
+                display_text = str(row_number_display)
+            else:
+                display_text = str(index + 1)
+            
+            viewer.insert("", "end", text=display_text, values=display_values)
+        
+        # 如果有更多行未显示，添加提示
+        if not show_all and len(display_df) > 20:
+            viewer.insert("", "end", text="...", 
+                         values=["...（其他行已省略显示）"] + [""] * (len(columns) - 1))
+        
+        print(f"{tab_name}数据加载完成：{len(df)} 行，{len(df.columns)} 列 -> 显示：{max_rows} 行，{len(display_df.columns)} 列")
+    
+    def calculate_column_widths(self, df, columns):
+        """
+        基于前4行数据计算最佳列宽
+        
+        算法:
+        1. 选择第2行数据（数据行，非表头）
+        2. 遍历每列，计算字符显示宽度
+        3. 中文字符按16px，英文字符按8px估算
+        4. 乘以1.2倍富余系数
+        5. 限制最小60px，最大300px
+        """
+        column_widths = []
+        
+        if len(df) >= 2:
+            calc_row = df.iloc[1]
+        elif len(df) >= 1:
+            calc_row = df.iloc[0]
+        else:
+            return [80] * len(columns)
+        
+        for i, col in enumerate(columns):
+            try:
+                header_length = len(str(col))
+                
+                if i < len(calc_row):
+                    data_value = calc_row.iloc[i] if hasattr(calc_row, 'iloc') else calc_row[i]
+                    data_length = len(str(data_value)) if not pd.isna(data_value) else 0
+                else:
+                    data_length = 0
+                
+                content_str = str(data_value) if i < len(calc_row) and not pd.isna(
+                    calc_row.iloc[i] if hasattr(calc_row, 'iloc') else calc_row[i]
+                ) else str(col)
+                
+                # 估算宽度
+                estimated_width = 0
+                for char in content_str:
+                    if ord(char) > 127:  # 中文
+                        estimated_width += 16
+                    else:  # 英文
+                        estimated_width += 8
+                
+                # 应用系数并限制范围
+                col_width = int(estimated_width * 1.2)
+                col_width = max(60, min(col_width, 300))
+                
+                column_widths.append(col_width)
+                
+            except Exception as e:
+                print(f"计算第{i}列宽度时出错: {e}")
+                column_widths.append(100)
+        
+        return column_widths
+    
+    def _create_optimized_display(self, df, tab_name):
+        """
+        创建优化的显示数据（仅显示关键列）
+        
+        根据不同文件类型选择关键列显示
+        """
+        try:
+            if tab_name == "内部需打开接口" and len(df.columns) >= 13:
+                # A=0, B=1, H=7, K=10, M=12
+                key_indices = [0, 1, 7, 10, 12]
+                return self._extract_columns(df, key_indices)
+            
+            elif tab_name == "内部需回复接口" and len(df.columns) >= 28:
+                # A=0, I=8, M=12, N=13, F=5, AB=27
+                key_indices = [0, 8, 12, 13, 5, 27]
+                return self._extract_columns(df, key_indices)
+            
+            elif tab_name == "外部需打开接口" and len(df.columns) >= 38:
+                # C=2, L=11, Q=16, M=12, T=19, I=8, AF=31, N=13
+                key_indices = [2, 11, 16, 12, 19, 8, 31, 13]
+                return self._extract_columns(df, key_indices)
+            
+            elif tab_name == "外部需回复接口" and len(df.columns) >= 32:
+                # A=0, I=8, M=12, O=14, H=7, AF=31
+                key_indices = [0, 8, 12, 14, 7, 31]
+                return self._extract_columns(df, key_indices)
+            
+            # 其他情况返回原始数据
+            return df
+            
+        except Exception as e:
+            print(f"创建优化显示数据失败: {e}")
+            return df
+    
+    def _extract_columns(self, df, indices):
+        """提取指定索引的列"""
+        try:
+            original_columns = list(df.columns)
+            new_columns = [original_columns[i] for i in indices if i < len(original_columns)]
+            
+            display_data = []
+            for _, row in df.iterrows():
+                new_row = [row.iloc[i] if i < len(row) else "" for i in indices]
+                display_data.append(new_row)
+            
+            return pd.DataFrame(display_data, columns=new_columns)
+        except Exception as e:
+            print(f"提取列失败: {e}")
+            return df
+    
+    def update_file_info(self, info_text):
+        """更新文件信息显示"""
+        if self.file_info_text:
+            self.file_info_text.config(state='normal')
+            self.file_info_text.delete('1.0', tk.END)
+            self.file_info_text.insert('1.0', info_text)
+            self.file_info_text.config(state='disabled')
+    
+    def enable_export_button(self, enabled=True):
+        """启用/禁用导出按钮"""
+        if 'export' in self.buttons:
+            self.buttons['export'].config(state='normal' if enabled else 'disabled')
+    
+    def _trigger_callback(self, callback_name):
+        """触发回调函数"""
+        if callback_name in self.callbacks:
+            try:
+                self.callbacks[callback_name]()
+            except Exception as e:
+                print(f"回调执行失败 [{callback_name}]: {e}")
+                import traceback
+                traceback.print_exc()
+    
+    def _on_tab_changed_internal(self, event):
+        """内部选项卡切换事件（触发外部回调）"""
+        self._trigger_callback('on_tab_changed')
+    
+    def get_selected_tab_index(self):
+        """获取当前选中的选项卡索引"""
+        if self.notebook:
+            return self.notebook.index(self.notebook.select())
+        return 0
+    
+    def get_path_value(self):
+        """获取文件夹路径"""
+        return self.path_var.get() if self.path_var else ""
+    
+    def get_export_path_value(self):
+        """获取导出路径"""
+        return self.export_path_var.get() if self.export_path_var else ""
+    
+    def set_path_value(self, path):
+        """设置文件夹路径"""
+        if self.path_var:
+            self.path_var.set(path)
+    
+    def set_export_path_value(self, path):
+        """设置导出路径"""
+        if self.export_path_var:
+            self.export_path_var.set(path)
+

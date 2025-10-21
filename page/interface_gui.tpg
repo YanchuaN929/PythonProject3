@@ -1,0 +1,242 @@
+<?xml version='1.0' encoding='utf-8'?>
+<project>
+    <toplevel>
+        <manager class="WindowManager" />
+    </toplevel>
+    <widgets>
+        <widget class="tk.Toplevel" name="toplevel">
+            <attr name="height">800</attr>
+            <attr name="title">接口筛选程序</attr>
+            <attr name="width">1200</attr>
+            <child>
+                <widget class="ttk.Frame" name="main_frame">
+                    <attr name="padding">10</attr>
+                    <pack>
+                        <attr name="expand">1</attr>
+                        <attr name="fill">both</attr>
+                        <attr name="side">top</attr>
+                    </pack>
+                    <child>
+                        <widget class="ttk.Frame" name="path_frame">
+                            <grid>
+                                <attr name="column">0</attr>
+                                <attr name="row">0</attr>
+                                <attr name="sticky">ew</attr>
+                                <attr name="pady">0 10</attr>
+                                <attr name="columnspan">3</attr>
+                            </grid>
+                            <child>
+                                <widget class="ttk.Label" name="folder_label">
+                                    <attr name="text">文件夹路径:</attr>
+                                    <grid>
+                                        <attr name="column">0</attr>
+                                        <attr name="row">0</attr>
+                                        <attr name="sticky">w</attr>
+                                        <attr name="padx">0 10</attr>
+                                    </grid>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Entry" name="path_entry">
+                                    <attr name="width">60</attr>
+                                    <grid>
+                                        <attr name="column">1</attr>
+                                        <attr name="row">0</attr>
+                                        <attr name="sticky">ew</attr>
+                                        <attr name="padx">0 10</attr>
+                                    </grid>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Button" name="browse_btn">
+                                    <attr name="text">浏览</attr>
+                                    <grid>
+                                        <attr name="column">2</attr>
+                                        <attr name="row">0</attr>
+                                        <attr name="sticky">w</attr>
+                                    </grid>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Button" name="settings_btn">
+                                    <attr name="text">⚙</attr>
+                                    <grid>
+                                        <attr name="column">3</attr>
+                                        <attr name="row">0</attr>
+                                        <attr name="sticky">e</attr>
+                                        <attr name="padx">20 0</attr>
+                                    </grid>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Label" name="export_label">
+                                    <attr name="text">导出结果位置:</attr>
+                                    <grid>
+                                        <attr name="column">0</attr>
+                                        <attr name="row">1</attr>
+                                        <attr name="sticky">w</attr>
+                                        <attr name="padx">0 10</attr>
+                                        <attr name="pady">8 0</attr>
+                                    </grid>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Entry" name="export_entry">
+                                    <attr name="width">60</attr>
+                                    <grid>
+                                        <attr name="column">1</attr>
+                                        <attr name="row">1</attr>
+                                        <attr name="sticky">ew</attr>
+                                        <attr name="padx">0 10</attr>
+                                        <attr name="pady">8 0</attr>
+                                    </grid>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Button" name="export_browse_btn">
+                                    <attr name="text">浏览</attr>
+                                    <grid>
+                                        <attr name="column">2</attr>
+                                        <attr name="row">1</attr>
+                                        <attr name="sticky">w</attr>
+                                        <attr name="pady">8 0</attr>
+                                    </grid>
+                                </widget>
+                            </child>
+                        </widget>
+                    </child>
+                    <child>
+                        <widget class="ttk.LabelFrame" name="info_frame">
+                            <attr name="text">Excel文件信息</attr>
+                            <attr name="padding">5</attr>
+                            <grid>
+                                <attr name="column">0</attr>
+                                <attr name="row">1</attr>
+                                <attr name="sticky">ew</attr>
+                                <attr name="columnspan">3</attr>
+                                <attr name="pady">0 0</attr>
+                            </grid>
+                        </widget>
+                    </child>
+                    <child>
+                        <widget class="ttk.LabelFrame" name="project_filter_frame">
+                            <attr name="text">项目号筛选</attr>
+                            <attr name="padding">2</attr>
+                            <grid>
+                                <attr name="column">0</attr>
+                                <attr name="row">2</attr>
+                                <attr name="sticky">ew</attr>
+                                <attr name="columnspan">3</attr>
+                                <attr name="pady">0 0</attr>
+                            </grid>
+                        </widget>
+                    </child>
+                    <child>
+                        <widget class="ttk.Notebook" name="notebook">
+                            <grid>
+                                <attr name="column">0</attr>
+                                <attr name="row">3</attr>
+                                <attr name="sticky">nsew</attr>
+                                <attr name="columnspan">3</attr>
+                                <attr name="pady">0 10</attr>
+                            </grid>
+                            <child>
+                                <widget class="ttk.Frame" name="tab1_frame">
+                                    <attr name="name">内部需打开接口</attr>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Frame" name="tab2_frame">
+                                    <attr name="name">内部需回复接口</attr>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Frame" name="tab3_frame">
+                                    <attr name="name">外部需打开接口</attr>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Frame" name="tab4_frame">
+                                    <attr name="name">外部需回复接口</attr>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Frame" name="tab5_frame">
+                                    <attr name="name">三维提资接口</attr>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Frame" name="tab6_frame">
+                                    <attr name="name">收发文函</attr>
+                                </widget>
+                            </child>
+                        </widget>
+                    </child>
+                    <child>
+                        <widget class="ttk.Frame" name="button_frame">
+                            <grid>
+                                <attr name="column">0</attr>
+                                <attr name="row">4</attr>
+                                <attr name="columnspan">3</attr>
+                                <attr name="pady">10 0</attr>
+                            </grid>
+                            <child>
+                                <widget class="ttk.Button" name="process_btn">
+                                    <attr name="text">开始处理</attr>
+                                    <pack>
+                                        <attr name="side">left</attr>
+                                        <attr name="padx">0 20</attr>
+                                    </pack>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Button" name="export_btn">
+                                    <attr name="text">导出结果</attr>
+                                    <attr name="state">disabled</attr>
+                                    <pack>
+                                        <attr name="side">left</attr>
+                                    </pack>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Button" name="open_folder_btn">
+                                    <attr name="text">打开文件位置</attr>
+                                    <pack>
+                                        <attr name="side">left</attr>
+                                        <attr name="padx">10 0</attr>
+                                    </pack>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Button" name="refresh_btn">
+                                    <attr name="text">刷新文件列表</attr>
+                                    <pack>
+                                        <attr name="side">left</attr>
+                                        <attr name="padx">20 0</attr>
+                                    </pack>
+                                </widget>
+                            </child>
+                            <child>
+                                <widget class="ttk.Button" name="monitor_btn">
+                                    <attr name="text">打开监控</attr>
+                                    <pack>
+                                        <attr name="side">left</attr>
+                                        <attr name="padx">10 0</attr>
+                                    </pack>
+                                </widget>
+                            </child>
+                        </widget>
+                    </child>
+                </widget>
+            </child>
+        </widget>
+    </widgets>
+    <support>
+        <import>import tkinter as tk</import>
+        <import>from tkinter import ttk</import>
+        <import>import tkinter.scrolledtext as scrolledtext</import>
+        <import>import pandas as pd</import>
+        <import>import os</import>
+        <import>import sys</import>
+    </support>
+</project>
