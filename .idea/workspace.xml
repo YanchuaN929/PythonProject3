@@ -1,7 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="53b9022f-c2a6-419c-b1b8-8029d9f676f1" name="更改" comment="" />
+    <list default="true" id="53b9022f-c2a6-419c-b1b8-8029d9f676f1" name="更改" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/PythonProject3.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/0.19.0" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/1.21.0" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/1.5.0" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/2.0.0" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/3.0.0" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/9.0.0" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Monitor.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/base.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/excel_processor/Analysis-00.toc" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/excel_processor/PKG-00.toc" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/excel_processor/PYZ-00.pyz" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/excel_processor/PYZ-00.toc" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/excel_processor/base_library.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/excel_processor/warn-excel_processor.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/build/excel_processor/xref-excel_processor.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/config.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/excel_processor.spec" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ico_bin/tubiao.ico" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -13,6 +42,12 @@
         <option value="Python Script" />
       </list>
     </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/base.py" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
@@ -26,7 +61,12 @@
   "keyToString": {
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
     "last_opened_file_path": "D:/PycharmProjects/PythonProject3",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "vue.rearranger.settings.migration": "true"
   }
@@ -48,6 +88,8 @@
       <updated>1754206062923</updated>
       <workItem from="1754206063991" duration="85000" />
       <workItem from="1754206165444" duration="2000" />
+      <workItem from="1754447076617" duration="159000" />
+      <workItem from="1755479057879" duration="1254000" />
     </task>
     <servers />
   </component>

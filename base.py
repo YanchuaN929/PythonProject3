@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Excel数据处理程序
+接口处理程序
 支持Win7+系统，具备GUI界面、后台运行、系统托盘等功能
 """
 
@@ -18,6 +18,15 @@ from pathlib import Path
 import pandas as pd
 import subprocess
 
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径，兼容开发环境和打包环境"""
+    if hasattr(sys, '_MEIPASS'):
+        # 打包后的临时目录
+        return os.path.join(sys._MEIPASS, relative_path)
+    else:
+        # 开发环境
+        return os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path)
+
 # 尝试导入系统托盘相关模块
 try:
     import pystray
@@ -30,15 +39,18 @@ except ImportError:
 class ExcelProcessorApp:
     """主应用程序类"""
     
-    def __init__(self):
+    def __init__(self, auto_mode: bool = False):
+        self.auto_mode = auto_mode
         self.root = tk.Tk()
         self.setup_window()
         self.load_config()
         # 四个勾选框变量
         self.process_file1_var = tk.BooleanVar(value=True)
-        self.process_file2_var = tk.BooleanVar(value=False)
-        self.process_file3_var = tk.BooleanVar(value=False)
-        self.process_file4_var = tk.BooleanVar(value=False)
+        self.process_file2_var = tk.BooleanVar(value=True)
+        self.process_file3_var = tk.BooleanVar(value=True)
+        self.process_file4_var = tk.BooleanVar(value=True)
+        self.process_file5_var = tk.BooleanVar(value=True)
+        self.process_file6_var = tk.BooleanVar(value=True)
         self.create_widgets()
         self.setup_layout()
         self.tray_icon = None
@@ -53,7 +65,7 @@ class ExcelProcessorApp:
         # Excel文件列表
         self.excel_files = []
         
-        # 四类文件及项目号
+        # 四类文件及项目号（单文件兼容性保留）
         self.target_file1 = None
         self.target_file1_project_id = None
         self.target_file2 = None
@@ -62,30 +74,76 @@ class ExcelProcessorApp:
         self.target_file3_project_id = None
         self.target_file4 = None
         self.target_file4_project_id = None
-        # 文件数据存储
+        
+        # 多文件存储结构：[(文件路径, 项目号), ...]
+        self.target_files1 = []  # 待处理文件1列表
+        self.target_files2 = []  # 待处理文件2列表  
+        self.target_files3 = []  # 待处理文件3列表
+        self.target_files4 = []  # 待处理文件4列表
+        self.target_files5 = []  # 待处理文件5列表
+        self.target_files6 = []  # 待处理文件6列表
+        
+        # 文件数据存储（单文件兼容性保留）
         self.file1_data = None
         self.file2_data = None
         self.file3_data = None
         self.file4_data = None
-        # 处理结果
+        self.file5_data = None
+        self.file6_data = None
+        
+        # 多文件数据存储：{项目号: DataFrame, ...}
+        self.files1_data = {}  # 待处理文件1的数据字典
+        self.files2_data = {}  # 待处理文件2的数据字典
+        self.files3_data = {}  # 待处理文件3的数据字典
+        self.files4_data = {}  # 待处理文件4的数据字典
+        self.files5_data = {}  # 待处理文件5的数据字典
+        self.files6_data = {}  # 待处理文件6的数据字典
+        
+        # 处理结果（单文件兼容性保留）
         self.processing_results = None
         self.processing_results2 = None
         self.processing_results3 = None
         self.processing_results4 = None
+        self.processing_results5 = None
+        self.processing_results6 = None
+        
+        # 多文件处理结果：{项目号: DataFrame, ...}
+        self.processing_results_multi1 = {}  # 待处理文件1的处理结果字典
+        self.processing_results_multi2 = {}  # 待处理文件2的处理结果字典
+        self.processing_results_multi3 = {}  # 待处理文件3的处理结果字典
+        self.processing_results_multi4 = {}  # 待处理文件4的处理结果字典
+        self.processing_results_multi5 = {}  # 待处理文件5的处理结果字典
+        self.processing_results_multi6 = {}  # 待处理文件6的处理结果字典
+        
         # 处理结果状态标记 - 用于判断是否显示处理后的结果
         self.has_processed_results1 = False
         self.has_processed_results2 = False
         self.has_processed_results3 = False
         self.has_processed_results4 = False
+        self.has_processed_results5 = False
+        self.has_processed_results6 = False
         # 监控器
         self.monitor = None
         
         # 勾选框变量
         
 
+        # 启动时检查“姓名”是否已填写，未填写则提醒并禁用按钮
+        try:
+            self._enforce_user_name_gate(show_popup=True)
+        except Exception:
+            pass
+
+        # 自动模式：启动后自动执行刷新→处理→导出
+        if self.auto_mode:
+            try:
+                self.root.after(300, self._run_auto_flow)
+            except Exception:
+                pass
+
     def setup_window(self):
         """设置主窗口属性"""
-        self.root.title("Excel数据处理程序")
+        self.root.title("接口筛选程序")
         
         # 获取屏幕分辨率并适配
         self.setup_window_size()
@@ -95,7 +153,7 @@ class ExcelProcessorApp:
         
         # 设置窗口图标
         try:
-            icon_path = "ico_bin/tubiao.ico"
+            icon_path = get_resource_path("ico_bin/tubiao.ico")
             if os.path.exists(icon_path):
                 self.root.iconbitmap(icon_path)
         except Exception as e:
@@ -141,12 +199,29 @@ class ExcelProcessorApp:
 
     def load_config(self):
         """加载配置文件"""
-        self.config_file = "config.json"
+        # 配置文件放在用户目录，避免打包后权限问题
+        user_config_dir = os.path.expanduser("~/.excel_processor")
+        if not os.path.exists(user_config_dir):
+            os.makedirs(user_config_dir, exist_ok=True)
+        self.config_file = os.path.join(user_config_dir, "config.json")
+        self.yaml_config_file = os.path.join(user_config_dir, "config.yaml")
         self.default_config = {
             "folder_path": "",
+            "export_folder_path": "",
+            "user_name": "",
             "auto_startup": False,
             "minimize_to_tray": True,
-            "dont_ask_again": False
+            "dont_ask_again": False,
+            "hide_previous_months": False,
+            # 自动运行导出日期窗口（按角色）。含义：截止日期与今天的天数差 <= 指定天数 才导出；允许为负（已超期）
+            "role_export_days": {
+                "一室主任": 7,
+                "二室主任": 7,
+                "建筑总图室主任": 7,
+                "所长": 2,
+                "管理员": None,
+                "设计人员": None
+            }
         }
         
         try:
@@ -158,6 +233,25 @@ class ExcelProcessorApp:
         except:
             self.config = self.default_config.copy()
 
+        # 填充缺省的 role_export_days（向后兼容旧配置）
+        try:
+            if "role_export_days" not in self.config or not isinstance(self.config.get("role_export_days"), dict):
+                self.config["role_export_days"] = self.default_config["role_export_days"].copy()
+            else:
+                # 合并缺失的角色键，但不覆盖已有值
+                for k, v in self.default_config["role_export_days"].items():
+                    if k not in self.config["role_export_days"]:
+                        self.config["role_export_days"][k] = v
+        except Exception:
+            pass
+
+        # 载入 YAML 新参数（timer/cache/general），无依赖第三方库的简易解析
+        self.timer_enabled = True
+        self.timer_require_24h = True
+        self.timer_times = "10:00,16:00"
+        self.timer_grace_minutes = 10
+        self._load_yaml_settings()
+
     def save_config(self):
         """保存配置文件"""
         try:
@@ -165,6 +259,78 @@ class ExcelProcessorApp:
                 json.dump(self.config, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"保存配置失败: {e}")
+        # 同步保存 YAML（包含迁移后的通用参数）
+        try:
+            self._save_yaml_all()
+        except Exception:
+            pass
+
+    def _load_yaml_settings(self):
+        """从 config.yaml 读取 timer/cache/general 参数（无则使用默认）"""
+        try:
+            if not os.path.exists(self.yaml_config_file):
+                return
+            current_section = None
+            with open(self.yaml_config_file, 'r', encoding='utf-8') as f:
+                for raw in f:
+                    line = raw.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    if line.endswith(':') and not ':' in line[:-1]:
+                        current_section = line[:-1].strip()
+                        continue
+                    if ':' in line and current_section in ('timer','cache','general'):
+                        key, val = line.split(':', 1)
+                        key = key.strip()
+                        val = val.strip().strip('"')
+                        if current_section == 'timer':
+                            if key == 'enabled':
+                                self.timer_enabled = (val.lower() == 'true')
+                            elif key == 'require_24h':
+                                self.timer_require_24h = (val.lower() == 'true')
+                            elif key == 'times':
+                                self.timer_times = val
+                            elif key == 'grace_minutes':
+                                try:
+                                    self.timer_grace_minutes = int(val)
+                                except Exception:
+                                    pass
+                        
+                        elif current_section == 'general':
+                            # 将旧参数迁移到 self.config
+                            if key in ("folder_path","export_folder_path","user_name"):
+                                self.config[key] = val
+                            elif key in ("auto_startup","minimize_to_tray","dont_ask_again","hide_previous_months"):
+                                self.config[key] = (val.lower() == 'true')
+        except Exception as e:
+            print(f"加载YAML配置失败: {e}")
+
+    def _save_yaml_all(self):
+        """将 general/timer/cache 参数保存到 config.yaml"""
+        try:
+            lines = []
+            # general 区域：写入旧有参数
+            lines.append("general:")
+            lines.append(f"  folder_path: \"{self.config.get('folder_path','')}\"")
+            lines.append(f"  export_folder_path: \"{self.config.get('export_folder_path','')}\"")
+            lines.append(f"  user_name: \"{self.config.get('user_name','')}\"")
+            lines.append(f"  auto_startup: {'true' if self.config.get('auto_startup', False) else 'false'}")
+            lines.append(f"  minimize_to_tray: {'true' if self.config.get('minimize_to_tray', True) else 'false'}")
+            lines.append(f"  dont_ask_again: {'true' if self.config.get('dont_ask_again', False) else 'false'}")
+            lines.append(f"  hide_previous_months: {'true' if self.config.get('hide_previous_months', False) else 'false'}")
+            lines.append("")
+            lines.append("timer:")
+            lines.append(f"  enabled: {'true' if self.timer_enabled else 'false'}")
+            lines.append(f"  require_24h: {'true' if self.timer_require_24h else 'false'}")
+            # times 使用逗号分隔字符串，避免实现列表解析
+            lines.append(f"  times: \"{self.timer_times}\"")
+            lines.append(f"  grace_minutes: {int(self.timer_grace_minutes)}")
+            
+            os.makedirs(os.path.dirname(self.yaml_config_file), exist_ok=True)
+            with open(self.yaml_config_file, 'w', encoding='utf-8') as f:
+                f.write("\n".join(lines))
+        except Exception as e:
+            print(f"保存YAML配置失败: {e}")
 
     def create_widgets(self):
         """创建GUI组件"""
@@ -195,6 +361,14 @@ class ExcelProcessorApp:
         # 右上角：设置菜单按钮
         self.settings_button = ttk.Button(path_frame, text="⚙", command=self.show_settings_menu)
         self.settings_button.grid(row=0, column=3, sticky=tk.E, padx=(20, 0))
+
+        # 新增：第二行 导出结果位置（可选，默认沿用文件夹路径）
+        ttk.Label(path_frame, text="导出结果位置:").grid(row=1, column=0, sticky=tk.W, padx=(0, 10), pady=(8, 0))
+        self.export_path_var = tk.StringVar(value=self.config.get("export_folder_path", ""))
+        self.export_path_entry = ttk.Entry(path_frame, textvariable=self.export_path_var, width=60)
+        self.export_path_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=(0, 10), pady=(8, 0))
+        self.browse_export_button = ttk.Button(path_frame, text="浏览", command=self.browse_export_folder)
+        self.browse_export_button.grid(row=1, column=2, sticky=tk.W, pady=(8, 0))
         
         # 初始化设置相关变量
         self.auto_startup_var = tk.BooleanVar(value=self.config.get("auto_startup", False))
@@ -247,6 +421,14 @@ class ExcelProcessorApp:
             state='disabled'
         )
         self.export_button.pack(side=tk.LEFT)
+
+        # 新增：打开文件位置按钮
+        self.open_folder_button = ttk.Button(
+            button_frame,
+            text="打开文件位置",
+            command=self.open_selected_folder
+        )
+        self.open_folder_button.pack(side=tk.LEFT, padx=(10, 0))
         
         # 刷新文件列表按钮
         self.refresh_button = ttk.Button(
@@ -264,49 +446,80 @@ class ExcelProcessorApp:
         )
         self.monitor_button.pack(side=tk.LEFT, padx=(10, 0))
 
+        # 初始根据姓名配置禁用/启用按钮
+        try:
+            self._enforce_user_name_gate(show_popup=False)
+        except Exception:
+            pass
+
+        # 右下角水印
+        try:
+            watermark = ttk.Label(main_frame, text="——by 建筑结构所，王任超", foreground="gray")
+            watermark.grid(row=4, column=2, sticky=tk.E, padx=(0, 4), pady=(6, 2))
+        except Exception:
+            pass
+
     def create_tabs(self):
         """创建选项卡"""
-        # 选项卡1：应打开接口
+        # 选项卡1：内部需打开接口
         self.tab1_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.tab1_frame, text="应打开接口")
+        self.notebook.add(self.tab1_frame, text="内部需打开接口")
         self.tab1_frame.columnconfigure(0, weight=1)
         self.tab1_frame.rowconfigure(1, weight=1)
-        self.tab1_check = ttk.Checkbutton(self.tab1_frame, text="处理应打开接口", variable=self.process_file1_var)
+        self.tab1_check = ttk.Checkbutton(self.tab1_frame, text="处理内部需打开接口", variable=self.process_file1_var)
         self.tab1_check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
-        # 选项卡2：需回复接口
+        # 选项卡2：内部需回复接口
         self.tab2_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.tab2_frame, text="需回复接口")
+        self.notebook.add(self.tab2_frame, text="内部需回复接口")
         self.tab2_frame.columnconfigure(0, weight=1)
         self.tab2_frame.rowconfigure(1, weight=1)
-        self.tab2_check = ttk.Checkbutton(self.tab2_frame, text="处理需打开接口", variable=self.process_file2_var)
+        self.tab2_check = ttk.Checkbutton(self.tab2_frame, text="处理内部需回复接口", variable=self.process_file2_var)
         self.tab2_check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
-        # 选项卡3：外部接口ICM
+        # 选项卡3：外部需打开接口
         self.tab3_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.tab3_frame, text="外部接口ICM")
+        self.notebook.add(self.tab3_frame, text="外部需打开接口")
         self.tab3_frame.columnconfigure(0, weight=1)
         self.tab3_frame.rowconfigure(1, weight=1)
-        self.tab3_check = ttk.Checkbutton(self.tab3_frame, text="处理外部接口ICM", variable=self.process_file3_var)
+        self.tab3_check = ttk.Checkbutton(self.tab3_frame, text="处理外部需打开接口", variable=self.process_file3_var)
         self.tab3_check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
-        # 选项卡4：外部接口单
+        # 选项卡4：外部需回复接口
         self.tab4_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.tab4_frame, text="外部接口单")
+        self.notebook.add(self.tab4_frame, text="外部需回复接口")
         self.tab4_frame.columnconfigure(0, weight=1)
         self.tab4_frame.rowconfigure(1, weight=1)
-        self.tab4_check = ttk.Checkbutton(self.tab4_frame, text="处理外部接口单", variable=self.process_file4_var)
+        self.tab4_check = ttk.Checkbutton(self.tab4_frame, text="处理外部需回复接口", variable=self.process_file4_var)
         self.tab4_check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
+        # 选项卡5：三维提资接口
+        self.tab5_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab5_frame, text="三维提资接口")
+        self.tab5_frame.columnconfigure(0, weight=1)
+        self.tab5_frame.rowconfigure(1, weight=1)
+        self.tab5_check = ttk.Checkbutton(self.tab5_frame, text="处理三维提资接口", variable=self.process_file5_var)
+        self.tab5_check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
+        # 选项卡6：收发文函
+        self.tab6_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab6_frame, text="收发文函")
+        self.tab6_frame.columnconfigure(0, weight=1)
+        self.tab6_frame.rowconfigure(1, weight=1)
+        self.tab6_check = ttk.Checkbutton(self.tab6_frame, text="处理收发文函", variable=self.process_file6_var)
+        self.tab6_check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
         # 为每个选项卡创建Excel预览控件
         self.create_excel_viewer(self.tab1_frame, "tab1")
         self.create_excel_viewer(self.tab2_frame, "tab2")
         self.create_excel_viewer(self.tab3_frame, "tab3")
         self.create_excel_viewer(self.tab4_frame, "tab4")
+        self.create_excel_viewer(self.tab5_frame, "tab5")
+        self.create_excel_viewer(self.tab6_frame, "tab6")
         # 绑定选项卡切换事件
         self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
         # 存储选项卡引用以便后续修改状态
         self.tabs = {
-            'tab1': 0,  # 应打开接口
-            'tab2': 1,  # 需回复接口
-            'tab3': 2,  # 外部接口ICM
-            'tab4': 3   # 外部接口单
+            'tab1': 0,  # 内部需打开接口
+            'tab2': 1,  # 内部需回复接口
+            'tab3': 2,  # 外部需打开接口
+            'tab4': 3,  # 外部需回复接口
+            'tab5': 4,  # 三维提资接口
+            'tab6': 5   # 收发文函
         }
 
     def create_excel_viewer(self, parent, tab_id):
@@ -358,76 +571,102 @@ class ExcelProcessorApp:
         selected_tab = self.notebook.index(self.notebook.select())
         
         # 根据选择的选项卡加载相应数据，优先显示处理结果
-        if selected_tab == 0 and self.target_file1:  # 应打开接口
+        if selected_tab == 0 and self.target_file1:  # 内部需打开接口
             # 如果有处理结果，显示过滤后的数据；否则显示原始数据
             if self.has_processed_results1 and self.processing_results is not None and not self.processing_results.empty:
                 print("显示处理后的过滤结果")
                 self.filter_and_display_results(self.processing_results)
-            elif self.has_processed_results1 and (self.processing_results is None or self.processing_results.empty):
+            elif self.has_processed_results1:
                 print("显示无数据结果")
-                self.show_no_data_result(show_popup=False)
+                self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
             elif self.file1_data is not None:
                 print("显示原始文件数据")
-                self.display_excel_data(self.tab1_viewer, self.file1_data, "应打开接口")
+                self.display_excel_data(self.tab1_viewer, self.file1_data, "内部需打开接口")
             else:
-                self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "应打开接口")
-        elif selected_tab == 1 and self.target_file2:  # 需回复接口
+                self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
+        elif selected_tab == 1 and self.target_file2:  # 内部需回复接口
             if self.has_processed_results2 and self.processing_results2 is not None and not self.processing_results2.empty:
                 display_df = self.processing_results2.drop(columns=['原始行号'], errors='ignore')
                 excel_row_numbers = list(self.processing_results2['原始行号'])
-                self.display_excel_data_with_original_rows(self.tab2_viewer, display_df, "需回复接口", excel_row_numbers)
+                self.display_excel_data_with_original_rows(self.tab2_viewer, display_df, "内部需回复接口", excel_row_numbers)
             elif self.has_processed_results2:
-                self.show_empty_message(self.tab2_viewer, "无需回复接口")
+                self.show_empty_message(self.tab2_viewer, "无内部需回复接口")
             elif self.file2_data is not None:
-                self.display_excel_data(self.tab2_viewer, self.file2_data, "需回复接口")
+                self.display_excel_data(self.tab2_viewer, self.file2_data, "内部需回复接口")
             else:
-                self.load_file_to_viewer(self.target_file2, self.tab2_viewer, "需回复接口")
-        elif selected_tab == 2 and self.target_file3:  # 外部接口ICM
+                self.load_file_to_viewer(self.target_file2, self.tab2_viewer, "内部需回复接口")
+        elif selected_tab == 2 and self.target_file3:  # 外部需打开接口
             if self.has_processed_results3 and self.processing_results3 is not None and not self.processing_results3.empty:
                 display_df = self.processing_results3.drop(columns=['原始行号'], errors='ignore')
                 excel_row_numbers = list(self.processing_results3['原始行号'])
-                self.display_excel_data_with_original_rows(self.tab3_viewer, display_df, "外部接口ICM", excel_row_numbers)
+                self.display_excel_data_with_original_rows(self.tab3_viewer, display_df, "外部需打开接口", excel_row_numbers)
             elif self.has_processed_results3:
-                self.show_empty_message(self.tab3_viewer, "无外部接口ICM")
+                self.show_empty_message(self.tab3_viewer, "无外部需打开接口")
             elif self.file3_data is not None:
-                self.display_excel_data(self.tab3_viewer, self.file3_data, "外部接口ICM")
+                self.display_excel_data(self.tab3_viewer, self.file3_data, "外部需打开接口")
             else:
-                self.load_file_to_viewer(self.target_file3, self.tab3_viewer, "外部接口ICM")
-        elif selected_tab == 3 and self.target_file4:  # 外部接口单
+                self.load_file_to_viewer(self.target_file3, self.tab3_viewer, "外部需打开接口")
+        elif selected_tab == 3 and self.target_file4:  # 外部需回复接口
             if self.has_processed_results4 and self.processing_results4 is not None and not self.processing_results4.empty:
                 display_df = self.processing_results4.drop(columns=['原始行号'], errors='ignore')
                 excel_row_numbers = list(self.processing_results4['原始行号'])
-                self.display_excel_data_with_original_rows(self.tab4_viewer, display_df, "外部接口单", excel_row_numbers)
+                self.display_excel_data_with_original_rows(self.tab4_viewer, display_df, "外部需回复接口", excel_row_numbers)
             elif self.has_processed_results4:
-                self.show_empty_message(self.tab4_viewer, "无外部接口单")
+                self.show_empty_message(self.tab4_viewer, "无外部需回复接口")
             elif self.file4_data is not None:
-                self.display_excel_data(self.tab4_viewer, self.file4_data, "外部接口单")
+                self.display_excel_data(self.tab4_viewer, self.file4_data, "外部需回复接口")
             else:
-                self.load_file_to_viewer(self.target_file4, self.tab4_viewer, "外部接口单")
+                self.load_file_to_viewer(self.target_file4, self.tab4_viewer, "外部需回复接口")
+        elif selected_tab == 4 and getattr(self, 'target_files5', None):  # 三维提资接口
+            if self.has_processed_results5 and self.processing_results5 is not None and not self.processing_results5.empty:
+                display_df = self.processing_results5.drop(columns=['原始行号'], errors='ignore')
+                excel_row_numbers = list(self.processing_results5['原始行号'])
+                self.display_excel_data_with_original_rows(self.tab5_viewer, display_df, "三维提资接口", excel_row_numbers)
+            elif self.has_processed_results5:
+                self.show_empty_message(self.tab5_viewer, "无三维提资接口")
+            elif self.file5_data is not None:
+                self.display_excel_data(self.tab5_viewer, self.file5_data, "三维提资接口")
+        elif selected_tab == 5 and getattr(self, 'target_files6', None):  # 收发文函
+            # 若视图已有内容，则不重绘，保持当前显示
+            try:
+                if len(self.tab6_viewer.get_children()) > 0:
+                    return
+            except Exception:
+                pass
+            if self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
+                display_df = self.processing_results6.drop(columns=['原始行号'], errors='ignore')
+                excel_row_numbers = list(self.processing_results6['原始行号'])
+                self.display_excel_data_with_original_rows(self.tab6_viewer, display_df, "收发文函", excel_row_numbers)
+            elif self.has_processed_results6:
+                self.show_empty_message(self.tab6_viewer, "无收发文函")
+            elif self.file6_data is not None:
+                self.display_excel_data(self.tab6_viewer, self.file6_data, "收发文函")
 
     def load_file_to_viewer(self, file_path, viewer, tab_name):
         """加载Excel文件到预览器"""
+        import os
+        
         try:
             print(f"正在加载 {tab_name} 文件: {os.path.basename(file_path)}")
             
-            # 读取Excel文件
+            # 读取Excel文件的第一个工作表（不强制Sheet1）
             if file_path.endswith('.xlsx'):
-                df = pd.read_excel(file_path, sheet_name='Sheet1', engine='openpyxl')
+                df = pd.read_excel(file_path, sheet_name=0, engine='openpyxl')
             else:
-                df = pd.read_excel(file_path, sheet_name='Sheet1', engine='xlrd')
+                df = pd.read_excel(file_path, sheet_name=0, engine='xlrd')
             
             if df.empty:
                 self.show_empty_message(viewer, f"{tab_name}文件为空")
                 return
             
             # 存储数据
-            if tab_name == "应打开接口":
+            if tab_name == "内部需打开接口":
                 self.file1_data = df
-            elif tab_name == "需回复接口":
+            elif tab_name == "内部需回复接口":
                 self.file2_data = df
-            elif tab_name == "外部接口ICM":
+            elif tab_name == "外部需打开接口":
                 self.file3_data = df
-            elif tab_name == "外部接口单":
+            elif tab_name == "外部需回复接口":
                 self.file4_data = df
             
             self.display_excel_data(viewer, df, tab_name)
@@ -443,19 +682,19 @@ class ExcelProcessorApp:
             viewer.delete(item)
         
         # 对不同的文件类型进行优化显示（仅显示关键列）
-        if tab_name == "应打开接口" and len(df.columns) >= 13:
+        if tab_name == "内部需打开接口" and len(df.columns) >= 13:
             # 创建优化后的显示数据
             display_df = self.create_optimized_display_data(df)
             columns = list(display_df.columns)
-        elif tab_name == "需回复接口" and len(df.columns) >= 28:
+        elif tab_name == "内部需回复接口" and len(df.columns) >= 28:
             # 待处理文件2优化显示
             display_df = self.create_optimized_display_data_file2(df)
             columns = list(display_df.columns)
-        elif tab_name == "外部接口ICM" and len(df.columns) >= 38:
+        elif tab_name == "外部需打开接口" and len(df.columns) >= 38:
             # 待处理文件3优化显示
             display_df = self.create_optimized_display_data_file3(df)
             columns = list(display_df.columns)
-        elif tab_name == "外部接口单" and len(df.columns) >= 32:
+        elif tab_name == "外部需回复接口" and len(df.columns) >= 32:
             # 待处理文件4优化显示
             display_df = self.create_optimized_display_data_file4(df)
             columns = list(display_df.columns)
@@ -481,10 +720,10 @@ class ExcelProcessorApp:
             # 设置固定列宽，并居中显示
             viewer.column(col, width=col_width, minwidth=col_width, anchor='center')
         
-        # 添加数据行，限制显示前30行
+        # 添加数据行，限制显示前20行
         row_count = 0
         for index, row in display_df.iterrows():
-            if row_count >= 30:  # 限制显示前30行
+            if row_count >= 20:  # 限制显示前20行
                 break
             
             # 处理数据显示格式
@@ -505,7 +744,7 @@ class ExcelProcessorApp:
             row_count += 1
         
         # 如果有更多行，添加提示信息
-        if len(display_df) > 30:
+        if len(display_df) > 20:
             viewer.insert("", "end", text="...", values=["...（其他行已省略显示）"] + [""] * (len(columns) - 1))
         
         print(f"{tab_name}数据加载完成：{len(df)} 行，{len(df.columns)} 列 -> 显示：{len(display_df.columns)} 列")
@@ -517,19 +756,19 @@ class ExcelProcessorApp:
             viewer.delete(item)
         
         # 对不同的文件类型进行优化显示（仅显示关键列）
-        if tab_name == "应打开接口" and len(df.columns) >= 13:
+        if tab_name == "内部需打开接口" and len(df.columns) >= 13:
             # 创建优化后的显示数据
             display_df = self.create_optimized_display_data(df)
             columns = list(display_df.columns)
-        elif tab_name == "需回复接口" and len(df.columns) >= 28:
+        elif tab_name == "内部需回复接口" and len(df.columns) >= 28:
             # 待处理文件2优化显示
             display_df = self.create_optimized_display_data_file2(df)
             columns = list(display_df.columns)
-        elif tab_name == "外部接口ICM" and len(df.columns) >= 38:
+        elif tab_name == "外部需打开接口" and len(df.columns) >= 38:
             # 待处理文件3优化显示
             display_df = self.create_optimized_display_data_file3(df)
             columns = list(display_df.columns)
-        elif tab_name == "外部接口单" and len(df.columns) >= 32:
+        elif tab_name == "外部需回复接口" and len(df.columns) >= 32:
             # 待处理文件4优化显示
             display_df = self.create_optimized_display_data_file4(df)
             columns = list(display_df.columns)
@@ -555,10 +794,10 @@ class ExcelProcessorApp:
             # 设置固定列宽，并居中显示
             viewer.column(col, width=col_width, minwidth=col_width, anchor='center')
         
-        # 添加数据行，使用原始Excel行号，限制显示前30行
+        # 添加数据行，使用原始Excel行号，限制显示前20行
         row_count = 0
         for index, row in display_df.iterrows():
-            if row_count >= 30:  # 限制显示前30行
+            if row_count >= 20:  # 限制显示前20行
                 break
             
             # 处理数据显示格式
@@ -590,7 +829,7 @@ class ExcelProcessorApp:
             row_count += 1
         
         # 如果有更多行，添加提示信息
-        if len(display_df) > 30:
+        if len(display_df) > 20:
             viewer.insert("", "end", text="...", values=["...（其他行已省略显示）"] + [""] * (len(columns) - 1))
         
         print(f"{tab_name}数据加载完成（使用原始行号）：{len(df)} 行，{len(df.columns)} 列 -> 显示：{len(display_df.columns)} 列")
@@ -739,18 +978,18 @@ class ExcelProcessorApp:
             return df
 
     def create_optimized_display_data_file3(self, df):
-        """为待处理文件3创建优化的显示数据（仅显示C、AL、I、M、Q、T、L、N列）"""
+        """为待处理文件3创建优化的显示数据（仅显示C、L、Q、M、T、I、AF、N列）"""
         try:
-            # 确保有足够的列（C=2, AL=37, I=8, M=12, Q=16, T=19, L=11, N=13）
-            required_cols = max(2, 37, 8, 12, 16, 19, 11, 13)
+            # 确保有足够的列（C=2, L=11, Q=16, M=12, T=19, I=8, AF=31, N=13）
+            required_cols = max(2, 11, 16, 12, 19, 8, 31, 13)
             if len(df.columns) <= required_cols:
                 return df
             
             # 获取列名（转换为列表以支持索引）
             original_columns = list(df.columns)
             
-            # 定义要显示的列（C=2, AL=37, I=8, M=12, Q=16, T=19, L=11, N=13）
-            key_column_indices = [2, 37, 8, 12, 16, 19, 11, 13]  # C, AL, I, M, Q, T, L, N列的索引
+            # 定义要显示的列，按新顺序：C列（接口编码）之后是L、Q、M、T、I、AF、N列
+            key_column_indices = [2, 11, 16, 12, 19, 8, 31, 13]  # C, L, Q, M, T, I, AF, N列的索引
             
             # 创建新的列名：仅显示关键列
             new_columns = []
@@ -773,7 +1012,7 @@ class ExcelProcessorApp:
             # 创建新的DataFrame
             display_df = pd.DataFrame(display_data, columns=new_columns)
             
-            print(f"优化显示文件3：原始{len(original_columns)}列 -> 显示关键列C,AL,I,M,Q,T,L,N")
+            print(f"优化显示文件3：原始{len(original_columns)}列 -> 显示关键列C,L,Q,M,T,I,AF,N")
             return display_df
             
         except Exception as e:
@@ -861,22 +1100,154 @@ class ExcelProcessorApp:
         # 显示初始欢迎信息，等待用户手动刷新
         self.show_initial_welcome_message()
 
+        # 启动后加载用户角色
+        try:
+            self.load_user_role()
+        except Exception:
+            pass
+
     def show_initial_welcome_message(self):
         """显示初始欢迎信息"""
         welcome_text = "欢迎使用本程序，请点击刷新文件列表按钮加载内容。"
         self.update_file_info(welcome_text)
         
         # 为所有选项卡显示欢迎信息
-        self.show_empty_message(self.tab1_viewer, "等待加载应打开接口数据")
-        self.show_empty_message(self.tab2_viewer, "等待加载需回复接口数据")
-        self.show_empty_message(self.tab3_viewer, "等待加载外部接口ICM数据")
-        self.show_empty_message(self.tab4_viewer, "等待加载外部接口单数据")
+        self.show_empty_message(self.tab1_viewer, "等待加载内部需打开接口数据")
+        self.show_empty_message(self.tab2_viewer, "等待加载内部需回复接口数据")
+        self.show_empty_message(self.tab3_viewer, "等待加载外部需打开接口数据")
+        self.show_empty_message(self.tab4_viewer, "等待加载外部需回复接口数据")
+        self.show_empty_message(self.tab5_viewer, "等待加载三维提资接口数据")
+        self.show_empty_message(self.tab6_viewer, "等待加载收发文函数据")
+
+    def apply_role_based_filter(self, df: pd.DataFrame) -> pd.DataFrame:
+        """根据姓名与角色对结果进行过滤。
+        依赖列：'科室'、'责任人'。缺列时安全回退为原df。
+        角色映射：
+          - 设计人员：责任人 == 姓名
+          - 一室主任：科室 ∈ {结构一室, 请室主任确认}
+          - 二室主任：科室 ∈ {结构二室, 请室主任确认}
+          - 建筑总图室主任：科室 ∈ {建筑总图室, 请室主任确认}
+          - 管理员或空角色/姓名：不过滤
+        """
+        try:
+            user_name = getattr(self, 'user_name', '').strip()
+            user_role = getattr(self, 'user_role', '').strip()
+            if not user_role or not user_name:
+                return df
+            safe_df = df.copy()
+            if user_role == '设计人员':
+                if '责任人' in safe_df.columns:
+                    return safe_df[safe_df['责任人'].astype(str).str.strip() == user_name]
+                return safe_df
+            if user_role == '一室主任':
+                if '科室' in safe_df.columns:
+                    return safe_df[safe_df['科室'].isin(['结构一室', '请室主任确认'])]
+                return safe_df
+            if user_role == '二室主任':
+                if '科室' in safe_df.columns:
+                    return safe_df[safe_df['科室'].isin(['结构二室', '请室主任确认'])]
+                return safe_df
+            if user_role == '建筑总图室主任':
+                if '科室' in safe_df.columns:
+                    return safe_df[safe_df['科室'].isin(['建筑总图室', '请室主任确认'])]
+                return safe_df
+            # 管理员/其他：不过滤
+            return safe_df
+        except Exception:
+            return df
+
+    def apply_auto_role_date_window(self, df: pd.DataFrame) -> pd.DataFrame:
+        """自动运行模式下，按角色限定导出的日期窗口。
+        依据列：'接口时间'（格式 mm.dd）。
+        规则：仅当 auto_mode=True 且 用户角色在 role_export_days 映射中时生效；
+             仅保留 (due_date - today).days <= 指定天数 的记录（支持负值，即已超期亦保留）。
+        解析失败或无'接口时间'的记录将被排除。
+        """
+        try:
+            if not getattr(self, 'auto_mode', False):
+                return df
+            user_role = getattr(self, 'user_role', '').strip()
+            if not user_role:
+                return df
+            role_days_map = self.config.get("role_export_days", {}) or {}
+            if user_role not in role_days_map:
+                return df
+            raw_days = role_days_map.get(user_role, None)
+            if raw_days is None or (isinstance(raw_days, str) and raw_days.strip() == ""):
+                return df
+            try:
+                max_days = int(raw_days)
+            except Exception:
+                return df
+            if "接口时间" not in df.columns:
+                return df.iloc[0:0]
+            from datetime import date
+            today = date.today()
+            kept_idx = []
+            for idx, val in df["接口时间"].items():
+                try:
+                    s = str(val).strip()
+                    if not s or s == "未知":
+                        continue
+                    parts = s.split('.')
+                    if len(parts) != 2:
+                        continue
+                    m = int(parts[0])
+                    d = int(parts[1])
+                    due = date(today.year, m, d)
+                    delta = (due - today).days
+                    if delta <= max_days:
+                        kept_idx.append(idx)
+                except Exception:
+                    continue
+            if not kept_idx:
+                return df.iloc[0:0]
+            return df.loc[kept_idx]
+        except Exception:
+            return df
+
+    def load_user_role(self):
+        """加载用户角色：从 excel_bin/姓名角色表.xlsx 中读取 A列=姓名，B列=角色"""
+        self.user_name = self.config.get("user_name", "").strip()
+        self.user_role = ""
+        if not self.user_name:
+            return
+        try:
+            xls_path = get_resource_path("excel_bin/姓名角色表.xlsx")
+            if not os.path.exists(xls_path):
+                return
+            df = pd.read_excel(xls_path, engine='openpyxl') if xls_path.endswith('.xlsx') else pd.read_excel(xls_path, engine='xlrd')
+            # 兼容无表头/不同表头
+            cols = list(df.columns)
+            name_col = None
+            role_col = None
+            for i, c in enumerate(cols):
+                cs = str(c)
+                if name_col is None and (cs.find('姓名') != -1):
+                    name_col = i
+                if role_col is None and (cs.find('角色') != -1):
+                    role_col = i
+            if name_col is None:
+                name_col = 0 if len(cols) >= 1 else None
+            if role_col is None:
+                role_col = 1 if len(cols) >= 2 else None
+            if name_col is None or role_col is None:
+                return
+            for _, row in df.iterrows():
+                try:
+                    name_val = str(row.iloc[name_col]).strip()
+                    role_val = str(row.iloc[role_col]).strip()
+                    if name_val == self.user_name:
+                        self.user_role = role_val
+                        break
+                except Exception:
+                    continue
+        except Exception:
+            pass
 
     def adjust_font_sizes(self):
-        """根据屏幕分辨率调整字体大小"""
+        """根据屏幕分辨率调整字体大小，并兼容Win7字体"""
         screen_width = self.root.winfo_screenwidth()
-        
-        # 根据屏幕宽度调整字体
         if screen_width >= 1920:
             font_size = 10
         elif screen_width >= 1600:
@@ -885,10 +1256,23 @@ class ExcelProcessorApp:
             font_size = 9
         else:
             font_size = 8
-        
-        # 设置默认字体
-        default_font = ('Microsoft YaHei UI', font_size)
-        
+
+        # 字体降级兼容
+        font_candidates = ["Microsoft YaHei UI", "Microsoft YaHei", "SimSun"]
+        for font_name in font_candidates:
+            try:
+                self.root.option_add("*Font", (font_name, font_size))
+                default_font = (font_name, font_size)
+                # 测试能否正常设置字体
+                test_label = tk.Label(self.root, text="test", font=default_font)
+                test_label.destroy()
+                break
+            except Exception:
+                continue
+        else:
+            # 如果都失败，使用Tk默认字体
+            default_font = ("TkDefaultFont", font_size)
+
         style = ttk.Style()
         style.configure('TLabel', font=default_font)
         style.configure('TButton', font=default_font)
@@ -910,31 +1294,74 @@ class ExcelProcessorApp:
             self.save_config()
             self.refresh_file_list()
 
+    def browse_export_folder(self):
+        """选择导出结果生成位置（可为空，表示沿用文件夹路径）"""
+        folder_path = filedialog.askdirectory(
+            title="选择导出结果位置",
+            initialdir=self.export_path_var.get() or self.path_var.get() or os.path.expanduser("~")
+        )
+        if folder_path:
+            self.export_path_var.set(folder_path)
+            self.config["export_folder_path"] = folder_path
+            self.save_config()
+
     def show_settings_menu(self):
         """显示设置菜单"""
         # 创建设置菜单窗口
         settings_menu = tk.Toplevel(self.root)
         settings_menu.title("设置")
-        settings_menu.geometry("250x120")
+        settings_menu.geometry("560x420")
         settings_menu.transient(self.root)
         settings_menu.grab_set()
+        settings_menu.resizable(False, False)
         
         # 设置窗口图标
         try:
-            icon_path = "ico_bin/tubiao.ico"
+            icon_path = get_resource_path("ico_bin/tubiao.ico")
             if os.path.exists(icon_path):
                 settings_menu.iconbitmap(icon_path)
         except Exception as e:
             print(f"设置菜单图标失败: {e}")
         
         # 居中显示
-        x = self.root.winfo_rootx() + (self.root.winfo_width() // 2) - 125
-        y = self.root.winfo_rooty() + 50
-        settings_menu.geometry(f"+{x}+{y}")
+        try:
+            settings_menu.update_idletasks()
+            win_w = settings_menu.winfo_width() or 380
+            x = self.root.winfo_rootx() + (self.root.winfo_width() // 2) - (win_w // 2)
+            y = self.root.winfo_rooty() + 50
+            settings_menu.geometry(f"+{x}+{y}")
+        except Exception:
+            pass
         
         # 设置框架
         frame = ttk.Frame(settings_menu, padding="15")
         frame.pack(fill=tk.BOTH, expand=True)
+        
+        # 姓名输入
+        name_frame = ttk.Frame(frame)
+        name_frame.pack(fill=tk.X, pady=(0, 10))
+        ttk.Label(name_frame, text="姓名:").pack(side=tk.LEFT)
+        self.user_name_var = tk.StringVar(value=self.config.get("user_name", ""))
+        name_entry = ttk.Entry(name_frame, textvariable=self.user_name_var, width=20)
+        name_entry.pack(side=tk.LEFT, padx=(8, 0))
+        try:
+            ttk.Label(name_frame, text="例:王任超", foreground="gray").pack(side=tk.LEFT, padx=(8,0))
+        except Exception:
+            pass
+
+        def on_name_change(*_):
+            self.config["user_name"] = self.user_name_var.get().strip()
+            self.save_config()
+            try:
+                self.load_user_role()
+            except Exception:
+                pass
+            # 根据姓名更新按钮可用性
+            try:
+                self._enforce_user_name_gate(show_popup=False)
+            except Exception:
+                pass
+        self.user_name_var.trace_add('write', on_name_change)
         
         # 开机自启动选项
         auto_startup_check = ttk.Checkbutton(
@@ -953,13 +1380,76 @@ class ExcelProcessorApp:
             command=self.toggle_close_dialog
         )
         close_dialog_check.pack(anchor=tk.W, pady=(0, 10))
+
+        # 不显示前月数据（影响日期筛选逻辑开关）
+        self.hide_previous_months_var = tk.BooleanVar(value=self.config.get("hide_previous_months", False))
+        def on_toggle_hide_prev():
+            self.config["hide_previous_months"] = self.hide_previous_months_var.get()
+            self.save_config()
+        hide_prev_check = ttk.Checkbutton(
+            frame,
+            text="不显示前月数据",
+            variable=self.hide_previous_months_var,
+            command=on_toggle_hide_prev
+        )
+        hide_prev_check.pack(anchor=tk.W, pady=(0, 10))
+
+        # 定时器设置
+        timer_frame = ttk.LabelFrame(frame, text="定时自动运行", padding="10")
+        timer_frame.pack(fill=tk.X, pady=(5, 10))
+
+        self.timer_enabled_var = tk.BooleanVar(value=self.timer_enabled)
+        def on_timer_enabled():
+            self.timer_enabled = self.timer_enabled_var.get()
+            self._save_yaml_all()
+        ttk.Checkbutton(timer_frame, text="启用定时自动运行", variable=self.timer_enabled_var, command=on_timer_enabled).pack(anchor=tk.W)
+
+        self.timer_require_24h_var = tk.BooleanVar(value=self.timer_require_24h)
+        def on_timer_require_24h():
+            self.timer_require_24h = self.timer_require_24h_var.get()
+            self._save_yaml_all()
+        ttk.Checkbutton(timer_frame, text="仅当运行满24小时后才触发", variable=self.timer_require_24h_var, command=on_timer_require_24h).pack(anchor=tk.W, pady=(4,0))
+
+        times_row = ttk.Frame(timer_frame)
+        times_row.pack(fill=tk.X, pady=(6,0))
+        ttk.Label(times_row, text="触发时间(逗号分隔):").pack(side=tk.LEFT)
+        self.timer_times_var = tk.StringVar(value=self.timer_times)
+        def on_times_change(*_):
+            self.timer_times = self.timer_times_var.get().strip() or "10:00,16:00"
+            self._save_yaml_all()
+        ttk.Entry(times_row, textvariable=self.timer_times_var, width=22).pack(side=tk.LEFT, padx=(8,0))
+        self.timer_times_var.trace_add('write', on_times_change)
+
+        grace_row = ttk.Frame(timer_frame)
+        grace_row.pack(fill=tk.X, pady=(6,0))
+        ttk.Label(grace_row, text="容错分钟:").pack(side=tk.LEFT)
+        self.timer_grace_var = tk.StringVar(value=str(self.timer_grace_minutes))
+        def on_grace_change(*_):
+            try:
+                gm = int(self.timer_grace_var.get().strip())
+                if gm < 0:
+                    gm = 0
+                self.timer_grace_minutes = gm
+                self._save_yaml_all()
+            except Exception:
+                pass
+        ttk.Entry(grace_row, textvariable=self.timer_grace_var, width=8).pack(side=tk.LEFT, padx=(8,0))
+        try:
+            ttk.Label(grace_row, text="说明：上面是您希望的弹窗时间，左侧10分钟不建议调整", foreground="gray").pack(side=tk.LEFT, padx=(8,0))
+        except Exception:
+            pass
+        self.timer_grace_var.trace_add('write', on_grace_change)
+
+        # （已移除缓存设置）
         
         # 关闭按钮
-        close_button = ttk.Button(frame, text="确定", command=settings_menu.destroy)
+        close_button = ttk.Button(frame, text="确定", command=settings_menu.destroy, width=14)
         close_button.pack(pady=(10, 0))
 
     def show_waiting_dialog(self, title, message):
         """显示等待对话框"""
+        if getattr(self, 'auto_mode', False):
+            return None, None
         waiting_dialog = tk.Toplevel(self.root)
         waiting_dialog.title(title)
         waiting_dialog.geometry("280x100")
@@ -969,7 +1459,7 @@ class ExcelProcessorApp:
         
         # 设置窗口图标
         try:
-            icon_path = "ico_bin/tubiao.ico"
+            icon_path = get_resource_path("ico_bin/tubiao.ico")
             if os.path.exists(icon_path):
                 waiting_dialog.iconbitmap(icon_path)
         except Exception as e:
@@ -1000,6 +1490,8 @@ class ExcelProcessorApp:
     
     def show_export_waiting_dialog(self, title, message, total_count):
         """显示导出等待对话框，支持进度显示"""
+        if getattr(self, 'auto_mode', False):
+            return None, None
         waiting_dialog = tk.Toplevel(self.root)
         waiting_dialog.title(title)
         waiting_dialog.geometry("320x120")
@@ -1009,7 +1501,7 @@ class ExcelProcessorApp:
         
         # 设置窗口图标
         try:
-            icon_path = "ico_bin/tubiao.ico"
+            icon_path = get_resource_path("ico_bin/tubiao.ico")
             if os.path.exists(icon_path):
                 waiting_dialog.iconbitmap(icon_path)
         except Exception as e:
@@ -1055,12 +1547,14 @@ class ExcelProcessorApp:
 
     def refresh_file_list(self, show_popup=True):
         """刷新Excel文件列表"""
+        import os
+        
         folder_path = self.path_var.get().strip()
         if not folder_path or not os.path.exists(folder_path):
             self.update_file_info("请选择有效的文件夹路径")
             return
         
-        # 显示等待对话框
+        # 显示等待对话框（自动模式下不显示）
         waiting_dialog, _ = self.show_waiting_dialog("刷新文件列表", "正在刷新中，请稍后。。。 。。。")
         
         # 使用after方法延迟执行实际刷新操作，确保等待对话框能正确显示
@@ -1081,28 +1575,101 @@ class ExcelProcessorApp:
                 if self.excel_files:
                     file_info = f"找到 {len(self.excel_files)} 个Excel文件:\n"
                     
-                    # 显示待处理文件信息
-                    if self.target_file1:
-                        file_info += f"✓ 待处理文件1 (应打开接口): {os.path.basename(self.target_file1)}\n"
-                    if self.target_file2:
-                        file_info += f"✓ 待处理文件2 (需回复接口): {os.path.basename(self.target_file2)}\n"
-                    if self.target_file3:
-                        file_info += f"✓ 待处理文件3 (外部接口ICM): {os.path.basename(self.target_file3)}\n"
-                    if self.target_file4:
-                        file_info += f"✓ 待处理文件4 (外部接口单): {os.path.basename(self.target_file4)}\n"
+                    # 统计所有识别到的文件
+                    total_identified_files = 0
+                    project_summary = {}  # {项目号: 文件数量}
                     
-                    file_info += f"\n全部文件列表:\n"
+                    # 显示待处理文件1信息（批量）
+                    if self.target_files1:
+                        file_info += f"✓ 待处理文件1 (内部需打开接口): {len(self.target_files1)} 个文件\n"
+                        for file_path, project_id in self.target_files1:
+                            disp_pid = project_id if project_id else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(file_path)}\n"
+                            project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
+                        total_identified_files += len(self.target_files1)
+                    
+                    # 显示待处理文件2信息（批量）
+                    if self.target_files2:
+                        file_info += f"✓ 待处理文件2 (内部需回复接口): {len(self.target_files2)} 个文件\n"
+                        for file_path, project_id in self.target_files2:
+                            disp_pid = project_id if project_id else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(file_path)}\n"
+                            project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
+                        total_identified_files += len(self.target_files2)
+                    
+                    # 显示待处理文件3信息（批量）
+                    if self.target_files3:
+                        file_info += f"✓ 待处理文件3 (外部需打开接口): {len(self.target_files3)} 个文件\n"
+                        for file_path, project_id in self.target_files3:
+                            disp_pid = project_id if project_id else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(file_path)}\n"
+                            project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
+                        total_identified_files += len(self.target_files3)
+                    
+                    # 显示待处理文件4信息（批量）
+                    if self.target_files4:
+                        file_info += f"✓ 待处理文件4 (外部需回复接口): {len(self.target_files4)} 个文件\n"
+                        for file_path, project_id in self.target_files4:
+                            disp_pid = project_id if project_id else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(file_path)}\n"
+                            project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
+                        total_identified_files += len(self.target_files4)
+
+                    # 显示待处理文件5信息（批量）
+                    if self.target_files5:
+                        file_info += f"✓ 待处理文件5 (三维提资接口): {len(self.target_files5)} 个文件\n"
+                        for file_path, project_id in self.target_files5:
+                            disp_pid = project_id if project_id else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(file_path)}\n"
+                            project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
+                        total_identified_files += len(self.target_files5)
+
+                    # 显示待处理文件6信息（批量）
+                    if self.target_files6:
+                        file_info += f"✓ 待处理文件6 (收发文函): {len(self.target_files6)} 个文件\n"
+                        for file_path, project_id in self.target_files6:
+                            disp_pid = project_id if project_id else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(file_path)}\n"
+                            project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
+                        total_identified_files += len(self.target_files6)
+                    
+                    # 项目汇总信息
+                    if project_summary:
+                        file_info += f"\n📊 项目汇总:\n"
+                        for project_id, count in sorted(project_summary.items()):
+                            disp_pid = project_id if project_id else "未知项目"
+                            file_info += f"  项目 {disp_pid}: {count} 个文件\n"
+                        file_info += f"  总计: {len(project_summary)} 个项目, {total_identified_files} 个待处理文件\n"
+                    
+                    # 显示示例文件（主界面显示第一个文件作为示例）
+                    file_info += f"\n📋 主界面显示示例:\n"
+                    if self.target_file1:
+                        file_info += f"  内部需打开接口: {os.path.basename(self.target_file1)} (项目{self.target_file1_project_id})\n"
+                    if self.target_file2:
+                        file_info += f"  内部需回复接口: {os.path.basename(self.target_file2)} (项目{self.target_file2_project_id})\n"
+                    if self.target_file3:
+                        file_info += f"  外部需打开接口: {os.path.basename(self.target_file3)} (项目{self.target_file3_project_id})\n"
+                    if self.target_file4:
+                        file_info += f"  外部需回复接口: {os.path.basename(self.target_file4)} (项目{self.target_file4_project_id})\n"
+                    
+                    file_info += f"\n📁 全部Excel文件列表:\n"
                     for i, file_path in enumerate(self.excel_files, 1):
                         file_name = os.path.basename(file_path)
                         file_size = os.path.getsize(file_path)
                         file_info += f"{i}. {file_name} ({file_size} 字节)\n"
+                        
+                    # 准备弹窗信息
+                    popup_message = self._generate_popup_message(project_summary, total_identified_files)
+                    
                 else:
                     file_info = "在指定路径下未找到Excel文件"
+                    popup_message = "未找到任何Excel文件"
                 
                 self.update_file_info(file_info)
                 
             except Exception as e:
                 self.update_file_info(f"读取文件列表时发生错误: {str(e)}")
+                popup_message = f"读取文件列表时发生错误: {str(e)}"
             
             # 刷新完成后，更新当前选项卡的显示
             self.refresh_current_tab_display()
@@ -1110,12 +1677,34 @@ class ExcelProcessorApp:
             # 关闭等待对话框
             self.close_waiting_dialog(waiting_dialog)
             
-            # 仅在手动刷新时显示弹窗
-            if show_popup:
-                messagebox.showinfo("刷新完成", "已完成刷新")
+            # 仅在手动刷新时显示弹窗（包含识别结果）。自动模式禁用
+            if show_popup and not getattr(self, 'auto_mode', False):
+                messagebox.showinfo("文件识别完成", popup_message)
         
         # 延迟执行刷新操作，确保等待对话框能够显示
         self.root.after(100, do_refresh)
+
+    def _generate_popup_message(self, project_summary, total_identified_files):
+        """生成弹窗显示的识别结果信息"""
+        if not project_summary:
+            return "未识别到任何待处理文件"
+        
+        message = f"🎉 文件识别成功！\n\n"
+        message += f"📊 识别结果汇总:\n"
+        message += f"• 发现 {len(project_summary)} 个项目\n"
+        message += f"• 共计 {total_identified_files} 个待处理文件\n\n"
+        
+        message += f"📋 各项目详情:\n"
+        for project_id in sorted(project_summary.keys()):
+            count = project_summary[project_id]
+            message += f"• 项目 {project_id}: {count} 个文件\n"
+        
+        message += f"\n💡 提示:\n"
+        message += f"• 主界面显示第一个项目的文件作为示例\n"
+        message += f"• 勾选文件类型将处理所有相应的项目文件\n"
+        message += f"• 导出结果将按项目号自动分文件夹存放"
+        
+        return message
 
     def refresh_current_tab_display(self):
         """刷新当前选项卡的显示内容"""
@@ -1125,16 +1714,40 @@ class ExcelProcessorApp:
             
             # 根据当前选项卡刷新对应的显示内容
             if current_tab == 0 and self.target_file1:  # 应打开接口
-                self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "应打开接口")
+                self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
             elif current_tab == 1 and self.target_file2:  # 需回复接口
-                self.load_file_to_viewer(self.target_file2, self.tab2_viewer, "需回复接口")
+                self.load_file_to_viewer(self.target_file2, self.tab2_viewer, "内部需回复接口")
             elif current_tab == 2 and self.target_file3:  # 外部接口ICM
-                self.load_file_to_viewer(self.target_file3, self.tab3_viewer, "外部接口ICM")
+                self.load_file_to_viewer(self.target_file3, self.tab3_viewer, "外部需打开接口")
             elif current_tab == 3 and self.target_file4:  # 外部接口单
-                self.load_file_to_viewer(self.target_file4, self.tab4_viewer, "外部接口单")
+                self.load_file_to_viewer(self.target_file4, self.tab4_viewer, "外部需回复接口")
+            elif current_tab == 4 and getattr(self, 'target_files5', None):  # 三维提资接口
+                if self.has_processed_results5 and self.processing_results5 is not None and not self.processing_results5.empty:
+                    display_df = self.processing_results5.drop(columns=['原始行号'], errors='ignore')
+                    excel_row_numbers = list(self.processing_results5['原始行号'])
+                    self.display_excel_data_with_original_rows(self.tab5_viewer, display_df, "三维提资接口", excel_row_numbers)
+                elif self.has_processed_results5:
+                    self.show_empty_message(self.tab5_viewer, "无三维提资接口")
+                elif self.file5_data is not None:
+                    self.display_excel_data(self.tab5_viewer, self.file5_data, "三维提资接口")
+            elif current_tab == 5 and getattr(self, 'target_files6', None):  # 收发文函
+                # 若视图已有内容，则不重绘，保持当前显示
+                try:
+                    if len(self.tab6_viewer.get_children()) > 0:
+                        return
+                except Exception:
+                    pass
+                if self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
+                    display_df = self.processing_results6.drop(columns=['原始行号'], errors='ignore')
+                    excel_row_numbers = list(self.processing_results6['原始行号'])
+                    self.display_excel_data_with_original_rows(self.tab6_viewer, display_df, "收发文函", excel_row_numbers)
+                elif self.has_processed_results6:
+                    self.show_empty_message(self.tab6_viewer, "无收发文函")
+                elif self.file6_data is not None:
+                    self.display_excel_data(self.tab6_viewer, self.file6_data, "收发文函")
             else:
                 # 如果当前选项卡没有对应的文件，显示空提示
-                tab_names = ["应打开接口", "需回复接口", "外部接口ICM", "外部接口单"]
+                tab_names = ["内部需打开接口", "内部需回复接口", "外部需打开接口", "外部需回复接口"]
                 viewers = [self.tab1_viewer, self.tab2_viewer, self.tab3_viewer, self.tab4_viewer]
                 if 0 <= current_tab < len(tab_names):
                     self.show_empty_message(viewers[current_tab], f"等待加载{tab_names[current_tab]}数据")
@@ -1143,7 +1756,7 @@ class ExcelProcessorApp:
 
     def identify_target_files(self):
         """识别特定格式的目标文件"""
-        # 重置文件状态
+        # 重置单文件状态（兼容性保留）
         self.target_file1 = None
         self.target_file1_project_id = None
         self.target_file2 = None
@@ -1156,11 +1769,34 @@ class ExcelProcessorApp:
         self.file2_data = None
         self.file3_data = None
         self.file4_data = None
+        
+        # 重置多文件状态
+        self.target_files1 = []
+        self.target_files2 = []
+        self.target_files3 = []
+        self.target_files4 = []
+        self.target_files5 = []
+        self.target_files6 = []
+        self.files1_data = {}
+        self.files2_data = {}
+        self.files3_data = {}
+        self.files4_data = {}
+        self.files5_data = {}
+        self.files6_data = {}
+        self.processing_results_multi1 = {}
+        self.processing_results_multi2 = {}
+        self.processing_results_multi3 = {}
+        self.processing_results_multi4 = {}
+        self.processing_results_multi5 = {}
+        self.processing_results_multi6 = {}
+        
         # 重置处理结果状态标记
         self.has_processed_results1 = False
         self.has_processed_results2 = False
         self.has_processed_results3 = False
         self.has_processed_results4 = False
+        self.has_processed_results5 = False
+        self.has_processed_results6 = False
         # 重置选项卡状态
         self.update_tab_color(0, "normal")
         self.update_tab_color(1, "normal")
@@ -1169,50 +1805,150 @@ class ExcelProcessorApp:
         if not self.excel_files:
             return
         try:
-            if os.path.exists("main.py"):
+            # 安全导入main模块（不依赖文件系统检查）
+            try:
                 import main
-                # 识别待处理文件1
-                if hasattr(main, 'find_target_file'):
-                    self.target_file1, self.target_file1_project_id = main.find_target_file(self.excel_files)
-                    if self.target_file1:
-                        self.update_tab_color(0, "green")
-                        self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "应打开接口")
-                # 识别待处理文件2
-                if hasattr(main, 'find_target_file2'):
-                    self.target_file2, self.target_file2_project_id = main.find_target_file2(self.excel_files)
-                    if self.target_file2:
-                        self.update_tab_color(1, "green")
-                        try:
-                            if self.target_file2.endswith('.xlsx'):
-                                self.file2_data = pd.read_excel(self.target_file2, sheet_name='Sheet1', engine='openpyxl')
-                            else:
-                                self.file2_data = pd.read_excel(self.target_file2, sheet_name='Sheet1', engine='xlrd')
-                        except Exception as e:
-                            print(f"预加载待处理文件2失败: {e}")
-                # 识别待处理文件3
-                if hasattr(main, 'find_target_file3'):
-                    self.target_file3, self.target_file3_project_id = main.find_target_file3(self.excel_files)
-                    if self.target_file3:
-                        self.update_tab_color(2, "green")
-                        try:
-                            if self.target_file3.endswith('.xlsx'):
-                                self.file3_data = pd.read_excel(self.target_file3, sheet_name='Sheet1', engine='openpyxl')
-                            else:
-                                self.file3_data = pd.read_excel(self.target_file3, sheet_name='Sheet1', engine='xlrd')
-                        except Exception as e:
-                            print(f"预加载待处理文件3失败: {e}")
-                # 识别待处理文件4
-                if hasattr(main, 'find_target_file4'):
-                    self.target_file4, self.target_file4_project_id = main.find_target_file4(self.excel_files)
-                    if self.target_file4:
-                        self.update_tab_color(3, "green")
-                        try:
-                            if self.target_file4.endswith('.xlsx'):
-                                self.file4_data = pd.read_excel(self.target_file4, sheet_name='Sheet1', engine='openpyxl')
-                            else:
-                                self.file4_data = pd.read_excel(self.target_file4, sheet_name='Sheet1', engine='xlrd')
-                        except Exception as e:
-                            print(f"预加载待处理文件4失败: {e}")
+            except ImportError:
+                import sys
+                import os
+                # 如果是打包环境，添加当前目录到路径
+                if hasattr(sys, '_MEIPASS'):
+                    sys.path.insert(0, sys._MEIPASS)
+                else:
+                    sys.path.insert(0, os.path.dirname(__file__))
+                import main
+            
+            # 识别待处理文件1（批量 + 兼容性）
+            if hasattr(main, 'find_all_target_files1'):
+                # 批量识别所有待处理文件1
+                self.target_files1 = main.find_all_target_files1(self.excel_files)
+                if self.target_files1:
+                    # 兼容性：设置第一个文件为单文件变量
+                    self.target_file1, self.target_file1_project_id = self.target_files1[0]
+                    self.update_tab_color(0, "green")
+                    self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
+            elif hasattr(main, 'find_target_file'):
+                # 兼容旧版本
+                self.target_file1, self.target_file1_project_id = main.find_target_file(self.excel_files)
+                if self.target_file1:
+                    self.target_files1 = [(self.target_file1, self.target_file1_project_id)]
+                    self.update_tab_color(0, "green")
+                    self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
+            
+            # 识别待处理文件2（批量 + 兼容性）
+            if hasattr(main, 'find_all_target_files2'):
+                # 批量识别所有待处理文件2
+                self.target_files2 = main.find_all_target_files2(self.excel_files)
+                if self.target_files2:
+                    # 兼容性：设置第一个文件为单文件变量
+                    self.target_file2, self.target_file2_project_id = self.target_files2[0]
+                    self.update_tab_color(1, "green")
+                    try:
+                        if self.target_file2.endswith('.xlsx'):
+                            self.file2_data = pd.read_excel(self.target_file2, sheet_name=0, engine='openpyxl')
+                        else:
+                            self.file2_data = pd.read_excel(self.target_file2, sheet_name=0, engine='xlrd')
+                    except Exception as e:
+                        print(f"预加载待处理文件2失败: {e}")
+            elif hasattr(main, 'find_target_file2'):
+                # 兼容旧版本
+                self.target_file2, self.target_file2_project_id = main.find_target_file2(self.excel_files)
+                if self.target_file2:
+                    self.target_files2 = [(self.target_file2, self.target_file2_project_id)]
+                    self.update_tab_color(1, "green")
+                    try:
+                        if self.target_file2.endswith('.xlsx'):
+                            self.file2_data = pd.read_excel(self.target_file2, sheet_name=0, engine='openpyxl')
+                        else:
+                            self.file2_data = pd.read_excel(self.target_file2, sheet_name=0, engine='xlrd')
+                    except Exception as e:
+                        print(f"预加载待处理文件2失败: {e}")
+            
+            # 识别待处理文件3（批量 + 兼容性）
+            if hasattr(main, 'find_all_target_files3'):
+                # 批量识别所有待处理文件3
+                self.target_files3 = main.find_all_target_files3(self.excel_files)
+                if self.target_files3:
+                    # 兼容性：设置第一个文件为单文件变量
+                    self.target_file3, self.target_file3_project_id = self.target_files3[0]
+                    self.update_tab_color(2, "green")
+                    try:
+                        if self.target_file3.endswith('.xlsx'):
+                            self.file3_data = pd.read_excel(self.target_file3, sheet_name=0, engine='openpyxl')
+                        else:
+                            self.file3_data = pd.read_excel(self.target_file3, sheet_name=0, engine='xlrd')
+                    except Exception as e:
+                        print(f"预加载待处理文件3失败: {e}")
+            elif hasattr(main, 'find_target_file3'):
+                # 兼容旧版本
+                self.target_file3, self.target_file3_project_id = main.find_target_file3(self.excel_files)
+                if self.target_file3:
+                    self.target_files3 = [(self.target_file3, self.target_file3_project_id)]
+                    self.update_tab_color(2, "green")
+                    try:
+                        if self.target_file3.endswith('.xlsx'):
+                            self.file3_data = pd.read_excel(self.target_file3, sheet_name=0, engine='openpyxl')
+                        else:
+                            self.file3_data = pd.read_excel(self.target_file3, sheet_name=0, engine='xlrd')
+                    except Exception as e:
+                        print(f"预加载待处理文件3失败: {e}")
+            
+            # 识别待处理文件4（批量 + 兼容性）
+            if hasattr(main, 'find_all_target_files4'):
+                # 批量识别所有待处理文件4
+                self.target_files4 = main.find_all_target_files4(self.excel_files)
+                if self.target_files4:
+                    # 兼容性：设置第一个文件为单文件变量
+                    self.target_file4, self.target_file4_project_id = self.target_files4[0]
+                    self.update_tab_color(3, "green")
+                    try:
+                        if self.target_file4.endswith('.xlsx'):
+                            self.file4_data = pd.read_excel(self.target_file4, sheet_name=0, engine='openpyxl')
+                        else:
+                            self.file4_data = pd.read_excel(self.target_file4, sheet_name=0, engine='xlrd')
+                    except Exception as e:
+                        print(f"预加载待处理文件4失败: {e}")
+            elif hasattr(main, 'find_target_file4'):
+                # 兼容旧版本
+                self.target_file4, self.target_file4_project_id = main.find_target_file4(self.excel_files)
+                if self.target_file4:
+                    self.target_files4 = [(self.target_file4, self.target_file4_project_id)]
+                    self.update_tab_color(3, "green")
+                    try:
+                        if self.target_file4.endswith('.xlsx'):
+                            self.file4_data = pd.read_excel(self.target_file4, sheet_name=0, engine='openpyxl')
+                        else:
+                            self.file4_data = pd.read_excel(self.target_file4, sheet_name=0, engine='xlrd')
+                    except Exception as e:
+                        print(f"预加载待处理文件4失败: {e}")
+
+            # 识别待处理文件5（批量）
+            if hasattr(main, 'find_all_target_files5'):
+                self.target_files5 = main.find_all_target_files5(self.excel_files)
+                if self.target_files5:
+                    self.update_tab_color(4, "green")
+                    try:
+                        file5, _pid5 = self.target_files5[0]
+                        if file5.endswith('.xlsx'):
+                            self.file5_data = pd.read_excel(file5, sheet_name=0, engine='openpyxl')
+                        else:
+                            self.file5_data = pd.read_excel(file5, sheet_name=0, engine='xlrd')
+                    except Exception as e:
+                        print(f"预加载待处理文件5失败: {e}")
+
+            # 识别待处理文件6（批量）
+            if hasattr(main, 'find_all_target_files6'):
+                self.target_files6 = main.find_all_target_files6(self.excel_files)
+                if self.target_files6:
+                    self.update_tab_color(5, "green")
+                    try:
+                        file6, _pid6 = self.target_files6[0]
+                        if file6.endswith('.xlsx'):
+                            self.file6_data = pd.read_excel(file6, sheet_name=0, engine='openpyxl')
+                        else:
+                            self.file6_data = pd.read_excel(file6, sheet_name=0, engine='xlrd')
+                    except Exception as e:
+                        print(f"预加载待处理文件6失败: {e}")
         except Exception as e:
             print(f"识别目标文件时发生错误: {e}")
 
@@ -1225,106 +1961,455 @@ class ExcelProcessorApp:
 
     def start_processing(self):
         """开始处理Excel文件"""
-        print("自动刷新文件列表...")
-        self.refresh_file_list(show_popup=False)  # 不显示刷新弹窗
+        
+        # 姓名必填校验
+        try:
+            if (not self.config.get("user_name", "").strip()) and (not getattr(self, 'auto_mode', False)):
+                message = "请先在设置中填写‘姓名’，否则无法开始处理。"
+                try:
+                    from tkinter import messagebox as _mb
+                    _mb.showwarning("提示", message)
+                except Exception:
+                    pass
+                return
+        except Exception:
+            pass
         
         # 检查勾选状态
         process_file1 = self.process_file1_var.get()
         process_file2 = self.process_file2_var.get()
         process_file3 = self.process_file3_var.get()
         process_file4 = self.process_file4_var.get()
-        if not (process_file1 or process_file2 or process_file3 or process_file4):
-            messagebox.showwarning("警告", "请至少勾选一个需要处理的接口类型！")
+        process_file5 = self.process_file5_var.get()
+        process_file6 = self.process_file6_var.get()
+        if not (process_file1 or process_file2 or process_file3 or process_file4 or process_file5 or process_file6):
+            if not getattr(self, 'auto_mode', False):
+                messagebox.showwarning("警告", "请至少勾选一个需要处理的接口类型！")
             return
         
-        # 显示等待对话框
+        # 显示等待对话框（自动模式下不显示）
         processing_dialog, _ = self.show_waiting_dialog("开始处理", "正在处理中，请稍后。。。 。。。")
             
         self.process_button.config(state='disabled', text="处理中...")
         
         def process_files():
             try:
-                import main
+                # 导入必要的模块
+                import pandas as pd
+                import os
+                import sys
+                # 读取日期逻辑开关
+                hide_prev = False
+                try:
+                    hide_prev = bool(self.config.get("hide_previous_months", False))
+                except Exception:
+                    hide_prev = False
+                
+                # 安全导入main模块
+                try:
+                    import main
+                except ImportError:
+                    # 如果是打包环境，添加当前目录到路径
+                    if hasattr(sys, '_MEIPASS'):
+                        sys.path.insert(0, sys._MEIPASS)
+                    else:
+                        sys.path.insert(0, os.path.dirname(__file__))
+                    import main
+                # 将设置中的日期逻辑开关传递给 main 模块
+                try:
+                    main.USE_OLD_DATE_LOGIC = hide_prev
+                except Exception:
+                    pass
+
+                # （已移除缓存模块）
+                # 初始化处理结果变量
                 results1 = None
                 results2 = None
                 results3 = None
                 results4 = None
                 
-                # 处理各个文件
-                if process_file1 and self.target_file1:
+                # 处理待处理文件1（批量）
+                if process_file1 and self.target_files1:
                     if hasattr(main, 'process_target_file'):
-                        results1 = main.process_target_file(self.target_file1, self.current_datetime)
-                if process_file2 and self.target_file2:
+                        print(f"开始批量处理文件1类型，共 {len(self.target_files1)} 个文件")
+                        try:
+                            import Monitor
+                            project_ids = list(set([pid for _, pid in self.target_files1]))
+                            Monitor.log_process(f"开始批量处理待处理文件1: {len(self.target_files1)}个文件，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
+                        except:
+                            pass
+                        
+                        self.processing_results_multi1 = {}
+                        combined_results = []
+                        
+                        for file_path, project_id in self.target_files1:
+                            try:
+                                print(f"处理项目{project_id}的文件1: {os.path.basename(file_path)}")
+                                try:
+                                    import Monitor
+                                    Monitor.log_process(f"处理项目{project_id}的待处理文件1: {os.path.basename(file_path)}")
+                                except:
+                                    pass
+
+                                # 直接处理（缓存已移除）
+                                result = main.process_target_file(file_path, self.current_datetime)
+                                if result is not None and not result.empty:
+                                    self.processing_results_multi1[project_id] = result
+                                    combined_results.append(result)
+                                    print(f"项目{project_id}文件1处理完成: {len(result)} 行")
+                                    try:
+                                        import Monitor
+                                        Monitor.log_success(f"项目{project_id}文件1处理完成: {len(result)} 行数据")
+                                    except:
+                                        pass
+                                else:
+                                    print(f"项目{project_id}文件1处理结果为空")
+                                    try:
+                                        import Monitor
+                                        Monitor.log_warning(f"项目{project_id}文件1处理结果为空")
+                                    except:
+                                        pass
+                            except Exception as e:
+                                print(f"项目{project_id}文件1处理失败: {e}")
+                                try:
+                                    import Monitor
+                                    Monitor.log_error(f"项目{project_id}文件1处理失败: {e}")
+                                except:
+                                    pass
+                        
+                        # 合并所有结果（兼容性）
+                        if combined_results:
+                            results1 = pd.concat(combined_results, ignore_index=True)
+                            print(f"文件1批量处理完成，总计: {len(results1)} 行")
+                            try:
+                                import Monitor
+                                Monitor.log_success(f"待处理文件1批量处理完成: 总计{len(results1)}行数据，来自{len(combined_results)}个项目")
+                            except:
+                                pass
+                        else:
+                            # 所有项目都没有结果，创建空DataFrame以确保显示"无数据"
+                            results1 = pd.DataFrame()
+                            print(f"文件1批量处理完成，所有项目都无符合条件的数据")
+                            try:
+                                import Monitor
+                                Monitor.log_warning(f"待处理文件1批量处理完成: 所有项目都无符合条件的数据")
+                            except:
+                                pass
+                
+                # 处理待处理文件2（批量）
+                if process_file2 and self.target_files2:
                     if hasattr(main, 'process_target_file2'):
-                        results2 = main.process_target_file2(self.target_file2, self.current_datetime)
-                if process_file3 and self.target_file3:
+                        print(f"开始批量处理文件2类型，共 {len(self.target_files2)} 个文件")
+                        try:
+                            import Monitor
+                            project_ids = list(set([pid for _, pid in self.target_files2]))
+                            Monitor.log_process(f"开始批量处理待处理文件2: {len(self.target_files2)}个文件，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
+                        except:
+                            pass
+                        
+                        self.processing_results_multi2 = {}
+                        combined_results = []
+                        
+                        for file_path, project_id in self.target_files2:
+                            try:
+                                print(f"处理项目{project_id}的文件2: {os.path.basename(file_path)}")
+                                result = main.process_target_file2(file_path, self.current_datetime)
+                                if result is not None and not result.empty:
+                                    self.processing_results_multi2[project_id] = result
+                                    combined_results.append(result)
+                                    print(f"项目{project_id}文件2处理完成: {len(result)} 行")
+                                else:
+                                    print(f"项目{project_id}文件2处理结果为空")
+                            except Exception as e:
+                                print(f"项目{project_id}文件2处理失败: {e}")
+                        
+                        # 合并所有结果（兼容性）
+                        if combined_results:
+                            results2 = pd.concat(combined_results, ignore_index=True)
+                            print(f"文件2批量处理完成，总计: {len(results2)} 行")
+                        else:
+                            # 所有项目都没有结果，创建空DataFrame以确保显示"无数据"
+                            results2 = pd.DataFrame()
+                            print(f"文件2批量处理完成，所有项目都无符合条件的数据")
+                            try:
+                                import Monitor
+                                Monitor.log_warning(f"待处理文件2批量处理完成: 所有项目都无符合条件的数据")
+                            except:
+                                pass
+                
+                # 处理待处理文件3（批量）
+                if process_file3 and self.target_files3:
                     if hasattr(main, 'process_target_file3'):
-                        try:
-                            results3 = main.process_target_file3(self.target_file3, self.current_datetime)
-                        except NotImplementedError:
-                            results3 = None
-                if process_file4 and self.target_file4:
+                        print(f"开始批量处理文件3类型，共 {len(self.target_files3)} 个文件")
+                        self.processing_results_multi3 = {}
+                        combined_results = []
+                        
+                        for file_path, project_id in self.target_files3:
+                            try:
+                                print(f"处理项目{project_id}的文件3: {os.path.basename(file_path)}")
+                                result = main.process_target_file3(file_path, self.current_datetime)
+                                if result is not None and not result.empty:
+                                    self.processing_results_multi3[project_id] = result
+                                    combined_results.append(result)
+                                    print(f"项目{project_id}文件3处理完成: {len(result)} 行")
+                                else:
+                                    print(f"项目{project_id}文件3处理结果为空")
+                            except Exception as e:
+                                print(f"项目{project_id}文件3处理失败: {e}")
+                        
+                        # 合并所有结果（兼容性）
+                        if combined_results:
+                            results3 = pd.concat(combined_results, ignore_index=True)
+                            print(f"文件3批量处理完成，总计: {len(results3)} 行")
+                        else:
+                            # 所有项目都没有结果，创建空DataFrame以确保显示"无数据"
+                            results3 = pd.DataFrame()
+                            print(f"文件3批量处理完成，所有项目都无符合条件的数据")
+                            try:
+                                import Monitor
+                                Monitor.log_warning(f"待处理文件3批量处理完成: 所有项目都无符合条件的数据")
+                            except:
+                                pass
+                
+                # 处理待处理文件4（批量）
+                if process_file4 and self.target_files4:
                     if hasattr(main, 'process_target_file4'):
-                        try:
-                            results4 = main.process_target_file4(self.target_file4, self.current_datetime)
-                        except NotImplementedError:
-                            results4 = None
+                        print(f"开始批量处理文件4类型，共 {len(self.target_files4)} 个文件")
+                        self.processing_results_multi4 = {}
+                        combined_results = []
+                        
+                        for file_path, project_id in self.target_files4:
+                            try:
+                                print(f"处理项目{project_id}的文件4: {os.path.basename(file_path)}")
+                                result = main.process_target_file4(file_path, self.current_datetime)
+                                if result is not None and not result.empty:
+                                    self.processing_results_multi4[project_id] = result
+                                    combined_results.append(result)
+                                    print(f"项目{project_id}文件4处理完成: {len(result)} 行")
+                                else:
+                                    print(f"项目{project_id}文件4处理结果为空")
+                            except Exception as e:
+                                print(f"项目{project_id}文件4处理失败: {e}")
+                        
+                        # 合并所有结果（兼容性）
+                        if combined_results:
+                            results4 = pd.concat(combined_results, ignore_index=True)
+                            print(f"文件4批量处理完成，总计: {len(results4)} 行")
+                        else:
+                            # 所有项目都没有结果，创建空DataFrame以确保显示"无数据"
+                            results4 = pd.DataFrame()
+                            print(f"文件4批量处理完成，所有项目都无符合条件的数据")
+                            try:
+                                import Monitor
+                                Monitor.log_warning(f"待处理文件4批量处理完成: 所有项目都无符合条件的数据")
+                            except:
+                                pass
                 
                 def update_display():
-                    # 统一处理结果显示和弹窗
+                    # 统一处理结果显示和弹窗（批量处理版本）
                     processed_count = 0
                     completion_messages = []
                     active_tab = 0  # 默认显示第一个选项卡
                     
+                    # 统计批量处理信息
+                    total_projects = set()
+                    total_files_processed = 0
+                    
                     if process_file1 and results1 is not None:
                         self.display_results(results1, show_popup=False)
-                        active_tab = 0  # 应打开接口
+                        active_tab = 0  # 内部需打开接口
+                        project_count = len(self.processing_results_multi1)
+                        file_count = len(self.target_files1) if self.target_files1 else 1
+                        total_projects.update(self.processing_results_multi1.keys())
+                        total_files_processed += file_count
+                        
                         if not results1.empty:
                             processed_count += 1
-                            completion_messages.append(f"应打开接口：{len(results1)} 行数据")
+                            if project_count > 1:
+                                completion_messages.append(f"内部需打开接口：{len(results1)} 行数据 ({project_count}个项目)")
+                            else:
+                                completion_messages.append(f"内部需打开接口：{len(results1)} 行数据")
                         else:
-                            completion_messages.append("应打开接口：无符合条件的数据")
+                            completion_messages.append("内部需打开接口：无符合条件的数据")
                     
                     if process_file2 and results2 is not None:
                         self.display_results2(results2, show_popup=False)
-                        if active_tab == 0 and not process_file1:  # 如果file1没处理，显示file2
+                        if not process_file1:  # 如果file1没处理，显示file2
                             active_tab = 1
+                        project_count = len(self.processing_results_multi2)
+                        file_count = len(self.target_files2) if self.target_files2 else 1
+                        total_projects.update(self.processing_results_multi2.keys())
+                        total_files_processed += file_count
+                        
                         if not results2.empty:
                             processed_count += 1
-                            completion_messages.append(f"需回复接口：{len(results2)} 行数据")
+                            if project_count > 1:
+                                completion_messages.append(f"内部需回复接口：{len(results2)} 行数据 ({project_count}个项目)")
+                            else:
+                                completion_messages.append(f"内部需回复接口：{len(results2)} 行数据")
                         else:
-                            completion_messages.append("需回复接口：无符合条件的数据")
+                            completion_messages.append("内部需回复接口：无符合条件的数据")
                     
                     if process_file3 and results3 is not None:
                         self.display_results3(results3, show_popup=False)
-                        if active_tab == 0 and not process_file1 and not process_file2:  # 显示优先级
+                        if not process_file1 and not process_file2:  # 显示优先级
                             active_tab = 2
+                        project_count = len(self.processing_results_multi3)
+                        file_count = len(self.target_files3) if self.target_files3 else 1
+                        total_projects.update(self.processing_results_multi3.keys())
+                        total_files_processed += file_count
+                        
                         if not results3.empty:
                             processed_count += 1
-                            completion_messages.append(f"外部接口ICM：{len(results3)} 行数据")
+                            if project_count > 1:
+                                completion_messages.append(f"外部需打开接口：{len(results3)} 行数据 ({project_count}个项目)")
+                            else:
+                                completion_messages.append(f"外部需打开接口：{len(results3)} 行数据")
                         else:
-                            completion_messages.append("外部接口ICM：无符合条件的数据")
+                            completion_messages.append("外部需打开接口：无符合条件的数据")
                     
                     if process_file4 and results4 is not None:
                         self.display_results4(results4, show_popup=False)
-                        if active_tab == 0 and not process_file1 and not process_file2 and not process_file3:
+                        if not process_file1 and not process_file2 and not process_file3:
                             active_tab = 3
+                        project_count = len(self.processing_results_multi4)
+                        file_count = len(self.target_files4) if self.target_files4 else 1
+                        total_projects.update(self.processing_results_multi4.keys())
+                        total_files_processed += file_count
+                        
                         if not results4.empty:
                             processed_count += 1
-                            completion_messages.append(f"外部接口单：{len(results4)} 行数据")
+                            if project_count > 1:
+                                completion_messages.append(f"外部需回复接口：{len(results4)} 行数据 ({project_count}个项目)")
+                            else:
+                                completion_messages.append(f"外部需回复接口：{len(results4)} 行数据")
                         else:
-                            completion_messages.append("外部接口单：无符合条件的数据")
+                            completion_messages.append("外部需回复接口：无符合条件的数据")
                     
-                    # 选择显示的选项卡（优先级：file1 > file2 > file3 > file4）
+                    # 处理待处理文件5（批量）
+                    process_file5 = getattr(self, 'process_file5_var', tk.BooleanVar(value=False)).get()
+                    results5 = None
+                    if process_file5 and getattr(self, 'target_files5', None):
+                        if hasattr(main, 'process_target_file5'):
+                            try:
+                                import Monitor
+                                pids = list(set([pid for _, pid in self.target_files5]))
+                                Monitor.log_process(f"开始批量处理待处理文件5: {len(self.target_files5)}个文件，涉及{len(pids)}个项目({', '.join(sorted(pids))})")
+                            except:
+                                pass
+                            self.processing_results_multi5 = {}
+                            combined_results = []
+                            for file_path, project_id in self.target_files5:
+                                try:
+                                    print(f"处理项目{project_id}的文件5: {os.path.basename(file_path)}")
+                                    result = main.process_target_file5(file_path, self.current_datetime)
+                                    if result is not None and not result.empty:
+                                        self.processing_results_multi5[project_id] = result
+                                        combined_results.append(result)
+                                except Exception as e:
+                                    print(f"处理文件5失败: {file_path} - {e}")
+                            if combined_results:
+                                results5 = pd.concat(combined_results, ignore_index=True)
+                                try:
+                                    self.display_results5(results5, show_popup=False)
+                                except Exception:
+                                    pass
+                                if not process_file1 and not process_file2 and not process_file3 and not process_file4:
+                                    active_tab = 4
+                                project_count = len(self.processing_results_multi5)
+                                file_count = len(self.target_files5) if self.target_files5 else 1
+                                total_projects.update(self.processing_results_multi5.keys())
+                                total_files_processed += file_count
+                                if not results5.empty:
+                                    processed_count += 1
+                                    if project_count > 1:
+                                        completion_messages.append(f"三维提资接口：{len(results5)} 行数据 ({project_count}个项目)")
+                                    else:
+                                        completion_messages.append(f"三维提资接口：{len(results5)} 行数据")
+                                else:
+                                    completion_messages.append("三维提资接口：无符合条件的数据")
+
+                    # 处理待处理文件6（批量）
+                    process_file6 = getattr(self, 'process_file6_var', tk.BooleanVar(value=False)).get()
+                    results6 = None
+                    if process_file6 and getattr(self, 'target_files6', None):
+                        if hasattr(main, 'process_target_file6'):
+                            try:
+                                import Monitor
+                                pids = list(set([pid for _, pid in self.target_files6]))
+                                Monitor.log_process(f"开始批量处理待处理文件6: {len(self.target_files6)}个文件，涉及{len(pids)}个项目")
+                            except:
+                                pass
+                            self.processing_results_multi6 = {}
+                            combined_results = []
+                            for file_path, project_id in self.target_files6:
+                                try:
+                                    print(f"处理文件6: {os.path.basename(file_path)}")
+                                    result = main.process_target_file6(file_path, self.current_datetime)
+                                    if result is not None and not result.empty:
+                                        self.processing_results_multi6[project_id] = result
+                                        combined_results.append(result)
+                                except Exception as e:
+                                    print(f"处理文件6失败: {file_path} - {e}")
+                            if combined_results:
+                                results6 = pd.concat(combined_results, ignore_index=True)
+                                try:
+                                    self.display_results6(results6, show_popup=False)
+                                except Exception:
+                                    pass
+                                if not process_file1 and not process_file2 and not process_file3 and not process_file4 and not process_file5:
+                                    active_tab = 5
+                                project_count = len(self.processing_results_multi6)
+                                file_count = len(self.target_files6) if self.target_files6 else 1
+                                total_projects.update(self.processing_results_multi6.keys())
+                                total_files_processed += file_count
+                                if not results6.empty:
+                                    processed_count += 1
+                                    completion_messages.append(f"收发文函：{len(results6)} 行数据")
+                                else:
+                                    completion_messages.append("收发文函：无符合条件的数据")
+
+                    # 选择显示的选项卡（优先级：file1 > file2 > file3 > file4 > file5 > file6）
                     self.notebook.select(active_tab)
                     
                     # 关闭等待对话框
                     self.close_waiting_dialog(processing_dialog)
                     
-                    # 统一弹窗显示处理结果
-                    if completion_messages:
-                        combined_message = "数据处理完成！\n\n" + "\n".join(completion_messages)
-                        messagebox.showinfo("处理完成", combined_message)
+                    # 统一弹窗显示处理结果（批量处理版本，自动模式下不显示）
+                    if completion_messages and not getattr(self, 'auto_mode', False):
+                        combined_message = "🎉 批量数据处理完成！\n\n"
+                        if len(total_projects) > 1:
+                            combined_message += f"📊 处理统计:\n"
+                            combined_message += f"• 共处理 {len(total_projects)} 个项目\n"
+                            combined_message += f"• 共处理 {total_files_processed} 个文件\n"
+                            combined_message += f"• 项目号: {', '.join(sorted(total_projects))}\n\n"
+                        combined_message += "📋 处理结果:\n"
+                        combined_message += "\n".join([f"• {msg}" for msg in completion_messages])
+                        if len(total_projects) > 1:
+                            combined_message += "\n\n💡 提示:\n"
+                            combined_message += "• 导出结果将按项目号自动分文件夹存放\n"
+                            combined_message += "• 主界面显示的是所有项目的合并数据"
+                        messagebox.showinfo("批量处理完成", combined_message)
+
+                    # 自动模式下，处理完成后自动导出
+                    if getattr(self, 'auto_mode', False):
+                        # 直接调用导出
+                        try:
+                            # 清除上次的汇总路径，避免误用历史文件
+                            self.last_summary_written_path = None
+                        except Exception:
+                            pass
+                        self.export_results()
+                        # 在导出任务队列启动后，仅在本次确有新汇总时才弹出TXT
+                        def after_export_summary():
+                            try:
+                                import os
+                                txt_path = getattr(self, 'last_summary_written_path', None)
+                                if txt_path and os.path.exists(txt_path):
+                                    self._show_summary_popup(txt_path)
+                            except Exception:
+                                pass
+                        self.root.after(2500, after_export_summary)
                     
                     self.process_button.config(state='normal', text="开始处理")
                 
@@ -1332,8 +2417,9 @@ class ExcelProcessorApp:
                 
             except Exception as e:
                 self.root.after(0, lambda: self.close_waiting_dialog(processing_dialog))
-                self.root.after(0, lambda: messagebox.showerror("错误", f"处理过程中发生错误: {str(e)}"))
-                self.root.after(0, lambda: self.process_button.config(state='normal', text="开始处理"))
+                if not (getattr(self, 'auto_mode', False) and getattr(self, '_auto_context', True)):
+                   self.root.after(0, lambda: messagebox.showerror("错误", f"处理过程中发生错误: {str(e)}"))
+                   self.root.after(0, lambda: self.process_button.config(state='normal', text="开始处理"))
         
         thread = threading.Thread(target=process_files, daemon=True)
         thread.start()
@@ -1341,23 +2427,17 @@ class ExcelProcessorApp:
     def display_results(self, results, show_popup=True):
         """显示处理结果"""
         # 检查处理结果
-        if not isinstance(results, pd.DataFrame) or results.empty:
-            if isinstance(results, pd.DataFrame) and len(results.columns) > 0:
-                # 如果是包含错误信息的DataFrame
-                error_msg = "处理过程中出现问题:\n"
-                for col in results.columns:
-                    for val in results[col]:
-                        error_msg += f"- {val}\n"
-                if show_popup:
-                    messagebox.showwarning("处理结果", error_msg)
-            else:
-                # 处理完成但没有符合条件的数据
-                self.show_no_data_result(show_popup)
+        if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
+            self.has_processed_results1 = True  # 标记已处理，即使结果为空
+            self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
+            self.update_export_button_state()  # 更新导出按钮状态
             return
         
         # 检查结果是否为空（所有行都被剔除）
         if len(results) == 0:
-            self.show_no_data_result(show_popup)
+            self.has_processed_results1 = True  # 标记已处理，即使结果为空
+            self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
+            self.update_export_button_state()  # 更新导出按钮状态
             return
         
         # 保存处理结果供导出使用
@@ -1375,23 +2455,7 @@ class ExcelProcessorApp:
         # 显示处理完成信息（仅在旧版调用时显示）
         if show_popup:
             row_count = len(results)
-            messagebox.showinfo("处理完成", f"数据处理完成！\n经过四步筛选后，共剩余 {row_count} 行符合条件的数据\n结果已在【应打开接口】选项卡中更新显示。")
-
-    def show_no_data_result(self, show_popup=True):
-        """显示无数据结果"""
-        # 清空处理结果
-        self.processing_results = None
-        self.has_processed_results1 = True  # 标记已处理，即使结果为空
-        
-        # 无符合条件的数据时，直接显示空提示信息，不显示任何数据行
-        self.show_empty_message(self.tab1_viewer, "无应打开接口")
-        
-        # 更新导出按钮状态（基于所有处理结果）
-        self.update_export_button_state()
-        
-        # 显示提示信息（仅在旧版调用时显示）
-        if show_popup:
-            messagebox.showinfo("处理完成", "无应打开接口\n\n经过四步筛选后，没有符合条件的数据。")
+            messagebox.showinfo("处理完成", f"数据处理完成！\n经过四步筛选后，共剩余 {row_count} 行符合条件的数据\n结果已在【内部需打开接口】选项卡中更新显示。")
 
     def update_export_button_state(self):
         """更新导出按钮状态，基于所有处理结果的综合状态"""
@@ -1421,6 +2485,11 @@ class ExcelProcessorApp:
             self.processing_results4 is not None and 
             not self.processing_results4.empty):
             has_exportable_results = True
+        # 检查待处理文件5的结果
+        if (self.has_processed_results5 and 
+            self.processing_results5 is not None and 
+            not self.processing_results5.empty):
+            has_exportable_results = True
         
         # 根据结果设置导出按钮状态
         if has_exportable_results:
@@ -1434,7 +2503,7 @@ class ExcelProcessorApp:
         """
         try:
             if results is None or results.empty or '原始行号' not in results.columns:
-                self.show_empty_message(self.tab1_viewer, "无应打开接口")
+                self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
                 return
 
             # 只取最终结果的所有数据行
@@ -1442,7 +2511,7 @@ class ExcelProcessorApp:
             excel_row_numbers = list(results['原始行号'])
 
             # 只显示数据行，不显示表头
-            self.display_excel_data_with_original_rows(self.tab1_viewer, display_df, "应打开接口", excel_row_numbers)
+            self.display_excel_data_with_original_rows(self.tab1_viewer, display_df, "内部需打开接口", excel_row_numbers)
         except Exception as e:
             print(f"显示最终筛选数据时发生错误: {e}")
             self.show_empty_message(self.tab1_viewer, "数据过滤失败")
@@ -1453,93 +2522,265 @@ class ExcelProcessorApp:
         """显示需回复接口处理结果"""
         if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
             self.has_processed_results2 = True  # 标记已处理，即使结果为空
-            self.show_empty_message(self.tab2_viewer, "无需回复接口")
+            self.show_empty_message(self.tab2_viewer, "无内部需回复接口")
             self.update_export_button_state()  # 更新导出按钮状态
             return
         self.processing_results2 = results
         self.has_processed_results2 = True  # 标记已有处理结果
         display_df = results.drop(columns=['原始行号'], errors='ignore')
         excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab2_viewer, display_df, "需回复接口", excel_row_numbers)
+        self.display_excel_data_with_original_rows(self.tab2_viewer, display_df, "内部需回复接口", excel_row_numbers)
         self.update_export_button_state()
         
         # 显示处理完成信息（仅在旧版调用时显示）
         if show_popup:
-            messagebox.showinfo("处理完成", f"需回复接口数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【需回复接口】选项卡中更新显示。")
+            messagebox.showinfo("处理完成", f"内部需回复接口数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【内部需回复接口】选项卡中更新显示。")
 
     def display_results3(self, results, show_popup=True):
         """显示外部接口ICM处理结果"""
         if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
             self.has_processed_results3 = True  # 标记已处理，即使结果为空
-            self.show_empty_message(self.tab3_viewer, "无外部接口ICM")
+            self.show_empty_message(self.tab3_viewer, "无外部需打开接口")
             self.update_export_button_state()  # 更新导出按钮状态
             return
         self.processing_results3 = results
         self.has_processed_results3 = True  # 标记已有处理结果
         display_df = results.drop(columns=['原始行号'], errors='ignore')
         excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab3_viewer, display_df, "外部接口ICM", excel_row_numbers)
+        self.display_excel_data_with_original_rows(self.tab3_viewer, display_df, "外部需打开接口", excel_row_numbers)
         self.update_export_button_state()
         
         # 显示处理完成信息（仅在旧版调用时显示）
         if show_popup:
-            messagebox.showinfo("处理完成", f"外部接口ICM数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【外部接口ICM】选项卡中更新显示。")
+            messagebox.showinfo("处理完成", f"外部需打开接口数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【外部需打开接口】选项卡中更新显示。")
 
     def display_results4(self, results, show_popup=True):
         """显示外部接口单处理结果"""
         if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
             self.has_processed_results4 = True  # 标记已处理，即使结果为空
-            self.show_empty_message(self.tab4_viewer, "无外部接口单")
+            self.show_empty_message(self.tab4_viewer, "无外部需回复接口")
             self.update_export_button_state()  # 更新导出按钮状态
             return
         self.processing_results4 = results
         self.has_processed_results4 = True  # 标记已有处理结果
         display_df = results.drop(columns=['原始行号'], errors='ignore')
         excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab4_viewer, display_df, "外部接口单", excel_row_numbers)
+        self.display_excel_data_with_original_rows(self.tab4_viewer, display_df, "外部需回复接口", excel_row_numbers)
         self.update_export_button_state()
         
         # 显示处理完成信息（仅在旧版调用时显示）
         if show_popup:
-            messagebox.showinfo("处理完成", f"外部接口单数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【外部接口单】选项卡中更新显示。")
+            messagebox.showinfo("处理完成", f"外部需回复接口数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【外部需回复接口】选项卡中更新显示。")
+
+    def display_results5(self, results, show_popup=True):
+        """显示三维提资接口处理结果"""
+        if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
+            self.has_processed_results5 = True
+            self.show_empty_message(self.tab5_viewer, "无三维提资接口")
+            self.update_export_button_state()
+            return
+        self.processing_results5 = results
+        self.has_processed_results5 = True
+        display_df = results.drop(columns=['原始行号'], errors='ignore')
+        excel_row_numbers = list(results['原始行号'])
+        self.display_excel_data_with_original_rows(self.tab5_viewer, display_df, "三维提资接口", excel_row_numbers)
+        self.update_export_button_state()
+        if show_popup:
+            messagebox.showinfo("处理完成", f"三维提资接口数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【三维提资接口】选项卡中更新显示。")
+
+    def display_results6(self, results, show_popup=True):
+        """显示收发文函处理结果（与其他类型保持一致）"""
+        if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
+            self.has_processed_results6 = True
+            self.show_empty_message(self.tab6_viewer, "无收发文函")
+            self.update_export_button_state()
+            return
+        self.processing_results6 = results
+        self.has_processed_results6 = True
+        display_df = results.drop(columns=['原始行号'], errors='ignore')
+        excel_row_numbers = list(results['原始行号'])
+        self.display_excel_data_with_original_rows(self.tab6_viewer, display_df, "收发文函", excel_row_numbers)
+        self.update_export_button_state()
+        if show_popup and not getattr(self, 'auto_mode', False):
+            messagebox.showinfo("处理完成", f"收发文函数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【收发文函】选项卡中更新显示。")
 
     def export_results(self):
         current_tab = self.notebook.index(self.notebook.select())
-        import main
+        # 姓名必填校验
+        try:
+            if (not self.config.get("user_name", "").strip()) and (not getattr(self, 'auto_mode', False)):
+                message = "请先在设置中填写‘姓名’，否则无法导出结果。"
+                try:
+                    from tkinter import messagebox as _mb
+                    _mb.showwarning("提示", message)
+                except Exception:
+                    pass
+                return
+        except Exception:
+            pass
+        
+        # 导入必要的模块
+        import sys
+        import os
+        
+        # 安全导入main模块
+        try:
+            import main
+        except ImportError:
+            # 如果是打包环境，添加当前目录到路径
+            if hasattr(sys, '_MEIPASS'):
+                sys.path.insert(0, sys._MEIPASS)
+            else:
+                sys.path.insert(0, os.path.dirname(__file__))
+            import main
         export_tasks = []
-        # 只导出有数据的部分
-        if self.process_file1_var.get() and self.processing_results is not None and isinstance(self.processing_results, pd.DataFrame) and not self.processing_results.empty:
-            export_tasks.append(('应打开接口', main.export_result_to_excel, self.processing_results, self.target_file1, self.current_datetime))
-        if self.process_file2_var.get() and self.processing_results2 is not None and isinstance(self.processing_results2, pd.DataFrame) and not self.processing_results2.empty:
-            export_tasks.append(('需打开接口', main.export_result_to_excel2, self.processing_results2, self.target_file2, self.current_datetime))
-        if self.process_file3_var.get() and self.processing_results3 is not None and isinstance(self.processing_results3, pd.DataFrame) and not self.processing_results3.empty:
+        # 预备过滤后结果字典
+        self.filtered_results_multi1 = {}
+        self.filtered_results_multi2 = {}
+        self.filtered_results_multi3 = {}
+        self.filtered_results_multi4 = {}
+        
+        # 批量导出所有项目的处理结果
+        # 导出待处理文件1的所有项目结果
+        if self.process_file1_var.get() and self.processing_results_multi1:
+            for project_id, results in self.processing_results_multi1.items():
+                if isinstance(results, pd.DataFrame) and not results.empty:
+                    # 角色过滤
+                    results = self.apply_role_based_filter(results)
+                    # 自动模式角色日期窗口限制
+                    results = self.apply_auto_role_date_window(results)
+                    self.filtered_results_multi1[project_id] = results
+                    # 找到对应项目的原始文件路径
+                    original_file = None
+                    for file_path, pid in self.target_files1:
+                        if pid == project_id:
+                            original_file = file_path
+                            break
+                    if original_file:
+                        pid_for_export = project_id if project_id else "未知项目"
+                        export_tasks.append(('应打开接口', main.export_result_to_excel, results, original_file, self.current_datetime, pid_for_export))
+        
+        # 导出待处理文件2的所有项目结果
+        if self.process_file2_var.get() and self.processing_results_multi2:
+            for project_id, results in self.processing_results_multi2.items():
+                if isinstance(results, pd.DataFrame) and not results.empty:
+                    results = self.apply_role_based_filter(results)
+                    results = self.apply_auto_role_date_window(results)
+                    self.filtered_results_multi2[project_id] = results
+                    # 找到对应项目的原始文件路径
+                    original_file = None
+                    for file_path, pid in self.target_files2:
+                        if pid == project_id:
+                            original_file = file_path
+                            break
+                    if original_file:
+                        pid_for_export = project_id if project_id else "未知项目"
+                        export_tasks.append(('需打开接口', main.export_result_to_excel2, results, original_file, self.current_datetime, pid_for_export))
+        
+        # 导出待处理文件3的所有项目结果
+        if self.process_file3_var.get() and self.processing_results_multi3:
             if hasattr(main, 'export_result_to_excel3'):
-                export_tasks.append(('外部接口ICM', main.export_result_to_excel3, self.processing_results3, self.target_file3, self.current_datetime))
-        if self.process_file4_var.get() and self.processing_results4 is not None and isinstance(self.processing_results4, pd.DataFrame) and not self.processing_results4.empty:
+                for project_id, results in self.processing_results_multi3.items():
+                    if isinstance(results, pd.DataFrame) and not results.empty:
+                        results = self.apply_role_based_filter(results)
+                        results = self.apply_auto_role_date_window(results)
+                        self.filtered_results_multi3[project_id] = results
+                        # 找到对应项目的原始文件路径
+                        original_file = None
+                        for file_path, pid in self.target_files3:
+                            if pid == project_id:
+                                original_file = file_path
+                                break
+                        if original_file:
+                            pid_for_export = project_id if project_id else "未知项目"
+                            export_tasks.append(('外部接口ICM', main.export_result_to_excel3, results, original_file, self.current_datetime, pid_for_export))
+        
+        # 导出待处理文件4的所有项目结果
+        if self.process_file4_var.get() and self.processing_results_multi4:
             if hasattr(main, 'export_result_to_excel4'):
-                export_tasks.append(('外部接口单', main.export_result_to_excel4, self.processing_results4, self.target_file4, self.current_datetime))
+                for project_id, results in self.processing_results_multi4.items():
+                    if isinstance(results, pd.DataFrame) and not results.empty:
+                        results = self.apply_role_based_filter(results)
+                        results = self.apply_auto_role_date_window(results)
+                        self.filtered_results_multi4[project_id] = results
+                        # 找到对应项目的原始文件路径
+                        original_file = None
+                        for file_path, pid in self.target_files4:
+                            if pid == project_id:
+                                original_file = file_path
+                                break
+                        if original_file:
+                            pid_for_export = project_id if project_id else "未知项目"
+                            export_tasks.append(('外部接口单', main.export_result_to_excel4, results, original_file, self.current_datetime, pid_for_export))
+        # 导出待处理文件5的所有项目结果
+        if self.process_file5_var.get() and self.processing_results_multi5:
+            if hasattr(main, 'export_result_to_excel5'):
+                for project_id, results in self.processing_results_multi5.items():
+                    if isinstance(results, pd.DataFrame) and not results.empty:
+                        results = self.apply_role_based_filter(results)
+                        results = self.apply_auto_role_date_window(results)
+                        if not hasattr(self, 'filtered_results_multi5'):
+                            self.filtered_results_multi5 = {}
+                        self.filtered_results_multi5[project_id] = results
+                        original_file = None
+                        for file_path, pid in getattr(self, 'target_files5', []):
+                            if pid == project_id:
+                                original_file = file_path
+                                break
+                        if original_file:
+                            pid_for_export = project_id if project_id else "未知项目"
+                            export_tasks.append(('三维提资接口', main.export_result_to_excel5, results, original_file, self.current_datetime, pid_for_export))
+        # 导出待处理文件6的所有项目结果
+        if self.process_file6_var.get() and self.processing_results_multi6:
+            if hasattr(main, 'export_result_to_excel6'):
+                for project_id, results in self.processing_results_multi6.items():
+                    if isinstance(results, pd.DataFrame) and not results.empty:
+                        results = self.apply_role_based_filter(results)
+                        results = self.apply_auto_role_date_window(results)
+                        if not hasattr(self, 'filtered_results_multi6'):
+                            self.filtered_results_multi6 = {}
+                        self.filtered_results_multi6[project_id] = results
+                        original_file = None
+                        for file_path, pid in getattr(self, 'target_files6', []):
+                            if pid == project_id:
+                                original_file = file_path
+                                break
+                        if original_file:
+                            pid_for_export = project_id if project_id else "未知项目"
+                            export_tasks.append(('收发文函', main.export_result_to_excel6, results, original_file, self.current_datetime, pid_for_export))
         if not export_tasks:
-            messagebox.showinfo("导出提示", "无可导出的数据")
+            if not getattr(self, 'auto_mode', False):
+               messagebox.showinfo("导出提示", "无可导出的数据")
             return
         
-        # 显示导出等待对话框
+        # 显示导出等待对话框（自动模式下不显示）
         total_count = len(export_tasks)
         export_dialog, progress_label = self.show_export_waiting_dialog("导出结果", "正在导出中，请稍后。。。 。。。", total_count)
         
         # 使用after方法延迟执行导出操作，确保等待对话框能正确显示
         def do_export():
-            folder_path = self.path_var.get().strip()
+            # 优先使用导出结果位置；为空则回退到文件夹路径
+            export_root = (self.export_path_var.get().strip() if hasattr(self, 'export_path_var') else '')
+            folder_path = export_root or self.path_var.get().strip()
             success_count = 0
             success_messages = []
+            project_stats = {}  # 统计各项目的导出文件数
             
-            for i, (name, func, results, original_file, dt) in enumerate(export_tasks, 1):
+            for i, (name, func, results, original_file, dt, project_id) in enumerate(export_tasks, 1):
                 # 更新进度
                 self.update_export_progress(export_dialog, progress_label, i-1, total_count)
                 
                 try:
-                    output_path = func(results, original_file, dt, folder_path)
+                    output_path = func(results, original_file, dt, folder_path, project_id)
+                    reused = False
                     success_count += 1
-                    success_messages.append(f"{name}: {output_path}")
+                    suffix = "(复用)" if reused else ""
+                    success_messages.append(f"{name}(项目{project_id}): {os.path.basename(output_path)}{suffix}")
+                    
+                    # 统计项目导出数量
+                    if project_id not in project_stats:
+                        project_stats[project_id] = 0
+                    project_stats[project_id] += 1
                     
                     # 更新进度显示已完成
                     self.update_export_progress(export_dialog, progress_label, i, total_count)
@@ -1556,16 +2797,163 @@ class ExcelProcessorApp:
             # 关闭等待对话框
             self.close_waiting_dialog(export_dialog)
             
-            # 显示导出成功信息
+            # 显示批量导出成功信息（包含各类型有无导出情况）
             if success_count > 0:
-                if success_count == 1:
-                    messagebox.showinfo("导出完成", f"成功导出 {success_count} 个文件！\n\n{success_messages[0]}")
+                combined_message = f"🎉 批量导出完成！\n\n"
+
+                # 统计各类型导出条目数
+                from collections import defaultdict
+                done_counts = defaultdict(int)
+                for msg in success_messages:
+                    try:
+                        type_name = msg.split('(项目', 1)[0]
+                        done_counts[type_name] += 1
+                    except Exception:
+                        continue
+
+                # 类型显示映射（用于用户可读名称统一）
+                display_map = {
+                    '应打开接口': '内部需打开接口',
+                    '需打开接口': '内部需回复接口',
+                    '外部接口ICM': '外部需打开接口',
+                    '外部接口单': '外部需回复接口',
+                    '三维提资接口': '三维提资接口',
+                    '收发文函': '收发文函',
+                }
+                all_types = ['应打开接口', '需打开接口', '外部接口ICM', '外部接口单', '三维提资接口', '收发文函']
+
+                # 添加统计信息
+                if len(project_stats) > 1:
+                    combined_message += f"📊 导出统计:\n"
+                    combined_message += f"• 共导出 {len(project_stats)} 个项目\n"
+                    combined_message += f"• 共导出 {success_count} 个文件\n\n"
                 else:
-                    combined_message = f"成功导出 {success_count} 个文件！\n\n" + "\n".join(success_messages)
-                    messagebox.showinfo("导出完成", combined_message)
+                    combined_message += f"📊 导出统计:\n"
+                    combined_message += f"• 共导出 {success_count} 个文件\n\n"
+
+                # 各类型导出结果（无则显示“无”）
+                combined_message += "📂 各类型导出结果:\n"
+                for t in all_types:
+                    dn = display_map.get(t, t)
+                    cnt = done_counts.get(t, 0)
+                    if cnt > 0:
+                        combined_message += f"• {dn}：{cnt} 个文件\n"
+                    else:
+                        combined_message += f"• {dn}：无\n"
+
+                # 详细文件清单
+                combined_message += f"\n📋 导出详情:\n"
+                combined_message += "\n".join([f"• {msg}" for msg in success_messages])
+
+                if len(project_stats) > 1:
+                    combined_message += f"\n\n💡 提示:\n"
+                    combined_message += f"• 文件已按项目号自动分文件夹存放\n"
+                    combined_message += f"• 各项目的结果文件在对应的\"项目号结果文件\"文件夹中"
+
+                if not getattr(self, 'auto_mode', False):
+                   messagebox.showinfo("批量导出完成", combined_message)
         
         # 延迟执行导出操作，确保等待对话框能够显示
         self.root.after(100, do_export)
+
+        # 导出完成后生成结果汇总（放在异步导出流程中完成后执行）
+        def write_summary_after_export():
+            try:
+                import sys, os
+                # 安全导入 main2 模块
+                try:
+                    import main2
+                except ImportError:
+                    if hasattr(sys, '_MEIPASS'):
+                        sys.path.insert(0, sys._MEIPASS)
+                    else:
+                        sys.path.insert(0, os.path.dirname(__file__))
+                    import main2
+
+                # TXT 汇总写入位置：优先使用导出结果位置，其次使用文件夹路径
+                export_root = (self.export_path_var.get().strip() if hasattr(self, 'export_path_var') else '')
+                summary_folder = export_root or self.path_var.get().strip()
+                if summary_folder:
+                    # 使用过滤后的结果进行汇总（若无则回退原结果）
+                    results_multi1 = getattr(self, 'filtered_results_multi1', getattr(self, 'processing_results_multi1', None))
+                    results_multi2 = getattr(self, 'filtered_results_multi2', getattr(self, 'processing_results_multi2', None))
+                    results_multi3 = getattr(self, 'filtered_results_multi3', getattr(self, 'processing_results_multi3', None))
+                    results_multi4 = getattr(self, 'filtered_results_multi4', getattr(self, 'processing_results_multi4', None))
+                    results_multi5 = getattr(self, 'filtered_results_multi5', getattr(self, 'processing_results_multi5', None))
+                    results_multi6 = getattr(self, 'filtered_results_multi6', getattr(self, 'processing_results_multi6', None))
+                   # 计算总条目数，用于自动模式下是否弹窗
+                    def _count_total(multi):
+                        try:
+                            if not multi:
+                                return 0
+                            return sum((len(df) if hasattr(df, 'empty') and not df.empty else 0) for df in multi.values())
+                        except Exception:
+                            return 0
+                    
+                    total_count = (_count_total(results_multi1)
+                                   + _count_total(results_multi2)
+                                   + _count_total(results_multi3)
+                                   + _count_total(results_multi4)
+                                   + _count_total(results_multi5)
+                                   + _count_total(results_multi6))
+                    txt_path = main2.write_export_summary(
+                        folder_path=summary_folder,
+                        current_datetime=self.current_datetime,
+                        results_multi1=results_multi1,
+                        results_multi2=results_multi2,
+                        results_multi3=results_multi3,
+                        results_multi4=results_multi4,
+                        results_multi5=results_multi5,
+                        results_multi6=results_multi6,
+                    )
+                    # 记录本次新生成的汇总文件路径
+                    try:
+                        if total_count > 0:
+                            self.last_summary_written_path = txt_path
+                        else:
+                            # 无任何结果时，不设置路径，自动模式不弹窗
+                            self.last_summary_written_path = None
+                    except Exception:
+                        pass
+            except Exception as _:
+                # 汇总失败不影响主流程
+                pass
+
+        # 延迟较长时间写汇总，确保导出完成
+        self.root.after(1000, write_summary_after_export)
+
+    def open_selected_folder(self):
+        """在资源管理器中打开导出结果位置（若未设置则打开选择的文件夹路径）"""
+        try:
+            import os
+            import subprocess
+            from tkinter import messagebox
+
+            # 优先导出结果位置；为空则回退到文件夹路径
+            export_root = self.export_path_var.get().strip() if hasattr(self, 'export_path_var') else ''
+            folder_path = export_root or (self.path_var.get().strip() if hasattr(self, 'path_var') else '')
+            if not folder_path:
+                messagebox.showwarning("提示", "请先设置导出结果位置或选择文件夹后再尝试打开。")
+                return
+            if not os.path.exists(folder_path):
+                messagebox.showerror("错误", f"目录不存在：\n{folder_path}")
+                return
+
+            try:
+                # 优先使用 Windows 的原生方式
+                os.startfile(folder_path)
+            except Exception:
+                # 回退到调用 explorer
+                try:
+                    subprocess.run(["explorer", folder_path], check=False)
+                except Exception as e:
+                    messagebox.showerror("错误", f"打开目录失败：{e}")
+        except Exception as e:
+            try:
+                from tkinter import messagebox
+                messagebox.showerror("错误", f"打开目录时出现问题：{e}")
+            except Exception:
+                print(f"打开目录时出现问题：{e}")
 
     def toggle_auto_startup(self):
         """切换开机自启动状态"""
@@ -1583,6 +2971,25 @@ class ExcelProcessorApp:
         self.config["dont_ask_again"] = not self.show_close_dialog_var.get()
         self.save_config()
 
+    def _enforce_user_name_gate(self, show_popup: bool = False):
+        """当未填写姓名时，禁用“开始处理/导出结果”按钮并提示。"""
+        has_name = bool(self.config.get("user_name", "").strip())
+        # 控制按钮可用性
+        try:
+            if (not has_name) and (not getattr(self, 'auto_mode', False)):
+                self.process_button.config(state='disabled')
+                self.export_button.config(state='disabled')
+            else:
+                self.process_button.config(state='normal')
+                # 导出按钮仍由处理结果决定，保持当前状态
+        except Exception:
+            pass
+        if (show_popup and not getattr(self, 'auto_mode', False)) and not has_name:
+            try:
+                messagebox.showwarning("提示", "请先在设置中填写‘姓名’，否则无法开始处理或导出结果。")
+            except Exception:
+                pass
+
     def add_to_startup(self):
         """添加到开机自启动"""
         try:
@@ -1594,9 +3001,11 @@ class ExcelProcessorApp:
             if exe_path.endswith('.py'):
                 # 如果是Python脚本，使用python.exe运行
                 python_exe = sys.executable
-                startup_cmd = f'"{python_exe}" "{exe_path}"'
+                # 自动模式参数 --auto 确保登录后后台自动运行
+                startup_cmd = f'"{python_exe}" "{exe_path}" --auto'
             else:
-                startup_cmd = f'"{exe_path}"'
+                # 可执行文件同样附加 --auto 参数
+                startup_cmd = f'"{exe_path}" --auto'
             
             winreg.SetValueEx(key, "ExcelProcessor", 0, winreg.REG_SZ, startup_cmd)
             winreg.CloseKey(key)
@@ -1637,7 +3046,7 @@ class ExcelProcessorApp:
             
             # 设置对话框图标
             try:
-                icon_path = "ico_bin/tubiao.ico"
+                icon_path = get_resource_path("ico_bin/tubiao.ico")
                 if os.path.exists(icon_path):
                     dialog.iconbitmap(icon_path)
             except Exception as e:
@@ -1700,34 +3109,27 @@ class ExcelProcessorApp:
         """创建系统托盘图标"""
         if not TRAY_AVAILABLE:
             return
-        
-        # 使用自定义图标文件
-        icon_path = "ico_bin/tubiao.ico"
+        icon_path = get_resource_path("ico_bin/tubiao.ico")
         try:
             if os.path.exists(icon_path):
-                # 加载图标并调整大小
                 image = Image.open(icon_path)
-                # 将图标调整为适合系统托盘的大小（通常32x32或64x64）
-                image = image.resize((32, 32), Image.Resampling.LANCZOS)
+                # 兼容Pillow 8.x和9.x+的LANCZOS写法
+                try:
+                    resample_method = getattr(getattr(Image, 'Resampling', Image), 'LANCZOS', Image.LANCZOS)
+                except Exception:
+                    resample_method = Image.LANCZOS
+                image = image.resize((32, 32), resample_method)
             else:
-                # 如果图标文件不存在，创建简单的默认图标
                 image = Image.new('RGB', (32, 32), color='blue')
         except Exception as e:
             print(f"加载托盘图标失败: {e}")
-            # 创建简单的默认图标
             image = Image.new('RGB', (32, 32), color='blue')
-        
-        # 创建菜单项，首项作为默认双击动作
         show_item = pystray.MenuItem("打开主程序", self.show_window, default=True)
         menu = pystray.Menu(
             show_item,
             pystray.MenuItem("关闭程序", self.quit_application)
         )
-        
-        # 创建托盘图标
         self.tray_icon = pystray.Icon("ExcelProcessor", image, "Excel数据处理程序", menu)
-        
-        # 在单独线程中运行托盘图标
         threading.Thread(target=self.tray_icon.run, daemon=True).start()
 
     def show_window(self, icon=None, item=None):
@@ -1751,8 +3153,18 @@ class ExcelProcessorApp:
     def open_monitor(self):
         """打开处理过程监控器"""
         try:
-            # 导入监控器模块
-            import Monitor
+            # 安全导入Monitor模块
+            try:
+                import Monitor
+            except ImportError:
+                import sys
+                import os
+                # 如果是打包环境，添加当前目录到路径
+                if hasattr(sys, '_MEIPASS'):
+                    sys.path.insert(0, sys._MEIPASS)
+                else:
+                    sys.path.insert(0, os.path.dirname(__file__))
+                import Monitor
             
             # 使用全局监控器实例，确保与main.py中的日志记录一致
             self.monitor = Monitor.get_monitor()
@@ -1783,12 +3195,138 @@ class ExcelProcessorApp:
 
     def run(self):
         """运行应用程序"""
+        # 启动定时器（按需）
+        try:
+            if getattr(self, 'timer_enabled', True):
+                # 延迟导入，避免未用时报错
+                from time import time as _t
+                import threading as _th
+                # 内部轻量定时器线程（简化版，不依赖外部文件）
+                def _timer_loop(app_ref):
+                    import datetime as _dt
+                    import time as _sleep
+                    started_at = _dt.datetime.now()
+                    last_fired = set()
+                    while True:
+                        try:
+                            # 简单退出条件
+                            if getattr(app_ref, 'is_closing', False):
+                                break
+                            now = _dt.datetime.now()
+                            # 24h门槛
+                            if self.timer_require_24h:
+                                if (now - started_at).total_seconds() < 24*3600:
+                                    _sleep.sleep(60)
+                                    continue
+                            # 时间点
+                            times_str = (self.timer_times or "10:00,16:00")
+                            grace = max(int(self.timer_grace_minutes), 0)
+                            for t in [s.strip() for s in times_str.split(',') if s.strip()]:
+                                try:
+                                    hh, mm = t.split(':')
+                                    target = now.replace(hour=int(hh), minute=int(mm), second=0, microsecond=0)
+                                except Exception:
+                                    continue
+                                window_start = target - _dt.timedelta(minutes=grace)
+                                window_end = target + _dt.timedelta(minutes=grace)
+                                key = now.strftime('%Y-%m-%d') + ' ' + t
+                                if window_start <= now <= window_end and key not in last_fired:
+                                    last_fired.add(key)
+                                    try:
+                                        app_ref.root.after(0, app_ref._run_auto_flow)
+                                    except Exception:
+                                        pass
+                            _sleep.sleep(60)
+                        except Exception:
+                            try:
+                                _sleep.sleep(60)
+                            except Exception:
+                                break
+                _th.Thread(target=_timer_loop, args=(self,), daemon=True).start()
+        except Exception:
+            pass
+
+        if getattr(self, 'auto_mode', False):
+            # 自动模式：隐藏窗口
+            try:
+                self.root.withdraw()
+            except Exception:
+                pass
+            # 自动模式：创建托盘图标，指示程序在后台运行
+            try:
+                self.create_tray_icon()
+            except Exception:
+                pass
         self.root.mainloop()
+
+    def _run_auto_flow(self):
+        """自动模式流程：校验路径→刷新→开始处理（导出与汇总弹窗由处理完成逻辑触发）"""
+        try:
+            # 路径判定：导出结果位置优先，其次文件夹路径
+            export_root = (self.export_path_var.get().strip() if hasattr(self, 'export_path_var') else '')
+            folder_path = self.path_var.get().strip() if hasattr(self, 'path_var') else ''
+            export_dir = export_root or folder_path
+            if not folder_path:
+                # 自动模式下仍提示一次路径缺失
+                try:
+                    messagebox.showwarning("路径缺失", "默认文件夹路径为空，请先在界面中设置路径后再使用自动模式。")
+                except Exception:
+                    pass
+                return
+            # 刷新文件列表（静默）
+            self.refresh_file_list(show_popup=False)
+            # 延迟以等待刷新完成后开始处理（导出与汇总弹窗在 start_processing 内部触发）
+            def after_refresh():
+                try:
+                    self.process_file1_var.set(True)
+                    self.process_file2_var.set(True)
+                    self.process_file3_var.set(True)
+                    self.process_file4_var.set(True)
+                except Exception:
+                    pass
+                self.start_processing()
+            self.root.after(500, after_refresh)
+        except Exception as e:
+            print(f"自动模式执行失败: {e}")
+
+    def _show_summary_popup(self, txt_path: str):
+        """显示汇总TXT内容（自动模式唯一弹窗）"""
+        try:
+            with open(txt_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except Exception as e:
+            content = f"无法读取汇总文件: {e}"
+        # 弹窗
+        dialog = tk.Toplevel(self.root)
+        dialog.title("导出结果汇总")
+        dialog.geometry("720x520")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        try:
+            icon_path = get_resource_path("ico_bin/tubiao.ico")
+            if os.path.exists(icon_path):
+                dialog.iconbitmap(icon_path)
+        except Exception:
+            pass
+        frame = ttk.Frame(dialog, padding="10")
+        frame.pack(fill=tk.BOTH, expand=True)
+        text = scrolledtext.ScrolledText(frame, wrap=tk.WORD)
+        text.pack(fill=tk.BOTH, expand=True)
+        text.insert('1.0', content)
+        text.config(state='disabled')
+        btn = ttk.Button(frame, text="关闭", command=dialog.destroy)
+        btn.pack(pady=(8, 0))
 
 
 def main():
     """主函数"""
-    app = ExcelProcessorApp()
+    # 识别 --auto 参数
+    auto_mode = False
+    try:
+        auto_mode = any(arg == "--auto" for arg in sys.argv[1:])
+    except Exception:
+        auto_mode = False
+    app = ExcelProcessorApp(auto_mode=auto_mode)
     app.run()
 
 

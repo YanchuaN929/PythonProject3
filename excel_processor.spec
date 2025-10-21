@@ -4,17 +4,23 @@ block_cipher = None
 
 a = Analysis(
     ['base.py'],
-    pathex=[],
+    pathex=['.'],
     binaries=[],
     datas=[
         ('main.py', '.'),
-        ('requirements.txt', '.'),
-        ('使用说明.md', '.'),
+        ('main2.py', '.'),
+        ('Monitor.py', '.'),
+        ('config.json', '.'),
+        ('ico_bin/tubiao.ico', 'ico_bin'),
+        ('excel_bin/姓名角色表.xlsx', 'excel_bin'),
     ],
     hiddenimports=[
+        'main',
+        'main2',
+        'Monitor',
         'pandas',
         'openpyxl',
-        'xlrd',
+        'xlrd', 
         'numpy',
         'pystray',
         'PIL',
@@ -29,7 +35,10 @@ a = Analysis(
         'json',
         'datetime',
         'pathlib',
-        'subprocess'
+        'subprocess',
+        'copy',
+        'warnings',
+        're'
     ],
     hookspath=[],
     hooksconfig={},
@@ -46,22 +55,27 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
     [],
-    name='Excel数据处理程序',
+    exclude_binaries=True,
+    name='接口筛选',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,
-    argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.ico'
+    icon='ico_bin/tubiao.ico'
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    name='接口筛选'
 )

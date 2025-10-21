@@ -1,13 +1,16 @@
-# Excel数据处理程序依赖包
-pandas>=1.5.0
-openpyxl>=3.0.0
-xlrd>=2.0.0
-numpy>=1.21.0
-pystray>=0.19.0
-Pillow>=9.0.0
+# Excel数据处理程序依赖包（Win7专用兼容版）
+pandas==1.1.5
+numpy==1.19.5
+openpyxl==3.0.10
+xlrd==1.2.0
+pystray==0.19.4
+Pillow==8.4.0
 
-# 备选依赖（如果需要更多功能）
-# matplotlib>=3.5.0  # 用于数据可视化
-# seaborn>=0.11.0    # 用于高级图表
-# xlsxwriter>=3.0.0  # 用于Excel写入
-# python-dateutil>=2.8.0  # 用于日期解析
+# 备选依赖（如需更多功能，需自行测试兼容性）
+# matplotlib==3.3.4  # 用于数据可视化
+# seaborn==0.11.1    # 用于高级图表
+# xlsxwriter==3.0.3  # 用于Excel写入
+# python-dateutil==2.8.1  # 用于日期解析
+#Remove-Item -Recurse -Force .\dist, .\build -ErrorAction SilentlyContinue
+#pyinstaller -y excel_processor.spec
+#python base.py --auto
