@@ -161,7 +161,7 @@ def write_export_summary(
         "内部需回复接口": "R", 
         "外部需打开接口": "C",
         "外部需回复接口": "E",
-        "三维提资接口": "E",  # 假设三维提资也用E列
+        "三维提资接口": "A",  # 三维提资接口使用A列
         "收发文函": "E"
     }
     
@@ -189,12 +189,21 @@ def write_export_summary(
                 else:
                     time_series = ["未知"] * len(df)
                 
-                # 确定接口号列
-                interface_col = interface_column_map.get(category_name, "A")
-                if interface_col in getattr(df, 'columns', []):
+                # 确定接口号列索引（使用列索引而非列名）
+                interface_col_letter = interface_column_map.get(category_name, "A")
+                # 将字母转换为索引：A=0, B=1, C=2, ..., R=17
+                col_index_map = {
+                    "A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5,
+                    "G": 6, "H": 7, "I": 8, "J": 9, "K": 10, "L": 11,
+                    "M": 12, "N": 13, "O": 14, "P": 15, "Q": 16, "R": 17
+                }
+                col_idx = col_index_map.get(interface_col_letter, 0)
+                
+                # 使用iloc通过索引获取列数据
+                if col_idx < len(df.columns):
                     interface_series = [
-                        (str(v).strip() if v is not None and str(v).strip() else "")
-                        for v in df[interface_col].tolist()
+                        (str(v).strip() if v is not None and str(v).strip() and str(v) != 'nan' else "")
+                        for v in df.iloc[:, col_idx].tolist()
                     ]
                 else:
                     interface_series = [""] * len(df)

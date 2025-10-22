@@ -465,12 +465,13 @@ class WindowManager:
         viewer["columns"] = columns
         viewer["show"] = "tree headings"
         
-        # 配置序号列
-        viewer.column("#0", width=60, minwidth=60)
-        viewer.heading("#0", text="行号")
-        
         # 配置数据列（自动计算列宽）
         column_widths = self.calculate_column_widths(display_df, columns)
+        
+        # 配置序号列（宽度与接口号列一致）
+        row_number_width = column_widths[0] if column_widths else 60
+        viewer.column("#0", width=row_number_width, minwidth=row_number_width)
+        viewer.heading("#0", text="行号")
         
         for i, col in enumerate(columns):
             col_width = column_widths[i] if i < len(column_widths) else 100
@@ -575,7 +576,7 @@ class WindowManager:
         - 内部需回复接口：R列
         - 外部需打开接口：C列
         - 外部需回复接口：E列
-        - 三维提资接口：E列
+        - 三维提资接口：A列
         - 收发文函：E列
         """
         try:
@@ -585,7 +586,7 @@ class WindowManager:
                 "内部需回复接口": 17,  # R列 = 索引17
                 "外部需打开接口": 2,   # C列 = 索引2
                 "外部需回复接口": 4,   # E列 = 索引4
-                "三维提资接口": 4,     # E列 = 索引4
+                "三维提资接口": 0,     # A列 = 索引0
                 "收发文函": 4          # E列 = 索引4
             }
             

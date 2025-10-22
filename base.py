@@ -3134,44 +3134,114 @@ class ExcelProcessorApp:
                 pass
 
     def add_to_startup(self):
-        """添加到开机自启动"""
+        """添加到开机自启动（增强版）"""
         try:
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 
-                               r"Software\Microsoft\Windows\CurrentVersion\Run", 
-                               0, winreg.KEY_SET_VALUE)
-            
+            # 1. 获取可执行文件路径
             exe_path = os.path.abspath(sys.argv[0])
+            
+            # 2. 规范化路径（处理空格和特殊字符）
             if exe_path.endswith('.py'):
-                # 如果是Python脚本，使用python.exe运行
+                # Python脚本模式
                 python_exe = sys.executable
-                # 自动模式参数 --auto 确保登录后后台自动运行
+                # 确保路径用双引号包裹
                 startup_cmd = f'"{python_exe}" "{exe_path}" --auto'
             else:
-                # 可执行文件同样附加 --auto 参数
+                # 可执行文件模式
                 startup_cmd = f'"{exe_path}" --auto'
             
-            winreg.SetValueEx(key, "ExcelProcessor", 0, winreg.REG_SZ, startup_cmd)
-            winreg.CloseKey(key)
-            
+            # 3. 尝试写入注册表
+            try:
+                key = winreg.OpenKey(
+                    winreg.HKEY_CURRENT_USER, 
+                    r"Software\Microsoft\Windows\CurrentVersion\Run", 
+                    0, 
+                    winreg.KEY_WRITE | winreg.KEY_READ  # 确保有读写权限
+                )
+                winreg.SetValueEx(key, "ExcelProcessor", 0, winreg.REG_SZ, startup_cmd)
+                winreg.CloseKey(key)
+                
+                # 4. 验证写入是否成功
+                verify_key = winreg.OpenKey(
+                    winreg.HKEY_CURRENT_USER, 
+                    r"Software\Microsoft\Windows\CurrentVersion\Run", 
+                    0, 
+                    winreg.KEY_READ
+                )
+                try:
+                    stored_value, _ = winreg.QueryValueEx(verify_key, "ExcelProcessor")
+                    winreg.CloseKey(verify_key)
+                    
+                    if stored_value != startup_cmd:
+                        raise ValueError("注册表值验证失败：写入的值与读取的值不一致")
+                    
+                    # 成功提示
+                    if self._should_show_popup():
+                        messagebox.showinfo("成功", f"开机自启动设置成功\n\n路径：{exe_path}\n命令：{startup_cmd}")
+                    
+                except Exception as verify_error:
+                    raise ValueError(f"验证失败: {verify_error}")
+                    
+            except PermissionError:
+                raise PermissionError("权限不足，无法写入注册表。请以管理员身份运行程序。")
+            except OSError as os_error:
+                raise OSError(f"注册表操作失败: {os_error}")
+                
         except Exception as e:
-            messagebox.showerror("错误", f"设置开机自启动失败: {str(e)}")
+            error_msg = f"设置开机自启动失败:\n\n{str(e)}\n\n可能原因:\n1. 权限不足（需要管理员权限）\n2. 注册表被安全软件保护\n3. 系统策略限制\n\n建议：请以管理员身份运行程序重试"
+            if self._should_show_popup():
+                messagebox.showerror("错误", error_msg)
             self.auto_startup_var.set(False)
+            # 记录到日志
+            print(f"[开机自启动] 设置失败: {e}")
 
     def remove_from_startup(self):
-        """从开机自启动中移除"""
+        """从开机自启动中移除（增强版）"""
         try:
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 
-                               r"Software\Microsoft\Windows\CurrentVersion\Run", 
-                               0, winreg.KEY_SET_VALUE)
-            
-            winreg.DeleteValue(key, "ExcelProcessor")
-            winreg.CloseKey(key)
-            
-        except FileNotFoundError:
-            # 如果注册表项不存在，忽略错误
-            pass
+            # 1. 尝试删除注册表值
+            try:
+                key = winreg.OpenKey(
+                    winreg.HKEY_CURRENT_USER, 
+                    r"Software\Microsoft\Windows\CurrentVersion\Run", 
+                    0, 
+                    winreg.KEY_WRITE | winreg.KEY_READ
+                )
+                winreg.DeleteValue(key, "ExcelProcessor")
+                winreg.CloseKey(key)
+                
+                # 2. 验证删除是否成功
+                verify_key = winreg.OpenKey(
+                    winreg.HKEY_CURRENT_USER, 
+                    r"Software\Microsoft\Windows\CurrentVersion\Run", 
+                    0, 
+                    winreg.KEY_READ
+                )
+                try:
+                    # 如果还能读取到值，说明删除失败
+                    _, _ = winreg.QueryValueEx(verify_key, "ExcelProcessor")
+                    winreg.CloseKey(verify_key)
+                    raise ValueError("删除验证失败：注册表值仍然存在")
+                except FileNotFoundError:
+                    # 正常情况：值不存在了
+                    winreg.CloseKey(verify_key)
+                    if self._should_show_popup():
+                        messagebox.showinfo("成功", "开机自启动已成功移除")
+                    
+            except FileNotFoundError:
+                # 如果注册表项不存在，视为成功（已经不存在）
+                pass
+            except PermissionError:
+                raise PermissionError("权限不足，无法修改注册表。请以管理员身份运行程序。")
+            except OSError as os_error:
+                raise OSError(f"注册表操作失败: {os_error}")
+                
         except Exception as e:
-            messagebox.showerror("错误", f"移除开机自启动失败: {str(e)}")
+            error_msg = f"移除开机自启动失败:\n\n{str(e)}\n\n可能原因:\n1. 权限不足（需要管理员权限）\n2. 注册表被安全软件保护\n\n建议：请以管理员身份运行程序重试"
+            if self._should_show_popup():
+                messagebox.showerror("错误", error_msg)
+            # 回滚状态
+            self.auto_startup_var.set(True)
+            # 记录到日志
+            print(f"[开机自启动] 移除失败: {e}")
 
     def on_window_close(self):
         """窗口关闭事件处理"""
@@ -3433,32 +3503,130 @@ class ExcelProcessorApp:
             print(f"自动模式执行失败: {e}")
 
     def _show_summary_popup(self, txt_path: str):
-        """显示汇总TXT内容（自动模式唯一弹窗）"""
+        """显示汇总TXT内容（自动模式唯一弹窗）- 支持选中复制"""
         try:
             with open(txt_path, 'r', encoding='utf-8') as f:
                 content = f.read()
         except Exception as e:
             content = f"无法读取汇总文件: {e}"
-        # 弹窗
+        
+        # 创建弹窗
         dialog = tk.Toplevel(self.root)
         dialog.title("导出结果汇总")
-        dialog.geometry("720x520")
+        dialog.geometry("800x600")  # 增大窗口以便更好地显示内容
         dialog.transient(self.root)
         dialog.grab_set()
+        
+        # 设置图标
         try:
             icon_path = get_resource_path("ico_bin/tubiao.ico")
             if os.path.exists(icon_path):
                 dialog.iconbitmap(icon_path)
         except Exception:
             pass
+        
+        # 主框架
         frame = ttk.Frame(dialog, padding="10")
         frame.pack(fill=tk.BOTH, expand=True)
-        text = scrolledtext.ScrolledText(frame, wrap=tk.WORD)
-        text.pack(fill=tk.BOTH, expand=True)
+        
+        # 提示标签
+        tip_label = ttk.Label(
+            frame, 
+            text="💡 提示：可以选中文本并复制（Ctrl+C），接口号信息在各时间节点下方",
+            foreground="gray"
+        )
+        tip_label.pack(anchor=tk.W, pady=(0, 5))
+        
+        # 文本显示区域（使用Text而非ScrolledText以便更好地控制）
+        text_frame = ttk.Frame(frame)
+        text_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # 创建文本框和滚动条
+        text = tk.Text(
+            text_frame, 
+            wrap=tk.WORD,
+            font=("Microsoft YaHei UI", 10),  # 使用更清晰的字体
+            padx=10,
+            pady=10
+        )
+        scrollbar_y = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=text.yview)
+        scrollbar_x = ttk.Scrollbar(text_frame, orient=tk.HORIZONTAL, command=text.xview)
+        
+        text.config(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+        
+        # 布局
+        text.grid(row=0, column=0, sticky='nsew')
+        scrollbar_y.grid(row=0, column=1, sticky='ns')
+        scrollbar_x.grid(row=1, column=0, sticky='ew')
+        
+        text_frame.grid_rowconfigure(0, weight=1)
+        text_frame.grid_columnconfigure(0, weight=1)
+        
+        # 插入内容
         text.insert('1.0', content)
-        text.config(state='disabled')
-        btn = ttk.Button(frame, text="关闭", command=dialog.destroy)
-        btn.pack(pady=(8, 0))
+        
+        # ⭐ 关键：使用 NORMAL 状态但禁用编辑功能，保留选中和复制
+        # 通过绑定事件来阻止修改，而不是使用disabled状态
+        def block_edit(event=None):
+            """阻止编辑但允许选中和复制"""
+            # 允许的操作：Ctrl+C（复制）、Ctrl+A（全选）、方向键、鼠标选择
+            allowed_keys = ['c', 'a', 'C', 'A']  # Ctrl+C 和 Ctrl+A
+            if event and event.state & 0x4:  # Ctrl键被按下
+                if event.keysym in allowed_keys:
+                    return  # 允许执行
+            # 其他情况阻止修改
+            return "break"
+        
+        # 绑定事件阻止编辑
+        text.bind('<Key>', block_edit)
+        # 允许鼠标选择
+        text.bind('<Button-1>', lambda e: None)
+        # 添加右键菜单支持复制
+        context_menu = tk.Menu(text, tearoff=0)
+        context_menu.add_command(
+            label="复制 (Ctrl+C)",
+            command=lambda: self.root.clipboard_append(text.selection_get()) if text.tag_ranges('sel') else None
+        )
+        context_menu.add_command(
+            label="全选 (Ctrl+A)",
+            command=lambda: text.tag_add('sel', '1.0', 'end')
+        )
+        
+        def show_context_menu(event):
+            try:
+                context_menu.post(event.x_root, event.y_root)
+            finally:
+                context_menu.grab_release()
+        
+        text.bind('<Button-3>', show_context_menu)
+        
+        # 设置文本为可选择但不可编辑的样式
+        text.config(
+            bg='#f5f5f5',  # 浅灰色背景，提示为只读
+            cursor='arrow',  # 箭头光标（但仍可选择文本）
+            selectbackground='#0078d7',  # 选中背景色
+            selectforeground='white'  # 选中文字颜色
+        )
+        
+        # 按钮框架
+        btn_frame = ttk.Frame(frame)
+        btn_frame.pack(pady=(8, 0), fill=tk.X)
+        
+        # 添加复制全部按钮
+        copy_all_btn = ttk.Button(
+            btn_frame, 
+            text="📋 复制全部",
+            command=lambda: [
+                self.root.clipboard_clear(),
+                self.root.clipboard_append(content),
+                messagebox.showinfo("提示", "已复制全部内容到剪贴板", parent=dialog)
+            ]
+        )
+        copy_all_btn.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # 关闭按钮
+        close_btn = ttk.Button(btn_frame, text="关闭", command=dialog.destroy)
+        close_btn.pack(side=tk.RIGHT)
 
 
 def main():
