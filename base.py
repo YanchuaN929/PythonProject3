@@ -1189,41 +1189,162 @@ class ExcelProcessorApp:
         self.show_empty_message(self.tab5_viewer, "等待加载三维提资接口数据")
         self.show_empty_message(self.tab6_viewer, "等待加载收发文函数据")
 
-    def apply_role_based_filter(self, df: pd.DataFrame) -> pd.DataFrame:
-        """根据姓名与角色对结果进行过滤。
-        依赖列：'科室'、'责任人'。缺列时安全回退为原df。
+    def _parse_interface_engineer_role(self, role: str):
+        """
+        解析接口工程师角色，提取项目号
+        例如："2016接口工程师" -> "2016"
+        返回：项目号字符串，如果不是接口工程师角色则返回None
+        """
+        import re
+        match = re.match(r'^(\d{4})接口工程师$', role.strip())
+        if match:
+            return match.group(1)
+        return None
+    
+    def _filter_by_single_role(self, df: pd.DataFrame, role: str, project_id: str = None) -> pd.DataFrame:
+        """
+        根据单个角色过滤数据
+        
+        参数:
+            df: 原始数据
+            role: 单个角色（如"设计人员"、"2016接口工程师"等）
+            project_id: 当前数据的项目号（用于接口工程师筛选）
+        
+        返回:
+            过滤后的DataFrame
+        """
+        try:
+            user_name = getattr(self, 'user_name', '').strip()
+            if not role or not user_name:
+                return df.iloc[0:0]  # 返回空DataFrame
+            
+            safe_df = df.copy()
+            
+            # 1. 接口工程师：按项目号筛选所有数据
+            engineer_project = self._parse_interface_engineer_role(role)
+            if engineer_project:
+                # 如果当前数据的项目号与接口工程师负责的项目号匹配，则返回全部数据
+                if project_id == engineer_project:
+                    return safe_df
+                else:
+                    return safe_df.iloc[0:0]  # 项目号不匹配，返回空
+            
+            # 2. 设计人员：责任人 == 姓名
+            if role == '设计人员':
+                if '责任人' in safe_df.columns:
+                    return safe_df[safe_df['责任人'].astype(str).str.strip() == user_name]
+                return safe_df
+            
+            # 3. 一室主任：科室 ∈ {结构一室, 请室主任确认}
+            if role == '一室主任':
+                if '科室' in safe_df.columns:
+                    return safe_df[safe_df['科室'].isin(['结构一室', '请室主任确认'])]
+                return safe_df
+            
+            # 4. 二室主任：科室 ∈ {结构二室, 请室主任确认}
+            if role == '二室主任':
+                if '科室' in safe_df.columns:
+                    return safe_df[safe_df['科室'].isin(['结构二室', '请室主任确认'])]
+                return safe_df
+            
+            # 5. 建筑总图室主任：科室 ∈ {建筑总图室, 请室主任确认}
+            if role == '建筑总图室主任':
+                if '科室' in safe_df.columns:
+                    return safe_df[safe_df['科室'].isin(['建筑总图室', '请室主任确认'])]
+                return safe_df
+            
+            # 6. 管理员或其他未知角色：不过滤
+            return safe_df
+        except Exception as e:
+            print(f"单角色过滤失败 [{role}]: {e}")
+            return df.iloc[0:0]
+    
+    def apply_role_based_filter(self, df: pd.DataFrame, project_id: str = None) -> pd.DataFrame:
+        """
+        根据姓名与角色对结果进行过滤（支持多角色）
+        
+        依赖列：'科室'、'责任人'、'原始行号'。缺列时安全回退为原df。
+        
         角色映射：
           - 设计人员：责任人 == 姓名
+          - 接口工程师（如"2016接口工程师"）：处理对应项目的所有数据
           - 一室主任：科室 ∈ {结构一室, 请室主任确认}
           - 二室主任：科室 ∈ {结构二室, 请室主任确认}
           - 建筑总图室主任：科室 ∈ {建筑总图室, 请室主任确认}
           - 管理员或空角色/姓名：不过滤
+        
+        多角色处理：
+          - 分别按每个角色筛选
+          - 合并结果（去重）
+          - 为每条数据添加"角色来源"列
+        
+        参数:
+            df: 原始数据
+            project_id: 项目号（用于接口工程师筛选）
+        
+        返回:
+            过滤后的DataFrame，包含"角色来源"列
         """
         try:
             user_name = getattr(self, 'user_name', '').strip()
-            user_role = getattr(self, 'user_role', '').strip()
-            if not user_role or not user_name:
+            user_roles = getattr(self, 'user_roles', [])
+            
+            # 兼容旧逻辑：如果没有user_roles，尝试从user_role解析
+            if not user_roles:
+                user_role = getattr(self, 'user_role', '').strip()
+                if user_role:
+                    user_roles = [user_role]
+            
+            if not user_roles or not user_name:
                 return df
+            
             safe_df = df.copy()
-            if user_role == '设计人员':
-                if '责任人' in safe_df.columns:
-                    return safe_df[safe_df['责任人'].astype(str).str.strip() == user_name]
-                return safe_df
-            if user_role == '一室主任':
-                if '科室' in safe_df.columns:
-                    return safe_df[safe_df['科室'].isin(['结构一室', '请室主任确认'])]
-                return safe_df
-            if user_role == '二室主任':
-                if '科室' in safe_df.columns:
-                    return safe_df[safe_df['科室'].isin(['结构二室', '请室主任确认'])]
-                return safe_df
-            if user_role == '建筑总图室主任':
-                if '科室' in safe_df.columns:
-                    return safe_df[safe_df['科室'].isin(['建筑总图室', '请室主任确认'])]
-                return safe_df
-            # 管理员/其他：不过滤
-            return safe_df
-        except Exception:
+            
+            # 如果只有一个角色且不是接口工程师，使用旧逻辑（向后兼容）
+            if len(user_roles) == 1 and not self._parse_interface_engineer_role(user_roles[0]):
+                filtered = self._filter_by_single_role(safe_df, user_roles[0], project_id)
+                # 添加角色来源列
+                if not filtered.empty and '角色来源' not in filtered.columns:
+                    filtered['角色来源'] = user_roles[0]
+                return filtered
+            
+            # 多角色处理：分别筛选，然后合并
+            all_results = []
+            role_map = {}  # {原始行号: [角色列表]}
+            
+            for role in user_roles:
+                filtered = self._filter_by_single_role(safe_df, role, project_id)
+                if not filtered.empty:
+                    all_results.append(filtered)
+                    # 记录每个原始行号对应的角色
+                    for idx in filtered.index:
+                        original_row = filtered.loc[idx, '原始行号'] if '原始行号' in filtered.columns else idx
+                        if original_row not in role_map:
+                            role_map[original_row] = []
+                        role_map[original_row].append(role)
+            
+            if not all_results:
+                return safe_df.iloc[0:0]
+            
+            # 合并所有结果（按原始行号去重）
+            merged = pd.concat(all_results, ignore_index=False)
+            if '原始行号' in merged.columns:
+                merged = merged.drop_duplicates(subset=['原始行号'], keep='first')
+            else:
+                merged = merged.drop_duplicates(keep='first')
+            
+            # 添加角色来源列
+            if '原始行号' in merged.columns:
+                merged['角色来源'] = merged['原始行号'].apply(
+                    lambda x: '、'.join(role_map.get(x, []))
+                )
+            else:
+                # 如果没有原始行号，只能用第一个角色
+                merged['角色来源'] = user_roles[0] if user_roles else ''
+            
+            return merged
+        except Exception as e:
+            print(f"角色过滤失败: {e}")
             return df
 
     def apply_auto_role_date_window(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -1277,9 +1398,13 @@ class ExcelProcessorApp:
             return df
 
     def load_user_role(self):
-        """加载用户角色：从 excel_bin/姓名角色表.xlsx 中读取 A列=姓名，B列=角色"""
+        """
+        加载用户角色：从 excel_bin/姓名角色表.xlsx 中读取 A列=姓名，B列=角色
+        支持多重角色（用顿号、分隔），识别接口工程师角色
+        """
         self.user_name = self.config.get("user_name", "").strip()
         self.user_role = ""
+        self.user_roles = []  # 新增：角色列表
         if not self.user_name:
             return
         try:
@@ -1309,11 +1434,15 @@ class ExcelProcessorApp:
                     name_val = str(row.iloc[name_col]).strip()
                     role_val = str(row.iloc[role_col]).strip()
                     if name_val == self.user_name:
-                        self.user_role = role_val
+                        self.user_role = role_val  # 保留原始字符串（兼容性）
+                        # 解析多重角色（用顿号、分隔）
+                        self.user_roles = [r.strip() for r in role_val.split('、') if r.strip()]
+                        print(f"加载角色成功: 用户={self.user_name}, 角色={self.user_roles}")
                         break
                 except Exception:
                     continue
-        except Exception:
+        except Exception as e:
+            print(f"加载角色表失败: {e}")
             pass
 
     def adjust_font_sizes(self):
@@ -2174,6 +2303,8 @@ class ExcelProcessorApp:
                                 # 直接处理（缓存已移除）
                                 result = main.process_target_file(file_path, self.current_datetime)
                                 if result is not None and not result.empty:
+                                    # 添加项目号列
+                                    result['项目号'] = project_id
                                     self.processing_results_multi1[project_id] = result
                                     combined_results.append(result)
                                     print(f"项目{project_id}文件1处理完成: {len(result)} 行")
@@ -2235,6 +2366,8 @@ class ExcelProcessorApp:
                                 print(f"处理项目{project_id}的文件2: {os.path.basename(file_path)}")
                                 result = main.process_target_file2(file_path, self.current_datetime)
                                 if result is not None and not result.empty:
+                                    # 添加项目号列
+                                    result['项目号'] = project_id
                                     self.processing_results_multi2[project_id] = result
                                     combined_results.append(result)
                                     print(f"项目{project_id}文件2处理完成: {len(result)} 行")
@@ -2269,6 +2402,8 @@ class ExcelProcessorApp:
                                 print(f"处理项目{project_id}的文件3: {os.path.basename(file_path)}")
                                 result = main.process_target_file3(file_path, self.current_datetime)
                                 if result is not None and not result.empty:
+                                    # 添加项目号列
+                                    result['项目号'] = project_id
                                     self.processing_results_multi3[project_id] = result
                                     combined_results.append(result)
                                     print(f"项目{project_id}文件3处理完成: {len(result)} 行")
@@ -2303,6 +2438,8 @@ class ExcelProcessorApp:
                                 print(f"处理项目{project_id}的文件4: {os.path.basename(file_path)}")
                                 result = main.process_target_file4(file_path, self.current_datetime)
                                 if result is not None and not result.empty:
+                                    # 添加项目号列
+                                    result['项目号'] = project_id
                                     self.processing_results_multi4[project_id] = result
                                     combined_results.append(result)
                                     print(f"项目{project_id}文件4处理完成: {len(result)} 行")
@@ -2424,6 +2561,8 @@ class ExcelProcessorApp:
                                     print(f"处理项目{project_id}的文件5: {os.path.basename(file_path)}")
                                     result = main.process_target_file5(file_path, self.current_datetime)
                                     if result is not None and not result.empty:
+                                        # 添加项目号列
+                                        result['项目号'] = project_id
                                         self.processing_results_multi5[project_id] = result
                                         combined_results.append(result)
                                 except Exception as e:
@@ -2467,6 +2606,8 @@ class ExcelProcessorApp:
                                     print(f"处理文件6: {os.path.basename(file_path)}")
                                     result = main.process_target_file6(file_path, self.current_datetime)
                                     if result is not None and not result.empty:
+                                        # 添加项目号列
+                                        result['项目号'] = project_id
                                         self.processing_results_multi6[project_id] = result
                                         combined_results.append(result)
                                 except Exception as e:
@@ -2772,8 +2913,8 @@ class ExcelProcessorApp:
         if self.process_file1_var.get() and self.processing_results_multi1:
             for project_id, results in self.processing_results_multi1.items():
                 if isinstance(results, pd.DataFrame) and not results.empty:
-                    # 角色过滤
-                    results = self.apply_role_based_filter(results)
+                    # 角色过滤（传递项目号）
+                    results = self.apply_role_based_filter(results, project_id=project_id)
                     # 自动模式角色日期窗口限制
                     results = self.apply_auto_role_date_window(results)
                     self.filtered_results_multi1[project_id] = results
@@ -2791,7 +2932,7 @@ class ExcelProcessorApp:
         if self.process_file2_var.get() and self.processing_results_multi2:
             for project_id, results in self.processing_results_multi2.items():
                 if isinstance(results, pd.DataFrame) and not results.empty:
-                    results = self.apply_role_based_filter(results)
+                    results = self.apply_role_based_filter(results, project_id=project_id)
                     results = self.apply_auto_role_date_window(results)
                     self.filtered_results_multi2[project_id] = results
                     # 找到对应项目的原始文件路径
@@ -2809,7 +2950,7 @@ class ExcelProcessorApp:
             if hasattr(main, 'export_result_to_excel3'):
                 for project_id, results in self.processing_results_multi3.items():
                     if isinstance(results, pd.DataFrame) and not results.empty:
-                        results = self.apply_role_based_filter(results)
+                        results = self.apply_role_based_filter(results, project_id=project_id)
                         results = self.apply_auto_role_date_window(results)
                         self.filtered_results_multi3[project_id] = results
                         # 找到对应项目的原始文件路径
@@ -2827,7 +2968,7 @@ class ExcelProcessorApp:
             if hasattr(main, 'export_result_to_excel4'):
                 for project_id, results in self.processing_results_multi4.items():
                     if isinstance(results, pd.DataFrame) and not results.empty:
-                        results = self.apply_role_based_filter(results)
+                        results = self.apply_role_based_filter(results, project_id=project_id)
                         results = self.apply_auto_role_date_window(results)
                         self.filtered_results_multi4[project_id] = results
                         # 找到对应项目的原始文件路径
@@ -2844,7 +2985,7 @@ class ExcelProcessorApp:
             if hasattr(main, 'export_result_to_excel5'):
                 for project_id, results in self.processing_results_multi5.items():
                     if isinstance(results, pd.DataFrame) and not results.empty:
-                        results = self.apply_role_based_filter(results)
+                        results = self.apply_role_based_filter(results, project_id=project_id)
                         results = self.apply_auto_role_date_window(results)
                         if not hasattr(self, 'filtered_results_multi5'):
                             self.filtered_results_multi5 = {}
@@ -2862,7 +3003,7 @@ class ExcelProcessorApp:
             if hasattr(main, 'export_result_to_excel6'):
                 for project_id, results in self.processing_results_multi6.items():
                     if isinstance(results, pd.DataFrame) and not results.empty:
-                        results = self.apply_role_based_filter(results)
+                        results = self.apply_role_based_filter(results, project_id=project_id)
                         results = self.apply_auto_role_date_window(results)
                         if not hasattr(self, 'filtered_results_multi6'):
                             self.filtered_results_multi6 = {}
@@ -3159,7 +3300,7 @@ class ExcelProcessorApp:
                 )
                 winreg.SetValueEx(key, "ExcelProcessor", 0, winreg.REG_SZ, startup_cmd)
                 winreg.CloseKey(key)
-                
+            
                 # 4. 验证写入是否成功
                 verify_key = winreg.OpenKey(
                     winreg.HKEY_CURRENT_USER, 
@@ -3185,7 +3326,7 @@ class ExcelProcessorApp:
                 raise PermissionError("权限不足，无法写入注册表。请以管理员身份运行程序。")
             except OSError as os_error:
                 raise OSError(f"注册表操作失败: {os_error}")
-                
+            
         except Exception as e:
             error_msg = f"设置开机自启动失败:\n\n{str(e)}\n\n可能原因:\n1. 权限不足（需要管理员权限）\n2. 注册表被安全软件保护\n3. 系统策略限制\n\n建议：请以管理员身份运行程序重试"
             if self._should_show_popup():
@@ -3201,13 +3342,13 @@ class ExcelProcessorApp:
             try:
                 key = winreg.OpenKey(
                     winreg.HKEY_CURRENT_USER, 
-                    r"Software\Microsoft\Windows\CurrentVersion\Run", 
+                               r"Software\Microsoft\Windows\CurrentVersion\Run", 
                     0, 
                     winreg.KEY_WRITE | winreg.KEY_READ
                 )
                 winreg.DeleteValue(key, "ExcelProcessor")
                 winreg.CloseKey(key)
-                
+            
                 # 2. 验证删除是否成功
                 verify_key = winreg.OpenKey(
                     winreg.HKEY_CURRENT_USER, 

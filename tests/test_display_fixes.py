@@ -174,7 +174,7 @@ class TestRowNumberColumnWidth:
                 f"行号列宽度({row_number_width})应该与接口号列宽度({data_column_width})一致"
     
     def test_row_number_width_short_interface_numbers(self, mock_root):
-        """测试：短接口号时行号列宽度相应缩小"""
+        """测试：接口号列使用固定宽度200px"""
         from window import WindowManager
         
         # 创建很短的接口号
@@ -185,11 +185,9 @@ class TestRowNumberColumnWidth:
         # 计算列宽
         column_widths = wm.calculate_column_widths(df, ['接口号'])
         
-        # 验证宽度被正确计算（短内容应该有较小的宽度）
+        # 验证接口号列使用固定宽度200px
         assert len(column_widths) > 0, "应该有列宽计算结果"
-        # 最小宽度应该是60px
-        assert column_widths[0] >= 60, "宽度应该不小于60px"
-        assert column_widths[0] <= 100, "短内容的宽度应该较小"
+        assert column_widths[0] == 200, "接口号列应该使用固定宽度200px"
 
 
 class TestMain2InterfaceMapping:

@@ -14,26 +14,35 @@ class TestProjectFilterVariables:
     
     def test_project_vars_initialization(self):
         """测试项目号变量默认全选"""
-        with patch('base.WindowManager'):
-            from base import ExcelProcessorApp
-            
-            app = ExcelProcessorApp(auto_mode=False)
-            
-            # 验证6个项目号变量都被初始化
-            assert hasattr(app, 'project_1818_var')
-            assert hasattr(app, 'project_1907_var')
-            assert hasattr(app, 'project_1916_var')
-            assert hasattr(app, 'project_2016_var')
-            assert hasattr(app, 'project_2026_var')
-            assert hasattr(app, 'project_2306_var')
-            
-            # 验证默认都是选中状态
-            assert app.project_1818_var.get() == True
-            assert app.project_1907_var.get() == True
-            assert app.project_1916_var.get() == True
-            assert app.project_2016_var.get() == True
-            assert app.project_2026_var.get() == True
-            assert app.project_2306_var.get() == True
+        # 创建真实的Tk root但不显示
+        root = tk.Tk()
+        root.withdraw()  # 隐藏窗口
+        
+        try:
+            with patch('base.WindowManager'):
+                from base import ExcelProcessorApp
+                
+                # 手动传入root
+                with patch('base.tk.Tk', return_value=root):
+                    app = ExcelProcessorApp(auto_mode=False)
+                    
+                    # 验证6个项目号变量都被初始化
+                    assert hasattr(app, 'project_1818_var')
+                    assert hasattr(app, 'project_1907_var')
+                    assert hasattr(app, 'project_1916_var')
+                    assert hasattr(app, 'project_2016_var')
+                    assert hasattr(app, 'project_2026_var')
+                    assert hasattr(app, 'project_2306_var')
+                    
+                    # 验证默认都是选中状态
+                    assert app.project_1818_var.get() == True
+                    assert app.project_1907_var.get() == True
+                    assert app.project_1916_var.get() == True
+                    assert app.project_2016_var.get() == True
+                    assert app.project_2026_var.get() == True
+                    assert app.project_2306_var.get() == True
+        finally:
+            root.destroy()
 
 
 class TestGetEnabledProjects:
@@ -41,7 +50,7 @@ class TestGetEnabledProjects:
     
     def test_all_projects_enabled(self):
         """测试全选情况"""
-        with patch('base.WindowManager'):
+        with patch('base.tk.Tk'), patch('base.WindowManager'):
             from base import ExcelProcessorApp
             
             app = ExcelProcessorApp(auto_mode=False)
@@ -57,44 +66,60 @@ class TestGetEnabledProjects:
     
     def test_partial_projects_enabled(self):
         """测试部分选择情况"""
-        with patch('base.WindowManager'):
-            from base import ExcelProcessorApp
-            
-            app = ExcelProcessorApp(auto_mode=False)
-            
-            # 取消勾选部分项目
-            app.project_1907_var.set(False)
-            app.project_2016_var.set(False)
-            app.project_2306_var.set(False)
-            
-            enabled = app.get_enabled_projects()
-            
-            assert len(enabled) == 3
-            assert '1818' in enabled
-            assert '1916' in enabled
-            assert '2026' in enabled
-            assert '1907' not in enabled
-            assert '2016' not in enabled
-            assert '2306' not in enabled
+        # 创建真实的Tk root但不显示
+        root = tk.Tk()
+        root.withdraw()
+        
+        try:
+            with patch('base.WindowManager'):
+                from base import ExcelProcessorApp
+                
+                with patch('base.tk.Tk', return_value=root):
+                    app = ExcelProcessorApp(auto_mode=False)
+                    
+                    # 取消勾选部分项目
+                    app.project_1907_var.set(False)
+                    app.project_2016_var.set(False)
+                    app.project_2306_var.set(False)
+                    
+                    enabled = app.get_enabled_projects()
+                    
+                    assert len(enabled) == 3
+                    assert '1818' in enabled
+                    assert '1916' in enabled
+                    assert '2026' in enabled
+                    assert '1907' not in enabled
+                    assert '2016' not in enabled
+                    assert '2306' not in enabled
+        finally:
+            root.destroy()
     
     def test_no_projects_enabled(self):
         """测试全不选情况"""
-        with patch('base.WindowManager'):
-            from base import ExcelProcessorApp
-            
-            app = ExcelProcessorApp(auto_mode=False)
-            
-            # 取消勾选所有项目
-            app.project_1818_var.set(False)
-            app.project_1907_var.set(False)
-            app.project_1916_var.set(False)
-            app.project_2016_var.set(False)
-            app.project_2026_var.set(False)
-            app.project_2306_var.set(False)
-            
-            enabled = app.get_enabled_projects()
-            
-            assert len(enabled) == 0
+        # 创建真实的Tk root但不显示
+        root = tk.Tk()
+        root.withdraw()
+        
+        try:
+            with patch('base.WindowManager'):
+                from base import ExcelProcessorApp
+                
+                with patch('base.tk.Tk', return_value=root):
+                    app = ExcelProcessorApp(auto_mode=False)
+                    
+                    # 取消勾选所有项目
+                    app.project_1818_var.set(False)
+                    app.project_1907_var.set(False)
+                    app.project_1916_var.set(False)
+                    app.project_2016_var.set(False)
+                    app.project_2026_var.set(False)
+                    app.project_2306_var.set(False)
+                    
+                    enabled = app.get_enabled_projects()
+                    
+                    assert len(enabled) == 0
+        finally:
+            root.destroy()
 
 
 class TestFilterFilesByProject:
@@ -102,7 +127,7 @@ class TestFilterFilesByProject:
     
     def test_filter_all_enabled(self):
         """测试全选时不过滤"""
-        with patch('base.WindowManager'):
+        with patch('base.tk.Tk'), patch('base.WindowManager'):
             from base import ExcelProcessorApp
             
             app = ExcelProcessorApp(auto_mode=False)
@@ -122,7 +147,7 @@ class TestFilterFilesByProject:
     
     def test_filter_partial_enabled(self):
         """测试部分项目勾选时的过滤"""
-        with patch('base.WindowManager'):
+        with patch('base.tk.Tk'), patch('base.WindowManager'):
             from base import ExcelProcessorApp
             
             app = ExcelProcessorApp(auto_mode=False)
@@ -154,7 +179,7 @@ class TestFilterFilesByProject:
     
     def test_filter_none_enabled(self):
         """测试全不选时全部过滤"""
-        with patch('base.WindowManager'):
+        with patch('base.tk.Tk'), patch('base.WindowManager'):
             from base import ExcelProcessorApp
             
             app = ExcelProcessorApp(auto_mode=False)
@@ -173,7 +198,7 @@ class TestFilterFilesByProject:
     
     def test_filter_empty_list(self):
         """测试空文件列表"""
-        with patch('base.WindowManager'):
+        with patch('base.tk.Tk'), patch('base.WindowManager'):
             from base import ExcelProcessorApp
             
             app = ExcelProcessorApp(auto_mode=False)
@@ -192,7 +217,7 @@ class TestProjectFilterIntegration:
     
     def test_project_vars_passed_to_window_manager(self):
         """测试项目号变量被正确传递给WindowManager"""
-        with patch('base.WindowManager') as MockWindowManager:
+        with patch('base.tk.Tk'), patch('base.WindowManager') as MockWindowManager:
             from base import ExcelProcessorApp
             
             app = ExcelProcessorApp(auto_mode=False)
@@ -214,7 +239,7 @@ class TestProjectFilterIntegration:
     
     def test_ignored_files_stored(self):
         """测试被忽略的文件被正确记录"""
-        with patch('base.WindowManager'):
+        with patch('base.tk.Tk'), patch('base.WindowManager'):
             from base import ExcelProcessorApp
             
             app = ExcelProcessorApp(auto_mode=False)

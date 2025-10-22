@@ -469,7 +469,9 @@ class WindowManager:
         column_widths = self.calculate_column_widths(display_df, columns)
         
         # 配置序号列（宽度与接口号列一致）
-        row_number_width = column_widths[0] if column_widths else 60
+        # 如果有项目号列，接口号在第二列(索引1)；否则在第一列(索引0)
+        interface_col_idx = 1 if "项目号" in columns else 0
+        row_number_width = column_widths[interface_col_idx] if len(column_widths) > interface_col_idx else 60
         viewer.column("#0", width=row_number_width, minwidth=row_number_width)
         viewer.heading("#0", text="行号")
         
@@ -515,7 +517,12 @@ class WindowManager:
     
     def calculate_column_widths(self, df, columns):
         """
-        基于前4行数据计算最佳列宽
+        基于列名和数据计算最佳列宽
+        
+        特殊处理:
+        - "项目号"列: 固定宽度80px
+        - "接口号"列: 固定宽度200px
+        - 其他列: 动态计算，限制在60-300px
         
         算法:
         1. 选择第2行数据（数据行，非表头）
@@ -535,6 +542,15 @@ class WindowManager:
         
         for i, col in enumerate(columns):
             try:
+                # 为特殊列设置固定宽度
+                if col == "项目号":
+                    column_widths.append(80)
+                    continue
+                elif col == "接口号":
+                    column_widths.append(200)
+                    continue
+                
+                # 其他列动态计算
                 header_length = len(str(col))
                 
                 if i < len(calc_row):
@@ -569,7 +585,7 @@ class WindowManager:
     
     def _create_optimized_display(self, df, tab_name):
         """
-        创建优化的显示数据（仅显示接口号列）
+        创建优化的显示数据（显示项目号和接口号列，并附加角色标注）
         
         根据不同文件类型选择对应的接口号列：
         - 内部需打开接口：A列
@@ -578,6 +594,9 @@ class WindowManager:
         - 外部需回复接口：E列
         - 三维提资接口：A列
         - 收发文函：E列
+        
+        如果DataFrame中存在"角色来源"列，则在接口号后添加角色标注，如：INT-001(设计人员)
+        如果DataFrame中存在"项目号"列，则在第一列显示项目号
         """
         try:
             # 定义接口号列映射（使用列索引）
@@ -596,10 +615,44 @@ class WindowManager:
                 
                 # 检查列索引是否有效
                 if col_idx < len(df.columns):
-                    # 只显示接口号列，重命名为"接口号"
-                    interface_col = df.iloc[:, col_idx:col_idx+1].copy()
-                    interface_col.columns = ["接口号"]
-                    return interface_col
+                    # 提取接口号列
+                    interface_values = df.iloc[:, col_idx].copy()
+                    
+                    # 如果存在"角色来源"列，则添加角色标注
+                    if "角色来源" in df.columns:
+                        role_values = df["角色来源"].astype(str)
+                        # 组合接口号和角色：INT-001(设计人员)
+                        combined_values = []
+                        for interface, role in zip(interface_values, role_values):
+                            interface_str = str(interface) if not pd.isna(interface) else ""
+                            role_str = str(role).strip() if not pd.isna(role) and str(role).strip() != "" else ""
+                            
+                            if interface_str and role_str and role_str.lower() != 'nan':
+                                combined_values.append(f"{interface_str}({role_str})")
+                            else:
+                                combined_values.append(interface_str)
+                        
+                        # 创建新的DataFrame - 如果有项目号列，则项目号在前
+                        if "项目号" in df.columns:
+                            result = pd.DataFrame({
+                                "项目号": df["项目号"],
+                                "接口号": combined_values
+                            })
+                        else:
+                            result = pd.DataFrame({"接口号": combined_values})
+                        return result
+                    else:
+                        # 没有角色来源列，直接返回接口号（和项目号）
+                        if "项目号" in df.columns:
+                            result = pd.DataFrame({
+                                "项目号": df["项目号"],
+                                "接口号": df.iloc[:, col_idx]
+                            })
+                        else:
+                            interface_col = df.iloc[:, col_idx:col_idx+1].copy()
+                            interface_col.columns = ["接口号"]
+                            result = interface_col
+                        return result
             
             # 如果没有匹配或出错，返回原始数据
             return df

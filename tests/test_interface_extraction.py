@@ -127,26 +127,23 @@ class TestWriteExportSummaryIntegration:
     def test_interface_ids_in_summary(self):
         """测试接口号是否包含在导出摘要中"""
         from main2 import write_export_summary
+        from datetime import datetime
         
-        # 创建测试数据
-        file_categories = []
-        
-        # 内部需打开接口（使用A列）
+        # 创建测试数据（使用新的函数签名）
         df1 = pd.DataFrame({
-            'Col0': ['INT-A001', 'INT-A002'],  # A列
-            'Col7': ['25C1', '25C2'],  # H列（科室）
-            'Col10': ['2025-01-06', '2025-01-08'],  # K列（时间）
+            0: ['INT-A001', 'INT-A002'],  # A列（索引0）
         })
         df1['科室'] = ['结构一室', '结构二室']
         df1['接口时间'] = ['01.06', '01.08']
-        file_categories.append(("内部需打开接口", {'1818': df1}))
+        
+        results_multi1 = {'1818': df1}
         
         # 创建临时目录
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = write_export_summary(
-                file_categories,
-                tmpdir,
-                export_time="2025-01-05 10:00:00"
+                folder_path=tmpdir,
+                current_datetime=datetime.now(),
+                results_multi1=results_multi1
             )
             
             # 读取生成的文件
@@ -160,8 +157,7 @@ class TestWriteExportSummaryIntegration:
     def test_multiple_interface_types(self):
         """测试多种接口类型的接口号提取"""
         from main2 import write_export_summary
-        
-        file_categories = []
+        from datetime import datetime
         
         # 内部需打开接口（A列）
         df1 = pd.DataFrame([[f'Col{i}' for i in range(20)] for _ in range(2)])
@@ -169,7 +165,6 @@ class TestWriteExportSummaryIntegration:
         df1.iloc[1, 0] = 'INT-A002'
         df1['科室'] = ['结构一室', '结构一室']
         df1['接口时间'] = ['01.06', '01.07']
-        file_categories.append(("内部需打开接口", {'1818': df1}))
         
         # 三维提资接口（A列）
         df2 = pd.DataFrame([[f'Col{i}' for i in range(20)] for _ in range(2)])
@@ -177,7 +172,6 @@ class TestWriteExportSummaryIntegration:
         df2.iloc[1, 0] = 'INT-3D002'
         df2['科室'] = ['结构二室', '结构二室']
         df2['接口时间'] = ['01.08', '01.09']
-        file_categories.append(("三维提资接口", {'1818': df2}))
         
         # 外部需回复接口（E列）
         df3 = pd.DataFrame([[f'Col{i}' for i in range(20)] for _ in range(2)])
@@ -185,13 +179,15 @@ class TestWriteExportSummaryIntegration:
         df3.iloc[1, 4] = 'INT-E002'
         df3['科室'] = ['建筑总图室', '建筑总图室']
         df3['接口时间'] = ['01.10', '01.11']
-        file_categories.append(("外部需回复接口", {'2016': df3}))
         
+        # 使用新的函数签名
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = write_export_summary(
-                file_categories,
-                tmpdir,
-                export_time="2025-01-05 10:00:00"
+                folder_path=tmpdir,
+                current_datetime=datetime.now(),
+                results_multi1={'1818': df1},
+                results_multi5={'1818': df2},
+                results_multi4={'2016': df3}
             )
             
             with open(output_path, 'r', encoding='utf-8') as f:

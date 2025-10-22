@@ -207,16 +207,30 @@ def write_export_summary(
                     ]
                 else:
                     interface_series = [""] * len(df)
+                
+                # 获取角色来源列（如果存在）
+                if "角色来源" in getattr(df, 'columns', []):
+                    role_series = [
+                        (str(v).strip() if v is not None and str(v).strip() and str(v) != 'nan' else "")
+                        for v in df["角色来源"].tolist()
+                    ]
+                else:
+                    role_series = [""] * len(df)
 
-                # 累计计数和接口号
-                for dept_value, time_key, interface_id in zip(dept_series, time_series, interface_series):
+                # 累计计数和接口号（包含角色标注）
+                for dept_value, time_key, interface_id, role_source in zip(dept_series, time_series, interface_series, role_series):
                     dept_entry = dept_map.setdefault(dept_value, {})
                     cat_entry = dept_entry.setdefault(category_name, {})
                     pid_entry = cat_entry.setdefault(pid, {})
                     time_entry = pid_entry.setdefault(time_key, {'count': 0, 'interface_ids': []})
                     time_entry['count'] += 1
                     if interface_id:  # 只添加非空的接口号
-                        time_entry['interface_ids'].append(interface_id)
+                        # 如果有角色来源，附加到接口号后面
+                        if role_source:
+                            formatted_id = f"{interface_id}({role_source})"
+                        else:
+                            formatted_id = interface_id
+                        time_entry['interface_ids'].append(formatted_id)
             except Exception:
                 continue
 
