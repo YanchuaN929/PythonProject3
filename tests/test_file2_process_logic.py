@@ -69,15 +69,15 @@ class TestFile2ProcessLogic:
         test_file = tmp_path / "test_1907.xlsx"
         df.to_excel(test_file, index=False, engine='openpyxl')
         
-        # Mock execute2_process1, process2, process4返回值
+        # Mock execute2_process1, process2, process4返回值（这些是pandas DataFrame的索引）
         def mock_process1(df):
-            return {1, 2, 3, 4, 5, 6}
+            return {1, 2, 3, 4, 5, 6}  # pandas索引
         
         def mock_process2(df, dt):
-            return {2, 3, 4, 5, 6, 7}
+            return {2, 3, 4, 5, 6, 7}  # pandas索引
         
         def mock_process4(df):
-            return {1, 2, 3, 4, 5, 6, 7, 8}
+            return {1, 2, 3, 4, 5, 6, 7, 8}  # pandas索引
         
         monkeypatch.setattr(main, 'execute2_process1', mock_process1)
         monkeypatch.setattr(main, 'execute2_process2', mock_process2)
@@ -88,8 +88,10 @@ class TestFile2ProcessLogic:
         result = main.process_target_file2(str(test_file), datetime.now(), project_id='1907')
         
         # 验证结果
-        # 标准逻辑：P1 & P2 & P4 = {1,2,3,4,5,6} & {2,3,4,5,6,7} & {1,2,3,4,5,6,7,8} = {2,3,4,5,6}
-        expected_rows = {2, 3, 4, 5, 6}
+        # 标准逻辑：P1 & P2 & P4 = {1,2,3,4,5,6} & {2,3,4,5,6,7} & {1,2,3,4,5,6,7,8}
+        #                        = {2,3,4,5,6} (pandas索引)
+        # 转换为Excel行号：pandas索引 + 2 = {4,5,6,7,8}
+        expected_rows = {4, 5, 6, 7, 8}  # Excel行号
         
         if not result.empty:
             actual_rows = set(result['原始行号'].values) if '原始行号' in result.columns else set()
@@ -103,13 +105,13 @@ class TestFile2ProcessLogic:
         df.to_excel(test_file, index=False, engine='openpyxl')
         
         def mock_process1(df):
-            return {1, 2, 3, 4, 5, 6}
+            return {1, 2, 3, 4, 5, 6}  # pandas索引
         
         def mock_process2(df, dt):
-            return {2, 3, 4, 5, 6, 7}
+            return {2, 3, 4, 5, 6, 7}  # pandas索引
         
         def mock_process4(df):
-            return {1, 2, 3, 4, 5, 6, 7, 8}
+            return {1, 2, 3, 4, 5, 6, 7, 8}  # pandas索引
         
         monkeypatch.setattr(main, 'execute2_process1', mock_process1)
         monkeypatch.setattr(main, 'execute2_process2', mock_process2)
@@ -118,7 +120,8 @@ class TestFile2ProcessLogic:
         from datetime import datetime
         result = main.process_target_file2(str(test_file), datetime.now(), project_id='2016')
         
-        expected_rows = {2, 3, 4, 5, 6}
+        # pandas索引 {2,3,4,5,6} + 2 = Excel行号 {4,5,6,7,8}
+        expected_rows = {4, 5, 6, 7, 8}  # Excel行号
         
         if not result.empty:
             actual_rows = set(result['原始行号'].values) if '原始行号' in result.columns else set()
@@ -131,16 +134,16 @@ class TestFile2ProcessLogic:
         df.to_excel(test_file, index=False, engine='openpyxl')
         
         def mock_process1(df):
-            return {1, 2, 3, 4, 5, 6}
+            return {1, 2, 3, 4, 5, 6}  # pandas索引
         
         def mock_process2(df, dt):
-            return {2, 3, 4, 5, 6, 7}
+            return {2, 3, 4, 5, 6, 7}  # pandas索引
         
         def mock_process4(df):
-            return {1, 2, 3, 4, 5, 6, 7, 8}
+            return {1, 2, 3, 4, 5, 6, 7, 8}  # pandas索引
         
-        # process3实际返回值：{2, 3, 8}
-        # 但由于我们mock了其他process，这里会使用真实的execute2_process3
+        # process3实际返回值：{2, 3, 8}（pandas索引）
+        # 这里会使用真实的execute2_process3函数
         
         monkeypatch.setattr(main, 'execute2_process1', mock_process1)
         monkeypatch.setattr(main, 'execute2_process2', mock_process2)
@@ -151,8 +154,12 @@ class TestFile2ProcessLogic:
         # 测试1818项目
         result = main.process_target_file2(str(test_file), datetime.now(), project_id='1818')
         
-        # 扩展逻辑：(P1 & P2 & P4) - P3 = {2,3,4,5,6} - {2,3,8} = {4,5,6}
-        expected_rows = {4, 5, 6}
+        # 扩展逻辑：(P1 & P2 & P4) - P3
+        #           = ({1,2,3,4,5,6} & {2,3,4,5,6,7} & {1,2,3,4,5,6,7,8}) - {2,3,8}
+        #           = {2,3,4,5,6} - {2,3,8}
+        #           = {4,5,6} (pandas索引)
+        # 转换为Excel行号：{4,5,6} + 2 = {6,7,8}
+        expected_rows = {6, 7, 8}  # Excel行号
         
         if not result.empty:
             actual_rows = set(result['原始行号'].values) if '原始行号' in result.columns else set()
@@ -163,13 +170,13 @@ class TestFile2ProcessLogic:
         df = self.create_test_dataframe()
         
         def mock_process1(df):
-            return {1, 2, 3, 4, 5, 6}
+            return {1, 2, 3, 4, 5, 6}  # pandas索引
         
         def mock_process2(df, dt):
-            return {2, 3, 4, 5, 6, 7}
+            return {2, 3, 4, 5, 6, 7}  # pandas索引
         
         def mock_process4(df):
-            return {1, 2, 3, 4, 5, 6, 7, 8}
+            return {1, 2, 3, 4, 5, 6, 7, 8}  # pandas索引
         
         monkeypatch.setattr(main, 'execute2_process1', mock_process1)
         monkeypatch.setattr(main, 'execute2_process2', mock_process2)
@@ -179,7 +186,10 @@ class TestFile2ProcessLogic:
         
         # 测试多个其他项目
         other_projects = ['1916', '2026', '2306']
-        expected_rows = {4, 5, 6}
+        # 扩展逻辑：(P1 & P2 & P4) - P3
+        #           = {2,3,4,5,6} - {2,3,8} = {4,5,6} (pandas索引)
+        # 转换为Excel行号：{4,5,6} + 2 = {6,7,8}
+        expected_rows = {6, 7, 8}  # Excel行号
         
         for project_id in other_projects:
             test_file = tmp_path / f"test_{project_id}.xlsx"

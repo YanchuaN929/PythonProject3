@@ -617,8 +617,25 @@ class WindowManager:
                 import traceback
                 traceback.print_exc()
         
-        # 绑定左键单击事件
-        viewer.bind("<Button-1>", on_click, add="+")
+        # 先解绑旧的事件，避免重复绑定
+        # 使用标签化绑定，只绑定我们自己的处理器
+        bind_tag = f"checkbox_click_{tab_name}"
+        
+        # 如果已经绑定过，先解绑
+        try:
+            viewer.unbind_class(bind_tag, "<Button-1>")
+        except:
+            pass
+        
+        # 给viewer添加这个标签
+        tags = list(viewer.bindtags())
+        if bind_tag not in tags:
+            # 插入到第一个位置，确保我们的处理器优先
+            tags.insert(0, bind_tag)
+            viewer.bindtags(tuple(tags))
+        
+        # 绑定到这个特定标签，不使用add="+"
+        viewer.bind_class(bind_tag, "<Button-1>", on_click)
     
     def _find_source_file(self, original_df, item_index, source_files):
         """

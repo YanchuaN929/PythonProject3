@@ -6,28 +6,39 @@
 1. 为每个Excel文件生成唯一标识（基于文件名、大小、修改时间）
 2. 管理"是否已完成"勾选状态的持久化
 3. 检测文件变化并自动清空勾选状态
+4. 管理处理结果缓存（按文件+项目粒度）
 """
 
 import os
 import json
 import hashlib
+import pickle
+import shutil
 from datetime import datetime
 from typing import Dict, Set, Optional, Tuple, List
+import pandas as pd
 
 
 class FileIdentityManager:
     """文件标识管理器"""
     
-    def __init__(self, cache_file="file_cache.json"):
+    def __init__(self, cache_file="file_cache.json", result_cache_dir="result_cache"):
         """
         初始化文件标识管理器
         
         参数:
             cache_file: 缓存文件路径
+            result_cache_dir: 结果缓存目录（相对路径，确保打包后可用）
         """
         self.cache_file = cache_file
+        self.result_cache_dir = result_cache_dir
         self.file_identities = {}  # {file_path: identity_hash}
         self.completed_rows = {}   # {file_path: {row_index: True}}
+        
+        # 确保缓存目录存在
+        self._ensure_cache_dir()
+        
+        # 加载缓存
         self._load_cache()
     
     def generate_file_identity(self, file_path: str) -> Optional[str]:
@@ -225,6 +236,180 @@ class FileIdentityManager:
             
         except Exception as e:
             print(f"保存缓存失败: {e}")
+    
+    def _ensure_cache_dir(self):
+        """确保缓存目录存在"""
+        try:
+            if not os.path.exists(self.result_cache_dir):
+                os.makedirs(self.result_cache_dir)
+                print(f"创建缓存目录: {self.result_cache_dir}")
+        except Exception as e:
+            print(f"创建缓存目录失败: {e}")
+    
+    def _get_cache_filename(self, file_path: str, project_id: str, file_type: str) -> str:
+        """
+        生成缓存文件名
+        
+        格式: {文件hash前8位}_{项目号}_{文件类型}.pkl
+        例如: a1b2c3d4_2016_file1.pkl
+        
+        参数:
+            file_path: 源文件路径
+            project_id: 项目号
+            file_type: 文件类型（file1-file6）
+            
+        返回:
+            缓存文件名
+        """
+        file_hash = hashlib.md5(os.path.abspath(file_path).encode('utf-8')).hexdigest()[:8]
+        cache_filename = f"{file_hash}_{project_id}_{file_type}.pkl"
+        return os.path.join(self.result_cache_dir, cache_filename)
+    
+    def save_cached_result(self, file_path: str, project_id: str, file_type: str, 
+                          dataframe: pd.DataFrame) -> bool:
+        """
+        保存处理结果到缓存
+        
+        参数:
+            file_path: 源文件路径
+            project_id: 项目号
+            file_type: 文件类型（file1-file6）
+            dataframe: 处理后的DataFrame
+            
+        返回:
+            True = 保存成功, False = 保存失败
+        """
+        try:
+            cache_file = self._get_cache_filename(file_path, project_id, file_type)
+            
+            # 使用pickle保存DataFrame
+            with open(cache_file, 'wb') as f:
+                pickle.dump(dataframe, f, protocol=pickle.HIGHEST_PROTOCOL)
+            
+            print(f"✅ 缓存已保存: {os.path.basename(cache_file)}")
+            return True
+            
+        except Exception as e:
+            print(f"❌ 保存缓存失败 [{file_type}, {project_id}]: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def load_cached_result(self, file_path: str, project_id: str, file_type: str) -> Optional[pd.DataFrame]:
+        """
+        加载缓存的处理结果
+        
+        参数:
+            file_path: 源文件路径
+            project_id: 项目号
+            file_type: 文件类型（file1-file6）
+            
+        返回:
+            DataFrame对象，如果缓存不存在或加载失败返回None
+        """
+        try:
+            cache_file = self._get_cache_filename(file_path, project_id, file_type)
+            
+            # 检查缓存文件是否存在
+            if not os.path.exists(cache_file):
+                return None
+            
+            # 验证源文件标识是否一致
+            current_identity = self.generate_file_identity(file_path)
+            cached_identity = self.file_identities.get(file_path)
+            
+            if current_identity != cached_identity:
+                print(f"⚠️ 文件已变化，缓存失效: {os.path.basename(cache_file)}")
+                # 静默删除失效的缓存
+                try:
+                    os.remove(cache_file)
+                except:
+                    pass
+                return None
+            
+            # 加载缓存
+            with open(cache_file, 'rb') as f:
+                dataframe = pickle.load(f)
+            
+            print(f"✅ 缓存已加载: {os.path.basename(cache_file)} ({len(dataframe)}行)")
+            return dataframe
+            
+        except (pickle.UnpicklingError, EOFError, ValueError) as e:
+            # 损坏的缓存文件，静默删除并重新处理
+            print(f"⚠️ 缓存文件损坏，将重新处理: {e}")
+            try:
+                cache_file = self._get_cache_filename(file_path, project_id, file_type)
+                if os.path.exists(cache_file):
+                    os.remove(cache_file)
+                    print(f"已删除损坏的缓存文件: {os.path.basename(cache_file)}")
+            except Exception as del_err:
+                print(f"删除损坏缓存失败: {del_err}")
+            return None
+            
+        except Exception as e:
+            print(f"❌ 加载缓存失败 [{file_type}, {project_id}]: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    def clear_file_cache(self, file_path: str):
+        """
+        清除指定文件的所有缓存（所有项目、所有类型）
+        
+        参数:
+            file_path: 源文件路径
+        """
+        try:
+            file_hash = hashlib.md5(os.path.abspath(file_path).encode('utf-8')).hexdigest()[:8]
+            
+            # 查找所有匹配的缓存文件
+            deleted_count = 0
+            if os.path.exists(self.result_cache_dir):
+                for filename in os.listdir(self.result_cache_dir):
+                    if filename.startswith(file_hash) and filename.endswith('.pkl'):
+                        cache_file = os.path.join(self.result_cache_dir, filename)
+                        try:
+                            os.remove(cache_file)
+                            deleted_count += 1
+                        except Exception as e:
+                            print(f"删除缓存文件失败 {filename}: {e}")
+            
+            if deleted_count > 0:
+                print(f"已清除 {deleted_count} 个缓存文件: {os.path.basename(file_path)}")
+                
+        except Exception as e:
+            print(f"清除文件缓存失败: {e}")
+    
+    def clear_all_caches(self):
+        """
+        清除所有缓存（包括结果缓存和勾选状态）
+        
+        用于"清除缓存"按钮
+        """
+        try:
+            # 1. 清除结果缓存目录
+            if os.path.exists(self.result_cache_dir):
+                shutil.rmtree(self.result_cache_dir)
+                print(f"✅ 已删除缓存目录: {self.result_cache_dir}")
+            
+            # 2. 重新创建空目录
+            self._ensure_cache_dir()
+            
+            # 3. 清空内存中的数据
+            self.file_identities = {}
+            self.completed_rows = {}
+            
+            # 4. 保存空的file_cache.json
+            self._save_cache()
+            
+            print("✅ 所有缓存已清除")
+            return True
+            
+        except Exception as e:
+            print(f"❌ 清除缓存失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
 
 
 # 全局单例

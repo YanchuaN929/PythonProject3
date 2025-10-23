@@ -86,18 +86,32 @@ class TestAutoModePopupLogic:
     
     def test_manual_operation_after_auto_run_shows_popup(self):
         """测试：自动运行后手动操作应显示弹窗"""
-        with patch('base.WindowManager'):
-            from base import ExcelProcessorApp
-            
-            app = ExcelProcessorApp(auto_mode=True)
-            
-            # 模拟自动运行完成
-            app._manual_operation = False
-            assert app._should_show_popup() == False  # 自动运行时不显示
-            
-            # 模拟手动点击"开始处理"
-            app._manual_operation = True
-            assert app._should_show_popup() == True, "手动操作时应显示弹窗"
+        # 创建真实的Tk root并隐藏（用于BooleanVar等需要真实Tk环境的组件）
+        import tkinter as tk
+        root = tk.Tk()
+        root.withdraw()  # 隐藏窗口
+        
+        try:
+            with patch('base.WindowManager'), \
+                 patch('base.tk.Tk', return_value=root), \
+                 patch('tkinter.messagebox'):
+                from base import ExcelProcessorApp
+                
+                app = ExcelProcessorApp(auto_mode=True)
+                
+                # 模拟自动运行完成
+                app._manual_operation = False
+                assert app._should_show_popup() == False  # 自动运行时不显示
+                
+                # 模拟手动点击"开始处理"
+                app._manual_operation = True
+                assert app._should_show_popup() == True, "手动操作时应显示弹窗"
+        finally:
+            # 清理Tkinter环境
+            try:
+                root.destroy()
+            except:
+                pass
     
     def test_normal_mode_always_shows_popup(self):
         """测试：非auto模式永远显示弹窗"""

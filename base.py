@@ -798,9 +798,9 @@ class ExcelProcessorApp:
                 self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
         elif selected_tab == 1 and self.target_file2:  # 内部需回复接口
             if self.has_processed_results2 and self.processing_results2 is not None and not self.processing_results2.empty:
-                display_df = self.processing_results2.drop(columns=['原始行号'], errors='ignore')
+                # 不要drop原始行号列，因为需要它来加载勾选状态
                 excel_row_numbers = list(self.processing_results2['原始行号'])
-                self.display_excel_data_with_original_rows(self.tab2_viewer, display_df, "内部需回复接口", excel_row_numbers)
+                self.display_excel_data_with_original_rows(self.tab2_viewer, self.processing_results2, "内部需回复接口", excel_row_numbers)
             elif self.has_processed_results2:
                 self.show_empty_message(self.tab2_viewer, "无内部需回复接口")
             elif self.file2_data is not None:
@@ -809,9 +809,9 @@ class ExcelProcessorApp:
                 self.load_file_to_viewer(self.target_file2, self.tab2_viewer, "内部需回复接口")
         elif selected_tab == 2 and self.target_file3:  # 外部需打开接口
             if self.has_processed_results3 and self.processing_results3 is not None and not self.processing_results3.empty:
-                display_df = self.processing_results3.drop(columns=['原始行号'], errors='ignore')
+                # 不要drop原始行号列，因为需要它来加载勾选状态
                 excel_row_numbers = list(self.processing_results3['原始行号'])
-                self.display_excel_data_with_original_rows(self.tab3_viewer, display_df, "外部需打开接口", excel_row_numbers)
+                self.display_excel_data_with_original_rows(self.tab3_viewer, self.processing_results3, "外部需打开接口", excel_row_numbers)
             elif self.has_processed_results3:
                 self.show_empty_message(self.tab3_viewer, "无外部需打开接口")
             elif self.file3_data is not None:
@@ -820,9 +820,9 @@ class ExcelProcessorApp:
                 self.load_file_to_viewer(self.target_file3, self.tab3_viewer, "外部需打开接口")
         elif selected_tab == 3 and self.target_file4:  # 外部需回复接口
             if self.has_processed_results4 and self.processing_results4 is not None and not self.processing_results4.empty:
-                display_df = self.processing_results4.drop(columns=['原始行号'], errors='ignore')
+                # 不要drop原始行号列，因为需要它来加载勾选状态
                 excel_row_numbers = list(self.processing_results4['原始行号'])
-                self.display_excel_data_with_original_rows(self.tab4_viewer, display_df, "外部需回复接口", excel_row_numbers)
+                self.display_excel_data_with_original_rows(self.tab4_viewer, self.processing_results4, "外部需回复接口", excel_row_numbers)
             elif self.has_processed_results4:
                 self.show_empty_message(self.tab4_viewer, "无外部需回复接口")
             elif self.file4_data is not None:
@@ -831,9 +831,9 @@ class ExcelProcessorApp:
                 self.load_file_to_viewer(self.target_file4, self.tab4_viewer, "外部需回复接口")
         elif selected_tab == 4 and getattr(self, 'target_files5', None):  # 三维提资接口
             if self.has_processed_results5 and self.processing_results5 is not None and not self.processing_results5.empty:
-                display_df = self.processing_results5.drop(columns=['原始行号'], errors='ignore')
+                # 不要drop原始行号列，因为需要它来加载勾选状态
                 excel_row_numbers = list(self.processing_results5['原始行号'])
-                self.display_excel_data_with_original_rows(self.tab5_viewer, display_df, "三维提资接口", excel_row_numbers)
+                self.display_excel_data_with_original_rows(self.tab5_viewer, self.processing_results5, "三维提资接口", excel_row_numbers)
             elif self.has_processed_results5:
                 self.show_empty_message(self.tab5_viewer, "无三维提资接口")
             elif self.file5_data is not None:
@@ -846,9 +846,9 @@ class ExcelProcessorApp:
             except Exception:
                 pass
             if self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
-                display_df = self.processing_results6.drop(columns=['原始行号'], errors='ignore')
+                # 不要drop原始行号列，因为需要它来加载勾选状态
                 excel_row_numbers = list(self.processing_results6['原始行号'])
-                self.display_excel_data_with_original_rows(self.tab6_viewer, display_df, "收发文函", excel_row_numbers)
+                self.display_excel_data_with_original_rows(self.tab6_viewer, self.processing_results6, "收发文函", excel_row_numbers)
             elif self.has_processed_results6:
                 self.show_empty_message(self.tab6_viewer, "无收发文函")
             elif self.file6_data is not None:
@@ -1736,11 +1736,42 @@ class ExcelProcessorApp:
             pass
         self.timer_grace_var.trace_add('write', on_grace_change)
 
-        # （已移除缓存设置）
+        # 清除缓存按钮
+        def on_clear_cache():
+            """清除所有缓存"""
+            try:
+                # 弹窗确认
+                from tkinter import messagebox as _mb
+                result = _mb.askyesno("确认清除", 
+                    "确定要清除所有缓存吗？\n\n"
+                    "这将删除：\n"
+                    "• 所有处理结果缓存\n"
+                    "• 所有勾选状态\n"
+                    "• 文件标识信息\n\n"
+                    "清除后需要重新处理文件。",
+                    parent=settings_menu)
+                
+                if result:
+                    # 清除缓存
+                    success = self.file_manager.clear_all_caches()
+                    if success:
+                        _mb.showinfo("成功", "所有缓存已清除！", parent=settings_menu)
+                    else:
+                        _mb.showerror("失败", "清除缓存时发生错误，请查看控制台输出。", parent=settings_menu)
+            except Exception as e:
+                print(f"清除缓存失败: {e}")
+                try:
+                    from tkinter import messagebox as _mb
+                    _mb.showerror("错误", f"清除缓存失败：{e}", parent=settings_menu)
+                except:
+                    pass
+        
+        cache_button = ttk.Button(frame, text="清除缓存", command=on_clear_cache, width=14)
+        cache_button.pack(pady=(10, 0))
         
         # 关闭按钮
         close_button = ttk.Button(frame, text="确定", command=settings_menu.destroy, width=14)
-        close_button.pack(pady=(10, 0))
+        close_button.pack(pady=(5, 0))
 
     def show_waiting_dialog(self, title, message):
         """显示等待对话框"""
@@ -1870,6 +1901,9 @@ class ExcelProcessorApp:
                 
                 # 识别特定文件并更新选项卡状态
                 self.identify_target_files()
+                
+                # 检查文件标识并加载缓存
+                self._check_and_load_cache()
                 
                 # 更新文件信息显示
                 if self.excel_files:
@@ -2041,9 +2075,9 @@ class ExcelProcessorApp:
                 self.load_file_to_viewer(self.target_file4, self.tab4_viewer, "外部需回复接口")
             elif current_tab == 4 and getattr(self, 'target_files5', None):  # 三维提资接口
                 if self.has_processed_results5 and self.processing_results5 is not None and not self.processing_results5.empty:
-                    display_df = self.processing_results5.drop(columns=['原始行号'], errors='ignore')
+                    # 不要drop原始行号列，因为需要它来加载勾选状态
                     excel_row_numbers = list(self.processing_results5['原始行号'])
-                    self.display_excel_data_with_original_rows(self.tab5_viewer, display_df, "三维提资接口", excel_row_numbers)
+                    self.display_excel_data_with_original_rows(self.tab5_viewer, self.processing_results5, "三维提资接口", excel_row_numbers)
                 elif self.has_processed_results5:
                     self.show_empty_message(self.tab5_viewer, "无三维提资接口")
                 elif self.file5_data is not None:
@@ -2056,9 +2090,9 @@ class ExcelProcessorApp:
                 except Exception:
                     pass
                 if self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
-                    display_df = self.processing_results6.drop(columns=['原始行号'], errors='ignore')
+                    # 不要drop原始行号列，因为需要它来加载勾选状态
                     excel_row_numbers = list(self.processing_results6['原始行号'])
-                    self.display_excel_data_with_original_rows(self.tab6_viewer, display_df, "收发文函", excel_row_numbers)
+                    self.display_excel_data_with_original_rows(self.tab6_viewer, self.processing_results6, "收发文函", excel_row_numbers)
                 elif self.has_processed_results6:
                     self.show_empty_message(self.tab6_viewer, "无收发文函")
                 elif self.file6_data is not None:
@@ -2295,6 +2329,173 @@ class ExcelProcessorApp:
                             print(f"加载{file_id}失败: {e2}")
         except Exception as e:
             print(f"识别目标文件时发生错误: {e}")
+    
+    def _process_with_cache(self, file_path, project_id, file_type, process_func, *args):
+        """
+        带缓存的处理方法
+        
+        参数:
+            file_path: 源文件路径
+            project_id: 项目号
+            file_type: 文件类型（file1-file6）
+            process_func: 处理函数
+            *args: 传递给处理函数的额外参数
+            
+        返回:
+            处理结果DataFrame，如果失败返回None
+        """
+        try:
+            # 1. 尝试加载缓存
+            cached_result = self.file_manager.load_cached_result(file_path, project_id, file_type)
+            
+            if cached_result is not None:
+                # 缓存命中
+                print(f"  ✅ 使用缓存: 项目{project_id}{file_type} ({len(cached_result)}行)")
+                return cached_result
+            
+            # 2. 缓存未命中，进行处理
+            result = process_func(file_path, *args)
+            
+            # 3. 保存缓存
+            if result is not None and not result.empty:
+                save_success = self.file_manager.save_cached_result(file_path, project_id, file_type, result)
+                if not save_success:
+                    # 缓存保存失败，弹窗提醒（仅在手动操作时）
+                    if self._should_show_popup():
+                        try:
+                            from tkinter import messagebox as _mb
+                            _mb.showwarning("缓存保存失败", 
+                                f"项目{project_id}{file_type}的缓存保存失败。\n"
+                                f"数据已正常处理，但下次可能需要重新处理。")
+                        except:
+                            pass
+            
+            return result
+            
+        except Exception as e:
+            print(f"处理{file_type}失败 [项目{project_id}]: {e}")
+            return None
+    
+    def _check_and_load_cache(self):
+        """
+        检查文件标识并加载缓存
+        
+        在刷新文件列表后调用，检查文件是否变化，如果未变化则加载缓存结果
+        """
+        try:
+            print("\n🔍 检查文件标识和缓存...")
+            
+            # 1. 收集所有待处理文件的路径
+            all_file_paths = []
+            if hasattr(self, 'target_files1') and self.target_files1:
+                all_file_paths.extend([f[0] for f in self.target_files1])
+            if hasattr(self, 'target_files2') and self.target_files2:
+                all_file_paths.extend([f[0] for f in self.target_files2])
+            if hasattr(self, 'target_files3') and self.target_files3:
+                all_file_paths.extend([f[0] for f in self.target_files3])
+            if hasattr(self, 'target_files4') and self.target_files4:
+                all_file_paths.extend([f[0] for f in self.target_files4])
+            if hasattr(self, 'target_files5') and self.target_files5:
+                all_file_paths.extend([f[0] for f in self.target_files5])
+            if hasattr(self, 'target_files6') and self.target_files6:
+                all_file_paths.extend([f[0] for f in self.target_files6])
+            
+            # 去重
+            all_file_paths = list(set(all_file_paths))
+            
+            if not all_file_paths:
+                print("  未发现待处理文件，跳过缓存检查")
+                return
+            
+            # 2. 检查文件是否变化
+            files_changed = self.file_manager.check_files_changed(all_file_paths)
+            
+            if files_changed:
+                print("  ⚠️ 检测到文件变化，清空所有缓存和勾选状态")
+                self.file_manager.clear_all_completed_rows()
+                # 清除结果缓存
+                for file_path in all_file_paths:
+                    self.file_manager.clear_file_cache(file_path)
+                # 更新文件标识
+                self.file_manager.update_file_identities(all_file_paths)
+                return
+            
+            # 3. 文件未变化，尝试加载缓存
+            print("  ✅ 文件未变化，尝试加载缓存...")
+            cache_loaded_count = 0
+            
+            # 加载file1缓存
+            if hasattr(self, 'target_files1') and self.target_files1:
+                for file_path, project_id in self.target_files1:
+                    cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file1')
+                    if cached_df is not None:
+                        self.processing_results_multi1[project_id] = cached_df
+                        cache_loaded_count += 1
+                if self.processing_results_multi1:
+                    self.has_processed_results1 = True
+            
+            # 加载file2缓存
+            if hasattr(self, 'target_files2') and self.target_files2:
+                for file_path, project_id in self.target_files2:
+                    cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file2')
+                    if cached_df is not None:
+                        self.processing_results_multi2[project_id] = cached_df
+                        cache_loaded_count += 1
+                if self.processing_results_multi2:
+                    self.has_processed_results2 = True
+            
+            # 加载file3缓存
+            if hasattr(self, 'target_files3') and self.target_files3:
+                for file_path, project_id in self.target_files3:
+                    cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file3')
+                    if cached_df is not None:
+                        self.processing_results_multi3[project_id] = cached_df
+                        cache_loaded_count += 1
+                if self.processing_results_multi3:
+                    self.has_processed_results3 = True
+            
+            # 加载file4缓存
+            if hasattr(self, 'target_files4') and self.target_files4:
+                for file_path, project_id in self.target_files4:
+                    cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file4')
+                    if cached_df is not None:
+                        self.processing_results_multi4[project_id] = cached_df
+                        cache_loaded_count += 1
+                if self.processing_results_multi4:
+                    self.has_processed_results4 = True
+            
+            # 加载file5缓存
+            if hasattr(self, 'target_files5') and self.target_files5:
+                for file_path, project_id in self.target_files5:
+                    cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file5')
+                    if cached_df is not None:
+                        self.processing_results_multi5[project_id] = cached_df
+                        cache_loaded_count += 1
+                if self.processing_results_multi5:
+                    self.has_processed_results5 = True
+            
+            # 加载file6缓存
+            if hasattr(self, 'target_files6') and self.target_files6:
+                for file_path, project_id in self.target_files6:
+                    cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file6')
+                    if cached_df is not None:
+                        self.processing_results_multi6[project_id] = cached_df
+                        cache_loaded_count += 1
+                if self.processing_results_multi6:
+                    self.has_processed_results6 = True
+            
+            # 4. 更新文件标识（如果之前没有）
+            self.file_manager.update_file_identities(all_file_paths)
+            
+            if cache_loaded_count > 0:
+                print(f"  ✅ 成功加载 {cache_loaded_count} 个缓存结果")
+            else:
+                print("  ℹ️ 未找到可用缓存，需要重新处理")
+            
+        except Exception as e:
+            print(f"检查和加载缓存时发生错误: {e}")
+            import traceback
+            traceback.print_exc()
 
     def update_file_info(self, text):
         """更新文件信息显示"""
@@ -2425,8 +2626,10 @@ class ExcelProcessorApp:
                                 except:
                                     pass
 
-                                # 直接处理（缓存已移除）
-                                result = main.process_target_file(file_path, self.current_datetime)
+                                # 使用缓存处理
+                                result = self._process_with_cache(file_path, project_id, 'file1', 
+                                                                 main.process_target_file, self.current_datetime)
+                                
                                 if result is not None and not result.empty:
                                     # 添加项目号列
                                     result['项目号'] = project_id
@@ -2489,7 +2692,9 @@ class ExcelProcessorApp:
                         for file_path, project_id in self.target_files2:
                             try:
                                 print(f"处理项目{project_id}的文件2: {os.path.basename(file_path)}")
-                                result = main.process_target_file2(file_path, self.current_datetime, project_id)
+                                # 使用缓存处理
+                                result = self._process_with_cache(file_path, project_id, 'file2', 
+                                                                 main.process_target_file2, self.current_datetime, project_id)
                                 if result is not None and not result.empty:
                                     # 添加项目号列
                                     result['项目号'] = project_id
@@ -2525,7 +2730,9 @@ class ExcelProcessorApp:
                         for file_path, project_id in self.target_files3:
                             try:
                                 print(f"处理项目{project_id}的文件3: {os.path.basename(file_path)}")
-                                result = main.process_target_file3(file_path, self.current_datetime)
+                                # 使用缓存处理
+                                result = self._process_with_cache(file_path, project_id, 'file3', 
+                                                                 main.process_target_file3, self.current_datetime)
                                 if result is not None and not result.empty:
                                     # 添加项目号列
                                     result['项目号'] = project_id
@@ -2561,7 +2768,9 @@ class ExcelProcessorApp:
                         for file_path, project_id in self.target_files4:
                             try:
                                 print(f"处理项目{project_id}的文件4: {os.path.basename(file_path)}")
-                                result = main.process_target_file4(file_path, self.current_datetime)
+                                # 使用缓存处理
+                                result = self._process_with_cache(file_path, project_id, 'file4', 
+                                                                 main.process_target_file4, self.current_datetime)
                                 if result is not None and not result.empty:
                                     # 添加项目号列
                                     result['项目号'] = project_id
@@ -2684,7 +2893,9 @@ class ExcelProcessorApp:
                             for file_path, project_id in self.target_files5:
                                 try:
                                     print(f"处理项目{project_id}的文件5: {os.path.basename(file_path)}")
-                                    result = main.process_target_file5(file_path, self.current_datetime)
+                                    # 使用缓存处理
+                                    result = self._process_with_cache(file_path, project_id, 'file5', 
+                                                                     main.process_target_file5, self.current_datetime)
                                     if result is not None and not result.empty:
                                         # 添加项目号列
                                         result['项目号'] = project_id
@@ -2729,7 +2940,9 @@ class ExcelProcessorApp:
                             for file_path, project_id in self.target_files6:
                                 try:
                                     print(f"处理文件6: {os.path.basename(file_path)}")
-                                    result = main.process_target_file6(file_path, self.current_datetime)
+                                    # 使用缓存处理
+                                    result = self._process_with_cache(file_path, project_id, 'file6', 
+                                                                     main.process_target_file6, self.current_datetime)
                                     if result is not None and not result.empty:
                                         # 添加项目号列
                                         result['项目号'] = project_id
@@ -2899,11 +3112,11 @@ class ExcelProcessorApp:
                 return
 
             # 只取最终结果的所有数据行
-            display_df = results.drop(columns=['原始行号'], errors='ignore')
+            # 不要drop原始行号列，因为需要它来加载勾选状态
             excel_row_numbers = list(results['原始行号'])
 
             # 只显示数据行，不显示表头
-            self.display_excel_data_with_original_rows(self.tab1_viewer, display_df, "内部需打开接口", excel_row_numbers)
+            self.display_excel_data_with_original_rows(self.tab1_viewer, results, "内部需打开接口", excel_row_numbers)
         except Exception as e:
             print(f"显示最终筛选数据时发生错误: {e}")
             self.show_empty_message(self.tab1_viewer, "数据过滤失败")
@@ -2919,9 +3132,9 @@ class ExcelProcessorApp:
             return
         self.processing_results2 = results
         self.has_processed_results2 = True  # 标记已有处理结果
-        display_df = results.drop(columns=['原始行号'], errors='ignore')
+        # 不要drop原始行号列，因为需要它来加载勾选状态
         excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab2_viewer, display_df, "内部需回复接口", excel_row_numbers)
+        self.display_excel_data_with_original_rows(self.tab2_viewer, results, "内部需回复接口", excel_row_numbers)
         self.update_export_button_state()
         
         # 显示处理完成信息（仅在旧版调用时显示）
@@ -2937,9 +3150,9 @@ class ExcelProcessorApp:
             return
         self.processing_results3 = results
         self.has_processed_results3 = True  # 标记已有处理结果
-        display_df = results.drop(columns=['原始行号'], errors='ignore')
+        # 不要drop原始行号列，因为需要它来加载勾选状态
         excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab3_viewer, display_df, "外部需打开接口", excel_row_numbers)
+        self.display_excel_data_with_original_rows(self.tab3_viewer, results, "外部需打开接口", excel_row_numbers)
         self.update_export_button_state()
         
         # 显示处理完成信息（仅在旧版调用时显示）
@@ -2955,9 +3168,9 @@ class ExcelProcessorApp:
             return
         self.processing_results4 = results
         self.has_processed_results4 = True  # 标记已有处理结果
-        display_df = results.drop(columns=['原始行号'], errors='ignore')
+        # 不要drop原始行号列，因为需要它来加载勾选状态
         excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab4_viewer, display_df, "外部需回复接口", excel_row_numbers)
+        self.display_excel_data_with_original_rows(self.tab4_viewer, results, "外部需回复接口", excel_row_numbers)
         self.update_export_button_state()
         
         # 显示处理完成信息（仅在旧版调用时显示）
@@ -2973,9 +3186,9 @@ class ExcelProcessorApp:
             return
         self.processing_results5 = results
         self.has_processed_results5 = True
-        display_df = results.drop(columns=['原始行号'], errors='ignore')
+        # 不要drop原始行号列，因为需要它来加载勾选状态
         excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab5_viewer, display_df, "三维提资接口", excel_row_numbers)
+        self.display_excel_data_with_original_rows(self.tab5_viewer, results, "三维提资接口", excel_row_numbers)
         self.update_export_button_state()
         if show_popup:
             messagebox.showinfo("处理完成", f"三维提资接口数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【三维提资接口】选项卡中更新显示。")
@@ -2989,9 +3202,9 @@ class ExcelProcessorApp:
             return
         self.processing_results6 = results
         self.has_processed_results6 = True
-        display_df = results.drop(columns=['原始行号'], errors='ignore')
+        # 不要drop原始行号列，因为需要它来加载勾选状态
         excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab6_viewer, display_df, "收发文函", excel_row_numbers)
+        self.display_excel_data_with_original_rows(self.tab6_viewer, results, "收发文函", excel_row_numbers)
         self.update_export_button_state()
         if show_popup and self._should_show_popup():
             messagebox.showinfo("处理完成", f"收发文函数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【收发文函】选项卡中更新显示。")
