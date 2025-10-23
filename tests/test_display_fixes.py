@@ -24,12 +24,14 @@ class TestInterfaceColumnMapping:
         wm = WindowManager(mock_root)
         result = wm._create_optimized_display(df, "三维提资接口")
         
-        # 应该只显示A列（索引0），重命名为"接口号"
-        assert len(result.columns) == 1, "应该只有1列"
-        assert result.columns[0] == "接口号", "列名应该是'接口号'"
+        # 应该显示2列：接口号 + 是否已完成
+        assert len(result.columns) == 2, "应该有2列（接口号 + 是否已完成）"
+        assert result.columns[0] == "接口号", "第一列应该是'接口号'"
+        assert result.columns[1] == "是否已完成", "第二列应该是'是否已完成'"
         
         # 验证数据来自A列（索引0）
         assert result.iloc[0, 0] == 'INT-001', "数据应该来自A列"
+        assert result.iloc[0, 1] == '☐', "默认应该未完成"
     
     def test_nebu_dakao_uses_column_a(self, mock_root):
         """测试：内部需打开接口使用A列"""
@@ -42,8 +44,9 @@ class TestInterfaceColumnMapping:
         wm = WindowManager(mock_root)
         result = wm._create_optimized_display(df, "内部需打开接口")
         
-        assert len(result.columns) == 1
+        assert len(result.columns) == 2, "应该有2列（接口号 + 是否已完成）"
         assert result.columns[0] == "接口号"
+        assert result.columns[1] == "是否已完成"
         assert result.iloc[0, 0] == 'INT-A001'
     
     def test_nebu_huifu_uses_column_r(self, mock_root):
@@ -57,8 +60,9 @@ class TestInterfaceColumnMapping:
         wm = WindowManager(mock_root)
         result = wm._create_optimized_display(df, "内部需回复接口")
         
-        assert len(result.columns) == 1
+        assert len(result.columns) == 2
         assert result.columns[0] == "接口号"
+        assert result.columns[1] == "是否已完成"
         assert result.iloc[0, 0] == 'INT-R001'
     
     def test_waibu_dakao_uses_column_c(self, mock_root):
@@ -72,8 +76,9 @@ class TestInterfaceColumnMapping:
         wm = WindowManager(mock_root)
         result = wm._create_optimized_display(df, "外部需打开接口")
         
-        assert len(result.columns) == 1
+        assert len(result.columns) == 2
         assert result.columns[0] == "接口号"
+        assert result.columns[1] == "是否已完成"
         assert result.iloc[0, 0] == 'INT-C001'
     
     def test_waibu_huifu_uses_column_e(self, mock_root):
@@ -87,8 +92,9 @@ class TestInterfaceColumnMapping:
         wm = WindowManager(mock_root)
         result = wm._create_optimized_display(df, "外部需回复接口")
         
-        assert len(result.columns) == 1
+        assert len(result.columns) == 2
         assert result.columns[0] == "接口号"
+        assert result.columns[1] == "是否已完成"
         assert result.iloc[0, 0] == 'INT-E001'
     
     def test_shoufawenhan_uses_column_e(self, mock_root):
@@ -102,8 +108,9 @@ class TestInterfaceColumnMapping:
         wm = WindowManager(mock_root)
         result = wm._create_optimized_display(df, "收发文函")
         
-        assert len(result.columns) == 1
+        assert len(result.columns) == 2
         assert result.columns[0] == "接口号"
+        assert result.columns[1] == "是否已完成"
         assert result.iloc[0, 0] == 'INT-E002'
 
 

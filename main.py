@@ -973,10 +973,14 @@ def export_result_to_excel(df, original_file_path, current_datetime, output_dir,
 
 
 # ===================== 待处理文件2（内部需回复接口）相关处理 =====================
-def process_target_file2(file_path, current_datetime):
+def process_target_file2(file_path, current_datetime, project_id=None):
     """
     处理待处理文件2（内部需回复接口）的主函数
     返回：pandas.DataFrame，包含原始行号
+    
+    筛选逻辑根据项目号决定：
+    - 1907和2016项目：final = P1 & P2 & P4
+    - 其他项目：final = P1 & P2 & P4 - P3
     """
     print(f"开始处理待处理文件2: {os.path.basename(file_path)}")
     try:
@@ -1004,22 +1008,31 @@ def process_target_file2(file_path, current_datetime):
     process1_rows = execute2_process1(df)
     # 处理2
     process2_rows = execute2_process2(df, current_datetime)
+    # 处理3（用于排除）
+    process3_rows = execute2_process3(df)
     # 处理4
     process4_rows = execute2_process4(df)
 
-    # 结果：满足1、2、4（取消处理3）
-    final_rows = process1_rows & process2_rows & process4_rows
+    # 根据项目号决定筛选逻辑
+    # 1907和2016使用现有逻辑，其他项目排除process3
+    if project_id in ['1907', '2016']:
+        final_rows = process1_rows & process2_rows & process4_rows
+        print(f"项目{project_id}使用标准逻辑（不排除process3）")
+    else:
+        final_rows = process1_rows & process2_rows & process4_rows - process3_rows
+        print(f"项目{project_id}使用扩展逻辑（排除process3：{len(process3_rows)}行）")
 
     # 日志
     try:
         import Monitor
         Monitor.log_info(f"处理1符合条件: {len(process1_rows)} 行")
         Monitor.log_info(f"处理2符合条件: {len(process2_rows)} 行")
+        Monitor.log_info(f"处理3(排除项)符合条件: {len(process3_rows)} 行")
         Monitor.log_info(f"处理4符合条件: {len(process4_rows)} 行")
         if len(final_rows) > 0:
             Monitor.log_success(f"最终完成处理数据: {len(final_rows)} 行")
         else:
-            Monitor.log_warning("经过四步筛选后，无符合条件的数据")
+            Monitor.log_warning("经过筛选后，无符合条件的数据")
     except:
         pass
 

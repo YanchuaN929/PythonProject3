@@ -434,7 +434,7 @@ class WindowManager:
         empty_values = [message] + [""] * (len(default_columns) - 1)
         viewer.insert("", "end", text="", values=empty_values)
     
-    def display_excel_data(self, viewer, df, tab_name, show_all=False, original_row_numbers=None):
+    def display_excel_data(self, viewer, df, tab_name, show_all=False, original_row_numbers=None, source_files=None, file_manager=None):
         """
         在viewer中显示Excel数据
         
@@ -442,11 +442,14 @@ class WindowManager:
         1. 支持显示全部数据（show_all=True）
         2. 自动配置滚动条
         3. 支持原始行号显示
+        4. 支持勾选框点击事件
         
         参数:
             viewer: Treeview控件
             df: pandas DataFrame数据
             tab_name: 选项卡名称
+            source_files: 源文件路径列表（用于勾选状态管理）
+            file_manager: 文件管理器实例（用于勾选状态持久化）
             show_all: 是否显示全部数据（True=全部，False=仅前20行）
             original_row_numbers: 原始Excel行号列表（可选）
         """
@@ -458,8 +461,14 @@ class WindowManager:
             self.show_empty_message(viewer, f"无{tab_name}数据")
             return
         
+        # 从file_manager获取已完成的行
+        completed_rows_set = set()
+        if file_manager and source_files:
+            for file_path in source_files:
+                completed_rows_set.update(file_manager.get_completed_rows(file_path))
+        
         # 优化显示列（仅显示关键列）
-        display_df = self._create_optimized_display(df, tab_name)
+        display_df = self._create_optimized_display(df, tab_name, completed_rows=completed_rows_set)
         columns = list(display_df.columns)
         
         viewer["columns"] = columns
@@ -513,7 +522,123 @@ class WindowManager:
             viewer.insert("", "end", text="...", 
                          values=["...（其他行已省略显示）"] + [""] * (len(columns) - 1))
         
+        # 绑定点击事件处理勾选功能
+        if file_manager and source_files and "是否已完成" in columns:
+            self._bind_checkbox_click_event(viewer, df, display_df, columns, 
+                                           original_row_numbers, source_files, 
+                                           file_manager, tab_name)
+        
         print(f"{tab_name}数据加载完成：{len(df)} 行，{len(df.columns)} 列 -> 显示：{max_rows} 行，{len(display_df.columns)} 列")
+    
+    def _bind_checkbox_click_event(self, viewer, original_df, display_df, columns, 
+                                    original_row_numbers, source_files, file_manager, tab_name):
+        """
+        绑定Treeview的点击事件，处理"是否已完成"列的勾选切换
+        
+        参数:
+            viewer: Treeview控件
+            original_df: 原始DataFrame（包含"原始行号"列）
+            display_df: 显示用DataFrame（优化后的列）
+            columns: 显示列名列表
+            original_row_numbers: 原始Excel行号列表
+            source_files: 源文件路径列表
+            file_manager: 文件管理器实例
+            tab_name: 选项卡名称
+        """
+        # 找到"是否已完成"列的索引
+        try:
+            checkbox_col_idx = columns.index("是否已完成")
+        except ValueError:
+            return  # 没有"是否已完成"列，不绑定事件
+        
+        def on_click(event):
+            """点击事件处理函数"""
+            try:
+                # 获取点击位置的信息
+                region = viewer.identify_region(event.x, event.y)
+                
+                if region != "cell":
+                    return
+                
+                # 获取点击的列和行
+                column_id = viewer.identify_column(event.x)
+                item_id = viewer.identify_row(event.y)
+                
+                if not item_id:
+                    return
+                
+                # 判断是否点击了"是否已完成"列
+                # 列ID格式: "#1", "#2", "#3"...（#0是行号列）
+                col_num = int(column_id.replace("#", "")) if column_id != "#0" else 0
+                
+                # 检查是否点击的是"是否已完成"列（列索引从1开始，因为#0是行号）
+                if col_num != (checkbox_col_idx + 1):
+                    return
+                
+                # 获取点击行的索引
+                item_index = viewer.index(item_id)
+                
+                # 获取原始行号
+                if not original_row_numbers or item_index >= len(original_row_numbers):
+                    print(f"无法获取原始行号：索引{item_index}")
+                    return
+                
+                original_row = original_row_numbers[item_index]
+                
+                # 确定源文件路径（使用第一个文件，或根据项目号匹配）
+                if not source_files:
+                    print("未提供源文件信息")
+                    return
+                
+                # 如果有多个文件，根据原始DataFrame中的数据匹配
+                source_file = source_files[0] if len(source_files) == 1 else self._find_source_file(
+                    original_df, item_index, source_files
+                )
+                
+                if not source_file:
+                    print(f"无法确定源文件：行索引{item_index}")
+                    return
+                
+                # 切换勾选状态
+                is_completed = file_manager.is_row_completed(source_file, original_row)
+                new_state = not is_completed
+                file_manager.set_row_completed(source_file, original_row, new_state)
+                
+                # 更新显示（切换符号）
+                current_values = list(viewer.item(item_id, "values"))
+                if checkbox_col_idx < len(current_values):
+                    current_values[checkbox_col_idx] = "☑" if new_state else "☐"
+                    viewer.item(item_id, values=current_values)
+                
+                print(f"行{original_row}的完成状态已切换为：{'已完成' if new_state else '未完成'}")
+                
+            except Exception as e:
+                print(f"点击事件处理失败: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        # 绑定左键单击事件
+        viewer.bind("<Button-1>", on_click, add="+")
+    
+    def _find_source_file(self, original_df, item_index, source_files):
+        """
+        从多个源文件中找到当前行对应的文件
+        
+        策略：根据"项目号"列匹配（如果有）
+        """
+        try:
+            if "项目号" in original_df.columns and item_index < len(original_df):
+                project_id = str(original_df.iloc[item_index]["项目号"])
+                # 从文件名中匹配项目号
+                for file_path in source_files:
+                    if project_id in file_path:
+                        return file_path
+            
+            # 默认返回第一个文件
+            return source_files[0] if source_files else None
+        except Exception as e:
+            print(f"查找源文件失败: {e}")
+            return source_files[0] if source_files else None
     
     def calculate_column_widths(self, df, columns):
         """
@@ -549,6 +674,9 @@ class WindowManager:
                 elif col == "接口号":
                     column_widths.append(200)
                     continue
+                elif col == "是否已完成":
+                    column_widths.append(100)  # 复选框列固定宽度
+                    continue
                 
                 # 其他列动态计算
                 header_length = len(str(col))
@@ -583,7 +711,7 @@ class WindowManager:
         
         return column_widths
     
-    def _create_optimized_display(self, df, tab_name):
+    def _create_optimized_display(self, df, tab_name, completed_rows=None):
         """
         创建优化的显示数据（显示项目号和接口号列，并附加角色标注）
         
@@ -597,6 +725,12 @@ class WindowManager:
         
         如果DataFrame中存在"角色来源"列，则在接口号后添加角色标注，如：INT-001(设计人员)
         如果DataFrame中存在"项目号"列，则在第一列显示项目号
+        添加"是否已完成"列（复选框）在接口号后面
+        
+        参数:
+            df: pandas DataFrame
+            tab_name: 选项卡名称
+            completed_rows: 已完成行的集合（原始行号）
         """
         try:
             # 定义接口号列映射（使用列索引）
@@ -632,26 +766,58 @@ class WindowManager:
                             else:
                                 combined_values.append(interface_str)
                         
+                        # 生成"是否已完成"列
+                        if completed_rows is None:
+                            completed_rows = set()
+                        
+                        # 获取原始行号（如果有）
+                        if "原始行号" in df.columns:
+                            original_rows = df["原始行号"].tolist()
+                            # 使用更大更清晰的符号：☑ (已完成) 和 ☐ (未完成)
+                            completed_status = ["☑" if row in completed_rows else "☐" for row in original_rows]
+                        else:
+                            # 没有原始行号，使用索引
+                            completed_status = ["☐"] * len(combined_values)
+                        
                         # 创建新的DataFrame - 如果有项目号列，则项目号在前
                         if "项目号" in df.columns:
                             result = pd.DataFrame({
                                 "项目号": df["项目号"],
-                                "接口号": combined_values
+                                "接口号": combined_values,
+                                "是否已完成": completed_status
                             })
                         else:
-                            result = pd.DataFrame({"接口号": combined_values})
+                            result = pd.DataFrame({
+                                "接口号": combined_values,
+                                "是否已完成": completed_status
+                            })
                         return result
                     else:
                         # 没有角色来源列，直接返回接口号（和项目号）
+                        # 生成"是否已完成"列
+                        if completed_rows is None:
+                            completed_rows = set()
+                        
+                        # 获取原始行号（如果有）
+                        if "原始行号" in df.columns:
+                            original_rows = df["原始行号"].tolist()
+                            # 使用更大更清晰的符号：☑ (已完成) 和 ☐ (未完成)
+                            completed_status = ["☑" if row in completed_rows else "☐" for row in original_rows]
+                        else:
+                            # 没有原始行号，使用索引
+                            completed_status = ["☐"] * len(df)
+                        
                         if "项目号" in df.columns:
                             result = pd.DataFrame({
                                 "项目号": df["项目号"],
-                                "接口号": df.iloc[:, col_idx]
+                                "接口号": df.iloc[:, col_idx],
+                                "是否已完成": completed_status
                             })
                         else:
-                            interface_col = df.iloc[:, col_idx:col_idx+1].copy()
-                            interface_col.columns = ["接口号"]
-                            result = interface_col
+                            result = pd.DataFrame({
+                                "接口号": df.iloc[:, col_idx],
+                                "是否已完成": completed_status
+                            })
                         return result
             
             # 如果没有匹配或出错，返回原始数据

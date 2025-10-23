@@ -133,6 +133,10 @@ class ExcelProcessorApp:
         self.root = tk.Tk()
         self.load_config()
         
+        # 初始化文件管理器（用于勾选状态管理）
+        from file_manager import get_file_manager
+        self.file_manager = get_file_manager()
+        
         # 项目号筛选变量（6个项目号，默认全选）
         self.project_1818_var = tk.BooleanVar(master=self.root, value=True)
         self.project_1907_var = tk.BooleanVar(master=self.root, value=True)
@@ -892,17 +896,109 @@ class ExcelProcessorApp:
         )
         print(f"{tab_name}数据预览已加载：显示前20行")
 
-    def display_excel_data_with_original_rows(self, viewer, df, tab_name, original_row_numbers):
-        """在viewer中显示Excel数据，使用原始Excel行号（处理结果-显示全部数据）"""
+    def display_excel_data_with_original_rows(self, viewer, df, tab_name, original_row_numbers, source_files=None):
+        """
+        在viewer中显示Excel数据，使用原始Excel行号（处理结果-显示全部数据）
+        
+        参数:
+            source_files: 源文件路径列表（用于勾选功能），可选
+        """
+        # 如果没有提供source_files，尝试从当前处理的文件中获取
+        if source_files is None:
+            source_files = self._get_source_files_for_tab(tab_name)
+        
         # 使用WindowManager的display_excel_data方法，显示全部数据
         self.window_manager.display_excel_data(
             viewer=viewer,
             df=df,
             tab_name=tab_name,
             show_all=True,  # 处理完成后显示全部数据
-            original_row_numbers=original_row_numbers
+            original_row_numbers=original_row_numbers,
+            source_files=source_files,
+            file_manager=self.file_manager
         )
         print(f"{tab_name}处理结果已显示：{len(df)} 行（全部数据，支持滚动）")
+
+    def _exclude_completed_rows(self, df, source_file):
+        """
+        从DataFrame中排除已勾选（已完成）的行
+        
+        参数:
+            df: pandas DataFrame（必须包含"原始行号"列）
+            source_file: 源文件路径
+            
+        返回:
+            过滤后的DataFrame
+        """
+        try:
+            if df is None or df.empty:
+                return df
+            
+            # 检查是否有"原始行号"列
+            if "原始行号" not in df.columns:
+                print(f"警告：DataFrame中没有'原始行号'列，无法排除已完成行")
+                return df
+            
+            # 获取已完成的行号集合
+            completed_rows = self.file_manager.get_completed_rows(source_file)
+            
+            if not completed_rows:
+                # 没有已完成的行，直接返回
+                return df
+            
+            # 过滤掉已完成的行
+            original_count = len(df)
+            df_filtered = df[~df['原始行号'].isin(completed_rows)].copy()
+            filtered_count = original_count - len(df_filtered)
+            
+            if filtered_count > 0:
+                print(f"导出时排除了{filtered_count}行已完成的数据（文件：{source_file}）")
+            
+            return df_filtered
+            
+        except Exception as e:
+            print(f"排除已完成行时出错: {e}")
+            import traceback
+            traceback.print_exc()
+            return df  # 出错时返回原始数据，确保导出不受影响
+    
+    def _get_source_files_for_tab(self, tab_name):
+        """
+        根据tab名称获取对应的源文件路径列表
+        
+        参数:
+            tab_name: 选项卡名称
+            
+        返回:
+            源文件路径列表
+        """
+        try:
+            # 根据tab名称映射到对应的target_files属性
+            tab_file_mapping = {
+                "内部需打开接口": "target_files1",
+                "内部需回复接口": "target_files2",
+                "外部需打开接口": "target_files3",
+                "外部需回复接口": "target_files4",
+                "三维提资接口": "target_files5",
+                "收发文函": "target_files6"
+            }
+            
+            attr_name = tab_file_mapping.get(tab_name)
+            if not attr_name:
+                return []
+            
+            target_files = getattr(self, attr_name, None)
+            if not target_files:
+                return []
+            
+            # target_files格式: [(file_path, project_id), ...]
+            # 提取所有文件路径
+            file_paths = [f[0] for f in target_files if isinstance(f, tuple) and len(f) >= 1]
+            return file_paths
+            
+        except Exception as e:
+            print(f"获取源文件列表失败: {e}")
+            return []
 
     def calculate_column_widths(self, df, columns):
         """基于第二行数据计算列宽，确保内容完全显示"""
@@ -2224,6 +2320,35 @@ class ExcelProcessorApp:
         except Exception:
             pass
         
+        # 检查文件变化并清空勾选状态（如需要）
+        try:
+            all_file_paths = []
+            # 收集所有待处理文件路径
+            if hasattr(self, 'target_files1') and self.target_files1:
+                all_file_paths.extend([f[0] for f in self.target_files1])
+            if hasattr(self, 'target_files2') and self.target_files2:
+                all_file_paths.extend([f[0] for f in self.target_files2])
+            if hasattr(self, 'target_files3') and self.target_files3:
+                all_file_paths.extend([f[0] for f in self.target_files3])
+            if hasattr(self, 'target_files4') and self.target_files4:
+                all_file_paths.extend([f[0] for f in self.target_files4])
+            if hasattr(self, 'target_files5') and self.target_files5:
+                all_file_paths.extend([f[0] for f in self.target_files5])
+            if hasattr(self, 'target_files6') and self.target_files6:
+                all_file_paths.extend([f[0] for f in self.target_files6])
+            
+            # 检查文件是否变化
+            if all_file_paths and self.file_manager.check_files_changed(all_file_paths):
+                # 清空所有勾选状态
+                self.file_manager.clear_all_completed_rows()
+                print("检测到文件变化，已清空所有勾选状态")
+            
+            # 更新文件标识
+            if all_file_paths:
+                self.file_manager.update_file_identities(all_file_paths)
+        except Exception as e:
+            print(f"文件变化检测失败: {e}")
+        
         # 检查勾选状态
         process_file1 = self.process_file1_var.get()
         process_file2 = self.process_file2_var.get()
@@ -2364,7 +2489,7 @@ class ExcelProcessorApp:
                         for file_path, project_id in self.target_files2:
                             try:
                                 print(f"处理项目{project_id}的文件2: {os.path.basename(file_path)}")
-                                result = main.process_target_file2(file_path, self.current_datetime)
+                                result = main.process_target_file2(file_path, self.current_datetime, project_id)
                                 if result is not None and not result.empty:
                                     # 添加项目号列
                                     result['项目号'] = project_id
@@ -2917,14 +3042,18 @@ class ExcelProcessorApp:
                     results = self.apply_role_based_filter(results, project_id=project_id)
                     # 自动模式角色日期窗口限制
                     results = self.apply_auto_role_date_window(results)
-                    self.filtered_results_multi1[project_id] = results
                     # 找到对应项目的原始文件路径
                     original_file = None
                     for file_path, pid in self.target_files1:
                         if pid == project_id:
                             original_file = file_path
                             break
+                    # 排除已勾选（已完成）的行
                     if original_file:
+                        results = self._exclude_completed_rows(results, original_file)
+                    # 保存过滤后的结果
+                    self.filtered_results_multi1[project_id] = results
+                    if original_file and not results.empty:
                         pid_for_export = project_id if project_id else "未知项目"
                         export_tasks.append(('应打开接口', main.export_result_to_excel, results, original_file, self.current_datetime, pid_for_export))
         
@@ -2934,14 +3063,18 @@ class ExcelProcessorApp:
                 if isinstance(results, pd.DataFrame) and not results.empty:
                     results = self.apply_role_based_filter(results, project_id=project_id)
                     results = self.apply_auto_role_date_window(results)
-                    self.filtered_results_multi2[project_id] = results
                     # 找到对应项目的原始文件路径
                     original_file = None
                     for file_path, pid in self.target_files2:
                         if pid == project_id:
                             original_file = file_path
                             break
+                    # 排除已勾选（已完成）的行
                     if original_file:
+                        results = self._exclude_completed_rows(results, original_file)
+                    # 保存过滤后的结果
+                    self.filtered_results_multi2[project_id] = results
+                    if original_file and not results.empty:
                         pid_for_export = project_id if project_id else "未知项目"
                         export_tasks.append(('需打开接口', main.export_result_to_excel2, results, original_file, self.current_datetime, pid_for_export))
         
@@ -2952,14 +3085,18 @@ class ExcelProcessorApp:
                     if isinstance(results, pd.DataFrame) and not results.empty:
                         results = self.apply_role_based_filter(results, project_id=project_id)
                         results = self.apply_auto_role_date_window(results)
-                        self.filtered_results_multi3[project_id] = results
                         # 找到对应项目的原始文件路径
                         original_file = None
                         for file_path, pid in self.target_files3:
                             if pid == project_id:
                                 original_file = file_path
                                 break
+                        # 排除已勾选（已完成）的行
                         if original_file:
+                            results = self._exclude_completed_rows(results, original_file)
+                        # 保存过滤后的结果
+                        self.filtered_results_multi3[project_id] = results
+                        if original_file and not results.empty:
                             pid_for_export = project_id if project_id else "未知项目"
                             export_tasks.append(('外部接口ICM', main.export_result_to_excel3, results, original_file, self.current_datetime, pid_for_export))
         
@@ -2970,14 +3107,18 @@ class ExcelProcessorApp:
                     if isinstance(results, pd.DataFrame) and not results.empty:
                         results = self.apply_role_based_filter(results, project_id=project_id)
                         results = self.apply_auto_role_date_window(results)
-                        self.filtered_results_multi4[project_id] = results
                         # 找到对应项目的原始文件路径
                         original_file = None
                         for file_path, pid in self.target_files4:
                             if pid == project_id:
                                 original_file = file_path
                                 break
+                        # 排除已勾选（已完成）的行
                         if original_file:
+                            results = self._exclude_completed_rows(results, original_file)
+                        # 保存过滤后的结果
+                        self.filtered_results_multi4[project_id] = results
+                        if original_file and not results.empty:
                             pid_for_export = project_id if project_id else "未知项目"
                             export_tasks.append(('外部接口单', main.export_result_to_excel4, results, original_file, self.current_datetime, pid_for_export))
         # 导出待处理文件5的所有项目结果
@@ -2987,15 +3128,20 @@ class ExcelProcessorApp:
                     if isinstance(results, pd.DataFrame) and not results.empty:
                         results = self.apply_role_based_filter(results, project_id=project_id)
                         results = self.apply_auto_role_date_window(results)
-                        if not hasattr(self, 'filtered_results_multi5'):
-                            self.filtered_results_multi5 = {}
-                        self.filtered_results_multi5[project_id] = results
+                        # 找到对应项目的原始文件路径
                         original_file = None
                         for file_path, pid in getattr(self, 'target_files5', []):
                             if pid == project_id:
                                 original_file = file_path
                                 break
+                        # 排除已勾选（已完成）的行
                         if original_file:
+                            results = self._exclude_completed_rows(results, original_file)
+                        # 保存过滤后的结果
+                        if not hasattr(self, 'filtered_results_multi5'):
+                            self.filtered_results_multi5 = {}
+                        self.filtered_results_multi5[project_id] = results
+                        if original_file and not results.empty:
                             pid_for_export = project_id if project_id else "未知项目"
                             export_tasks.append(('三维提资接口', main.export_result_to_excel5, results, original_file, self.current_datetime, pid_for_export))
         # 导出待处理文件6的所有项目结果
@@ -3005,15 +3151,20 @@ class ExcelProcessorApp:
                     if isinstance(results, pd.DataFrame) and not results.empty:
                         results = self.apply_role_based_filter(results, project_id=project_id)
                         results = self.apply_auto_role_date_window(results)
-                        if not hasattr(self, 'filtered_results_multi6'):
-                            self.filtered_results_multi6 = {}
-                        self.filtered_results_multi6[project_id] = results
+                        # 找到对应项目的原始文件路径
                         original_file = None
                         for file_path, pid in getattr(self, 'target_files6', []):
                             if pid == project_id:
                                 original_file = file_path
                                 break
+                        # 排除已勾选（已完成）的行
                         if original_file:
+                            results = self._exclude_completed_rows(results, original_file)
+                        # 保存过滤后的结果
+                        if not hasattr(self, 'filtered_results_multi6'):
+                            self.filtered_results_multi6 = {}
+                        self.filtered_results_multi6[project_id] = results
+                        if original_file and not results.empty:
                             pid_for_export = project_id if project_id else "未知项目"
                             export_tasks.append(('收发文函', main.export_result_to_excel6, results, original_file, self.current_datetime, pid_for_export))
         if not export_tasks:
@@ -3300,7 +3451,7 @@ class ExcelProcessorApp:
                 )
                 winreg.SetValueEx(key, "ExcelProcessor", 0, winreg.REG_SZ, startup_cmd)
                 winreg.CloseKey(key)
-            
+                
                 # 4. 验证写入是否成功
                 verify_key = winreg.OpenKey(
                     winreg.HKEY_CURRENT_USER, 
@@ -3348,7 +3499,7 @@ class ExcelProcessorApp:
                 )
                 winreg.DeleteValue(key, "ExcelProcessor")
                 winreg.CloseKey(key)
-            
+                
                 # 2. 验证删除是否成功
                 verify_key = winreg.OpenKey(
                     winreg.HKEY_CURRENT_USER, 
