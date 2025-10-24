@@ -10,6 +10,7 @@
 """
 
 import os
+import sys
 import json
 import hashlib
 import pickle
@@ -17,6 +18,25 @@ import shutil
 from datetime import datetime
 from typing import Dict, Set, Optional, Tuple, List
 import pandas as pd
+
+
+def _get_app_directory():
+    """
+    获取程序所在目录的绝对路径
+    
+    支持：
+    - 开发环境：返回脚本所在目录
+    - 打包环境：返回exe所在目录
+    - 开机自启动：确保返回程序实际目录
+    """
+    if getattr(sys, 'frozen', False):
+        # 打包后的exe环境
+        app_dir = os.path.dirname(sys.executable)
+    else:
+        # 开发环境
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    return app_dir
 
 
 class FileIdentityManager:
@@ -27,13 +47,21 @@ class FileIdentityManager:
         初始化文件标识管理器
         
         参数:
-            cache_file: 缓存文件路径
-            result_cache_dir: 结果缓存目录（相对路径，确保打包后可用）
+            cache_file: 缓存文件名（将转为绝对路径）
+            result_cache_dir: 结果缓存目录名（将转为绝对路径）
         """
-        self.cache_file = cache_file
-        self.result_cache_dir = result_cache_dir
+        # 获取程序所在目录
+        app_dir = _get_app_directory()
+        
+        # 转换为绝对路径（基于程序所在目录）
+        self.cache_file = os.path.join(app_dir, cache_file)
+        self.result_cache_dir = os.path.join(app_dir, result_cache_dir)
+        
         self.file_identities = {}  # {file_path: identity_hash}
         self.completed_rows = {}   # {file_path: {row_index: True}}
+        
+        print(f"缓存目录: {self.result_cache_dir}")
+        print(f"缓存文件: {self.cache_file}")
         
         # 确保缓存目录存在
         self._ensure_cache_dir()
@@ -220,6 +248,12 @@ class FileIdentityManager:
     def _save_cache(self):
         """保存缓存到文件"""
         try:
+            # 检查目录是否可写
+            cache_dir = os.path.dirname(self.cache_file)
+            if not os.access(cache_dir, os.W_OK):
+                print(f"⚠️ 缓存目录无写入权限，跳过保存: {cache_dir}")
+                return
+            
             # 转换completed_rows的key为str（JSON要求）
             completed_rows_serializable = {}
             for file_path, rows in self.completed_rows.items():
@@ -234,17 +268,33 @@ class FileIdentityManager:
             with open(self.cache_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             
+        except PermissionError as e:
+            print(f"⚠️ 缓存文件无写入权限，跳过保存: {self.cache_file}")
         except Exception as e:
-            print(f"保存缓存失败: {e}")
+            print(f"⚠️ 保存缓存失败: {e}")
     
     def _ensure_cache_dir(self):
         """确保缓存目录存在"""
         try:
+            # 检查父目录是否可写
+            parent_dir = os.path.dirname(self.result_cache_dir)
+            if not parent_dir:
+                parent_dir = os.path.dirname(os.path.abspath(self.result_cache_dir))
+            
+            if not os.access(parent_dir, os.W_OK):
+                print(f"⚠️ 父目录无写入权限，无法创建缓存目录: {parent_dir}")
+                print(f"⚠️ 缓存功能将被禁用，但不影响程序主要功能")
+                return
+            
             if not os.path.exists(self.result_cache_dir):
-                os.makedirs(self.result_cache_dir)
-                print(f"创建缓存目录: {self.result_cache_dir}")
+                os.makedirs(self.result_cache_dir, exist_ok=True)
+                print(f"✅ 创建缓存目录: {self.result_cache_dir}")
+        except PermissionError as e:
+            print(f"⚠️ 权限不足，无法创建缓存目录: {self.result_cache_dir}")
+            print(f"⚠️ 缓存功能将被禁用，但不影响程序主要功能")
         except Exception as e:
-            print(f"创建缓存目录失败: {e}")
+            print(f"⚠️ 创建缓存目录失败: {e}")
+            print(f"⚠️ 缓存功能将被禁用，但不影响程序主要功能")
     
     def _get_cache_filename(self, file_path: str, project_id: str, file_type: str) -> str:
         """
@@ -280,6 +330,15 @@ class FileIdentityManager:
             True = 保存成功, False = 保存失败
         """
         try:
+            # 检查缓存目录是否存在且可写
+            if not os.path.exists(self.result_cache_dir):
+                print(f"⚠️ 缓存目录不存在，跳过保存: {self.result_cache_dir}")
+                return False
+            
+            if not os.access(self.result_cache_dir, os.W_OK):
+                print(f"⚠️ 缓存目录无写入权限，跳过保存: {self.result_cache_dir}")
+                return False
+            
             cache_file = self._get_cache_filename(file_path, project_id, file_type)
             
             # 使用pickle保存DataFrame
@@ -289,10 +348,11 @@ class FileIdentityManager:
             print(f"✅ 缓存已保存: {os.path.basename(cache_file)}")
             return True
             
+        except PermissionError as e:
+            print(f"⚠️ 权限不足，无法保存缓存 [{file_type}, {project_id}]")
+            return False
         except Exception as e:
-            print(f"❌ 保存缓存失败 [{file_type}, {project_id}]: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"⚠️ 保存缓存失败 [{file_type}, {project_id}]: {e}")
             return False
     
     def load_cached_result(self, file_path: str, project_id: str, file_type: str) -> Optional[pd.DataFrame]:
