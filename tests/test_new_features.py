@@ -19,18 +19,18 @@ class TestCopyFunctionality:
     """测试复制功能"""
     
     def test_copy_selected_rows_single(self):
-        """测试复制单行数据"""
+        """测试复制单行数据（只复制接口号）"""
         with patch('window.tk'):
             from window import WindowManager
             
             mock_root = MagicMock(spec=tk.Tk)
             wm = WindowManager(mock_root)
             
-            # 创建模拟的Treeview
+            # 创建模拟的Treeview（项目号、接口号列）
             mock_viewer = MagicMock(spec=ttk.Treeview)
             mock_viewer.selection.return_value = ['item1']
-            mock_viewer.__getitem__ = lambda self, key: ['Col1', 'Col2'] if key == 'columns' else None
-            mock_viewer.item.return_value = {'values': ['Value1', 'Value2']}
+            mock_viewer.__getitem__ = lambda self, key: ['项目号', '接口号'] if key == 'columns' else None
+            mock_viewer.item.return_value = {'values': ['2016', 'INT-001(设计人员)']}
             
             # 模拟剪贴板
             mock_root.clipboard_clear = Mock()
@@ -43,26 +43,26 @@ class TestCopyFunctionality:
             mock_root.clipboard_clear.assert_called_once()
             mock_root.clipboard_append.assert_called_once()
             
-            # 验证复制的文本格式
+            # 验证复制的文本格式（只复制接口号，去掉角色标注）
             copied_text = mock_root.clipboard_append.call_args[0][0]
-            assert copied_text == 'Value1\tValue2'
+            assert copied_text == 'INT-001'
     
     def test_copy_selected_rows_multiple(self):
-        """测试复制多行数据"""
+        """测试复制多行数据（只复制接口号）"""
         with patch('window.tk'):
             from window import WindowManager
             
             mock_root = MagicMock(spec=tk.Tk)
             wm = WindowManager(mock_root)
             
-            # 创建模拟的Treeview
+            # 创建模拟的Treeview（项目号、接口号列）
             mock_viewer = MagicMock(spec=ttk.Treeview)
             mock_viewer.selection.return_value = ['item1', 'item2', 'item3']
-            mock_viewer.__getitem__ = lambda self, key: ['Col1', 'Col2'] if key == 'columns' else None
+            mock_viewer.__getitem__ = lambda self, key: ['项目号', '接口号'] if key == 'columns' else None
             mock_viewer.item.side_effect = [
-                {'values': ['A1', 'B1']},
-                {'values': ['A2', 'B2']},
-                {'values': ['A3', 'B3']}
+                {'values': ['2016', 'INT-001(设计人员)']},
+                {'values': ['2016', 'INT-002(2016接口工程师)']},
+                {'values': ['1818', 'INT-003(设计人员)']}
             ]
             
             # 模拟剪贴板
@@ -72,9 +72,9 @@ class TestCopyFunctionality:
             # 执行复制
             wm._copy_selected_rows(mock_viewer)
             
-            # 验证复制的文本格式（多行用换行分隔）
+            # 验证复制的文本格式（多行用换行分隔，只包含接口号）
             copied_text = mock_root.clipboard_append.call_args[0][0]
-            assert copied_text == 'A1\tB1\nA2\tB2\nA3\tB3'
+            assert copied_text == 'INT-001\nINT-002\nINT-003'
     
     def test_copy_selected_rows_empty_selection(self):
         """测试空选择时不复制"""

@@ -434,7 +434,7 @@ class WindowManager:
         empty_values = [message] + [""] * (len(default_columns) - 1)
         viewer.insert("", "end", text="", values=empty_values)
     
-    def display_excel_data(self, viewer, df, tab_name, show_all=False, original_row_numbers=None, source_files=None, file_manager=None):
+    def display_excel_data(self, viewer, df, tab_name, show_all=False, original_row_numbers=None, source_files=None, file_manager=None, current_user_roles=None):
         """
         在viewer中显示Excel数据
         
@@ -443,6 +443,7 @@ class WindowManager:
         2. 自动配置滚动条
         3. 支持原始行号显示
         4. 支持勾选框点击事件
+        5. 支持按用户角色筛选显示数据
         
         参数:
             viewer: Treeview控件
@@ -452,6 +453,7 @@ class WindowManager:
             file_manager: 文件管理器实例（用于勾选状态持久化）
             show_all: 是否显示全部数据（True=全部，False=仅前20行）
             original_row_numbers: 原始Excel行号列表（可选）
+            current_user_roles: 当前用户的角色列表（用于筛选显示，如["设计人员", "2016接口工程师"]）
         """
         # 清空现有内容
         for item in viewer.get_children():
@@ -461,6 +463,27 @@ class WindowManager:
             self.show_empty_message(viewer, f"无{tab_name}数据")
             return
         
+        # 【新增】如果提供了用户角色，进行筛选
+        filtered_df = df.copy()
+        if current_user_roles and "角色来源" in filtered_df.columns:
+            # 筛选包含任一用户角色的数据行
+            def contains_any_role(role_str):
+                if pd.isna(role_str):
+                    # 没有角色来源的数据也显示（宽松筛选，避免遗漏）
+                    return True
+                role_str = str(role_str).strip()
+                if not role_str or role_str.lower() == 'nan':
+                    return True
+                # 检查是否包含任一用户角色
+                return any(role in role_str for role in current_user_roles)
+            
+            mask = filtered_df["角色来源"].apply(contains_any_role)
+            filtered_df = filtered_df[mask].copy()
+            
+            # 同步更新原始行号列表
+            if original_row_numbers is not None and "原始行号" in filtered_df.columns:
+                original_row_numbers = list(filtered_df["原始行号"])
+        
         # 从file_manager获取已完成的行
         completed_rows_set = set()
         if file_manager and source_files:
@@ -468,7 +491,7 @@ class WindowManager:
                 completed_rows_set.update(file_manager.get_completed_rows(file_path))
         
         # 优化显示列（仅显示关键列）
-        display_df = self._create_optimized_display(df, tab_name, completed_rows=completed_rows_set)
+        display_df = self._create_optimized_display(filtered_df, tab_name, completed_rows=completed_rows_set)
         columns = list(display_df.columns)
         
         viewer["columns"] = columns
@@ -914,7 +937,9 @@ class WindowManager:
     def _copy_selected_rows(self, viewer):
         """
         复制Treeview中选中的行到剪贴板
-        支持多选，格式：列之间用制表符分隔，行之间用换行分隔
+        
+        【修改】只复制接口号列，去掉角色标注（括号部分）
+        多行复制时用换行符分隔
         """
         try:
             selection = viewer.selection()
@@ -926,21 +951,44 @@ class WindowManager:
             if not columns:
                 return
             
-            # 收集选中行的数据
-            copied_data = []
+            # 【修改】确定接口号列的位置
+            # 如果第一列是"项目号"，接口号在第二列(索引1)
+            # 否则接口号在第一列(索引0)
+            if len(columns) > 0 and columns[0] == "项目号":
+                interface_col_idx = 1
+            else:
+                interface_col_idx = 0
+            
+            # 检查接口号列是否存在
+            if interface_col_idx >= len(columns):
+                print("未找到接口号列")
+                return
+            
+            # 收集接口号数据
+            copied_interfaces = []
             for item_id in selection:
                 values = viewer.item(item_id)['values']
-                if values:
-                    # 将所有值转换为字符串并用制表符连接
-                    row_text = '\t'.join(str(v) for v in values)
-                    copied_data.append(row_text)
+                if values and len(values) > interface_col_idx:
+                    interface_with_role = str(values[interface_col_idx])
+                    
+                    # 【新增】去掉角色标注（括号部分）
+                    # 例如: "INT-001(设计人员)" -> "INT-001"
+                    if '(' in interface_with_role:
+                        interface_num = interface_with_role.split('(')[0]
+                    else:
+                        interface_num = interface_with_role
+                    
+                    # 去除首尾空格
+                    interface_num = interface_num.strip()
+                    if interface_num:
+                        copied_interfaces.append(interface_num)
             
-            # 将数据复制到剪贴板
-            if copied_data:
-                text_to_copy = '\n'.join(copied_data)
+            # 将数据复制到剪贴板（换行分隔）
+            if copied_interfaces:
+                text_to_copy = '\n'.join(copied_interfaces)
                 self.root.clipboard_clear()
                 self.root.clipboard_append(text_to_copy)
-                print(f"已复制 {len(copied_data)} 行数据到剪贴板")
+                print(f"已复制 {len(copied_interfaces)} 个接口号到剪贴板")
         except Exception as e:
             print(f"复制失败: {e}")
     
@@ -949,7 +997,7 @@ class WindowManager:
         为Treeview创建右键菜单
         """
         menu = tk.Menu(viewer, tearoff=0)
-        menu.add_command(label="复制选中行 (Ctrl+C)", 
+        menu.add_command(label="复制接口号 (Ctrl+C)", 
                         command=lambda: self._copy_selected_rows(viewer))
         menu.add_separator()
         menu.add_command(label="全选 (Ctrl+A)", 

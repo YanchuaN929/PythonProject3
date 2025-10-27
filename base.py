@@ -907,6 +907,14 @@ class ExcelProcessorApp:
         if source_files is None:
             source_files = self._get_source_files_for_tab(tab_name)
         
+        # 【新增】获取当前用户的角色列表
+        user_roles = getattr(self, 'user_roles', [])
+        if not user_roles:
+            # 兼容：如果没有user_roles，尝试从user_role获取
+            user_role = getattr(self, 'user_role', '').strip()
+            if user_role:
+                user_roles = [user_role]
+        
         # 使用WindowManager的display_excel_data方法，显示全部数据
         self.window_manager.display_excel_data(
             viewer=viewer,
@@ -915,7 +923,8 @@ class ExcelProcessorApp:
             show_all=True,  # 处理完成后显示全部数据
             original_row_numbers=original_row_numbers,
             source_files=source_files,
-            file_manager=self.file_manager
+            file_manager=self.file_manager,
+            current_user_roles=user_roles  # 【新增】传递用户角色列表
         )
         print(f"{tab_name}处理结果已显示：{len(df)} 行（全部数据，支持滚动）")
 
@@ -2631,10 +2640,13 @@ class ExcelProcessorApp:
                                                                  main.process_target_file, self.current_datetime)
                                 
                                 if result is not None and not result.empty:
-                                    # 添加项目号列
-                                    result['项目号'] = project_id
-                                    self.processing_results_multi1[project_id] = result
-                                    combined_results.append(result)
+                                    # 【新增】应用角色筛选（传递项目号）
+                                    result = self.apply_role_based_filter(result, project_id=project_id)
+                                    if result is not None and not result.empty:
+                                        # 添加项目号列
+                                        result['项目号'] = project_id
+                                        self.processing_results_multi1[project_id] = result
+                                        combined_results.append(result)
                                     print(f"项目{project_id}文件1处理完成: {len(result)} 行")
                                     try:
                                         import Monitor
@@ -2696,11 +2708,16 @@ class ExcelProcessorApp:
                                 result = self._process_with_cache(file_path, project_id, 'file2', 
                                                                  main.process_target_file2, self.current_datetime, project_id)
                                 if result is not None and not result.empty:
-                                    # 添加项目号列
-                                    result['项目号'] = project_id
-                                    self.processing_results_multi2[project_id] = result
-                                    combined_results.append(result)
-                                    print(f"项目{project_id}文件2处理完成: {len(result)} 行")
+                                    # 【新增】应用角色筛选（传递项目号）
+                                    result = self.apply_role_based_filter(result, project_id=project_id)
+                                    if result is not None and not result.empty:
+                                        # 添加项目号列
+                                        result['项目号'] = project_id
+                                        self.processing_results_multi2[project_id] = result
+                                        combined_results.append(result)
+                                        print(f"项目{project_id}文件2处理完成: {len(result)} 行")
+                                    else:
+                                        print(f"项目{project_id}文件2处理结果为空")
                                 else:
                                     print(f"项目{project_id}文件2处理结果为空")
                             except Exception as e:
@@ -2734,10 +2751,13 @@ class ExcelProcessorApp:
                                 result = self._process_with_cache(file_path, project_id, 'file3', 
                                                                  main.process_target_file3, self.current_datetime)
                                 if result is not None and not result.empty:
-                                    # 添加项目号列
-                                    result['项目号'] = project_id
-                                    self.processing_results_multi3[project_id] = result
-                                    combined_results.append(result)
+                                    # 【新增】应用角色筛选（传递项目号）
+                                    result = self.apply_role_based_filter(result, project_id=project_id)
+                                    if result is not None and not result.empty:
+                                        # 添加项目号列
+                                        result['项目号'] = project_id
+                                        self.processing_results_multi3[project_id] = result
+                                        combined_results.append(result)
                                     print(f"项目{project_id}文件3处理完成: {len(result)} 行")
                                 else:
                                     print(f"项目{project_id}文件3处理结果为空")
@@ -2772,10 +2792,13 @@ class ExcelProcessorApp:
                                 result = self._process_with_cache(file_path, project_id, 'file4', 
                                                                  main.process_target_file4, self.current_datetime)
                                 if result is not None and not result.empty:
-                                    # 添加项目号列
-                                    result['项目号'] = project_id
-                                    self.processing_results_multi4[project_id] = result
-                                    combined_results.append(result)
+                                    # 【新增】应用角色筛选（传递项目号）
+                                    result = self.apply_role_based_filter(result, project_id=project_id)
+                                    if result is not None and not result.empty:
+                                        # 添加项目号列
+                                        result['项目号'] = project_id
+                                        self.processing_results_multi4[project_id] = result
+                                        combined_results.append(result)
                                     print(f"项目{project_id}文件4处理完成: {len(result)} 行")
                                 else:
                                     print(f"项目{project_id}文件4处理结果为空")
@@ -2897,10 +2920,13 @@ class ExcelProcessorApp:
                                     result = self._process_with_cache(file_path, project_id, 'file5', 
                                                                      main.process_target_file5, self.current_datetime)
                                     if result is not None and not result.empty:
-                                        # 添加项目号列
-                                        result['项目号'] = project_id
-                                        self.processing_results_multi5[project_id] = result
-                                        combined_results.append(result)
+                                        # 【新增】应用角色筛选（传递项目号）
+                                        result = self.apply_role_based_filter(result, project_id=project_id)
+                                        if result is not None and not result.empty:
+                                            # 添加项目号列
+                                            result['项目号'] = project_id
+                                            self.processing_results_multi5[project_id] = result
+                                            combined_results.append(result)
                                 except Exception as e:
                                     print(f"处理文件5失败: {file_path} - {e}")
                             if combined_results:
@@ -2944,10 +2970,13 @@ class ExcelProcessorApp:
                                     result = self._process_with_cache(file_path, project_id, 'file6', 
                                                                      main.process_target_file6, self.current_datetime)
                                     if result is not None and not result.empty:
-                                        # 添加项目号列
-                                        result['项目号'] = project_id
-                                        self.processing_results_multi6[project_id] = result
-                                        combined_results.append(result)
+                                        # 【新增】应用角色筛选（传递项目号）
+                                        result = self.apply_role_based_filter(result, project_id=project_id)
+                                        if result is not None and not result.empty:
+                                            # 添加项目号列
+                                            result['项目号'] = project_id
+                                            self.processing_results_multi6[project_id] = result
+                                            combined_results.append(result)
                                 except Exception as e:
                                     print(f"处理文件6失败: {file_path} - {e}")
                             if combined_results:
