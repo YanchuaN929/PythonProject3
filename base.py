@@ -133,6 +133,16 @@ class ExcelProcessorApp:
         self.root = tk.Tk()
         self.load_config()
         
+        # 【修复】加载用户角色（必须在load_config之后，确保能读取默认姓名）
+        try:
+            self.load_user_role()
+        except Exception as e:
+            print(f"初始化加载角色失败: {e}")
+            # 初始化空角色变量，避免后续出错
+            self.user_name = self.config.get("user_name", "").strip()
+            self.user_role = ""
+            self.user_roles = []
+        
         # 初始化文件管理器（用于勾选状态管理）
         from file_manager import get_file_manager
         self.file_manager = get_file_manager()
@@ -1400,7 +1410,11 @@ class ExcelProcessorApp:
                 if user_role:
                     user_roles = [user_role]
             
+            # 【调试】打印角色筛选信息
+            print(f"🔍 角色筛选: user_name={user_name}, user_roles={user_roles}, project_id={project_id}")
+            
             if not user_roles or not user_name:
+                print(f"⚠️ 角色筛选跳过: 用户名或角色为空，返回原始数据（{len(df)}行）")
                 return df
             
             safe_df = df.copy()
@@ -1411,6 +1425,7 @@ class ExcelProcessorApp:
                 # 添加角色来源列
                 if not filtered.empty and '角色来源' not in filtered.columns:
                     filtered['角色来源'] = user_roles[0]
+                print(f"✅ 单角色筛选完成: 输入{len(safe_df)}行，输出{len(filtered)}行，角色来源列={'已添加' if '角色来源' in filtered.columns else '未添加'}")
                 return filtered
             
             # 多角色处理：分别筛选，然后合并
@@ -1446,6 +1461,8 @@ class ExcelProcessorApp:
             else:
                 # 如果没有原始行号，只能用第一个角色
                 merged['角色来源'] = user_roles[0] if user_roles else ''
+            
+            print(f"✅ 角色筛选完成: 输入{len(safe_df)}行，输出{len(merged)}行，角色来源列={'已添加' if '角色来源' in merged.columns else '未添加'}")
             
             return merged
         except Exception as e:
@@ -2388,7 +2405,8 @@ class ExcelProcessorApp:
                     # 兼容性：设置第一个文件为单文件变量
                     self.target_file1, self.target_file1_project_id = self.target_files1[0]
                     self.update_tab_color(0, "green")
-                    self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
+                    # 【修复】不再在识别文件时立即显示原始数据，避免覆盖后续的处理结果
+                    # self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
             elif hasattr(main, 'find_target_file'):
                 # 兼容旧版本
                 self.target_file1, self.target_file1_project_id = main.find_target_file(self.excel_files)
@@ -2398,7 +2416,8 @@ class ExcelProcessorApp:
                     self.ignored_files.extend(ignored)
                     if self.target_files1:
                         self.update_tab_color(0, "green")
-                        self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
+                        # 【修复】不再在识别文件时立即显示原始数据，避免覆盖后续的处理结果
+                        # self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
                     else:
                         self.target_file1 = None
                         self.target_file1_project_id = None
