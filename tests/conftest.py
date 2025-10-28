@@ -107,3 +107,40 @@ def config_data():
         'export_folder_path': 'D:/test/export',
     }
 
+
+@pytest.fixture
+def base_app(monkeypatch):
+    """创建ExcelProcessorApp实例用于测试"""
+    from unittest.mock import MagicMock
+    import tkinter as tk
+    
+    # Mock所有messagebox
+    monkeypatch.setattr('tkinter.messagebox.showinfo', MagicMock())
+    monkeypatch.setattr('tkinter.messagebox.showwarning', MagicMock())
+    monkeypatch.setattr('tkinter.messagebox.showerror', MagicMock())
+    monkeypatch.setattr('tkinter.messagebox.askyesno', MagicMock(return_value=False))
+    
+    # Mock load_user_role to prevent file loading errors
+    from base import ExcelProcessorApp
+    original_load_user_role = ExcelProcessorApp.load_user_role
+    
+    def mock_load_user_role(self):
+        """Mock的load_user_role，避免文件读取错误"""
+        self.user_name = self.config.get("user_name", "").strip()
+        self.user_role = ""
+        self.user_roles = []
+    
+    monkeypatch.setattr(ExcelProcessorApp, 'load_user_role', mock_load_user_role)
+    
+    # 创建app实例
+    app = ExcelProcessorApp(auto_mode=True)
+    app.user_roles = []  # 默认空角色
+    
+    yield app
+    
+    # 清理
+    try:
+        app.root.destroy()
+    except:
+        pass
+

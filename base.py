@@ -455,6 +455,7 @@ class ExcelProcessorApp:
             "minimize_to_tray": True,
             "dont_ask_again": False,
             "hide_previous_months": False,
+            "simple_export_mode": False,  # 简洁导出模式（仅管理员可用，导出时只显示个数不显示接口号）
             # 自动运行导出日期窗口（按角色）。含义：截止日期与今天的天数差 <= 指定天数 才导出；允许为负（已超期）
             "role_export_days": {
                 "一室主任": 7,
@@ -542,7 +543,7 @@ class ExcelProcessorApp:
                             # 将旧参数迁移到 self.config
                             if key in ("folder_path","export_folder_path","user_name"):
                                 self.config[key] = val
-                            elif key in ("auto_startup","minimize_to_tray","dont_ask_again","hide_previous_months"):
+                            elif key in ("auto_startup","minimize_to_tray","dont_ask_again","hide_previous_months","simple_export_mode"):
                                 self.config[key] = (val.lower() == 'true')
         except Exception as e:
             print(f"加载YAML配置失败: {e}")
@@ -560,6 +561,7 @@ class ExcelProcessorApp:
             lines.append(f"  minimize_to_tray: {'true' if self.config.get('minimize_to_tray', True) else 'false'}")
             lines.append(f"  dont_ask_again: {'true' if self.config.get('dont_ask_again', False) else 'false'}")
             lines.append(f"  hide_previous_months: {'true' if self.config.get('hide_previous_months', False) else 'false'}")
+            lines.append(f"  simple_export_mode: {'true' if self.config.get('simple_export_mode', False) else 'false'}")
             lines.append("")
             lines.append("timer:")
             lines.append(f"  enabled: {'true' if self.timer_enabled else 'false'}")
@@ -1720,6 +1722,23 @@ class ExcelProcessorApp:
             command=on_toggle_hide_prev
         )
         hide_prev_check.pack(anchor=tk.W, pady=(0, 10))
+
+        # 简洁显示模式（仅管理员可见）
+        self.simple_export_mode_var = tk.BooleanVar(value=self.config.get("simple_export_mode", False))
+        def on_toggle_simple_export():
+            self.config["simple_export_mode"] = self.simple_export_mode_var.get()
+            self.save_config()
+        
+        simple_export_check = ttk.Checkbutton(
+            frame,
+            text="简洁显示模式（导出时只显示个数）",
+            variable=self.simple_export_mode_var,
+            command=on_toggle_simple_export
+        )
+        
+        # 仅当用户角色为管理员时显示
+        if "管理员" in self.user_roles:
+            simple_export_check.pack(anchor=tk.W, pady=(0, 10))
 
         # 定时器设置
         timer_frame = ttk.LabelFrame(frame, text="定时自动运行", padding="10")
@@ -3777,6 +3796,9 @@ class ExcelProcessorApp:
                                    + _count_total(results_multi4)
                                    + _count_total(results_multi5)
                                    + _count_total(results_multi6))
+                    # 检查是否启用简洁导出模式（仅管理员且勾选）
+                    simple_mode = ("管理员" in self.user_roles) and self.config.get("simple_export_mode", False)
+                    
                     txt_path = main2.write_export_summary(
                         folder_path=summary_folder,
                         current_datetime=self.current_datetime,
@@ -3786,6 +3808,7 @@ class ExcelProcessorApp:
                         results_multi4=results_multi4,
                         results_multi5=results_multi5,
                         results_multi6=results_multi6,
+                        simple_export_mode=simple_mode,
                     )
                     # 记录本次新生成的汇总文件路径
                     try:

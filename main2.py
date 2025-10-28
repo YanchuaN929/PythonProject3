@@ -31,6 +31,7 @@ def write_export_summary(
     results_multi4: Optional[Dict[str, Any]] = None,
     results_multi5: Optional[Dict[str, Any]] = None,
     results_multi6: Optional[Dict[str, Any]] = None,
+    simple_export_mode: bool = False,
 ) -> str:
     """依据导出的批量处理结果，生成结果汇总TXT文件。
 
@@ -269,8 +270,8 @@ def write_export_summary(
                         # 基本信息行
                         lines.append(f"      {t}{action_word}{cnt}个{tag}")
                         
-                        # 接口号详情（如果有）
-                        if interface_ids:
+                        # 接口号详情（如果有，且未启用简洁模式）
+                        if not simple_export_mode and interface_ids:
                             # 将接口号用逗号分隔，每行最多显示10个
                             interface_str = "、".join(interface_ids)
                             lines.append(f"        接口号：{interface_str}")
