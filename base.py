@@ -461,7 +461,7 @@ class ExcelProcessorApp:
                 "一室主任": 7,
                 "二室主任": 7,
                 "建筑总图室主任": 7,
-                "所长": 2,
+                "所领导": 2,
                 "管理员": None,
                 "设计人员": None
             }
@@ -1370,7 +1370,11 @@ class ExcelProcessorApp:
                     return safe_df[safe_df['科室'].isin(['建筑总图室', '请室主任确认'])]
                 return safe_df
             
-            # 6. 管理员或其他未知角色：不过滤
+            # 6. 所领导：不区分科室，查看所有数据
+            if role == '所领导':
+                return safe_df
+            
+            # 7. 管理员或其他未知角色：不过滤
             return safe_df
         except Exception as e:
             print(f"单角色过滤失败 [{role}]: {e}")
@@ -1388,6 +1392,7 @@ class ExcelProcessorApp:
           - 一室主任：科室 ∈ {结构一室, 请室主任确认}
           - 二室主任：科室 ∈ {结构二室, 请室主任确认}
           - 建筑总图室主任：科室 ∈ {建筑总图室, 请室主任确认}
+          - 所领导：不区分科室，查看所有数据
           - 管理员或空角色/姓名：不过滤
         
         多角色处理：
@@ -1476,6 +1481,7 @@ class ExcelProcessorApp:
         依据列：'接口时间'（格式 mm.dd）。
         规则：仅当 auto_mode=True 且 用户角色在 role_export_days 映射中时生效；
              仅保留 (due_date - today).days <= 指定天数 的记录（支持负值，即已超期亦保留）。
+             对于"所领导"、"一室主任"、"二室主任"、"建筑总图室主任"，使用工作日计算（排除周六周日）。
         解析失败或无'接口时间'的记录将被排除。
         """
         try:
@@ -1497,7 +1503,13 @@ class ExcelProcessorApp:
             if "接口时间" not in df.columns:
                 return df.iloc[0:0]
             from datetime import date
+            from date_utils import get_workday_difference
+            
             today = date.today()
+            # 判断是否使用工作日计算（所领导、室主任使用工作日）
+            # 管理员、设计人员无天数限制；接口工程师不在此配置中
+            use_workdays = (user_role in ["所领导", "一室主任", "二室主任", "建筑总图室主任"])
+            
             kept_idx = []
             for idx, val in df["接口时间"].items():
                 try:
@@ -1510,7 +1522,13 @@ class ExcelProcessorApp:
                     m = int(parts[0])
                     d = int(parts[1])
                     due = date(today.year, m, d)
-                    delta = (due - today).days
+                    
+                    # 根据角色选择计算方式
+                    if use_workdays:
+                        delta = get_workday_difference(due, today)
+                    else:
+                        delta = (due - today).days
+                    
                     if delta <= max_days:
                         kept_idx.append(idx)
                 except Exception:
@@ -3820,8 +3838,13 @@ class ExcelProcessorApp:
                                    + _count_total(results_multi4)
                                    + _count_total(results_multi5)
                                    + _count_total(results_multi6))
-                    # 检查是否启用简洁导出模式（仅管理员且勾选）
-                    simple_mode = ("管理员" in self.user_roles) and self.config.get("simple_export_mode", False)
+                    # 检查是否启用简洁导出模式
+                    # 1. 管理员且勾选了简洁模式
+                    # 2. 所领导角色（默认使用简洁模式）
+                    simple_mode = (
+                        (("管理员" in self.user_roles) and self.config.get("simple_export_mode", False)) or
+                        ("所领导" in self.user_roles)
+                    )
                     
                     txt_path = main2.write_export_summary(
                         folder_path=summary_folder,

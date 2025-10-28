@@ -4,7 +4,7 @@
 日期工具模块 - 提供日期相关的公共函数
 """
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 
@@ -53,13 +53,79 @@ def is_date_overdue(date_str: str, reference_date: Optional[date] = None) -> boo
         return False
 
 
-def get_date_warn_tag(date_str: str, reference_date: Optional[date] = None) -> str:
+def count_workdays(start_date: date, end_date: date) -> int:
+    """
+    计算两个日期之间的工作日天数（排除周六和周日）
+    
+    Args:
+        start_date: 开始日期
+        end_date: 结束日期
+    
+    Returns:
+        int: 工作日天数
+    
+    Examples:
+        >>> count_workdays(date(2025, 10, 27), date(2025, 10, 31))  # 周一到周五
+        5
+        >>> count_workdays(date(2025, 10, 25), date(2025, 10, 27))  # 周六到周一
+        1
+    """
+    if start_date > end_date:
+        return 0
+    
+    workdays = 0
+    current = start_date
+    
+    while current <= end_date:
+        # weekday(): 0=周一, 1=周二, ..., 5=周六, 6=周日
+        if current.weekday() < 5:  # 周一到周五
+            workdays += 1
+        current += timedelta(days=1)
+    
+    return workdays
+
+
+def get_workday_difference(target_date: date, reference_date: Optional[date] = None) -> int:
+    """
+    计算目标日期与参考日期之间的工作日天数差（排除周六周日）
+    
+    Args:
+        target_date: 目标日期（截止日期）
+        reference_date: 参考日期，默认为今天
+    
+    Returns:
+        int: 工作日天数差
+            - 正数：目标日期在参考日期之后（还有N个工作日）
+            - 负数：目标日期在参考日期之前（已延期N个工作日）
+            - 0：同一天或目标日期是参考日期后的非工作日
+    
+    Examples:
+        >>> get_workday_difference(date(2025, 10, 31), date(2025, 10, 27))  # 周一到周五
+        5
+        >>> get_workday_difference(date(2025, 10, 25), date(2025, 10, 27))  # 周六到周一
+        -1
+    """
+    if reference_date is None:
+        reference_date = date.today()
+    
+    if target_date < reference_date:
+        # 已过期：计算逾期的工作日数（返回负值）
+        return -count_workdays(target_date, reference_date - timedelta(days=1))
+    elif target_date == reference_date:
+        return 0
+    else:
+        # 未来：计算剩余工作日数（返回正值）
+        return count_workdays(reference_date + timedelta(days=1), target_date)
+
+
+def get_date_warn_tag(date_str: str, reference_date: Optional[date] = None, use_workdays: bool = True) -> str:
     """
     根据日期与当前日期的天数差生成提醒标签
     
     Args:
         date_str: 日期字符串，格式 mm.dd（如：01.15）
         reference_date: 参考日期，默认为今天
+        use_workdays: 是否使用工作日计算（排除周六周日），默认True
     
     Returns:
         str: 提醒标签，可能的值：
@@ -95,7 +161,12 @@ def get_date_warn_tag(date_str: str, reference_date: Optional[date] = None) -> s
         due_date = date(reference_date.year, month, day)
         
         # 计算天数差
-        delta = (due_date - reference_date).days
+        if use_workdays:
+            # 使用工作日计算（排除周六周日）
+            delta = get_workday_difference(due_date, reference_date)
+        else:
+            # 使用自然日计算
+            delta = (due_date - reference_date).days
         
         # 根据天数差返回提醒标签
         if delta <= 0:

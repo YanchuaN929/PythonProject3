@@ -74,8 +74,9 @@ class TestProjectIdDisplay:
         # 验证返回结果
         assert '项目号' in result.columns
         assert '接口号' in result.columns
-        assert result.columns[0] == '项目号'  # 项目号在第一列
-        assert result.columns[1] == '接口号'  # 接口号在第二列
+        assert result.columns[0] == '状态'  # 状态列在第一列
+        assert result.columns[1] == '项目号'  # 项目号在第二列
+        assert result.columns[2] == '接口号'  # 接口号在第三列
         assert len(result) == 3
         assert list(result['项目号']) == ['2016', '2016', '1818']
         assert all(result['接口号'].notna())
@@ -97,8 +98,9 @@ class TestProjectIdDisplay:
         # 验证返回结果
         assert '项目号' in result.columns
         assert '接口号' in result.columns
-        assert result.columns[0] == '项目号'  # 项目号在第一列
-        assert result.columns[1] == '接口号'  # 接口号在第二列
+        assert result.columns[0] == '状态'  # 状态列在第一列
+        assert result.columns[1] == '项目号'  # 项目号在第二列
+        assert result.columns[2] == '接口号'  # 接口号在第三列
         assert len(result) == 3
         
         # 验证接口号包含角色标注
@@ -137,7 +139,8 @@ class TestProjectIdDisplay:
         
         assert '项目号' in result.columns
         assert '接口号' in result.columns
-        assert result.columns[0] == '项目号'
+        assert result.columns[0] == '状态'  # 状态列在第一列
+        assert result.columns[1] == '项目号'  # 项目号在第二列
         assert all(result['项目号'] == '2026')
         
         # 创建测试数据 - 外部需打开接口（C列=索引2）
@@ -184,8 +187,9 @@ class TestProjectIdColumnOrdering:
         # 验证列顺序
         columns = list(result.columns)
         assert columns.index('项目号') < columns.index('接口号'), "项目号应该在接口号之前"
-        assert columns[0] == '项目号', "项目号应该是第一列"
-        assert columns[1] == '接口号', "接口号应该是第二列"
+        assert columns[0] == '状态', "状态列应该是第一列"
+        assert columns[1] == '项目号', "项目号应该是第二列"
+        assert columns[2] == '接口号', "接口号应该是第三列"
 
 
 class TestMultiProjectDisplay:

@@ -3135,11 +3135,10 @@ def process_target_file6(file_path, current_datetime):
     """
     处理待处理文件6（收发文函）
     条件：
-      1) V列包含“河北分公司.建筑结构所”
-      2) H列等于“是”
-      3) I列为日期，且 0 ≤ (日期 - 今天) ≤ 14
-      4) M列等于“尚未回复”
-      最终：上述四条件交集
+      1) V列包含"河北分公司.建筑结构所"
+      2) I列为日期，且 0 ≤ (日期 - 今天) ≤ 14
+      3) M列等于"尚未回复"或"超期未回复"
+      最终：上述三条件交集
     附加：
       - 接口时间：I列按 mm.dd 提取
       - 责任人：X列分隔的姓名集合（用于角色过滤，稍后基于包含关系过滤）
@@ -3167,17 +3166,15 @@ def process_target_file6(file_path, current_datetime):
         return pd.DataFrame()
 
     p1 = execute6_process1(df)
-    p2 = execute6_process2(df)
     p3 = execute6_process3(df, current_datetime)
     p4 = execute6_process4(df)
 
-    final_rows = p1 & p2 & p3 & p4
+    final_rows = p1 & p3 & p4
     try:
         import Monitor
         Monitor.log_info(f"文件6处理1(V列机构匹配): {len(p1)} 行")
-        Monitor.log_info(f"文件6处理2(H列=是): {len(p2)} 行")
         Monitor.log_info(f"文件6处理3(I列未来14天内): {len(p3)} 行")
-        Monitor.log_info(f"文件6处理4(M列=尚未回复): {len(p4)} 行")
+        Monitor.log_info(f"文件6处理4(M列=尚未回复或超期未回复): {len(p4)} 行")
         Monitor.log_success(f"文件6最终完成处理数据: {len(final_rows)} 行")
     except Exception:
         pass
@@ -3313,7 +3310,7 @@ def execute6_process3(df, current_datetime):
 
 
 def execute6_process4(df):
-    """M列为“尚未回复”"""
+    """M列为'尚未回复'或'超期未回复'"""
     result_rows = set()
     if len(df.columns) <= 12:
         return result_rows
@@ -3321,7 +3318,8 @@ def execute6_process4(df):
     for idx, val in m_column.items():
         if idx == 0:
             continue
-        if str(val).strip() == "尚未回复":
+        val_str = str(val).strip()
+        if val_str in ["尚未回复", "超期未回复"]:
             result_rows.add(idx)
     return result_rows
 

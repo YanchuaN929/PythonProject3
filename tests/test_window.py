@@ -336,10 +336,13 @@ class TestOptimizedDisplay:
         wm = WindowManager(mock_root)
         result = wm._create_optimized_display(df, "内部需打开接口")
         
-        # 应该显示2列：接口号 + 是否已完成
-        assert len(result.columns) == 2
-        assert result.columns[0] == "接口号"
-        assert result.columns[1] == "是否已完成"
+        # 应该显示至少3列：状态 + 接口号 + 是否已完成
+        assert len(result.columns) >= 3
+        assert '接口号' in result.columns
+        assert '状态' in result.columns
+        assert '是否已完成' in result.columns
+        # 当没有项目号列时，顺序应该是：状态、接口号、是否已完成
+        assert result.columns[0] == "状态"
         # 验证数据来自第0列
         assert list(result["接口号"]) == [0, 1, 2, 3, 4]
     

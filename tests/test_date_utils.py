@@ -68,28 +68,28 @@ class TestGetDateWarnTag:
     def test_overdue_tag(self):
         """测试已延误标签"""
         test_date = date(2025, 1, 15)
-        assert get_date_warn_tag("01.10", test_date) == "（已延误！！）"
-        assert get_date_warn_tag("01.14", test_date) == "（已延误！！）"
+        assert get_date_warn_tag("01.10", test_date, use_workdays=False) == "（已延误！！）"
+        assert get_date_warn_tag("01.14", test_date, use_workdays=False) == "（已延误！！）"
     
     def test_urgent_tag(self):
         """测试紧急标签（3天内）"""
         test_date = date(2025, 1, 15)
-        assert get_date_warn_tag("01.16", test_date) == "（下班前必须完成）"
-        assert get_date_warn_tag("01.17", test_date) == "（下班前必须完成）"
-        assert get_date_warn_tag("01.18", test_date) == "（下班前必须完成）"
+        assert get_date_warn_tag("01.16", test_date, use_workdays=False) == "（下班前必须完成）"
+        assert get_date_warn_tag("01.17", test_date, use_workdays=False) == "（下班前必须完成）"
+        assert get_date_warn_tag("01.18", test_date, use_workdays=False) == "（下班前必须完成）"
     
     def test_warning_tag(self):
         """测试警告标签（7天内）"""
         test_date = date(2025, 1, 15)
-        assert get_date_warn_tag("01.19", test_date) == "（注意时间）"
-        assert get_date_warn_tag("01.20", test_date) == "（注意时间）"
-        assert get_date_warn_tag("01.22", test_date) == "（注意时间）"
+        assert get_date_warn_tag("01.19", test_date, use_workdays=False) == "（注意时间）"
+        assert get_date_warn_tag("01.20", test_date, use_workdays=False) == "（注意时间）"
+        assert get_date_warn_tag("01.22", test_date, use_workdays=False) == "（注意时间）"
     
     def test_no_tag(self):
         """测试无标签（7天后）"""
         test_date = date(2025, 1, 15)
-        assert get_date_warn_tag("01.23", test_date) == ""
-        assert get_date_warn_tag("01.30", test_date) == ""
+        assert get_date_warn_tag("01.23", test_date, use_workdays=False) == ""
+        assert get_date_warn_tag("01.30", test_date, use_workdays=False) == ""
     
     def test_unknown_date_tag(self):
         """测试未知日期标签"""
