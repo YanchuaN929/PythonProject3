@@ -493,7 +493,23 @@ class WindowManager:
         
         # 优化显示列（仅显示关键列）
         display_df = self._create_optimized_display(filtered_df, tab_name, completed_rows=completed_rows_set)
-        columns = list(display_df.columns)
+        
+        # 【新增】填充"状态"列：根据"接口时间"判断是否延期
+        if "状态" in display_df.columns and "接口时间" in display_df.columns:
+            status_values = []
+            for idx in range(len(display_df)):
+                try:
+                    time_value = display_df.iloc[idx]["接口时间"]
+                    if is_date_overdue(str(time_value) if not pd.isna(time_value) else ""):
+                        status_values.append("⚠️")  # 延期标记
+                    else:
+                        status_values.append("")  # 正常无标记
+                except Exception:
+                    status_values.append("")
+            display_df["状态"] = status_values
+        
+        # 【重要】过滤掉"接口时间"列（仅用于逻辑判断，不在GUI显示）
+        columns = [col for col in display_df.columns if col != "接口时间"]
         
         viewer["columns"] = columns
         viewer["show"] = "tree headings"
@@ -509,12 +525,27 @@ class WindowManager:
         viewer.heading("#0", text="行号")
         
         for i, col in enumerate(columns):
-            col_width = column_widths[i] if i < len(column_widths) else 100
+            # 【新增】"状态"列固定宽度为50px，其他列自动计算
+            if col == "状态":
+                col_width = 50  # 状态列固定宽度
+            else:
+                col_width = column_widths[i] if i < len(column_widths) else 100
             viewer.heading(col, text=str(col))
             viewer.column(col, width=col_width, minwidth=col_width, anchor='center')
         
-        # 配置延期数据的红色标签（在插入数据前配置）
-        viewer.tag_configure('overdue', foreground='red')
+        # 配置延期数据的标签（在插入数据前配置）
+        # 【重要】ttk.Treeview在Windows系统主题下的限制：
+        #   - background: 通常不生效（被主题锁定）
+        #   - foreground: 部分主题支持
+        #   - font: 完全支持
+        # 策略：使用 深红色前景 + 加粗 + 斜体 的组合来最大化视觉冲击
+        try:
+            # 方案：深红色 + 加粗 + 斜体
+            viewer.tag_configure('overdue', 
+                                foreground='#8B0000',         # 深红色/暗红色（DarkRed）
+                                font=('', 10, 'bold italic')) # 加粗+斜体，字号稍大
+        except Exception as e:
+            print(f"[错误] tag配置失败: {e}")
         
         # 添加数据行
         max_rows = len(display_df) if show_all else min(20, len(display_df))
@@ -522,9 +553,11 @@ class WindowManager:
         for index in range(max_rows):
             row = display_df.iloc[index]
             
-            # 处理数据显示格式
+            # 处理数据显示格式（仅显示过滤后的列，不包括"接口时间"）
             display_values = []
-            for val in row:
+            for col in columns:  # 只遍历要显示的列
+                val = row[col]
+                
                 if pd.isna(val):
                     display_values.append("")
                 elif isinstance(val, (int, float)):
@@ -535,6 +568,15 @@ class WindowManager:
                 else:
                     display_values.append(str(val))
             
+            # 判断是否为延期数据（用于应用tag样式）
+            is_overdue_flag = False
+            if "接口时间" in display_df.columns and index < len(display_df):
+                try:
+                    time_value = display_df.iloc[index]["接口时间"]
+                    is_overdue_flag = is_date_overdue(str(time_value) if not pd.isna(time_value) else "")
+                except Exception:
+                    is_overdue_flag = False
+            
             # 确定行号显示
             if original_row_numbers and index < len(original_row_numbers):
                 row_number_display = original_row_numbers[index]
@@ -542,28 +584,9 @@ class WindowManager:
             else:
                 display_text = str(index + 1)
             
-            # 判断是否为延期数据（需要标红）
-            # 尝试从原始DataFrame获取接口时间
-            is_overdue_flag = False
-            if "接口时间" in df.columns and index < len(df):
-                try:
-                    # 获取对应原始行的接口时间
-                    if original_row_numbers and index < len(original_row_numbers):
-                        original_row_idx = original_row_numbers[index] - 1  # 行号从1开始，索引从0开始
-                        if 0 <= original_row_idx < len(df):
-                            time_value = df.iloc[original_row_idx]["接口时间"]
-                            is_overdue_flag = is_date_overdue(str(time_value) if not pd.isna(time_value) else "")
-                    else:
-                        # 如果没有原始行号，直接用当前index
-                        time_value = df.iloc[index]["接口时间"]
-                        is_overdue_flag = is_date_overdue(str(time_value) if not pd.isna(time_value) else "")
-                except Exception as e:
-                    # 如果获取失败，不标红
-                    is_overdue_flag = False
-            
             # 应用标签
             tags = ('overdue',) if is_overdue_flag else ()
-            viewer.insert("", "end", text=display_text, values=display_values, tags=tags)
+            item_id = viewer.insert("", "end", text=display_text, values=display_values, tags=tags)
         
         # 如果有更多行未显示，添加提示
         if not show_all and len(display_df) > 20:
@@ -845,14 +868,33 @@ class WindowManager:
                             completed_status = ["☐"] * len(combined_values)
                         
                         # 创建新的DataFrame - 如果有项目号列，则项目号在前
-                        if "项目号" in df.columns:
+                        # 【重要】保留"接口时间"列用于延期判断（但不在GUI显示）
+                        # 【新增】添加"状态"列用于显示延期警告标记
+                        if "项目号" in df.columns and "接口时间" in df.columns:
                             result = pd.DataFrame({
+                                "状态": [""] * len(combined_values),  # 占位，稍后根据延期情况填充
+                                "项目号": df["项目号"],
+                                "接口号": combined_values,
+                                "是否已完成": completed_status,
+                                "接口时间": df["接口时间"]  # 保留用于延期判断
+                            })
+                        elif "项目号" in df.columns:
+                            result = pd.DataFrame({
+                                "状态": [""] * len(combined_values),
                                 "项目号": df["项目号"],
                                 "接口号": combined_values,
                                 "是否已完成": completed_status
                             })
+                        elif "接口时间" in df.columns:
+                            result = pd.DataFrame({
+                                "状态": [""] * len(combined_values),
+                                "接口号": combined_values,
+                                "是否已完成": completed_status,
+                                "接口时间": df["接口时间"]  # 保留用于延期判断
+                            })
                         else:
                             result = pd.DataFrame({
+                                "状态": [""] * len(combined_values),
                                 "接口号": combined_values,
                                 "是否已完成": completed_status
                             })
@@ -872,14 +914,33 @@ class WindowManager:
                             # 没有原始行号，使用索引
                             completed_status = ["☐"] * len(df)
                         
-                        if "项目号" in df.columns:
+                        # 【重要】保留"接口时间"列用于延期判断（但不在GUI显示）
+                        # 【新增】添加"状态"列用于显示延期警告标记
+                        if "项目号" in df.columns and "接口时间" in df.columns:
                             result = pd.DataFrame({
+                                "状态": [""] * len(df),
+                                "项目号": df["项目号"],
+                                "接口号": df.iloc[:, col_idx],
+                                "是否已完成": completed_status,
+                                "接口时间": df["接口时间"]  # 保留用于延期判断
+                            })
+                        elif "项目号" in df.columns:
+                            result = pd.DataFrame({
+                                "状态": [""] * len(df),
                                 "项目号": df["项目号"],
                                 "接口号": df.iloc[:, col_idx],
                                 "是否已完成": completed_status
                             })
+                        elif "接口时间" in df.columns:
+                            result = pd.DataFrame({
+                                "状态": [""] * len(df),
+                                "接口号": df.iloc[:, col_idx],
+                                "是否已完成": completed_status,
+                                "接口时间": df["接口时间"]  # 保留用于延期判断
+                            })
                         else:
                             result = pd.DataFrame({
+                                "状态": [""] * len(df),
                                 "接口号": df.iloc[:, col_idx],
                                 "是否已完成": completed_status
                             })
@@ -976,16 +1037,20 @@ class WindowManager:
             if not columns:
                 return
             
-            # 【修改】确定接口号列的位置
-            # 如果第一列是"项目号"，接口号在第二列(索引1)
-            # 否则接口号在第一列(索引0)
-            if len(columns) > 0 and columns[0] == "项目号":
-                interface_col_idx = 1
-            else:
-                interface_col_idx = 0
+            # 【修改】动态查找"接口号"列的位置
+            # 支持的列顺序：
+            # - 状态、项目号、接口号、是否已完成
+            # - 状态、接口号、是否已完成
+            # - 项目号、接口号、是否已完成
+            # - 接口号、是否已完成
+            interface_col_idx = -1
+            for idx, col in enumerate(columns):
+                if col == "接口号":
+                    interface_col_idx = idx
+                    break
             
             # 检查接口号列是否存在
-            if interface_col_idx >= len(columns):
+            if interface_col_idx == -1:
                 print("未找到接口号列")
                 return
             

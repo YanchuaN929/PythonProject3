@@ -2238,58 +2238,82 @@ class ExcelProcessorApp:
             
             # 根据当前选项卡刷新对应的显示内容
             if current_tab == 0:  # 内部需打开接口
-                # 【修复】优先显示已处理结果，否则加载原始文件
-                if self.has_processed_results1 and self.processing_results is not None and not self.processing_results.empty:
-                    excel_row_numbers = list(self.processing_results['原始行号'])
-                    self.display_excel_data_with_original_rows(self.tab1_viewer, self.processing_results, "内部需打开接口", excel_row_numbers)
-                elif self.has_processed_results1:
-                    self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
+                # 【修复】区分"已处理"和"未处理"状态
+                if self.has_processed_results1:
+                    # 已处理：显示处理结果或"无数据"
+                    if self.processing_results is not None and not self.processing_results.empty:
+                        excel_row_numbers = list(self.processing_results['原始行号'])
+                        self.display_excel_data_with_original_rows(self.tab1_viewer, self.processing_results, "内部需打开接口", excel_row_numbers)
+                    else:
+                        # 处理后无数据
+                        self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
                 elif self.target_file1:
+                    # 未处理：加载原始文件
                     self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
             elif current_tab == 1:  # 内部需回复接口
-                # 【修复】优先显示已处理结果，否则加载原始文件
-                if self.has_processed_results2 and self.processing_results2 is not None and not self.processing_results2.empty:
-                    excel_row_numbers = list(self.processing_results2['原始行号'])
-                    self.display_excel_data_with_original_rows(self.tab2_viewer, self.processing_results2, "内部需回复接口", excel_row_numbers)
-                elif self.has_processed_results2:
-                    self.show_empty_message(self.tab2_viewer, "无内部需回复接口")
+                # 【修复】区分"已处理"和"未处理"状态
+                if self.has_processed_results2:
+                    # 已处理：显示处理结果或"无数据"
+                    if self.processing_results2 is not None and not self.processing_results2.empty:
+                        excel_row_numbers = list(self.processing_results2['原始行号'])
+                        self.display_excel_data_with_original_rows(self.tab2_viewer, self.processing_results2, "内部需回复接口", excel_row_numbers)
+                    else:
+                        # 处理后无数据
+                        self.show_empty_message(self.tab2_viewer, "无内部需回复接口")
                 elif self.target_file2:
+                    # 未处理：加载原始文件
                     self.load_file_to_viewer(self.target_file2, self.tab2_viewer, "内部需回复接口")
             elif current_tab == 2:  # 外部需打开接口
-                # 【修复】优先显示已处理结果，否则加载原始文件
-                if self.has_processed_results3 and self.processing_results3 is not None and not self.processing_results3.empty:
-                    excel_row_numbers = list(self.processing_results3['原始行号'])
-                    self.display_excel_data_with_original_rows(self.tab3_viewer, self.processing_results3, "外部需打开接口", excel_row_numbers)
-                elif self.has_processed_results3:
-                    self.show_empty_message(self.tab3_viewer, "无外部需打开接口")
+                # 【修复】区分"已处理"和"未处理"状态
+                if self.has_processed_results3:
+                    # 已处理：显示处理结果或"无数据"
+                    if self.processing_results3 is not None and not self.processing_results3.empty:
+                        excel_row_numbers = list(self.processing_results3['原始行号'])
+                        self.display_excel_data_with_original_rows(self.tab3_viewer, self.processing_results3, "外部需打开接口", excel_row_numbers)
+                    else:
+                        # 处理后无数据
+                        self.show_empty_message(self.tab3_viewer, "无外部需打开接口")
                 elif self.target_file3:
+                    # 未处理：加载原始文件
                     self.load_file_to_viewer(self.target_file3, self.tab3_viewer, "外部需打开接口")
             elif current_tab == 3:  # 外部需回复接口
-                # 【修复】优先显示已处理结果，否则加载原始文件
-                if self.has_processed_results4 and self.processing_results4 is not None and not self.processing_results4.empty:
-                    excel_row_numbers = list(self.processing_results4['原始行号'])
-                    self.display_excel_data_with_original_rows(self.tab4_viewer, self.processing_results4, "外部需回复接口", excel_row_numbers)
-                elif self.has_processed_results4:
-                    self.show_empty_message(self.tab4_viewer, "无外部需回复接口")
+                # 【修复】区分"已处理"和"未处理"状态
+                if self.has_processed_results4:
+                    # 已处理：显示处理结果或"无数据"
+                    if self.processing_results4 is not None and not self.processing_results4.empty:
+                        excel_row_numbers = list(self.processing_results4['原始行号'])
+                        self.display_excel_data_with_original_rows(self.tab4_viewer, self.processing_results4, "外部需回复接口", excel_row_numbers)
+                    else:
+                        # 处理后无数据
+                        self.show_empty_message(self.tab4_viewer, "无外部需回复接口")
                 elif self.target_file4:
+                    # 未处理：加载原始文件
                     self.load_file_to_viewer(self.target_file4, self.tab4_viewer, "外部需回复接口")
             elif current_tab == 4 and getattr(self, 'target_files5', None):  # 三维提资接口
-                # 【修复】优先显示已处理结果（已在refresh_all_processed_results中更新）
-                if self.has_processed_results5 and self.processing_results5 is not None and not self.processing_results5.empty:
-                    excel_row_numbers = list(self.processing_results5['原始行号'])
-                    self.display_excel_data_with_original_rows(self.tab5_viewer, self.processing_results5, "三维提资接口", excel_row_numbers)
-                elif self.has_processed_results5:
-                    self.show_empty_message(self.tab5_viewer, "无三维提资接口")
+                # 【修复】区分"已处理"和"未处理"状态
+                if self.has_processed_results5:
+                    # 已处理：显示处理结果或"无数据"
+                    if self.processing_results5 is not None and not self.processing_results5.empty:
+                        excel_row_numbers = list(self.processing_results5['原始行号'])
+                        self.display_excel_data_with_original_rows(self.tab5_viewer, self.processing_results5, "三维提资接口", excel_row_numbers)
+                    else:
+                        # 处理后无数据
+                        self.show_empty_message(self.tab5_viewer, "无三维提资接口")
                 elif self.file5_data is not None:
+                    # 未处理：显示原始数据
                     self.display_excel_data(self.tab5_viewer, self.file5_data, "三维提资接口")
             elif current_tab == 5 and getattr(self, 'target_files6', None):  # 收发文函
-                # 【修复】优先显示已处理结果（已在refresh_all_processed_results中更新）
-                if self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
-                    excel_row_numbers = list(self.processing_results6['原始行号'])
-                    self.display_excel_data_with_original_rows(self.tab6_viewer, self.processing_results6, "收发文函", excel_row_numbers)
-                elif self.has_processed_results6:
-                    self.show_empty_message(self.tab6_viewer, "无收发文函")
+                # 【修复】区分"已处理"和"未处理"状态
+                if self.has_processed_results6:
+                    # 已处理：显示处理结果或"无数据"
+                    if self.processing_results6 is not None and not self.processing_results6.empty:
+                        excel_row_numbers = list(self.processing_results6['原始行号'])
+                        self.display_excel_data_with_original_rows(self.tab6_viewer, self.processing_results6, "收发文函", excel_row_numbers)
+                    else:
+                        # 处理后无数据
+                        self.show_empty_message(self.tab6_viewer, "无收发文函")
                 elif self.file6_data is not None:
+                    # 未处理：显示原始数据
                     self.display_excel_data(self.tab6_viewer, self.file6_data, "收发文函")
             else:
                 # 如果当前选项卡没有对应的文件，显示空提示
