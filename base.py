@@ -2255,29 +2255,8 @@ class ExcelProcessorApp:
                 elif self.target_file4:
                     self.load_file_to_viewer(self.target_file4, self.tab4_viewer, "外部需回复接口")
             elif current_tab == 4 and getattr(self, 'target_files5', None):  # 三维提资接口
-                # 【修复】从processing_results_multi5重新合并数据并应用角色筛选
-                if hasattr(self, 'processing_results_multi5') and self.processing_results_multi5:
-                    combined_results = []
-                    for project_id, cached_df in self.processing_results_multi5.items():
-                        if cached_df is not None and not cached_df.empty:
-                            # 【关键】应用角色筛选
-                            filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
-                            if filtered_df is not None and not filtered_df.empty:
-                                combined_results.append(filtered_df)
-                    
-                    if combined_results:
-                        results5 = pd.concat(combined_results, ignore_index=True)
-                        self.processing_results5 = results5  # 更新单文件结果
-                        self.has_processed_results5 = True
-                        excel_row_numbers = list(results5['原始行号'])
-                        self.display_excel_data_with_original_rows(self.tab5_viewer, results5, "三维提资接口", excel_row_numbers)
-                    else:
-                        # 【修复】角色筛选后无数据，标记为已处理
-                        self.has_processed_results5 = True
-                        self.processing_results5 = pd.DataFrame()
-                        self.show_empty_message(self.tab5_viewer, "无三维提资接口")
-                elif self.has_processed_results5 and self.processing_results5 is not None and not self.processing_results5.empty:
-                    # 不要drop原始行号列，因为需要它来加载勾选状态
+                # 【修复】优先显示已处理结果（已在refresh_all_processed_results中更新）
+                if self.has_processed_results5 and self.processing_results5 is not None and not self.processing_results5.empty:
                     excel_row_numbers = list(self.processing_results5['原始行号'])
                     self.display_excel_data_with_original_rows(self.tab5_viewer, self.processing_results5, "三维提资接口", excel_row_numbers)
                 elif self.has_processed_results5:
@@ -2285,30 +2264,8 @@ class ExcelProcessorApp:
                 elif self.file5_data is not None:
                     self.display_excel_data(self.tab5_viewer, self.file5_data, "三维提资接口")
             elif current_tab == 5 and getattr(self, 'target_files6', None):  # 收发文函
-                # 【修复】从processing_results_multi6重新合并数据并应用角色筛选
-                if hasattr(self, 'processing_results_multi6') and self.processing_results_multi6:
-                    combined_results = []
-                    for project_id, cached_df in self.processing_results_multi6.items():
-                        if cached_df is not None and not cached_df.empty:
-                            # 【关键】应用角色筛选
-                            filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
-                            if filtered_df is not None and not filtered_df.empty:
-                                combined_results.append(filtered_df)
-                    
-                    if combined_results:
-                        results6 = pd.concat(combined_results, ignore_index=True)
-                        self.processing_results6 = results6  # 更新单文件结果
-                        self.has_processed_results6 = True
-                        excel_row_numbers = list(results6['原始行号'])
-                        self.display_excel_data_with_original_rows(self.tab6_viewer, results6, "收发文函", excel_row_numbers)
-                    else:
-                        # 【修复】角色筛选后无数据，标记为已处理
-                        self.has_processed_results6 = True
-                        self.processing_results6 = pd.DataFrame()
-                        self.show_empty_message(self.tab6_viewer, "无收发文函")
-                        self.update_export_button_state()
-                elif self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
-                    # 不要drop原始行号列，因为需要它来加载勾选状态
+                # 【修复】优先显示已处理结果（已在refresh_all_processed_results中更新）
+                if self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
                     excel_row_numbers = list(self.processing_results6['原始行号'])
                     self.display_excel_data_with_original_rows(self.tab6_viewer, self.processing_results6, "收发文函", excel_row_numbers)
                 elif self.has_processed_results6:
