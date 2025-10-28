@@ -11,6 +11,7 @@ import tkinter.scrolledtext as scrolledtext
 import pandas as pd
 import os
 import sys
+from date_utils import is_date_overdue
 
 
 def get_resource_path(relative_path):
@@ -512,6 +513,9 @@ class WindowManager:
             viewer.heading(col, text=str(col))
             viewer.column(col, width=col_width, minwidth=col_width, anchor='center')
         
+        # 配置延期数据的红色标签（在插入数据前配置）
+        viewer.tag_configure('overdue', foreground='red')
+        
         # 添加数据行
         max_rows = len(display_df) if show_all else min(20, len(display_df))
         
@@ -538,7 +542,28 @@ class WindowManager:
             else:
                 display_text = str(index + 1)
             
-            viewer.insert("", "end", text=display_text, values=display_values)
+            # 判断是否为延期数据（需要标红）
+            # 尝试从原始DataFrame获取接口时间
+            is_overdue_flag = False
+            if "接口时间" in df.columns and index < len(df):
+                try:
+                    # 获取对应原始行的接口时间
+                    if original_row_numbers and index < len(original_row_numbers):
+                        original_row_idx = original_row_numbers[index] - 1  # 行号从1开始，索引从0开始
+                        if 0 <= original_row_idx < len(df):
+                            time_value = df.iloc[original_row_idx]["接口时间"]
+                            is_overdue_flag = is_date_overdue(str(time_value) if not pd.isna(time_value) else "")
+                    else:
+                        # 如果没有原始行号，直接用当前index
+                        time_value = df.iloc[index]["接口时间"]
+                        is_overdue_flag = is_date_overdue(str(time_value) if not pd.isna(time_value) else "")
+                except Exception as e:
+                    # 如果获取失败，不标红
+                    is_overdue_flag = False
+            
+            # 应用标签
+            tags = ('overdue',) if is_overdue_flag else ()
+            viewer.insert("", "end", text=display_text, values=display_values, tags=tags)
         
         # 如果有更多行未显示，添加提示
         if not show_all and len(display_df) > 20:

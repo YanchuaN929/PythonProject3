@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, date
 from typing import Dict, Any, Optional
+from date_utils import get_date_warn_tag
 
 
 def _format_date_for_filename(current_datetime: Optional[Any]) -> str:
@@ -135,22 +136,8 @@ def write_export_summary(
         _current_date = date.today()
 
     def _warn_tag(mmdd: str) -> str:
-        # 根据 mm.dd 与当前日期天数差生成提醒标签
-        try:
-            if not mmdd or mmdd == "未知":
-                return ""
-            m, d = mmdd.split(".")
-            due = date(_current_date.year, int(m), int(d))
-            delta = (due - _current_date).days
-            if delta <= 0:
-                return "（已延误！！）"
-            if delta <= 3:
-                return "（下班前必须完成）"
-            if delta <= 7:
-                return "（注意时间）"
-            return ""
-        except Exception:
-            return ""
+        # 根据 mm.dd 与当前日期天数差生成提醒标签（使用公共工具函数）
+        return get_date_warn_tag(mmdd, _current_date)
 
     # 重组为：科室 -> 文件类型 -> 项目 -> 接口时间
     # 构建聚合映射：dept -> category -> pid -> time_key -> {'count': int, 'interface_ids': list}

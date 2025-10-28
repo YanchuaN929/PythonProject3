@@ -1634,7 +1634,7 @@ class ExcelProcessorApp:
         # 创建设置菜单窗口
         settings_menu = tk.Toplevel(self.root)
         settings_menu.title("设置")
-        settings_menu.geometry("560x420")
+        settings_menu.geometry("560x460")  # 增加高度以适应新增的"简洁显示模式"选项
         settings_menu.transient(self.root)
         settings_menu.grab_set()
         settings_menu.resizable(False, False)
