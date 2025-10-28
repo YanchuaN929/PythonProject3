@@ -1666,6 +1666,11 @@ class ExcelProcessorApp:
                 self._enforce_user_name_gate(show_popup=False)
             except Exception:
                 pass
+            # 【新增】角色改变后，重新筛选和显示所有已处理的数据
+            try:
+                self.refresh_all_processed_results()
+            except Exception as e:
+                print(f"刷新已处理结果失败: {e}")
         self.user_name_var.trace_add('write', on_name_change)
         
         # 开机自启动选项
@@ -2067,6 +2072,128 @@ class ExcelProcessorApp:
         
         return message
 
+    def refresh_all_processed_results(self):
+        """
+        当用户名或角色改变时，重新筛选并显示所有已处理的数据
+        
+        功能：
+        1. 对所有 processing_results_multiX 中的缓存数据重新应用角色筛选
+        2. 更新所有 processing_resultsX 单文件结果
+        3. 重新显示当前选项卡的内容
+        4. 正确处理"无数据"的情况
+        """
+        try:
+            print("🔄 角色改变，重新筛选所有已处理数据...")
+            
+            # 处理文件1（内部需打开接口）
+            if hasattr(self, 'processing_results_multi1') and self.processing_results_multi1:
+                combined_results = []
+                for project_id, cached_df in self.processing_results_multi1.items():
+                    if cached_df is not None and not cached_df.empty:
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            combined_results.append(filtered_df)
+                
+                if combined_results:
+                    self.processing_results = pd.concat(combined_results, ignore_index=True)
+                    self.has_processed_results1 = True
+                else:
+                    self.processing_results = pd.DataFrame()
+                    self.has_processed_results1 = True
+            
+            # 处理文件2（内部需回复接口）
+            if hasattr(self, 'processing_results_multi2') and self.processing_results_multi2:
+                combined_results = []
+                for project_id, cached_df in self.processing_results_multi2.items():
+                    if cached_df is not None and not cached_df.empty:
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            combined_results.append(filtered_df)
+                
+                if combined_results:
+                    self.processing_results2 = pd.concat(combined_results, ignore_index=True)
+                    self.has_processed_results2 = True
+                else:
+                    self.processing_results2 = pd.DataFrame()
+                    self.has_processed_results2 = True
+            
+            # 处理文件3（外部需打开接口）
+            if hasattr(self, 'processing_results_multi3') and self.processing_results_multi3:
+                combined_results = []
+                for project_id, cached_df in self.processing_results_multi3.items():
+                    if cached_df is not None and not cached_df.empty:
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            combined_results.append(filtered_df)
+                
+                if combined_results:
+                    self.processing_results3 = pd.concat(combined_results, ignore_index=True)
+                    self.has_processed_results3 = True
+                else:
+                    self.processing_results3 = pd.DataFrame()
+                    self.has_processed_results3 = True
+            
+            # 处理文件4（外部需回复接口）
+            if hasattr(self, 'processing_results_multi4') and self.processing_results_multi4:
+                combined_results = []
+                for project_id, cached_df in self.processing_results_multi4.items():
+                    if cached_df is not None and not cached_df.empty:
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            combined_results.append(filtered_df)
+                
+                if combined_results:
+                    self.processing_results4 = pd.concat(combined_results, ignore_index=True)
+                    self.has_processed_results4 = True
+                else:
+                    self.processing_results4 = pd.DataFrame()
+                    self.has_processed_results4 = True
+            
+            # 处理文件5（三维提资接口）
+            if hasattr(self, 'processing_results_multi5') and self.processing_results_multi5:
+                combined_results = []
+                for project_id, cached_df in self.processing_results_multi5.items():
+                    if cached_df is not None and not cached_df.empty:
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            combined_results.append(filtered_df)
+                
+                if combined_results:
+                    self.processing_results5 = pd.concat(combined_results, ignore_index=True)
+                    self.has_processed_results5 = True
+                else:
+                    self.processing_results5 = pd.DataFrame()
+                    self.has_processed_results5 = True
+            
+            # 处理文件6（收发文函）
+            if hasattr(self, 'processing_results_multi6') and self.processing_results_multi6:
+                combined_results = []
+                for project_id, cached_df in self.processing_results_multi6.items():
+                    if cached_df is not None and not cached_df.empty:
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            combined_results.append(filtered_df)
+                
+                if combined_results:
+                    self.processing_results6 = pd.concat(combined_results, ignore_index=True)
+                    self.has_processed_results6 = True
+                else:
+                    self.processing_results6 = pd.DataFrame()
+                    self.has_processed_results6 = True
+            
+            # 刷新当前选项卡的显示
+            self.refresh_current_tab_display()
+            
+            # 更新导出按钮状态
+            self.update_export_button_state()
+            
+            print("✅ 角色筛选刷新完成")
+            
+        except Exception as e:
+            print(f"刷新已处理结果失败: {e}")
+            import traceback
+            traceback.print_exc()
+
     def refresh_current_tab_display(self):
         """刷新当前选项卡的显示内容"""
         try:
@@ -2074,14 +2201,42 @@ class ExcelProcessorApp:
             current_tab = self.notebook.index(self.notebook.select())
             
             # 根据当前选项卡刷新对应的显示内容
-            if current_tab == 0 and self.target_file1:  # 应打开接口
-                self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
-            elif current_tab == 1 and self.target_file2:  # 需回复接口
-                self.load_file_to_viewer(self.target_file2, self.tab2_viewer, "内部需回复接口")
-            elif current_tab == 2 and self.target_file3:  # 外部接口ICM
-                self.load_file_to_viewer(self.target_file3, self.tab3_viewer, "外部需打开接口")
-            elif current_tab == 3 and self.target_file4:  # 外部接口单
-                self.load_file_to_viewer(self.target_file4, self.tab4_viewer, "外部需回复接口")
+            if current_tab == 0:  # 内部需打开接口
+                # 【修复】优先显示已处理结果，否则加载原始文件
+                if self.has_processed_results1 and self.processing_results is not None and not self.processing_results.empty:
+                    excel_row_numbers = list(self.processing_results['原始行号'])
+                    self.display_excel_data_with_original_rows(self.tab1_viewer, self.processing_results, "内部需打开接口", excel_row_numbers)
+                elif self.has_processed_results1:
+                    self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
+                elif self.target_file1:
+                    self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
+            elif current_tab == 1:  # 内部需回复接口
+                # 【修复】优先显示已处理结果，否则加载原始文件
+                if self.has_processed_results2 and self.processing_results2 is not None and not self.processing_results2.empty:
+                    excel_row_numbers = list(self.processing_results2['原始行号'])
+                    self.display_excel_data_with_original_rows(self.tab2_viewer, self.processing_results2, "内部需回复接口", excel_row_numbers)
+                elif self.has_processed_results2:
+                    self.show_empty_message(self.tab2_viewer, "无内部需回复接口")
+                elif self.target_file2:
+                    self.load_file_to_viewer(self.target_file2, self.tab2_viewer, "内部需回复接口")
+            elif current_tab == 2:  # 外部需打开接口
+                # 【修复】优先显示已处理结果，否则加载原始文件
+                if self.has_processed_results3 and self.processing_results3 is not None and not self.processing_results3.empty:
+                    excel_row_numbers = list(self.processing_results3['原始行号'])
+                    self.display_excel_data_with_original_rows(self.tab3_viewer, self.processing_results3, "外部需打开接口", excel_row_numbers)
+                elif self.has_processed_results3:
+                    self.show_empty_message(self.tab3_viewer, "无外部需打开接口")
+                elif self.target_file3:
+                    self.load_file_to_viewer(self.target_file3, self.tab3_viewer, "外部需打开接口")
+            elif current_tab == 3:  # 外部需回复接口
+                # 【修复】优先显示已处理结果，否则加载原始文件
+                if self.has_processed_results4 and self.processing_results4 is not None and not self.processing_results4.empty:
+                    excel_row_numbers = list(self.processing_results4['原始行号'])
+                    self.display_excel_data_with_original_rows(self.tab4_viewer, self.processing_results4, "外部需回复接口", excel_row_numbers)
+                elif self.has_processed_results4:
+                    self.show_empty_message(self.tab4_viewer, "无外部需回复接口")
+                elif self.target_file4:
+                    self.load_file_to_viewer(self.target_file4, self.tab4_viewer, "外部需回复接口")
             elif current_tab == 4 and getattr(self, 'target_files5', None):  # 三维提资接口
                 # 【修复】从processing_results_multi5重新合并数据并应用角色筛选
                 if hasattr(self, 'processing_results_multi5') and self.processing_results_multi5:
@@ -2100,6 +2255,9 @@ class ExcelProcessorApp:
                         excel_row_numbers = list(results5['原始行号'])
                         self.display_excel_data_with_original_rows(self.tab5_viewer, results5, "三维提资接口", excel_row_numbers)
                     else:
+                        # 【修复】角色筛选后无数据，标记为已处理
+                        self.has_processed_results5 = True
+                        self.processing_results5 = pd.DataFrame()
                         self.show_empty_message(self.tab5_viewer, "无三维提资接口")
                 elif self.has_processed_results5 and self.processing_results5 is not None and not self.processing_results5.empty:
                     # 不要drop原始行号列，因为需要它来加载勾选状态
@@ -2127,7 +2285,11 @@ class ExcelProcessorApp:
                         excel_row_numbers = list(results6['原始行号'])
                         self.display_excel_data_with_original_rows(self.tab6_viewer, results6, "收发文函", excel_row_numbers)
                     else:
+                        # 【修复】角色筛选后无数据，标记为已处理
+                        self.has_processed_results6 = True
+                        self.processing_results6 = pd.DataFrame()
                         self.show_empty_message(self.tab6_viewer, "无收发文函")
+                        self.update_export_button_state()
                 elif self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
                     # 不要drop原始行号列，因为需要它来加载勾选状态
                     excel_row_numbers = list(self.processing_results6['原始行号'])
@@ -2468,8 +2630,14 @@ class ExcelProcessorApp:
                 for file_path, project_id in self.target_files1:
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file1')
                     if cached_df is not None:
-                        self.processing_results_multi1[project_id] = cached_df
-                        cache_loaded_count += 1
+                        # 【修复】对缓存数据应用角色筛选，添加"角色来源"列
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            # 添加项目号列
+                            if '项目号' not in filtered_df.columns:
+                                filtered_df['项目号'] = project_id
+                            self.processing_results_multi1[project_id] = filtered_df
+                            cache_loaded_count += 1
                 if self.processing_results_multi1:
                     self.has_processed_results1 = True
             
@@ -2478,8 +2646,14 @@ class ExcelProcessorApp:
                 for file_path, project_id in self.target_files2:
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file2')
                     if cached_df is not None:
-                        self.processing_results_multi2[project_id] = cached_df
-                        cache_loaded_count += 1
+                        # 【修复】对缓存数据应用角色筛选，添加"角色来源"列
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            # 添加项目号列
+                            if '项目号' not in filtered_df.columns:
+                                filtered_df['项目号'] = project_id
+                            self.processing_results_multi2[project_id] = filtered_df
+                            cache_loaded_count += 1
                 if self.processing_results_multi2:
                     self.has_processed_results2 = True
             
@@ -2488,8 +2662,14 @@ class ExcelProcessorApp:
                 for file_path, project_id in self.target_files3:
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file3')
                     if cached_df is not None:
-                        self.processing_results_multi3[project_id] = cached_df
-                        cache_loaded_count += 1
+                        # 【修复】对缓存数据应用角色筛选，添加"角色来源"列
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            # 添加项目号列
+                            if '项目号' not in filtered_df.columns:
+                                filtered_df['项目号'] = project_id
+                            self.processing_results_multi3[project_id] = filtered_df
+                            cache_loaded_count += 1
                 if self.processing_results_multi3:
                     self.has_processed_results3 = True
             
@@ -2498,8 +2678,14 @@ class ExcelProcessorApp:
                 for file_path, project_id in self.target_files4:
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file4')
                     if cached_df is not None:
-                        self.processing_results_multi4[project_id] = cached_df
-                        cache_loaded_count += 1
+                        # 【修复】对缓存数据应用角色筛选，添加"角色来源"列
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            # 添加项目号列
+                            if '项目号' not in filtered_df.columns:
+                                filtered_df['项目号'] = project_id
+                            self.processing_results_multi4[project_id] = filtered_df
+                            cache_loaded_count += 1
                 if self.processing_results_multi4:
                     self.has_processed_results4 = True
             
@@ -2508,8 +2694,14 @@ class ExcelProcessorApp:
                 for file_path, project_id in self.target_files5:
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file5')
                     if cached_df is not None:
-                        self.processing_results_multi5[project_id] = cached_df
-                        cache_loaded_count += 1
+                        # 【修复】对缓存数据应用角色筛选，添加"角色来源"列
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            # 添加项目号列
+                            if '项目号' not in filtered_df.columns:
+                                filtered_df['项目号'] = project_id
+                            self.processing_results_multi5[project_id] = filtered_df
+                            cache_loaded_count += 1
                 if self.processing_results_multi5:
                     self.has_processed_results5 = True
             
@@ -2518,8 +2710,14 @@ class ExcelProcessorApp:
                 for file_path, project_id in self.target_files6:
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file6')
                     if cached_df is not None:
-                        self.processing_results_multi6[project_id] = cached_df
-                        cache_loaded_count += 1
+                        # 【修复】对缓存数据应用角色筛选，添加"角色来源"列
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            # 添加项目号列
+                            if '项目号' not in filtered_df.columns:
+                                filtered_df['项目号'] = project_id
+                            self.processing_results_multi6[project_id] = filtered_df
+                            cache_loaded_count += 1
                 if self.processing_results_multi6:
                     self.has_processed_results6 = True
             
