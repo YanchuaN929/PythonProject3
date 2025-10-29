@@ -120,6 +120,90 @@ class TestFile6ProcessLogic:
         assert 1 in final_rows
 
 
+class TestFile6DateLogic:
+    """测试I列日期筛选逻辑"""
+    
+    def test_process3_includes_past_dates(self):
+        """测试execute6_process3包含过去的日期"""
+        today = datetime.now()
+        past_date = today - timedelta(days=30)  # 30天前
+        
+        data = {i: ['标题', '数据1', '数据2'] for i in range(9)}
+        data[8] = ['I列', past_date, today]
+        df = pd.DataFrame(data)
+        
+        result = main.execute6_process3(df, today)
+        
+        # 应该包含行1（过去30天）和行2（今天）
+        assert len(result) == 2
+        assert 1 in result  # 过去的日期
+        assert 2 in result  # 今天
+    
+    def test_process3_includes_today(self):
+        """测试execute6_process3包含今天"""
+        today = datetime.now()
+        
+        data = {i: ['标题', '数据'] for i in range(9)}
+        data[8] = ['I列', today]
+        df = pd.DataFrame(data)
+        
+        result = main.execute6_process3(df, today)
+        
+        assert len(result) == 1
+        assert 1 in result
+    
+    def test_process3_includes_future_14_days(self):
+        """测试execute6_process3包含未来14天"""
+        today = datetime.now()
+        future_14 = today + timedelta(days=14)
+        
+        data = {i: ['标题', '数据'] for i in range(9)}
+        data[8] = ['I列', future_14]
+        df = pd.DataFrame(data)
+        
+        result = main.execute6_process3(df, today)
+        
+        assert len(result) == 1
+        assert 1 in result
+    
+    def test_process3_excludes_future_15_days(self):
+        """测试execute6_process3排除未来15天及以后"""
+        today = datetime.now()
+        future_15 = today + timedelta(days=15)
+        future_20 = today + timedelta(days=20)
+        
+        data = {i: ['标题', '数据1', '数据2'] for i in range(9)}
+        data[8] = ['I列', future_15, future_20]
+        df = pd.DataFrame(data)
+        
+        result = main.execute6_process3(df, today)
+        
+        # 不应该包含任何数据（15天和20天都超出范围）
+        assert len(result) == 0
+    
+    def test_process3_mixed_dates(self):
+        """测试execute6_process3混合日期（过去、今天、未来14天内、未来15天外）"""
+        today = datetime.now()
+        past = today - timedelta(days=100)
+        future_7 = today + timedelta(days=7)
+        future_14 = today + timedelta(days=14)
+        future_15 = today + timedelta(days=15)
+        
+        data = {i: ['标题', '数据1', '数据2', '数据3', '数据4', '数据5'] for i in range(9)}
+        data[8] = ['I列', past, today, future_7, future_14, future_15]
+        df = pd.DataFrame(data)
+        
+        result = main.execute6_process3(df, today)
+        
+        # 应该包含前4行（过去、今天、未来7天、未来14天），排除第5行（未来15天）
+        assert len(result) == 4
+        assert 1 in result  # 过去
+        assert 2 in result  # 今天
+        assert 3 in result  # 未来7天
+        assert 4 in result  # 未来14天
+        assert 5 not in result  # 未来15天（超出范围）
+
+
 class TestFile6MColumnExpansion:
     """测试M列接受多种状态"""
     

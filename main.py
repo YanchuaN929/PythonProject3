@@ -3131,14 +3131,21 @@ def find_all_target_files6(excel_files):
     return matched_files
 
 
-def process_target_file6(file_path, current_datetime):
+def process_target_file6(file_path, current_datetime, skip_date_filter=False):
     """
     处理待处理文件6（收发文函）
+    
+    Args:
+        file_path: Excel文件路径
+        current_datetime: 当前时间
+        skip_date_filter: 是否跳过I列日期筛选（管理员模式为True）
+    
     条件：
       1) V列包含"河北分公司.建筑结构所"
-      2) I列为日期，且 0 ≤ (日期 - 今天) ≤ 14
+      2) I列为日期，且日期 ≤ 今天+14天（即包含过去、今天及未来14天）
+         【管理员模式】跳过此条件
       3) M列等于"尚未回复"或"超期未回复"
-      最终：上述三条件交集
+      最终：上述条件交集（管理员模式为 p1 & p4）
     附加：
       - 接口时间：I列按 mm.dd 提取
       - 责任人：X列分隔的姓名集合（用于角色过滤，稍后基于包含关系过滤）
@@ -3166,18 +3173,31 @@ def process_target_file6(file_path, current_datetime):
         return pd.DataFrame()
 
     p1 = execute6_process1(df)
-    p3 = execute6_process3(df, current_datetime)
     p4 = execute6_process4(df)
-
-    final_rows = p1 & p3 & p4
-    try:
-        import Monitor
-        Monitor.log_info(f"文件6处理1(V列机构匹配): {len(p1)} 行")
-        Monitor.log_info(f"文件6处理3(I列未来14天内): {len(p3)} 行")
-        Monitor.log_info(f"文件6处理4(M列=尚未回复或超期未回复): {len(p4)} 行")
-        Monitor.log_success(f"文件6最终完成处理数据: {len(final_rows)} 行")
-    except Exception:
-        pass
+    
+    # 根据skip_date_filter决定是否使用p3（I列日期筛选）
+    if skip_date_filter:
+        # 管理员模式：跳过I列日期筛选
+        final_rows = p1 & p4
+        try:
+            import Monitor
+            Monitor.log_info(f"文件6处理1(V列机构匹配): {len(p1)} 行")
+            Monitor.log_info(f"文件6处理4(M列=尚未回复或超期未回复): {len(p4)} 行")
+            Monitor.log_success(f"文件6最终完成处理数据(管理员模式): {len(final_rows)} 行")
+        except Exception:
+            pass
+    else:
+        # 普通模式：使用所有筛选条件
+        p3 = execute6_process3(df, current_datetime)
+        final_rows = p1 & p3 & p4
+        try:
+            import Monitor
+            Monitor.log_info(f"文件6处理1(V列机构匹配): {len(p1)} 行")
+            Monitor.log_info(f"文件6处理3(I列日期≤今天+14天): {len(p3)} 行")
+            Monitor.log_info(f"文件6处理4(M列=尚未回复或超期未回复): {len(p4)} 行")
+            Monitor.log_success(f"文件6最终完成处理数据: {len(final_rows)} 行")
+        except Exception:
+            pass
 
     if not final_rows:
         return pd.DataFrame()
@@ -3255,13 +3275,13 @@ def execute6_process2(df):
 
 
 def execute6_process3(df, current_datetime):
-    """I列为日期，筛选未来14天内（含当天和第14天）"""
+    """I列为日期，筛选当日及之前 + 未来14天内（即 delta <= 14）"""
     result_rows = set()
     if len(df.columns) <= 8:
         return result_rows
     i_column = df.iloc[:, 8]
     if USE_OLD_DATE_LOGIC:
-        # 旧逻辑：未来14天（含当天与第14天）
+        # 旧逻辑：当日及之前 + 未来14天（即日期 <= 今天+14天）
         today = current_datetime.date()
         for idx, val in i_column.items():
             if idx == 0:
@@ -3272,29 +3292,15 @@ def execute6_process3(df, current_datetime):
                     continue
                 d = parsed.date()
                 delta = (d - today).days
-                if 0 <= delta <= 14:
+                # 修改：包含过去的日期（delta < 0）+ 今天和未来14天（0 <= delta <= 14）
+                if delta <= 14:
                     result_rows.add(idx)
             except Exception:
                 continue
     else:
-        # 新逻辑：1~19 → 当年1月1日至当月末；20~31 → 当年1月1日至次月末
-        current_day = current_datetime.day
-        current_year = current_datetime.year
-        current_month = current_datetime.month
-        start_date = datetime.datetime(current_year, 1, 1)
-        if current_day <= 19:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year, 12, 31)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
-        else:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-            elif current_month == 11:
-                end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
-
+        # 新逻辑：与旧逻辑相同，待处理文件6不使用月度范围，而是使用简单的日期窗口
+        # 当日及之前 + 未来14天（即日期 <= 今天+14天）
+        today = current_datetime.date()
         for idx, val in i_column.items():
             if idx == 0:
                 continue
@@ -3302,7 +3308,10 @@ def execute6_process3(df, current_datetime):
                 parsed = pd.to_datetime(val, errors='coerce')
                 if pd.isna(parsed):
                     continue
-                if start_date <= parsed <= end_date:
+                d = parsed.date()
+                delta = (d - today).days
+                # 包含过去的日期（delta < 0）+ 今天和未来14天（0 <= delta <= 14）
+                if delta <= 14:
                     result_rows.add(idx)
             except Exception:
                 continue

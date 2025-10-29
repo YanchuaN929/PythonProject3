@@ -960,8 +960,9 @@ class ExcelProcessorApp:
                 print(f"警告：DataFrame中没有'原始行号'列，无法排除已完成行")
                 return df
             
-            # 获取已完成的行号集合
-            completed_rows = self.file_manager.get_completed_rows(source_file)
+            # 【修复】获取已完成的行号集合，传入用户姓名
+            user_name = getattr(self, 'user_name', '').strip()
+            completed_rows = self.file_manager.get_completed_rows(source_file, user_name)
             
             if not completed_rows:
                 # 没有已完成的行，直接返回
@@ -1370,9 +1371,51 @@ class ExcelProcessorApp:
                     return safe_df[safe_df['科室'].isin(['建筑总图室', '请室主任确认'])]
                 return safe_df
             
-            # 6. 所领导：不区分科室，查看所有数据
+            # 6. 所领导：不区分科室，但需应用2个工作日的时间窗口
+            #    时间窗口定义：所有已延期数据 + 未来2个工作日内到期的数据
             if role == '所领导':
-                return safe_df
+                # 检查是否有"接口时间"列
+                if '接口时间' not in safe_df.columns:
+                    return safe_df
+                
+                # 应用2个工作日的时间窗口过滤
+                from datetime import date
+                from date_utils import get_workday_difference, parse_mmdd_to_date
+                
+                today = date.today()
+                max_workdays = 2  # 所领导：未来2个工作日
+                
+                kept_idx = []
+                for idx, time_val in safe_df["接口时间"].items():
+                    if pd.isna(time_val) or str(time_val).strip() in ['', '-']:
+                        # 空值不保留
+                        continue
+                    
+                    try:
+                        # 使用统一的日期解析函数（正确处理跨年和跨月）
+                        due_date = parse_mmdd_to_date(str(time_val).strip(), today)
+                        if due_date is None:
+                            continue
+                        
+                        # 使用工作日计算（参数：目标日期，参考日期）
+                        workday_diff = get_workday_difference(due_date, today)
+                        
+                        # 保留条件：
+                        # 1. 已延期（workday_diff < 0）：全部保留
+                        # 2. 今天到期（workday_diff == 0）：保留
+                        # 3. 未来2个工作日内（0 < workday_diff <= 2）：保留
+                        # 4. 超过2个工作日（workday_diff > 2）：不保留
+                        if workday_diff <= max_workdays:
+                            kept_idx.append(idx)
+                    except Exception as e:
+                        # 解析失败，不保留（调试时可打印错误）
+                        # print(f"日期解析失败 [{time_val}]: {e}")
+                        continue
+                
+                if not kept_idx:
+                    return safe_df.iloc[0:0]  # 返回空DataFrame
+                
+                return safe_df.loc[kept_idx]
             
             # 7. 管理员或其他未知角色：不过滤
             return safe_df
@@ -1503,7 +1546,7 @@ class ExcelProcessorApp:
             if "接口时间" not in df.columns:
                 return df.iloc[0:0]
             from datetime import date
-            from date_utils import get_workday_difference
+            from date_utils import get_workday_difference, parse_mmdd_to_date
             
             today = date.today()
             # 判断是否使用工作日计算（所领导、室主任使用工作日）
@@ -1516,12 +1559,11 @@ class ExcelProcessorApp:
                     s = str(val).strip()
                     if not s or s == "未知":
                         continue
-                    parts = s.split('.')
-                    if len(parts) != 2:
+                    
+                    # 使用统一的日期解析函数（正确处理跨年和跨月）
+                    due = parse_mmdd_to_date(s, today)
+                    if due is None:
                         continue
-                    m = int(parts[0])
-                    d = int(parts[1])
-                    due = date(today.year, m, d)
                     
                     # 根据角色选择计算方式
                     if use_workdays:
@@ -3231,9 +3273,12 @@ class ExcelProcessorApp:
                             for file_path, project_id in self.target_files6:
                                 try:
                                     print(f"处理文件6: {os.path.basename(file_path)}")
+                                    # 判断是否为管理员或所领导，决定是否跳过日期筛选
+                                    # 管理员和所领导都不受时间限制
+                                    skip_date_filter = ("管理员" in self.user_roles) or ("所领导" in self.user_roles)
                                     # 使用缓存处理
                                     result = self._process_with_cache(file_path, project_id, 'file6', 
-                                                                     main.process_target_file6, self.current_datetime)
+                                                                     main.process_target_file6, self.current_datetime, skip_date_filter)
                                     if result is not None and not result.empty:
                                         # 【新增】应用角色筛选（传递项目号）
                                         result = self.apply_role_based_filter(result, project_id=project_id)

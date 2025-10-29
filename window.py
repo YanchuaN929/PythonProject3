@@ -486,36 +486,71 @@ class WindowManager:
                 original_row_numbers = list(filtered_df["原始行号"])
         
         # 从file_manager获取已完成的行
+        # 【修复】获取已完成行时传入用户姓名
         completed_rows_set = set()
         if file_manager and source_files:
+            user_name = getattr(self.app, 'user_name', '').strip()
             for file_path in source_files:
-                completed_rows_set.update(file_manager.get_completed_rows(file_path))
+                completed_rows_set.update(file_manager.get_completed_rows(file_path, user_name))
         
         # 优化显示列（仅显示关键列）
         display_df = self._create_optimized_display(filtered_df, tab_name, completed_rows=completed_rows_set)
         
         # 【新增】填充"状态"列：根据"接口时间"判断是否延期
-        if "状态" in display_df.columns and "接口时间" in display_df.columns:
+        # 【新增】处理"接口时间"列：空值显示为"-"
+        if "接口时间" in display_df.columns:
+            # 处理空值
+            time_values = []
             status_values = []
             for idx in range(len(display_df)):
                 try:
                     time_value = display_df.iloc[idx]["接口时间"]
-                    if is_date_overdue(str(time_value) if not pd.isna(time_value) else ""):
-                        status_values.append("⚠️")  # 延期标记
+                    # 空值处理
+                    if pd.isna(time_value) or str(time_value).strip() == '':
+                        time_str = '-'
                     else:
-                        status_values.append("")  # 正常无标记
+                        time_str = str(time_value).strip()
+                    time_values.append(time_str)
+                    
+                    # 延期判断（只对有效日期判断）
+                    if "状态" in display_df.columns:
+                        if time_str != '-' and is_date_overdue(time_str):
+                            status_values.append("⚠️")  # 延期标记
+                        else:
+                            status_values.append("")  # 正常无标记
                 except Exception:
-                    status_values.append("")
-            display_df["状态"] = status_values
+                    time_values.append('-')
+                    if "状态" in display_df.columns:
+                        status_values.append("")
+            
+            display_df["接口时间"] = time_values
+            if "状态" in display_df.columns:
+                display_df["状态"] = status_values
         
-        # 【重要】过滤掉"接口时间"列（仅用于逻辑判断，不在GUI显示）
-        columns = [col for col in display_df.columns if col != "接口时间"]
+        # 【新增】保留"接口时间"列用于GUI显示
+        columns = list(display_df.columns)
         
         viewer["columns"] = columns
         viewer["show"] = "tree headings"
         
-        # 配置数据列（自动计算列宽）
-        column_widths = self.calculate_column_widths(display_df, columns)
+        # 配置数据列（使用固定列宽方案）
+        # 方案C - 平衡布局
+        fixed_column_widths = {
+            '状态': 50,
+            '项目号': 75,
+            '接口号': 240,
+            '接口时间': 85,
+            '是否已完成': 95
+        }
+        
+        # 其他列自动计算
+        column_widths = []
+        for col in columns:
+            if col in fixed_column_widths:
+                column_widths.append(fixed_column_widths[col])
+            else:
+                # 其他列（如科室、责任人）自动计算
+                column_widths.append(self._calculate_single_column_width(display_df, col))
         
         # 配置序号列（宽度与接口号列一致）
         # 如果有项目号列，接口号在第二列(索引1)；否则在第一列(索引0)
@@ -524,14 +559,25 @@ class WindowManager:
         viewer.column("#0", width=row_number_width, minwidth=row_number_width)
         viewer.heading("#0", text="行号")
         
+        # 配置列对齐方式
+        column_alignment = {
+            '状态': 'center',
+            '项目号': 'center',
+            '接口号': 'w',  # 左对齐
+            '接口时间': 'center',
+            '是否已完成': 'center'
+        }
+        
         for i, col in enumerate(columns):
-            # 【新增】"状态"列固定宽度为50px，其他列自动计算
-            if col == "状态":
-                col_width = 50  # 状态列固定宽度
-            else:
-                col_width = column_widths[i] if i < len(column_widths) else 100
-            viewer.heading(col, text=str(col))
-            viewer.column(col, width=col_width, minwidth=col_width, anchor='center')
+            col_width = column_widths[i] if i < len(column_widths) else 100
+            alignment = column_alignment.get(col, 'center')
+            
+            # 为所有列添加排序功能（点击列头排序）
+            # 使用 lambda 的技巧：通过 c=col 固定变量，避免闭包问题
+            viewer.heading(col, text=str(col), 
+                         command=lambda c=col: self._sort_by_column(viewer, c, tab_name))
+            
+            viewer.column(col, width=col_width, minwidth=col_width, anchor=alignment)
         
         # 配置延期数据的标签（在插入数据前配置）
         # 【重要】ttk.Treeview在Windows系统主题下的限制：
@@ -670,10 +716,11 @@ class WindowManager:
                     print(f"无法确定源文件：行索引{item_index}")
                     return
                 
-                # 切换勾选状态
-                is_completed = file_manager.is_row_completed(source_file, original_row)
+                # 【修复】切换勾选状态，传入用户姓名
+                user_name = getattr(self.app, 'user_name', '').strip()
+                is_completed = file_manager.is_row_completed(source_file, original_row, user_name)
                 new_state = not is_completed
-                file_manager.set_row_completed(source_file, original_row, new_state)
+                file_manager.set_row_completed(source_file, original_row, new_state, user_name)
                 
                 # 更新显示（切换符号）
                 current_values = list(viewer.item(item_id, "values"))
@@ -727,6 +774,50 @@ class WindowManager:
         except Exception as e:
             print(f"查找源文件失败: {e}")
             return source_files[0] if source_files else None
+    
+    def _calculate_single_column_width(self, df, col_name):
+        """
+        计算单个列的宽度
+        
+        参数:
+            df: pandas DataFrame
+            col_name: 列名
+            
+        返回:
+            int: 列宽度（像素）
+        """
+        try:
+            # 选择用于计算的行
+            if len(df) >= 2:
+                calc_row = df.iloc[1]
+            elif len(df) >= 1:
+                calc_row = df.iloc[0]
+            else:
+                return 100  # 默认宽度
+            
+            # 获取列数据
+            if col_name in df.columns:
+                data_value = calc_row[col_name]
+            else:
+                return 100
+            
+            # 计算宽度
+            content_str = str(data_value) if not pd.isna(data_value) else str(col_name)
+            estimated_width = 0
+            for char in content_str:
+                if '\u4e00' <= char <= '\u9fff':  # 中文字符
+                    estimated_width += 16
+                else:  # 英文、数字、符号
+                    estimated_width += 8
+            
+            # 加上边距和富余空间（1.2倍）
+            final_width = int(estimated_width * 1.2) + 20
+            
+            # 限制范围
+            return max(60, min(final_width, 300))
+        except Exception as e:
+            print(f"计算列宽失败 {col_name}: {e}")
+            return 100
     
     def calculate_column_widths(self, df, columns):
         """
@@ -868,34 +959,36 @@ class WindowManager:
                             completed_status = ["☐"] * len(combined_values)
                         
                         # 创建新的DataFrame - 如果有项目号列，则项目号在前
-                        # 【重要】保留"接口时间"列用于延期判断（但不在GUI显示）
-                        # 【新增】添加"状态"列用于显示延期警告标记
+                        # 【新增】"接口时间"列在"接口号"和"是否已完成"之间显示
+                        # 列顺序: 状态 → 项目号 → 接口号 → 接口时间 → 是否已完成
                         if "项目号" in df.columns and "接口时间" in df.columns:
                             result = pd.DataFrame({
                                 "状态": [""] * len(combined_values),  # 占位，稍后根据延期情况填充
                                 "项目号": df["项目号"],
                                 "接口号": combined_values,
-                                "是否已完成": completed_status,
-                                "接口时间": df["接口时间"]  # 保留用于延期判断
+                                "接口时间": df["接口时间"],  # 在接口号之后显示
+                                "是否已完成": completed_status
                             })
                         elif "项目号" in df.columns:
                             result = pd.DataFrame({
                                 "状态": [""] * len(combined_values),
                                 "项目号": df["项目号"],
                                 "接口号": combined_values,
+                                "接口时间": ["-"] * len(combined_values),  # 没有时间数据时显示"-"
                                 "是否已完成": completed_status
                             })
                         elif "接口时间" in df.columns:
                             result = pd.DataFrame({
                                 "状态": [""] * len(combined_values),
                                 "接口号": combined_values,
-                                "是否已完成": completed_status,
-                                "接口时间": df["接口时间"]  # 保留用于延期判断
+                                "接口时间": df["接口时间"],  # 在接口号之后显示
+                                "是否已完成": completed_status
                             })
                         else:
                             result = pd.DataFrame({
                                 "状态": [""] * len(combined_values),
                                 "接口号": combined_values,
+                                "接口时间": ["-"] * len(combined_values),  # 没有时间数据时显示"-"
                                 "是否已完成": completed_status
                             })
                         return result
@@ -1114,4 +1207,116 @@ class WindowManager:
                 viewer.selection_set(all_items)
         except Exception as e:
             print(f"全选失败: {e}")
+    
+    def _sort_by_column(self, viewer, column_name, tab_name):
+        """
+        按指定列对Treeview进行排序
+        
+        参数:
+            viewer: Treeview控件
+            column_name: 要排序的列名
+            tab_name: 选项卡名称（用于日志）
+        """
+        try:
+            # 获取当前排序状态（如果没有则初始化为升序）
+            if not hasattr(self, '_sort_states'):
+                self._sort_states = {}
+            
+            # 切换排序方向
+            current_state = self._sort_states.get((viewer, column_name), False)
+            reverse = not current_state
+            self._sort_states[(viewer, column_name)] = reverse
+            
+            # 获取所有数据
+            data = []
+            for item_id in viewer.get_children():
+                values = viewer.item(item_id)['values']
+                text = viewer.item(item_id)['text']
+                
+                # 找到要排序的列的索引
+                columns = viewer['columns']
+                try:
+                    col_idx = list(columns).index(column_name)
+                    sort_value = values[col_idx] if col_idx < len(values) else ""
+                except ValueError:
+                    sort_value = ""
+                
+                # 根据列类型生成排序键
+                sort_key = self._generate_sort_key(column_name, sort_value, reverse)
+                
+                data.append((sort_key, text, values, item_id))
+            
+            # 按指定列排序
+            data.sort(reverse=reverse, key=lambda x: x[0])
+            
+            # 重新排列Treeview中的项
+            for index, (_, text, values, item_id) in enumerate(data):
+                viewer.move(item_id, '', index)
+            
+            # 更新所有列标题（清除其他列的排序符号，只显示当前列的）
+            for col in columns:
+                if col == column_name:
+                    direction_symbol = ' ↓' if reverse else ' ↑'
+                    viewer.heading(col, text=f"{col}{direction_symbol}",
+                                 command=lambda c=col: self._sort_by_column(viewer, c, tab_name))
+                else:
+                    viewer.heading(col, text=col,
+                                 command=lambda c=col: self._sort_by_column(viewer, c, tab_name))
+            
+            print(f"{tab_name} - 按{column_name}列排序（{'降序' if reverse else '升序'}）")
+            
+        except Exception as e:
+            print(f"排序失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def _generate_sort_key(self, column_name, sort_value, reverse):
+        """
+        根据列名和值生成排序键
+        
+        参数:
+            column_name: 列名
+            sort_value: 列值
+            reverse: 是否降序
+            
+        返回:
+            排序键（字符串或元组）
+        """
+        try:
+            # 特殊列：接口时间（日期格式 mm.dd）
+            if column_name == '接口时间':
+                if sort_value == '-' or sort_value == '' or sort_value is None:
+                    # 空值排到最后
+                    return '99.99' if not reverse else '00.00'
+                else:
+                    # 日期格式 mm.dd 可以直接字符串排序
+                    return str(sort_value)
+            
+            # 特殊列：项目号（数字）
+            if column_name == '项目号':
+                try:
+                    return int(str(sort_value)) if sort_value and str(sort_value).strip() else 0
+                except:
+                    return 0
+            
+            # 特殊列：是否已完成（☐在前，☑在后）
+            if column_name == '是否已完成':
+                if str(sort_value) == '☑':
+                    return '1'
+                else:
+                    return '0'
+            
+            # 特殊列：状态（⚠️在前，空值在后）
+            if column_name == '状态':
+                if str(sort_value) == '⚠️':
+                    return '0'
+                else:
+                    return '1'
+            
+            # 其他列：字符串排序（中文按拼音）
+            return str(sort_value) if sort_value is not None else ''
+            
+        except Exception as e:
+            print(f"生成排序键失败 [{column_name}={sort_value}]: {e}")
+            return str(sort_value) if sort_value is not None else ''
 

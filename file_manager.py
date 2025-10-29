@@ -58,7 +58,9 @@ class FileIdentityManager:
         self.result_cache_dir = os.path.join(app_dir, result_cache_dir)
         
         self.file_identities = {}  # {file_path: identity_hash}
-        self.completed_rows = {}   # {file_path: {row_index: True}}
+        # 【修复】completed_rows改为按用户姓名分组
+        # 结构: {user_name: {file_path: {row_index: True}}}
+        self.completed_rows = {}
         
         print(f"缓存目录: {self.result_cache_dir}")
         print(f"缓存文件: {self.cache_file}")
@@ -151,7 +153,7 @@ class FileIdentityManager:
         
         self._save_cache()
     
-    def set_row_completed(self, file_path: str, row_index: int, completed: bool = True):
+    def set_row_completed(self, file_path: str, row_index: int, completed: bool = True, user_name: str = ""):
         """
         设置某行的完成状态
         
@@ -159,49 +161,72 @@ class FileIdentityManager:
             file_path: 文件路径
             row_index: 行索引
             completed: 是否已完成
+            user_name: 用户姓名（新增）
         """
-        if file_path not in self.completed_rows:
-            self.completed_rows[file_path] = {}
+        if not user_name:
+            user_name = "默认用户"
+        
+        # 确保用户姓名的字典存在
+        if user_name not in self.completed_rows:
+            self.completed_rows[user_name] = {}
+        
+        # 确保文件路径的字典存在
+        if file_path not in self.completed_rows[user_name]:
+            self.completed_rows[user_name][file_path] = {}
         
         if completed:
-            self.completed_rows[file_path][row_index] = True
+            self.completed_rows[user_name][file_path][row_index] = True
         else:
             # 取消勾选
-            if row_index in self.completed_rows[file_path]:
-                del self.completed_rows[file_path][row_index]
+            if row_index in self.completed_rows[user_name][file_path]:
+                del self.completed_rows[user_name][file_path][row_index]
         
         self._save_cache()
     
-    def is_row_completed(self, file_path: str, row_index: int) -> bool:
+    def is_row_completed(self, file_path: str, row_index: int, user_name: str = "") -> bool:
         """
         查询某行是否已完成
         
         参数:
             file_path: 文件路径
             row_index: 行索引
+            user_name: 用户姓名（新增）
             
         返回:
             True = 已完成，False = 未完成
         """
-        if file_path not in self.completed_rows:
+        if not user_name:
+            user_name = "默认用户"
+        
+        if user_name not in self.completed_rows:
             return False
         
-        return self.completed_rows[file_path].get(row_index, False)
+        if file_path not in self.completed_rows[user_name]:
+            return False
+        
+        return self.completed_rows[user_name][file_path].get(row_index, False)
     
-    def get_completed_rows(self, file_path: str) -> Set[int]:
+    def get_completed_rows(self, file_path: str, user_name: str = "") -> Set[int]:
         """
         获取文件所有已完成的行索引
         
         参数:
             file_path: 文件路径
+            user_name: 用户姓名（新增）
             
         返回:
             已完成行索引的集合
         """
-        if file_path not in self.completed_rows:
+        if not user_name:
+            user_name = "默认用户"
+        
+        if user_name not in self.completed_rows:
             return set()
         
-        return set(self.completed_rows[file_path].keys())
+        if file_path not in self.completed_rows[user_name]:
+            return set()
+        
+        return set(self.completed_rows[user_name][file_path].keys())
     
     def clear_all_completed_rows(self):
         """
@@ -213,15 +238,24 @@ class FileIdentityManager:
         self.completed_rows = {}
         self._save_cache()
     
-    def clear_file_completed_rows(self, file_path: str):
+    def clear_file_completed_rows(self, file_path: str, user_name: str = ""):
         """
-        清空指定文件的完成状态
+        清空指定文件的完成状态（可选：仅清空指定用户的）
         
         参数:
             file_path: 文件路径
+            user_name: 用户姓名（如果为空，清空所有用户的该文件状态）
         """
-        if file_path in self.completed_rows:
-            del self.completed_rows[file_path]
+        if user_name:
+            # 清空指定用户的指定文件
+            if user_name in self.completed_rows and file_path in self.completed_rows[user_name]:
+                del self.completed_rows[user_name][file_path]
+                self._save_cache()
+        else:
+            # 清空所有用户的指定文件
+            for user in self.completed_rows:
+                if file_path in self.completed_rows[user]:
+                    del self.completed_rows[user][file_path]
             self._save_cache()
     
     def _load_cache(self):
@@ -233,11 +267,36 @@ class FileIdentityManager:
                     
                 self.file_identities = data.get('file_identities', {})
                 
-                # 转换completed_rows的key为int
+                # 【修复】转换completed_rows的key为int,支持新的按用户分组结构
                 completed_rows_raw = data.get('completed_rows', {})
                 self.completed_rows = {}
-                for file_path, rows in completed_rows_raw.items():
-                    self.completed_rows[file_path] = {int(k): v for k, v in rows.items()}
+                
+                # 判断是旧格式还是新格式
+                if completed_rows_raw:
+                    # 检查第一个key是否是文件路径(旧格式)或用户姓名(新格式)
+                    first_key = list(completed_rows_raw.keys())[0]
+                    first_value = completed_rows_raw[first_key]
+                    
+                    # 如果first_value的第一个value是bool,说明是旧格式{file_path: {row: bool}}
+                    # 如果first_value的第一个value是dict,说明是新格式{user: {file_path: {row: bool}}}
+                    is_old_format = False
+                    if first_value:
+                        first_inner_value = list(first_value.values())[0]
+                        if isinstance(first_inner_value, bool):
+                            is_old_format = True
+                    
+                    if is_old_format:
+                        # 旧格式：将所有数据迁移到"默认用户"下
+                        print("  检测到旧格式缓存，自动迁移到新格式")
+                        self.completed_rows["默认用户"] = {}
+                        for file_path, rows in completed_rows_raw.items():
+                            self.completed_rows["默认用户"][file_path] = {int(k): v for k, v in rows.items()}
+                    else:
+                        # 新格式：按用户姓名分组
+                        for user_name, user_data in completed_rows_raw.items():
+                            self.completed_rows[user_name] = {}
+                            for file_path, rows in user_data.items():
+                                self.completed_rows[user_name][file_path] = {int(k): v for k, v in rows.items()}
                 
                 print(f"加载缓存成功: {len(self.file_identities)}个文件标识")
         except Exception as e:
@@ -254,10 +313,12 @@ class FileIdentityManager:
                 print(f"⚠️ 缓存目录无写入权限，跳过保存: {cache_dir}")
                 return
             
-            # 转换completed_rows的key为str（JSON要求）
+            # 【修复】转换completed_rows的key为str（JSON要求），支持新的按用户分组结构
             completed_rows_serializable = {}
-            for file_path, rows in self.completed_rows.items():
-                completed_rows_serializable[file_path] = {str(k): v for k, v in rows.items()}
+            for user_name, user_data in self.completed_rows.items():
+                completed_rows_serializable[user_name] = {}
+                for file_path, rows in user_data.items():
+                    completed_rows_serializable[user_name][file_path] = {str(k): v for k, v in rows.items()}
             
             data = {
                 'file_identities': self.file_identities,

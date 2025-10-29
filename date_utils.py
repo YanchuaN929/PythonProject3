@@ -85,6 +85,77 @@ def count_workdays(start_date: date, end_date: date) -> int:
     return workdays
 
 
+def parse_mmdd_to_date(date_str: str, reference_date: Optional[date] = None) -> Optional[date]:
+    """
+    将 mm.dd 格式的日期字符串解析为 date 对象
+    
+    智能处理跨年情况的核心逻辑:
+    1. 先按今年解析日期
+    2. 如果解析出的日期已经过去(< reference_date):
+       - 判断是"最近刚过期"还是"很久以前"
+       - 如果相差超过6个月,判断为"明年的日期,但还没到"(跨年未来)
+       - 否则判断为"今年的已延期数据"
+    3. 如果解析出的日期在未来(>= reference_date):
+       - 直接返回今年的日期
+    
+    Args:
+        date_str: mm.dd 格式的日期字符串(如 "09.15", "01.20")
+        reference_date: 参考日期,默认为今天
+    
+    Returns:
+        date对象,解析失败返回None
+    
+    Examples:
+        # 假设今天是 2025-10-28
+        >>> parse_mmdd_to_date("09.15")  # 今年9月(已延期)
+        date(2025, 9, 15)
+        >>> parse_mmdd_to_date("11.05")  # 今年11月(未来)
+        date(2025, 11, 5)
+        >>> parse_mmdd_to_date("01.20")  # 明年1月(未来,因为距离今天超过6个月)
+        date(2026, 1, 20)
+    """
+    if reference_date is None:
+        reference_date = date.today()
+    
+    try:
+        # 解析 mm.dd
+        parts = str(date_str).strip().split('.')
+        if len(parts) != 2:
+            return None
+        
+        month, day = int(parts[0]), int(parts[1])
+        
+        # 先尝试今年
+        try:
+            current_year_date = date(reference_date.year, month, day)
+            
+            # 计算距离参考日期的天数
+            days_diff = (current_year_date - reference_date).days
+            
+            # 情况1: 日期在未来 (>= 0)
+            if days_diff >= 0:
+                return current_year_date
+            
+            # 情况2: 日期在过去 (< 0)
+            # 需要判断是"今年的已延期"还是"实际上是明年但被解析成今年"
+            # 阈值: 如果过去超过180天(约6个月),很可能是明年的日期
+            # 例如: 今天是10月28日,1月10日距离今天约-291天,应该是明年1月
+            #       今天是10月28日,9月15日距离今天约-43天,应该是今年9月(已延期)
+            if days_diff < -180:
+                # 距离太远,判断为明年
+                next_year_date = date(reference_date.year + 1, month, day)
+                return next_year_date
+            else:
+                # 距离较近,判断为今年已延期
+                return current_year_date
+                
+        except ValueError:
+            # 日期无效(如2月30日)
+            return None
+            
+    except (ValueError, AttributeError, IndexError):
+        return None
+
 def get_workday_difference(target_date: date, reference_date: Optional[date] = None) -> int:
     """
     计算目标日期与参考日期之间的工作日天数差（排除周六周日）
