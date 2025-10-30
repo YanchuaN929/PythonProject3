@@ -439,7 +439,9 @@ class FileIdentityManager:
             current_identity = self.generate_file_identity(file_path)
             cached_identity = self.file_identities.get(file_path)
             
-            if current_identity != cached_identity:
+            # 【修复】只有当cached_identity存在且不一致时，才使缓存失效
+            # 如果cached_identity是None（新文件），允许使用缓存
+            if cached_identity is not None and current_identity != cached_identity:
                 print(f"⚠️ 文件已变化，缓存失效: {os.path.basename(cache_file)}")
                 # 静默删除失效的缓存
                 try:
@@ -447,6 +449,11 @@ class FileIdentityManager:
                 except:
                     pass
                 return None
+            
+            # 【新增】如果这是新文件（cached_identity是None），更新文件标识
+            if cached_identity is None and current_identity is not None:
+                self.file_identities[file_path] = current_identity
+                self._save_cache()
             
             # 加载缓存
             with open(cache_file, 'rb') as f:

@@ -54,8 +54,8 @@ class TestInterfaceTimeDisplay:
         # 验证"接口时间"列存在
         assert "接口时间" in result_df.columns, "接口时间列应该存在"
         
-        # 验证列的顺序
-        expected_order = ["状态", "项目号", "接口号", "接口时间", "是否已完成"]
+        # 验证列的顺序（【修改】添加了"责任人"列）
+        expected_order = ["状态", "项目号", "接口号", "接口时间", "责任人", "是否已完成"]
         actual_order = list(result_df.columns)
         assert actual_order == expected_order, f"列顺序应为{expected_order}，实际为{actual_order}"
     

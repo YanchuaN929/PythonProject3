@@ -853,12 +853,6 @@ class ExcelProcessorApp:
             elif self.file5_data is not None:
                 self.display_excel_data(self.tab5_viewer, self.file5_data, "三维提资接口")
         elif selected_tab == 5 and getattr(self, 'target_files6', None):  # 收发文函
-            # 若视图已有内容，则不重绘，保持当前显示
-            try:
-                if len(self.tab6_viewer.get_children()) > 0:
-                    return
-            except Exception:
-                pass
             if self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
                 # 不要drop原始行号列，因为需要它来加载勾选状态
                 excel_row_numbers = list(self.processing_results6['原始行号'])
@@ -1630,6 +1624,52 @@ class ExcelProcessorApp:
         except Exception as e:
             print(f"加载角色表失败: {e}")
             pass
+    
+    def get_valid_names_from_role_table(self):
+        """
+        从姓名角色表中获取所有有效姓名列表
+        
+        返回:
+            set: 有效姓名集合（去除空值和无效值）
+        """
+        valid_names = set()
+        try:
+            xls_path = get_resource_path("excel_bin/姓名角色表.xlsx")
+            if not os.path.exists(xls_path):
+                print("姓名角色表不存在")
+                return valid_names
+            
+            # 使用优化的读取方法
+            df = optimized_read_excel(xls_path)
+            
+            # 兼容无表头/不同表头
+            cols = list(df.columns)
+            name_col = None
+            for i, c in enumerate(cols):
+                cs = str(c)
+                if name_col is None and (cs.find('姓名') != -1):
+                    name_col = i
+            if name_col is None:
+                name_col = 0 if len(cols) >= 1 else None
+            
+            if name_col is None:
+                return valid_names
+            
+            # 收集所有有效姓名
+            for _, row in df.iterrows():
+                try:
+                    name_val = str(row.iloc[name_col]).strip()
+                    if name_val and name_val not in ['nan', 'None', '']:
+                        valid_names.add(name_val)
+                except Exception:
+                    continue
+            
+            print(f"从姓名角色表加载了 {len(valid_names)} 个有效姓名")
+            return valid_names
+            
+        except Exception as e:
+            print(f"加载姓名角色表失败: {e}")
+            return valid_names
 
     def adjust_font_sizes(self):
         """根据屏幕分辨率调整字体大小，并兼容Win7字体"""
@@ -2184,98 +2224,122 @@ class ExcelProcessorApp:
             print("🔄 角色改变，重新筛选所有已处理数据...")
             
             # 处理文件1（内部需打开接口）
-            if hasattr(self, 'processing_results_multi1') and self.processing_results_multi1:
-                combined_results = []
-                for project_id, cached_df in self.processing_results_multi1.items():
-                    if cached_df is not None and not cached_df.empty:
-                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
-                        if filtered_df is not None and not filtered_df.empty:
-                            combined_results.append(filtered_df)
-                
-                if combined_results:
-                    self.processing_results = pd.concat(combined_results, ignore_index=True)
-                    self.has_processed_results1 = True
-                else:
+            if hasattr(self, 'processing_results_multi1'):
+                if self.processing_results_multi1:  # 有缓存数据
+                    combined_results = []
+                    for project_id, cached_df in self.processing_results_multi1.items():
+                        if cached_df is not None and not cached_df.empty:
+                            filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                            if filtered_df is not None and not filtered_df.empty:
+                                combined_results.append(filtered_df)
+                    
+                    if combined_results:
+                        self.processing_results = pd.concat(combined_results, ignore_index=True)
+                        self.has_processed_results1 = True
+                    else:
+                        self.processing_results = pd.DataFrame()
+                        self.has_processed_results1 = True
+                else:  # 空字典，但仍需设置标志
                     self.processing_results = pd.DataFrame()
                     self.has_processed_results1 = True
             
             # 处理文件2（内部需回复接口）
-            if hasattr(self, 'processing_results_multi2') and self.processing_results_multi2:
-                combined_results = []
-                for project_id, cached_df in self.processing_results_multi2.items():
-                    if cached_df is not None and not cached_df.empty:
-                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
-                        if filtered_df is not None and not filtered_df.empty:
-                            combined_results.append(filtered_df)
-                
-                if combined_results:
-                    self.processing_results2 = pd.concat(combined_results, ignore_index=True)
-                    self.has_processed_results2 = True
-                else:
+            if hasattr(self, 'processing_results_multi2'):
+                if self.processing_results_multi2:  # 有缓存数据
+                    combined_results = []
+                    for project_id, cached_df in self.processing_results_multi2.items():
+                        if cached_df is not None and not cached_df.empty:
+                            filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                            if filtered_df is not None and not filtered_df.empty:
+                                combined_results.append(filtered_df)
+                    
+                    if combined_results:
+                        self.processing_results2 = pd.concat(combined_results, ignore_index=True)
+                        self.has_processed_results2 = True
+                    else:
+                        self.processing_results2 = pd.DataFrame()
+                        self.has_processed_results2 = True
+                else:  # 空字典，但仍需设置标志
                     self.processing_results2 = pd.DataFrame()
                     self.has_processed_results2 = True
             
             # 处理文件3（外部需打开接口）
-            if hasattr(self, 'processing_results_multi3') and self.processing_results_multi3:
-                combined_results = []
-                for project_id, cached_df in self.processing_results_multi3.items():
-                    if cached_df is not None and not cached_df.empty:
-                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
-                        if filtered_df is not None and not filtered_df.empty:
-                            combined_results.append(filtered_df)
-                
-                if combined_results:
-                    self.processing_results3 = pd.concat(combined_results, ignore_index=True)
-                    self.has_processed_results3 = True
-                else:
+            if hasattr(self, 'processing_results_multi3'):
+                if self.processing_results_multi3:  # 有缓存数据
+                    combined_results = []
+                    for project_id, cached_df in self.processing_results_multi3.items():
+                        if cached_df is not None and not cached_df.empty:
+                            filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                            if filtered_df is not None and not filtered_df.empty:
+                                combined_results.append(filtered_df)
+                    
+                    if combined_results:
+                        self.processing_results3 = pd.concat(combined_results, ignore_index=True)
+                        self.has_processed_results3 = True
+                    else:
+                        self.processing_results3 = pd.DataFrame()
+                        self.has_processed_results3 = True
+                else:  # 空字典，但仍需设置标志
                     self.processing_results3 = pd.DataFrame()
                     self.has_processed_results3 = True
             
             # 处理文件4（外部需回复接口）
-            if hasattr(self, 'processing_results_multi4') and self.processing_results_multi4:
-                combined_results = []
-                for project_id, cached_df in self.processing_results_multi4.items():
-                    if cached_df is not None and not cached_df.empty:
-                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
-                        if filtered_df is not None and not filtered_df.empty:
-                            combined_results.append(filtered_df)
-                
-                if combined_results:
-                    self.processing_results4 = pd.concat(combined_results, ignore_index=True)
-                    self.has_processed_results4 = True
-                else:
+            if hasattr(self, 'processing_results_multi4'):
+                if self.processing_results_multi4:  # 有缓存数据
+                    combined_results = []
+                    for project_id, cached_df in self.processing_results_multi4.items():
+                        if cached_df is not None and not cached_df.empty:
+                            filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                            if filtered_df is not None and not filtered_df.empty:
+                                combined_results.append(filtered_df)
+                    
+                    if combined_results:
+                        self.processing_results4 = pd.concat(combined_results, ignore_index=True)
+                        self.has_processed_results4 = True
+                    else:
+                        self.processing_results4 = pd.DataFrame()
+                        self.has_processed_results4 = True
+                else:  # 空字典，但仍需设置标志
                     self.processing_results4 = pd.DataFrame()
                     self.has_processed_results4 = True
             
             # 处理文件5（三维提资接口）
-            if hasattr(self, 'processing_results_multi5') and self.processing_results_multi5:
-                combined_results = []
-                for project_id, cached_df in self.processing_results_multi5.items():
-                    if cached_df is not None and not cached_df.empty:
-                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
-                        if filtered_df is not None and not filtered_df.empty:
-                            combined_results.append(filtered_df)
-                
-                if combined_results:
-                    self.processing_results5 = pd.concat(combined_results, ignore_index=True)
-                    self.has_processed_results5 = True
-                else:
+            if hasattr(self, 'processing_results_multi5'):
+                if self.processing_results_multi5:  # 有缓存数据
+                    combined_results = []
+                    for project_id, cached_df in self.processing_results_multi5.items():
+                        if cached_df is not None and not cached_df.empty:
+                            filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                            if filtered_df is not None and not filtered_df.empty:
+                                combined_results.append(filtered_df)
+                    
+                    if combined_results:
+                        self.processing_results5 = pd.concat(combined_results, ignore_index=True)
+                        self.has_processed_results5 = True
+                    else:
+                        self.processing_results5 = pd.DataFrame()
+                        self.has_processed_results5 = True
+                else:  # 空字典，但仍需设置标志
                     self.processing_results5 = pd.DataFrame()
                     self.has_processed_results5 = True
             
             # 处理文件6（收发文函）
-            if hasattr(self, 'processing_results_multi6') and self.processing_results_multi6:
-                combined_results = []
-                for project_id, cached_df in self.processing_results_multi6.items():
-                    if cached_df is not None and not cached_df.empty:
-                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
-                        if filtered_df is not None and not filtered_df.empty:
-                            combined_results.append(filtered_df)
-                
-                if combined_results:
-                    self.processing_results6 = pd.concat(combined_results, ignore_index=True)
-                    self.has_processed_results6 = True
-                else:
+            if hasattr(self, 'processing_results_multi6'):
+                if self.processing_results_multi6:  # 有缓存数据
+                    combined_results = []
+                    for project_id, cached_df in self.processing_results_multi6.items():
+                        if cached_df is not None and not cached_df.empty:
+                            filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                            if filtered_df is not None and not filtered_df.empty:
+                                combined_results.append(filtered_df)
+                    
+                    if combined_results:
+                        self.processing_results6 = pd.concat(combined_results, ignore_index=True)
+                        self.has_processed_results6 = True
+                    else:
+                        self.processing_results6 = pd.DataFrame()
+                        self.has_processed_results6 = True
+                else:  # 空字典，但仍需设置标志
                     self.processing_results6 = pd.DataFrame()
                     self.has_processed_results6 = True
             
@@ -3270,6 +3334,9 @@ class ExcelProcessorApp:
                                 Monitor.log_process(f"开始批量处理待处理文件6: {len(self.target_files6)}个文件，涉及{len(pids)}个项目")
                             except:
                                 pass
+                            # 【新增】加载姓名角色表中的有效姓名列表（用于过滤责任人）
+                            valid_names_set = self.get_valid_names_from_role_table()
+                            
                             self.processing_results_multi6 = {}
                             combined_results = []
                             for file_path, project_id in self.target_files6:
@@ -3278,9 +3345,9 @@ class ExcelProcessorApp:
                                     # 判断是否为管理员或所领导，决定是否跳过日期筛选
                                     # 管理员和所领导都不受时间限制
                                     skip_date_filter = ("管理员" in self.user_roles) or ("所领导" in self.user_roles)
-                                    # 使用缓存处理
+                                    # 使用缓存处理，传入valid_names_set
                                     result = self._process_with_cache(file_path, project_id, 'file6', 
-                                                                     main.process_target_file6, self.current_datetime, skip_date_filter)
+                                                                     main.process_target_file6, self.current_datetime, skip_date_filter, valid_names_set)
                                     if result is not None and not result.empty:
                                         # 【新增】应用角色筛选（传递项目号）
                                         result = self.apply_role_based_filter(result, project_id=project_id)

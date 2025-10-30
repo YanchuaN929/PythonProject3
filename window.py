@@ -527,6 +527,23 @@ class WindowManager:
             if "状态" in display_df.columns:
                 display_df["状态"] = status_values
         
+        # 【新增】处理"责任人"列：空值显示为"无"
+        if "责任人" in display_df.columns:
+            responsible_values = []
+            for idx in range(len(display_df)):
+                try:
+                    responsible_value = display_df.iloc[idx]["责任人"]
+                    # 空值处理
+                    if pd.isna(responsible_value) or str(responsible_value).strip() == '':
+                        resp_str = '无'
+                    else:
+                        resp_str = str(responsible_value).strip()
+                    responsible_values.append(resp_str)
+                except Exception:
+                    responsible_values.append('无')
+            
+            display_df["责任人"] = responsible_values
+        
         # 【新增】保留"接口时间"列用于GUI显示
         columns = list(display_df.columns)
         
@@ -540,6 +557,7 @@ class WindowManager:
             '项目号': 75,
             '接口号': 240,
             '接口时间': 85,
+            '责任人': 100,  # 新增责任人列
             '是否已完成': 95
         }
         
@@ -565,6 +583,7 @@ class WindowManager:
             '项目号': 'center',
             '接口号': 'w',  # 左对齐
             '接口时间': 'center',
+            '责任人': 'center',  # 新增责任人列对齐方式
             '是否已完成': 'center'
         }
         
@@ -644,6 +663,11 @@ class WindowManager:
             self._bind_checkbox_click_event(viewer, df, display_df, columns, 
                                            original_row_numbers, source_files, 
                                            file_manager, tab_name)
+        
+        # 【新增】绑定接口号点击事件（用于回文单号输入）
+        if "接口号" in columns:
+            self._bind_interface_click_event(viewer, df, display_df, columns,
+                                            original_row_numbers, tab_name)
         
         print(f"{tab_name}数据加载完成：{len(df)} 行，{len(df.columns)} 列 -> 显示：{max_rows} 行，{len(display_df.columns)} 列")
     
@@ -774,6 +798,166 @@ class WindowManager:
         except Exception as e:
             print(f"查找源文件失败: {e}")
             return source_files[0] if source_files else None
+    
+    def _bind_interface_click_event(self, viewer, original_df, display_df, columns,
+                                     original_row_numbers, tab_name):
+        """
+        绑定Treeview的点击事件，处理"接口号"列的点击（用于回文单号输入）
+        
+        参数:
+            viewer: Treeview控件
+            original_df: 原始DataFrame（包含_source_column、source_file等信息）
+            display_df: 显示用DataFrame
+            columns: 显示列名列表
+            original_row_numbers: 原始Excel行号列表
+            tab_name: 选项卡名称
+        """
+        # 检查是否是处理后的数据（包含source_file列）
+        if 'source_file' not in original_df.columns:
+            # 原始数据（未处理），不支持回文单号输入功能
+            return
+        
+        # 找到"接口号"列的索引
+        try:
+            interface_col_idx = columns.index("接口号")
+        except ValueError:
+            return  # 没有"接口号"列，不绑定事件
+        
+        def on_interface_click(event):
+            """点击接口号列的事件处理函数"""
+            try:
+                # 获取点击位置的信息
+                region = viewer.identify_region(event.x, event.y)
+                
+                if region != "cell":
+                    return
+                
+                # 获取点击的列和行
+                column_id = viewer.identify_column(event.x)
+                item_id = viewer.identify_row(event.y)
+                
+                if not item_id:
+                    return
+                
+                # 判断是否点击了"接口号"列
+                # 列ID格式: "#1", "#2", "#3"...（#0是行号列）
+                col_num = int(column_id.replace("#", "")) if column_id != "#0" else 0
+                
+                # 检查是否点击的是"接口号"列（列索引从1开始，因为#0是行号）
+                if col_num != (interface_col_idx + 1):
+                    return
+                
+                # 获取点击行的索引
+                item_index = viewer.index(item_id)
+                
+                # 获取行数据
+                item_values = viewer.item(item_id, "values")
+                if not item_values or interface_col_idx >= len(item_values):
+                    return
+                
+                interface_id = item_values[interface_col_idx]
+                
+                # 获取原始行号
+                if not original_row_numbers or item_index >= len(original_row_numbers):
+                    print(f"无法获取原始行号：索引{item_index}")
+                    return
+                
+                original_row = original_row_numbers[item_index]
+                
+                # 获取文件类型（根据选项卡名称）
+                file_type = self._get_file_type_from_tab(tab_name)
+                
+                # 获取源文件路径
+                source_file = None
+                if 'source_file' in original_df.columns:
+                    try:
+                        if item_index < len(original_df):
+                            source_file = original_df.iloc[item_index]['source_file']
+                    except:
+                        pass
+                
+                if not source_file:
+                    print(f"无法确定源文件：行索引{item_index}")
+                    from tkinter import messagebox
+                    messagebox.showerror("错误", "无法获取源文件信息，请联系管理员", parent=viewer)
+                    return
+                
+                # 获取项目号
+                project_id = ""
+                if "项目号" in columns:
+                    try:
+                        project_col_idx = columns.index("项目号")
+                        if project_col_idx < len(item_values):
+                            project_id = str(item_values[project_col_idx])
+                    except:
+                        pass
+                
+                # 获取当前用户姓名
+                user_name = getattr(self.app, 'user_name', '').strip()
+                if not user_name:
+                    from tkinter import messagebox
+                    messagebox.showwarning("警告", "无法获取当前用户姓名", parent=viewer)
+                    return
+                
+                # 文件3需要获取source_column
+                source_column = None
+                if file_type == 3 and '_source_column' in original_df.columns:
+                    try:
+                        if item_index < len(original_df):
+                            source_column = original_df.iloc[item_index]['_source_column']
+                    except:
+                        pass
+                
+                # 显示输入对话框
+                from input_handler import InterfaceInputDialog
+                
+                dialog = InterfaceInputDialog(
+                    viewer,
+                    interface_id,
+                    file_type,
+                    source_file,
+                    original_row,
+                    user_name,
+                    project_id,
+                    source_column
+                )
+                dialog.wait_window()
+                
+            except Exception as e:
+                print(f"点击接口号处理失败: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        # 绑定点击事件（使用Double-1双击）
+        # 使用标签化绑定，避免与其他事件冲突
+        bind_tag = f"interface_click_{tab_name}"
+        
+        # 如果已经绑定过，先解绑
+        try:
+            viewer.unbind_class(bind_tag, "<Double-1>")
+        except:
+            pass
+        
+        # 给viewer添加这个标签
+        tags = list(viewer.bindtags())
+        if bind_tag not in tags:
+            tags.insert(1, bind_tag)
+            viewer.bindtags(tuple(tags))
+        
+        # 绑定双击事件
+        viewer.bind_class(bind_tag, "<Double-1>", on_interface_click)
+    
+    def _get_file_type_from_tab(self, tab_name):
+        """根据选项卡名称获取文件类型"""
+        tab_map = {
+            "内部需打开接口": 1,
+            "内部需回复接口": 2,
+            "外部需打开接口": 3,
+            "外部需回复接口": 4,
+            "三维提资接口": 5,
+            "收发文函": 6
+        }
+        return tab_map.get(tab_name, 1)
     
     def _calculate_single_column_width(self, df, col_name):
         """
@@ -960,35 +1144,47 @@ class WindowManager:
                         
                         # 创建新的DataFrame - 如果有项目号列，则项目号在前
                         # 【新增】"接口时间"列在"接口号"和"是否已完成"之间显示
-                        # 列顺序: 状态 → 项目号 → 接口号 → 接口时间 → 是否已完成
+                        # 列顺序: 状态 → 项目号 → 接口号 → 接口时间 → 责任人 → 是否已完成
                         if "项目号" in df.columns and "接口时间" in df.columns:
+                            # 准备责任人数据
+                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(combined_values)
                             result = pd.DataFrame({
                                 "状态": [""] * len(combined_values),  # 占位，稍后根据延期情况填充
                                 "项目号": df["项目号"],
                                 "接口号": combined_values,
                                 "接口时间": df["接口时间"],  # 在接口号之后显示
+                                "责任人": responsible_data,  # 新增责任人列
                                 "是否已完成": completed_status
                             })
                         elif "项目号" in df.columns:
+                            # 准备责任人数据
+                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(combined_values)
                             result = pd.DataFrame({
                                 "状态": [""] * len(combined_values),
                                 "项目号": df["项目号"],
                                 "接口号": combined_values,
                                 "接口时间": ["-"] * len(combined_values),  # 没有时间数据时显示"-"
+                                "责任人": responsible_data,  # 新增责任人列
                                 "是否已完成": completed_status
                             })
                         elif "接口时间" in df.columns:
+                            # 准备责任人数据
+                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(combined_values)
                             result = pd.DataFrame({
                                 "状态": [""] * len(combined_values),
                                 "接口号": combined_values,
                                 "接口时间": df["接口时间"],  # 在接口号之后显示
+                                "责任人": responsible_data,  # 新增责任人列
                                 "是否已完成": completed_status
                             })
                         else:
+                            # 准备责任人数据
+                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(combined_values)
                             result = pd.DataFrame({
                                 "状态": [""] * len(combined_values),
                                 "接口号": combined_values,
                                 "接口时间": ["-"] * len(combined_values),  # 没有时间数据时显示"-"
+                                "责任人": responsible_data,  # 新增责任人列
                                 "是否已完成": completed_status
                             })
                         return result
@@ -1010,31 +1206,45 @@ class WindowManager:
                         # 【重要】保留"接口时间"列用于延期判断（但不在GUI显示）
                         # 【新增】添加"状态"列用于显示延期警告标记
                         if "项目号" in df.columns and "接口时间" in df.columns:
+                            # 准备责任人数据
+                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(df)
                             result = pd.DataFrame({
                                 "状态": [""] * len(df),
                                 "项目号": df["项目号"],
                                 "接口号": df.iloc[:, col_idx],
-                                "是否已完成": completed_status,
-                                "接口时间": df["接口时间"]  # 保留用于延期判断
+                                "接口时间": df["接口时间"],  # 保留用于延期判断
+                                "责任人": responsible_data,  # 新增责任人列
+                                "是否已完成": completed_status
                             })
                         elif "项目号" in df.columns:
+                            # 准备责任人数据
+                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(df)
                             result = pd.DataFrame({
                                 "状态": [""] * len(df),
                                 "项目号": df["项目号"],
                                 "接口号": df.iloc[:, col_idx],
+                                "接口时间": ["-"] * len(df),  # 没有时间数据时显示"-"
+                                "责任人": responsible_data,  # 新增责任人列
                                 "是否已完成": completed_status
                             })
                         elif "接口时间" in df.columns:
+                            # 准备责任人数据
+                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(df)
                             result = pd.DataFrame({
                                 "状态": [""] * len(df),
                                 "接口号": df.iloc[:, col_idx],
-                                "是否已完成": completed_status,
-                                "接口时间": df["接口时间"]  # 保留用于延期判断
+                                "接口时间": df["接口时间"],  # 保留用于延期判断
+                                "责任人": responsible_data,  # 新增责任人列
+                                "是否已完成": completed_status
                             })
                         else:
+                            # 准备责任人数据
+                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(df)
                             result = pd.DataFrame({
                                 "状态": [""] * len(df),
                                 "接口号": df.iloc[:, col_idx],
+                                "接口时间": ["-"] * len(df),  # 没有时间数据时显示"-"
+                                "责任人": responsible_data,  # 新增责任人列
                                 "是否已完成": completed_status
                             })
                         return result

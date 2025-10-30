@@ -451,7 +451,7 @@ def process_target_file(file_path, current_datetime):
     except Exception:
         result_df["接口时间"] = ""
 
-    # 新增“责任人”列（基于R列：索引17，提取中文）
+    # 新增"责任人"列（基于R列：索引17，提取中文）
     try:
         zh_pattern = re.compile(r"[\u4e00-\u9fa5]+")
         owners = []
@@ -463,6 +463,9 @@ def process_target_file(file_path, current_datetime):
         result_df['责任人'] = owners
     except Exception:
         result_df['责任人'] = ""
+    
+    # 【新增】添加source_file列（用于回文单号输入时定位源文件）
+    result_df['source_file'] = file_path
 
     return result_df
 
@@ -1043,12 +1046,25 @@ def process_target_file2(file_path, current_datetime, project_id=None):
     excel_row_numbers = [i + 2 for i in final_indices]  # pandas索引+2=Excel行号
     result_df = df.iloc[final_indices].copy()
     result_df['原始行号'] = excel_row_numbers
-    # 新增“责任人”列（暂为空）
+    
+    # 新增"责任人"列（基于AM列：索引38，提取中文）
     try:
-        result_df['责任人'] = ""
+        zh_pattern = re.compile(r"[\u4e00-\u9fa5]+")
+        owners = []
+        for idx in result_df.index:
+            cell_val = df.iloc[idx, 38] if 38 < len(df.columns) else None
+            s = str(cell_val) if cell_val is not None else ""
+            found = zh_pattern.findall(s)
+            owner_str = "".join(found)
+            # 空值显示"无"
+            owners.append(owner_str if owner_str else "无")
+        result_df['责任人'] = owners
     except Exception:
-        pass
-    # 新增“科室”列（基于I列内容包含：结构一室/结构二室/建筑总图室）
+        result_df['责任人'] = "无"
+    
+    # 【新增】添加source_file列
+    result_df['source_file'] = file_path
+    # 新增"科室"列（基于I列内容包含：结构一室/结构二室/建筑总图室）
     try:
         department_values = []
         for idx in result_df.index:
@@ -1450,6 +1466,17 @@ def process_target_file3(file_path, current_datetime):
     excel_row_numbers = [i + 2 for i in final_indices]  # pandas索引+2=Excel行号
     result_df = df.iloc[final_indices].copy()
     result_df['原始行号'] = excel_row_numbers
+    
+    # 【新增】添加来源标记（用于回文单号输入时判断写入列）
+    source_columns = []
+    for idx in final_indices:
+        if idx in group1 and idx not in group2:
+            source_columns.append('M')  # M列筛选路径
+        elif idx in group2 and idx not in group1:
+            source_columns.append('L')  # L列筛选路径
+        else:
+            source_columns.append('M')  # 两者都匹配，优先M列
+    result_df['_source_column'] = source_columns
     # 新增“科室”列（基于AO列：匹配三种科室，空值则“请室主任确认”，否则保留原值）
     try:
         department_values = []
@@ -1493,7 +1520,7 @@ def process_target_file3(file_path, current_datetime):
         result_df["接口时间"] = time_values
     except Exception:
         result_df["接口时间"] = ""
-    # 新增“责任人”列（基于AP列：索引41，提取中文）
+    # 新增"责任人"列（基于AP列：索引41，提取中文）
     try:
         zh_pattern = re.compile(r"[\u4e00-\u9fa5]+")
         owners = []
@@ -1505,6 +1532,8 @@ def process_target_file3(file_path, current_datetime):
         result_df['责任人'] = owners
     except Exception:
         result_df['责任人'] = ""
+    # 【新增】添加source_file列
+    result_df['source_file'] = file_path
     return result_df
 
 
@@ -2254,7 +2283,7 @@ def process_target_file4(file_path, current_datetime):
         result_df["接口时间"] = time_values
     except Exception:
         result_df["接口时间"] = ""
-    # 新增“责任人”列（基于AH列：索引33，提取中文）
+    # 新增"责任人"列（基于AH列：索引33，提取中文）
     try:
         zh_pattern = re.compile(r"[\u4e00-\u9fa5]+")
         owners = []
@@ -2266,6 +2295,8 @@ def process_target_file4(file_path, current_datetime):
         result_df['责任人'] = owners
     except Exception:
         result_df['责任人'] = ""
+    # 【新增】添加source_file列
+    result_df['source_file'] = file_path
     return result_df
 
 
@@ -2843,7 +2874,7 @@ def process_target_file5(file_path, current_datetime):
     except Exception:
         result_df["接口时间"] = ""
 
-    # 新增“责任人”列（基于K列：索引10，提取中文）
+    # 新增"责任人"列（基于K列：索引10，提取中文）
     try:
         zh_pattern = re.compile(r"[\u4e00-\u9fa5]+")
         owners = []
@@ -2855,6 +2886,9 @@ def process_target_file5(file_path, current_datetime):
         result_df['责任人'] = owners
     except Exception:
         result_df['责任人'] = ""
+    
+    # 【新增】添加source_file列
+    result_df['source_file'] = file_path
 
     return result_df
 
@@ -3131,7 +3165,44 @@ def find_all_target_files6(excel_files):
     return matched_files
 
 
-def process_target_file6(file_path, current_datetime, skip_date_filter=False):
+def filter_valid_names(names_str, valid_names_set):
+    """
+    过滤责任人姓名，只保留在姓名角色表中存在的姓名
+    
+    Args:
+        names_str: 逗号分隔的姓名字符串，如"刘峰a,张三,李四b"
+        valid_names_set: 有效姓名集合
+    
+    Returns:
+        str: 过滤后的姓名字符串
+    
+    规则：
+        - "刘峰a" → 尝试匹配"刘峰"（去除尾部字母）
+        - 只保留在姓名角色表中存在的姓名
+    """
+    if not names_str or not valid_names_set:
+        return names_str
+    
+    tokens = [t.strip() for t in names_str.split(',') if t.strip()]
+    filtered_names = []
+    
+    for name in tokens:
+        # 首先尝试精确匹配
+        if name in valid_names_set:
+            filtered_names.append(name)
+        else:
+            # 尝试去除尾部字母后匹配（如"刘峰a" → "刘峰"）
+            import re
+            # 移除尾部的英文字母（一个或多个）
+            cleaned_name = re.sub(r'[a-zA-Z]+$', '', name)
+            if cleaned_name and cleaned_name in valid_names_set:
+                filtered_names.append(cleaned_name)
+            # 如果都不匹配，不添加该姓名（过滤掉）
+    
+    return ','.join(filtered_names)
+
+
+def process_target_file6(file_path, current_datetime, skip_date_filter=False, valid_names_set=None):
     """
     处理待处理文件6（收发文函）
     
@@ -3139,6 +3210,7 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False):
         file_path: Excel文件路径
         current_datetime: 当前时间
         skip_date_filter: 是否跳过I列日期筛选（管理员模式为True）
+        valid_names_set: 有效姓名集合（用于过滤责任人）
     
     条件：
       1) V列包含"河北分公司.建筑结构所"
@@ -3149,6 +3221,7 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False):
     附加：
       - 接口时间：I列按 mm.dd 提取
       - 责任人：X列分隔的姓名集合（用于角色过滤，稍后基于包含关系过滤）
+        【新增】只保留在姓名角色表中存在的姓名
       - 科室：空值（待处理文件6科室空值）
     """
     print(f"开始处理待处理文件6: {os.path.basename(file_path)}")
@@ -3237,10 +3310,19 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False):
             for sep in [',', '，', ';', '；', '/', '、']:
                 s = s.replace(sep, ',')
             tokens = [t.strip() for t in s.split(',') if t.strip()]
-            owners.append(','.join(tokens))
+            names_str = ','.join(tokens)
+            
+            # 【新增】过滤责任人：只保留在姓名角色表中存在的姓名
+            if valid_names_set:
+                names_str = filter_valid_names(names_str, valid_names_set)
+            
+            owners.append(names_str)
         result_df['责任人'] = owners
     except Exception:
         result_df['责任人'] = ""
+    
+    # 【新增】添加source_file列
+    result_df['source_file'] = file_path
 
     return result_df
 
