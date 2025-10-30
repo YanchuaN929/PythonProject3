@@ -205,6 +205,8 @@ class ExcelProcessorApp:
         
         # 使用WindowManager创建界面
         self.window_manager = WindowManager(self.root, callbacks)
+        # 设置app引用，供WindowManager中需要访问用户信息的方法使用
+        self.window_manager.app = self
         self.window_manager.setup(config_data, process_vars, project_vars)
         
         # 保存UI组件引用（向后兼容）
