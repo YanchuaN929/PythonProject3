@@ -127,6 +127,7 @@ class FileIdentityManager:
             
             if cached_identity is None:
                 # 新文件，视为变化
+                print(f"检测到新文件: {os.path.basename(file_path)}")
                 return True
             
             if current_identity != cached_identity:
@@ -143,6 +144,7 @@ class FileIdentityManager:
         参数:
             file_paths: 文件路径列表
         """
+        updated_count = 0
         for file_path in file_paths:
             if not file_path:
                 continue
@@ -150,8 +152,10 @@ class FileIdentityManager:
             identity = self.generate_file_identity(file_path)
             if identity:
                 self.file_identities[file_path] = identity
+                updated_count += 1
         
-        self._save_cache()
+        if updated_count > 0:
+            self._save_cache()
     
     def set_row_completed(self, file_path: str, row_index: int, completed: bool = True, user_name: str = ""):
         """

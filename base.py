@@ -2759,11 +2759,18 @@ class ExcelProcessorApp:
             if files_changed:
                 print("  ⚠️ 检测到文件变化，清空所有缓存和勾选状态")
                 self.file_manager.clear_all_completed_rows()
-                # 清除结果缓存
+                # 【修复】先清除结果缓存
                 for file_path in all_file_paths:
                     self.file_manager.clear_file_cache(file_path)
-                # 更新文件标识
+                # 【修复】然后更新文件标识
                 self.file_manager.update_file_identities(all_file_paths)
+                # 清空内存中的处理结果
+                self.processing_results_multi1 = {}
+                self.processing_results_multi2 = {}
+                self.processing_results_multi3 = {}
+                self.processing_results_multi4 = {}
+                self.processing_results_multi5 = {}
+                self.processing_results_multi6 = {}
                 return
             
             # 3. 文件未变化，尝试加载缓存
@@ -2924,10 +2931,14 @@ class ExcelProcessorApp:
             if all_file_paths and self.file_manager.check_files_changed(all_file_paths):
                 # 清空所有勾选状态
                 self.file_manager.clear_all_completed_rows()
-                print("检测到文件变化，已清空所有勾选状态")
-            
-            # 更新文件标识
-            if all_file_paths:
+                # 【修复】清除所有缓存文件（关键！）
+                for file_path in all_file_paths:
+                    self.file_manager.clear_file_cache(file_path)
+                print("检测到文件变化，已清空所有缓存和勾选状态")
+                # 【修复】更新文件标识
+                self.file_manager.update_file_identities(all_file_paths)
+            elif all_file_paths:
+                # 文件未变化，也需要更新标识（为新文件记录标识）
                 self.file_manager.update_file_identities(all_file_paths)
         except Exception as e:
             print(f"文件变化检测失败: {e}")
