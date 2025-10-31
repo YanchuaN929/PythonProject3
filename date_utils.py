@@ -13,7 +13,10 @@ def is_date_overdue(date_str: str, reference_date: Optional[date] = None) -> boo
     判断日期是否已延期
     
     Args:
-        date_str: 日期字符串，格式 mm.dd（如：01.15）
+        date_str: 日期字符串，支持多种格式：
+                  - mm.dd（如：01.15）
+                  - yyyy.mm.dd（如：2024.12.20）
+                  - yyyy-mm-dd（如：2024-12-20）
         reference_date: 参考日期，默认为今天
     
     Returns:
@@ -21,7 +24,7 @@ def is_date_overdue(date_str: str, reference_date: Optional[date] = None) -> boo
     
     Examples:
         >>> is_date_overdue("01.10")  # 如果今天是01.15，返回True
-        >>> is_date_overdue("01.20")  # 如果今天是01.15，返回False
+        >>> is_date_overdue("2024.12.20")  # 如果今天是2025.10.31，返回True
         >>> is_date_overdue("未知")   # 返回False
     """
     try:
@@ -31,22 +34,42 @@ def is_date_overdue(date_str: str, reference_date: Optional[date] = None) -> boo
         
         # 解析日期字符串
         date_str = str(date_str).strip()
-        parts = date_str.split('.')
-        if len(parts) != 2:
-            return False
-        
-        month = int(parts[0])
-        day = int(parts[1])
         
         # 确定参考日期
         if reference_date is None:
             reference_date = date.today()
         
-        # 构建截止日期（假设为当前年份）
-        due_date = date(reference_date.year, month, day)
+        # 尝试解析完整日期格式（yyyy.mm.dd 或 yyyy-mm-dd）
+        if '.' in date_str or '-' in date_str:
+            separator = '.' if '.' in date_str else '-'
+            parts = date_str.split(separator)
+            
+            if len(parts) == 3:
+                # 完整日期格式：yyyy.mm.dd
+                try:
+                    year = int(parts[0])
+                    month = int(parts[1])
+                    day = int(parts[2])
+                    due_date = date(year, month, day)
+                    return due_date < reference_date
+                except (ValueError, IndexError):
+                    pass
+            
+            if len(parts) == 2:
+                # mm.dd 格式：使用智能跨年判断
+                parsed_date = parse_mmdd_to_date(date_str, reference_date)
+                if parsed_date:
+                    return parsed_date < reference_date
         
-        # 判断是否延期（截止日期 < 参考日期）
-        return due_date < reference_date
+        # 兜底：按照旧逻辑处理（假设为当前年份）
+        parts = date_str.replace('-', '.').split('.')
+        if len(parts) == 2:
+            month = int(parts[0])
+            day = int(parts[1])
+            due_date = date(reference_date.year, month, day)
+            return due_date < reference_date
+        
+        return False
         
     except (ValueError, AttributeError, IndexError) as e:
         # 解析失败，默认不标红

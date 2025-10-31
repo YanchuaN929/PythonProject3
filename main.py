@@ -444,7 +444,8 @@ def process_target_file(file_path, current_datetime):
                 if pd.isna(parsed):
                     time_values.append("")
                 else:
-                    time_values.append(parsed.strftime('%m.%d'))
+                    # 【修复】保留完整年份，支持跨年延期判断
+                    time_values.append(parsed.strftime('%Y.%m.%d'))
             except Exception:
                 time_values.append("")
         result_df["接口时间"] = time_values
@@ -1081,7 +1082,7 @@ def process_target_file2(file_path, current_datetime, project_id=None):
     except Exception:
         result_df["科室"] = ""
 
-    # 新增“接口时间”列（基于M列：索引12），格式 mm.dd
+    # 新增"接口时间"列（基于M列：索引12），格式 yyyy.mm.dd
     try:
         time_values = []
         for idx in result_df.index:
@@ -1091,7 +1092,8 @@ def process_target_file2(file_path, current_datetime, project_id=None):
                 if pd.isna(parsed):
                     time_values.append("")
                 else:
-                    time_values.append(parsed.strftime('%m.%d'))
+                    # 【修复】保留完整年份，支持跨年延期判断
+                    time_values.append(parsed.strftime('%Y.%m.%d'))
             except Exception:
                 time_values.append("")
         result_df["接口时间"] = time_values
@@ -1497,7 +1499,7 @@ def process_target_file3(file_path, current_datetime):
     except Exception:
         result_df["科室"] = "请室主任确认"
 
-    # 新增“接口时间”列（优先M列索引12，其次L列索引11），格式 mm.dd
+    # 新增"接口时间"列（优先M列索引12，其次L列索引11），格式 yyyy.mm.dd
     try:
         time_values = []
         for idx in result_df.index:
@@ -1516,7 +1518,8 @@ def process_target_file3(file_path, current_datetime):
             if parsed is None or pd.isna(parsed):
                 time_values.append("")
             else:
-                time_values.append(parsed.strftime('%m.%d'))
+                # 【修复】保留完整年份，支持跨年延期判断
+                time_values.append(parsed.strftime('%Y.%m.%d'))
         result_df["接口时间"] = time_values
     except Exception:
         result_df["接口时间"] = ""
@@ -2267,7 +2270,7 @@ def process_target_file4(file_path, current_datetime):
     except Exception:
         result_df["科室"] = "请室主任确认"
 
-    # 新增“接口时间”列（基于S列：索引18），格式 mm.dd
+    # 新增"接口时间"列（基于S列：索引18），格式 yyyy.mm.dd
     try:
         time_values = []
         for idx in result_df.index:
@@ -2277,7 +2280,8 @@ def process_target_file4(file_path, current_datetime):
                 if pd.isna(parsed):
                     time_values.append("")
                 else:
-                    time_values.append(parsed.strftime('%m.%d'))
+                    # 【修复】保留完整年份，支持跨年延期判断
+                    time_values.append(parsed.strftime('%Y.%m.%d'))
             except Exception:
                 time_values.append("")
         result_df["接口时间"] = time_values
@@ -2857,7 +2861,7 @@ def process_target_file5(file_path, current_datetime):
     except Exception:
         result_df["科室"] = ""
 
-    # 新增“接口时间”列（基于L列：索引11），格式 mm.dd
+    # 新增"接口时间"列（基于L列：索引11），格式 yyyy.mm.dd
     try:
         time_values = []
         for idx in result_df.index:
@@ -2867,7 +2871,8 @@ def process_target_file5(file_path, current_datetime):
                 if pd.isna(parsed):
                     time_values.append("")
                 else:
-                    time_values.append(parsed.strftime('%m.%d'))
+                    # 【修复】保留完整年份，支持跨年延期判断
+                    time_values.append(parsed.strftime('%Y.%m.%d'))
             except Exception:
                 time_values.append("")
         result_df["接口时间"] = time_values
@@ -3209,16 +3214,20 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
     Args:
         file_path: Excel文件路径
         current_datetime: 当前时间
-        skip_date_filter: 是否跳过I列日期筛选（管理员模式为True）
+        skip_date_filter: 是否跳过I列日期范围筛选（管理员/所领导模式为True）
         valid_names_set: 有效姓名集合（用于过滤责任人）
     
-    条件：
-      1) V列包含"河北分公司.建筑结构所"
-      2) I列为日期，且日期 ≤ 今天+14天（即包含过去、今天及未来14天）
-         【管理员模式】跳过此条件
-      3) M列等于"尚未回复"或"超期未回复"
-      最终：上述条件交集（管理员模式为 p1 & p4）
-    附加：
+    筛选条件：
+      p1) V列包含"河北分公司.建筑结构所"
+      p_i) I列不为空且为有效日期
+      p3) I列日期 ≤ 今天+14天（普通模式）
+      p4) M列等于"尚未回复"或"超期未回复"
+      
+    最终结果：
+      - 【普通模式】: p1 & p_i & p3 & p4
+      - 【管理员/所领导模式】: p1 & p_i & p4（跳过日期范围限制，但仍需I列非空）
+    
+    附加字段：
       - 接口时间：I列按 mm.dd 提取
       - 责任人：X列分隔的姓名集合（用于角色过滤，稍后基于包含关系过滤）
         【新增】只保留在姓名角色表中存在的姓名
@@ -3246,26 +3255,29 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
         return pd.DataFrame()
 
     p1 = execute6_process1(df)
+    p_i_not_empty = execute6_process_i_not_empty(df)  # 【新增】I列非空检查
     p4 = execute6_process4(df)
     
     # 根据skip_date_filter决定是否使用p3（I列日期筛选）
     if skip_date_filter:
-        # 管理员模式：跳过I列日期筛选
-        final_rows = p1 & p4
+        # 管理员模式：跳过I列日期范围筛选，但仍需检查I列非空
+        final_rows = p1 & p_i_not_empty & p4
         try:
             import Monitor
             Monitor.log_info(f"文件6处理1(V列机构匹配): {len(p1)} 行")
+            Monitor.log_info(f"文件6 I列非空检查: {len(p_i_not_empty)} 行")
             Monitor.log_info(f"文件6处理4(M列=尚未回复或超期未回复): {len(p4)} 行")
             Monitor.log_success(f"文件6最终完成处理数据(管理员模式): {len(final_rows)} 行")
         except Exception:
             pass
     else:
-        # 普通模式：使用所有筛选条件
+        # 普通模式：使用所有筛选条件（包括I列非空和日期范围）
         p3 = execute6_process3(df, current_datetime)
-        final_rows = p1 & p3 & p4
+        final_rows = p1 & p_i_not_empty & p3 & p4
         try:
             import Monitor
             Monitor.log_info(f"文件6处理1(V列机构匹配): {len(p1)} 行")
+            Monitor.log_info(f"文件6 I列非空检查: {len(p_i_not_empty)} 行")
             Monitor.log_info(f"文件6处理3(I列日期≤今天+14天): {len(p3)} 行")
             Monitor.log_info(f"文件6处理4(M列=尚未回复或超期未回复): {len(p4)} 行")
             Monitor.log_success(f"文件6最终完成处理数据: {len(final_rows)} 行")
@@ -3289,7 +3301,8 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
             if pd.isna(parsed):
                 time_values.append("")
             else:
-                time_values.append(parsed.strftime('%m.%d'))
+                # 【修复】保留完整年份，支持跨年延期判断
+                time_values.append(parsed.strftime('%Y.%m.%d'))
         result_df["接口时间"] = time_values
     except Exception:
         result_df["接口时间"] = ""
@@ -3353,6 +3366,27 @@ def execute6_process2(df):
             continue
         if str(val).strip() == "是":
             result_rows.add(idx)
+    return result_rows
+
+
+def execute6_process_i_not_empty(df):
+    """I列不为空（管理员模式和普通模式都需要）"""
+    result_rows = set()
+    if len(df.columns) <= 8:
+        return result_rows
+    i_column = df.iloc[:, 8]
+    for idx, val in i_column.items():
+        if idx == 0:
+            continue
+        # 检查I列是否为空
+        if val is not None and str(val).strip() != '':
+            # 尝试解析为日期，确保是有效日期
+            try:
+                parsed = pd.to_datetime(val, errors='coerce')
+                if not pd.isna(parsed):
+                    result_rows.add(idx)
+            except Exception:
+                continue
     return result_rows
 
 

@@ -23,6 +23,13 @@ from openpyxl import load_workbook
 # 导入窗口管理器
 from window import WindowManager
 
+# 导入任务指派模块
+try:
+    import distribution
+except ImportError:
+    print("警告: 未找到distribution模块")
+    distribution = None
+
 def get_resource_path(relative_path):
     """获取资源文件的绝对路径，兼容开发环境和打包环境"""
     if hasattr(sys, '_MEIPASS'):
@@ -187,6 +194,7 @@ class ExcelProcessorApp:
             'on_open_monitor': self.open_monitor,
             'on_settings_menu': self.show_settings_menu,
             'on_tab_changed': lambda: self.on_tab_changed(None),  # 包装函数，传递None作为event
+            'on_assignment_click': self._on_assignment_button_click,  # 【新增】指派任务回调
         }
         
         config_data = {
@@ -216,6 +224,7 @@ class ExcelProcessorApp:
         self.notebook = self.window_manager.notebook
         self.export_button = self.window_manager.buttons.get('export')
         self.process_button = self.window_manager.buttons.get('process')
+        self.assignment_button = self.window_manager.buttons.get('assignment')  # 【新增】指派任务按钮引用
         
         # 保存tab viewers引用
         self.tab1_viewer = self.window_manager.viewers['tab1']
@@ -3432,6 +3441,10 @@ class ExcelProcessorApp:
                     
                     self.process_button.config(state='normal', text="开始处理")
                     
+                    # 【新增】检测是否需要指派任务（仅接口工程师和室主任）
+                    if distribution and self._should_show_assignment_reminder():
+                        self.root.after(500, self._show_assignment_reminder)
+                    
                     # 重置手动操作标志
                     self._manual_operation = False
                 
@@ -4048,7 +4061,7 @@ class ExcelProcessorApp:
         self.save_config()
 
     def _enforce_user_name_gate(self, show_popup: bool = False):
-        """当未填写姓名时，禁用“开始处理/导出结果”按钮并提示。"""
+        """当未填写姓名时，禁用"开始处理/导出结果"按钮并提示。"""
         has_name = bool(self.config.get("user_name", "").strip())
         # 控制按钮可用性
         try:
@@ -4560,6 +4573,154 @@ class ExcelProcessorApp:
         # 关闭按钮
         close_btn = ttk.Button(btn_frame, text="关闭", command=dialog.destroy)
         close_btn.pack(side=tk.RIGHT)
+
+    # ============================================================================
+    # 任务指派相关方法
+    # ============================================================================
+    
+    def _should_show_assignment_reminder(self):
+        """判断是否需要显示指派提醒"""
+        try:
+            # 检查角色
+            user_roles = getattr(self, 'user_roles', [])
+            
+            # 只有接口工程师和室主任需要指派
+            has_assignment_role = distribution.is_interface_engineer(user_roles) or \
+                                distribution.is_director(user_roles)
+            
+            if not has_assignment_role:
+                return False
+            
+            # 检查是否有未指派任务
+            unassigned = self._check_unassigned_tasks()
+            return len(unassigned) > 0
+            
+        except Exception as e:
+            print(f"检查指派提醒失败: {e}")
+            return False
+    
+    def _check_unassigned_tasks(self):
+        """检测未指派任务"""
+        try:
+            if not distribution:
+                return []
+            
+            # 收集所有处理结果
+            processed_results = {}
+            for i in range(1, 7):
+                result_attr = f'processing_results{i}'
+                if hasattr(self, result_attr):
+                    df = getattr(self, result_attr)
+                    if df is not None and not df.empty:
+                        processed_results[i] = df
+            
+            # 检测未指派任务
+            user_roles = getattr(self, 'user_roles', [])
+            project_id = self._get_my_project_id()
+            
+            unassigned = distribution.check_unassigned(processed_results, user_roles, project_id)
+            return unassigned
+            
+        except Exception as e:
+            print(f"检测未指派任务失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+    
+    def _get_my_project_id(self):
+        """获取接口工程师负责的项目号"""
+        try:
+            if not distribution:
+                return None
+            
+            user_roles = getattr(self, 'user_roles', [])
+            return distribution.parse_interface_engineer_project(user_roles)
+            
+        except Exception as e:
+            print(f"获取项目号失败: {e}")
+            return None
+    
+    def _show_assignment_reminder(self):
+        """显示指派提醒弹窗"""
+        try:
+            if not distribution:
+                return
+            
+            unassigned = self._check_unassigned_tasks()
+            count = len(unassigned)
+            
+            if count == 0:
+                return
+            
+            # 提醒弹窗
+            result = messagebox.askyesno(
+                "任务指派提醒",
+                f"您有 {count} 个需要指派的接口任务\n请注意\n\n是否现在指派？",
+                parent=self.root
+            )
+            
+            if result:
+                # 现在指派
+                name_list = distribution.get_name_list()
+                if not name_list:
+                    messagebox.showwarning("警告", "无法读取姓名列表，请检查姓名角色表.xlsx", parent=self.root)
+                    return
+                
+                dialog = distribution.AssignmentDialog(
+                    self.root,
+                    unassigned,
+                    name_list
+                )
+                dialog.wait_window()
+                
+                # 指派完成后，刷新显示
+                try:
+                    self.refresh_all_processed_results()
+                except Exception as e:
+                    print(f"刷新显示失败: {e}")
+            else:
+                # 取消 - 按钮已始终显示，无需额外操作
+                print("[DEBUG] 用户点击取消")
+                
+        except Exception as e:
+            print(f"❌ 显示指派提醒失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    
+    def _on_assignment_button_click(self):
+        """指派任务按钮点击"""
+        try:
+            if not distribution:
+                return
+            
+            unassigned = self._check_unassigned_tasks()
+            if not unassigned:
+                messagebox.showinfo("提示", "当前没有需要指派的任务", parent=self.root)
+                return
+            
+            name_list = distribution.get_name_list()
+            if not name_list:
+                messagebox.showwarning("警告", "无法读取姓名列表，请检查姓名角色表.xlsx", parent=self.root)
+                return
+            
+            dialog = distribution.AssignmentDialog(
+                self.root,
+                unassigned,
+                name_list
+            )
+            dialog.wait_window()
+            
+            # 指派完成后刷新显示
+            try:
+                self.refresh_all_processed_results()
+            except Exception as e:
+                print(f"刷新显示失败: {e}")
+                
+        except Exception as e:
+            print(f"指派任务失败: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 def main():
