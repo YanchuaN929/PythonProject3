@@ -110,9 +110,13 @@ def count_workdays(start_date: date, end_date: date) -> int:
 
 def parse_mmdd_to_date(date_str: str, reference_date: Optional[date] = None) -> Optional[date]:
     """
-    将 mm.dd 格式的日期字符串解析为 date 对象
+    将日期字符串解析为 date 对象
     
-    智能处理跨年情况的核心逻辑:
+    支持的格式：
+    1. mm.dd 格式（如 "09.15", "01.20"）- 使用智能跨年判断
+    2. yyyy.mm.dd 格式（如 "2024.12.20"）- 直接解析完整日期
+    
+    智能处理跨年情况的核心逻辑（仅用于 mm.dd 格式）:
     1. 先按今年解析日期
     2. 如果解析出的日期已经过去(< reference_date):
        - 判断是"最近刚过期"还是"很久以前"
@@ -122,7 +126,7 @@ def parse_mmdd_to_date(date_str: str, reference_date: Optional[date] = None) -> 
        - 直接返回今年的日期
     
     Args:
-        date_str: mm.dd 格式的日期字符串(如 "09.15", "01.20")
+        date_str: 日期字符串，支持 mm.dd 或 yyyy.mm.dd 格式
         reference_date: 参考日期,默认为今天
     
     Returns:
@@ -136,13 +140,28 @@ def parse_mmdd_to_date(date_str: str, reference_date: Optional[date] = None) -> 
         date(2025, 11, 5)
         >>> parse_mmdd_to_date("01.20")  # 明年1月(未来,因为距离今天超过6个月)
         date(2026, 1, 20)
+        >>> parse_mmdd_to_date("2024.12.20")  # 完整日期（已延期）
+        date(2024, 12, 20)
     """
     if reference_date is None:
         reference_date = date.today()
     
     try:
-        # 解析 mm.dd
+        # 解析日期字符串
         parts = str(date_str).strip().split('.')
+        
+        # 【新增】支持 yyyy.mm.dd 格式（3个部分）
+        if len(parts) == 3:
+            # 完整日期格式：yyyy.mm.dd
+            try:
+                year = int(parts[0])
+                month = int(parts[1])
+                day = int(parts[2])
+                return date(year, month, day)
+            except (ValueError, IndexError):
+                return None
+        
+        # 原有逻辑：mm.dd 格式（2个部分）
         if len(parts) != 2:
             return None
         
