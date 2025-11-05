@@ -1,7 +1,0 @@
-Collecting pystray
-  Downloading pystray-0.19.5-py2.py3-none-any.whl.metadata (9.4 kB)
-Requirement already satisfied: Pillow in d:\program files\python313\lib\site-packages (from pystray) (11.2.1)
-Requirement already satisfied: six in d:\program files\python313\lib\site-packages (from pystray) (1.17.0)
-Downloading pystray-0.19.5-py2.py3-none-any.whl (49 kB)
-Installing collected packages: pystray
-Successfully installed pystray-0.19.5
