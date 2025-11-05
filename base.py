@@ -30,6 +30,13 @@ except ImportError:
     print("警告: 未找到distribution模块")
     distribution = None
 
+# 导入Registry模块
+try:
+    from registry import hooks as registry_hooks
+except ImportError:
+    print("警告: 未找到registry模块")
+    registry_hooks = None
+
 def get_resource_path(relative_path):
     """获取资源文件的绝对路径，兼容开发环境和打包环境"""
     if hasattr(sys, '_MEIPASS'):
@@ -139,6 +146,15 @@ class ExcelProcessorApp:
         self._manual_operation = False  # 标记当前操作是否为手动触发（用于弹窗控制）
         self.root = tk.Tk()
         self.load_config()
+        
+        # 【多用户协作】如果配置中已有数据文件夹路径，立即设置
+        folder_path = self.config.get('folder_path', '').strip()
+        if folder_path:
+            try:
+                from registry import hooks as registry_hooks
+                registry_hooks.set_data_folder(folder_path)
+            except Exception as e:
+                print(f"[Registry] 设置数据文件夹失败: {e}")
         
         # 【修复】加载用户角色（必须在load_config之后，确保能读取默认姓名）
         try:
@@ -867,7 +883,7 @@ class ExcelProcessorApp:
                 excel_row_numbers = list(self.processing_results6['原始行号'])
                 self.display_excel_data_with_original_rows(self.tab6_viewer, self.processing_results6, "收发文函", excel_row_numbers)
             elif self.has_processed_results6:
-                self.show_empty_message(self.tab6_viewer, "无收发文函")
+                self.show_empty_message(self.tab6_viewer, "无需要回复的文函")
             elif self.file6_data is not None:
                 self.display_excel_data(self.tab6_viewer, self.file6_data, "收发文函")
 
@@ -988,6 +1004,90 @@ class ExcelProcessorApp:
             import traceback
             traceback.print_exc()
             return df  # 出错时返回原始数据，确保导出不受影响
+    
+    def _exclude_pending_confirmation_rows(self, df, source_file, file_type, project_id):
+        """
+        从DataFrame中排除待确认的任务行
+        
+        参数:
+            df: pandas DataFrame（必须包含"原始行号"、"接口号"列）
+            source_file: 源文件路径
+            file_type: 文件类型（1-6）
+            project_id: 项目号
+            
+        返回:
+            过滤后的DataFrame
+        """
+        try:
+            if df is None or df.empty:
+                return df
+            
+            # 检查必要列
+            if "原始行号" not in df.columns:
+                print(f"[Registry] 警告：DataFrame中没有'原始行号'列，无法过滤待确认行")
+                return df
+            
+            # 【Registry】查询所有待确认的任务
+            from registry import hooks as registry_hooks
+            from registry.util import extract_interface_id, extract_project_id, make_task_id
+            
+            # 构造task_keys
+            task_keys = []
+            df_index_map = {}  # task_id -> df_index映射
+            for idx in range(len(df)):
+                try:
+                    row_data = df.iloc[idx]
+                    interface_id = extract_interface_id(row_data, file_type)
+                    proj_id = extract_project_id(row_data, file_type) or project_id
+                    row_index = row_data.get("原始行号", idx + 2)
+                    
+                    if interface_id and proj_id:
+                        task_key = {
+                            'file_type': file_type,
+                            'project_id': proj_id,
+                            'interface_id': interface_id,
+                            'source_file': source_file,
+                            'row_index': row_index
+                        }
+                        task_keys.append(task_key)
+                        
+                        # 记录映射关系
+                        tid = make_task_id(
+                            file_type, proj_id, interface_id,
+                            source_file, row_index
+                        )
+                        df_index_map[tid] = idx
+                except Exception as e:
+                    continue
+            
+            if not task_keys:
+                return df
+            
+            # 批量查询状态
+            status_map = registry_hooks.get_display_status(task_keys)
+            
+            # 找出包含"待"字样的任务索引
+            pending_indices = []
+            for tid, status_text in status_map.items():
+                if "待" in status_text and tid in df_index_map:
+                    pending_indices.append(df_index_map[tid])
+            
+            if not pending_indices:
+                return df
+            
+            # 过滤掉待确认的行
+            original_count = len(df)
+            df_filtered = df.drop(df.index[pending_indices]).reset_index(drop=True)
+            filtered_count = len(pending_indices)
+            
+            if filtered_count > 0:
+                print(f"[Registry] 导出过滤: 排除待确认行 {filtered_count} 条")
+            
+            return df_filtered
+            
+        except Exception as e:
+            print(f"[Registry] 排除待确认行时出错（不影响主流程）: {e}")
+            return df
     
     def _get_source_files_for_tab(self, tab_name):
         """
@@ -1727,6 +1827,14 @@ class ExcelProcessorApp:
             self.path_var.set(folder_path)
             self.config["folder_path"] = folder_path
             self.save_config()
+            
+            # 【多用户协作】设置数据文件夹路径，数据库将创建在该文件夹下
+            try:
+                from registry import hooks as registry_hooks
+                registry_hooks.set_data_folder(folder_path)
+            except Exception as e:
+                print(f"[Registry] 设置数据文件夹失败: {e}")
+            
             self.refresh_file_list()
 
     def browse_export_folder(self):
@@ -2446,7 +2554,7 @@ class ExcelProcessorApp:
                         self.display_excel_data_with_original_rows(self.tab6_viewer, self.processing_results6, "收发文函", excel_row_numbers)
                     else:
                         # 处理后无数据
-                        self.show_empty_message(self.tab6_viewer, "无收发文函")
+                        self.show_empty_message(self.tab6_viewer, "无需要回复的文函")
                 elif self.file6_data is not None:
                     # 未处理：显示原始数据
                     self.display_excel_data(self.tab6_viewer, self.file6_data, "收发文函")
@@ -3070,6 +3178,23 @@ class ExcelProcessorApp:
                                 Monitor.log_success(f"待处理文件1批量处理完成: 总计{len(results1)}行数据，来自{len(combined_results)}个项目")
                             except:
                                 pass
+                            
+                            # 【Registry】调用on_process_done钩子
+                            if registry_hooks:
+                                try:
+                                    for project_id, df in self.processing_results_multi1.items():
+                                        if df is not None and not df.empty:
+                                            # 找到对应的源文件
+                                            source_file = next((fp for fp, pid in self.target_files1 if pid == project_id), "")
+                                            registry_hooks.on_process_done(
+                                                file_type=1,
+                                                project_id=project_id,
+                                                source_file=source_file,
+                                                result_df=df,
+                                                now=self.current_datetime
+                                            )
+                                except Exception as e:
+                                    print(f"[Registry] 文件1钩子调用失败: {e}")
                         else:
                             # 所有项目都没有结果，创建空DataFrame以确保显示"无数据"
                             results1 = pd.DataFrame()
@@ -3120,6 +3245,22 @@ class ExcelProcessorApp:
                         if combined_results:
                             results2 = pd.concat(combined_results, ignore_index=True)
                             print(f"文件2批量处理完成，总计: {len(results2)} 行")
+                            
+                            # 【Registry】调用on_process_done钩子
+                            if registry_hooks:
+                                try:
+                                    for project_id, df in self.processing_results_multi2.items():
+                                        if df is not None and not df.empty:
+                                            source_file = next((fp for fp, pid in self.target_files2 if pid == project_id), "")
+                                            registry_hooks.on_process_done(
+                                                file_type=2,
+                                                project_id=project_id,
+                                                source_file=source_file,
+                                                result_df=df,
+                                                now=self.current_datetime
+                                            )
+                                except Exception as e:
+                                    print(f"[Registry] 文件2钩子调用失败: {e}")
                         else:
                             # 所有项目都没有结果，创建空DataFrame以确保显示"无数据"
                             results2 = pd.DataFrame()
@@ -3161,6 +3302,22 @@ class ExcelProcessorApp:
                         if combined_results:
                             results3 = pd.concat(combined_results, ignore_index=True)
                             print(f"文件3批量处理完成，总计: {len(results3)} 行")
+                            
+                            # 【Registry】调用on_process_done钩子
+                            if registry_hooks:
+                                try:
+                                    for project_id, df in self.processing_results_multi3.items():
+                                        if df is not None and not df.empty:
+                                            source_file = next((fp for fp, pid in self.target_files3 if pid == project_id), "")
+                                            registry_hooks.on_process_done(
+                                                file_type=3,
+                                                project_id=project_id,
+                                                source_file=source_file,
+                                                result_df=df,
+                                                now=self.current_datetime
+                                            )
+                                except Exception as e:
+                                    print(f"[Registry] 文件3钩子调用失败: {e}")
                         else:
                             # 所有项目都没有结果，创建空DataFrame以确保显示"无数据"
                             results3 = pd.DataFrame()
@@ -3202,6 +3359,22 @@ class ExcelProcessorApp:
                         if combined_results:
                             results4 = pd.concat(combined_results, ignore_index=True)
                             print(f"文件4批量处理完成，总计: {len(results4)} 行")
+                            
+                            # 【Registry】调用on_process_done钩子
+                            if registry_hooks:
+                                try:
+                                    for project_id, df in self.processing_results_multi4.items():
+                                        if df is not None and not df.empty:
+                                            source_file = next((fp for fp, pid in self.target_files4 if pid == project_id), "")
+                                            registry_hooks.on_process_done(
+                                                file_type=4,
+                                                project_id=project_id,
+                                                source_file=source_file,
+                                                result_df=df,
+                                                now=self.current_datetime
+                                            )
+                                except Exception as e:
+                                    print(f"[Registry] 文件4钩子调用失败: {e}")
                         else:
                             # 所有项目都没有结果，创建空DataFrame以确保显示"无数据"
                             results4 = pd.DataFrame()
@@ -3324,6 +3497,23 @@ class ExcelProcessorApp:
                                     print(f"处理文件5失败: {file_path} - {e}")
                             if combined_results:
                                 results5 = pd.concat(combined_results, ignore_index=True)
+                                
+                                # 【Registry】调用on_process_done钩子
+                                if registry_hooks:
+                                    try:
+                                        for project_id, df in self.processing_results_multi5.items():
+                                            if df is not None and not df.empty:
+                                                source_file = next((fp for fp, pid in self.target_files5 if pid == project_id), "")
+                                                registry_hooks.on_process_done(
+                                                    file_type=5,
+                                                    project_id=project_id,
+                                                    source_file=source_file,
+                                                    result_df=df,
+                                                    now=self.current_datetime
+                                                )
+                                    except Exception as e:
+                                        print(f"[Registry] 文件5钩子调用失败: {e}")
+                                
                                 try:
                                     self.display_results5(results5, show_popup=False)
                                 except Exception:
@@ -3380,6 +3570,23 @@ class ExcelProcessorApp:
                                     print(f"处理文件6失败: {file_path} - {e}")
                             if combined_results:
                                 results6 = pd.concat(combined_results, ignore_index=True)
+                                
+                                # 【Registry】调用on_process_done钩子
+                                if registry_hooks:
+                                    try:
+                                        for project_id, df in self.processing_results_multi6.items():
+                                            if df is not None and not df.empty:
+                                                source_file = next((fp for fp, pid in self.target_files6 if pid == project_id), "")
+                                                registry_hooks.on_process_done(
+                                                    file_type=6,
+                                                    project_id=project_id,
+                                                    source_file=source_file,
+                                                    result_df=df,
+                                                    now=self.current_datetime
+                                                )
+                                    except Exception as e:
+                                        print(f"[Registry] 文件6钩子调用失败: {e}")
+                                
                                 try:
                                     self.display_results6(results6, show_popup=False)
                                 except Exception:
@@ -3395,6 +3602,21 @@ class ExcelProcessorApp:
                                     completion_messages.append(f"收发文函：{len(results6)} 行数据")
                                 else:
                                     completion_messages.append("收发文函：无符合条件的数据")
+                            else:
+                                # 【修复】所有文件处理结果都为空时，也需要调用display_results6
+                                # 确保设置has_processed_results6标志，防止显示原始文件数据
+                                results6 = pd.DataFrame()
+                                print(f"文件6批量处理完成，所有项目都无符合条件的数据")
+                                try:
+                                    import Monitor
+                                    Monitor.log_warning(f"待处理文件6批量处理完成: 所有项目都无符合条件的数据")
+                                except:
+                                    pass
+                                try:
+                                    self.display_results6(results6, show_popup=False)
+                                except Exception:
+                                    pass
+                                completion_messages.append("收发文函：无符合条件的数据")
 
                     # 选择显示的选项卡（优先级：file1 > file2 > file3 > file4 > file5 > file6）
                     self.notebook.select(active_tab)
@@ -3629,7 +3851,7 @@ class ExcelProcessorApp:
         """显示收发文函处理结果（与其他类型保持一致）"""
         if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
             self.has_processed_results6 = True
-            self.show_empty_message(self.tab6_viewer, "无收发文函")
+            self.show_empty_message(self.tab6_viewer, "无需要回复的文函")
             self.update_export_button_state()
             return
         self.processing_results6 = results
@@ -3696,6 +3918,8 @@ class ExcelProcessorApp:
                     # 排除已勾选（已完成）的行
                     if original_file:
                         results = self._exclude_completed_rows(results, original_file)
+                        # 【Registry】排除待确认的任务行
+                        results = self._exclude_pending_confirmation_rows(results, original_file, 1, project_id)
                     # 保存过滤后的结果
                     self.filtered_results_multi1[project_id] = results
                     if original_file and not results.empty:
@@ -3717,6 +3941,8 @@ class ExcelProcessorApp:
                     # 排除已勾选（已完成）的行
                     if original_file:
                         results = self._exclude_completed_rows(results, original_file)
+                        # 【Registry】排除待确认的任务行
+                        results = self._exclude_pending_confirmation_rows(results, original_file, 2, project_id)
                     # 保存过滤后的结果
                     self.filtered_results_multi2[project_id] = results
                     if original_file and not results.empty:
@@ -3739,6 +3965,8 @@ class ExcelProcessorApp:
                         # 排除已勾选（已完成）的行
                         if original_file:
                             results = self._exclude_completed_rows(results, original_file)
+                            # 【Registry】排除待确认的任务行
+                            results = self._exclude_pending_confirmation_rows(results, original_file, 3, project_id)
                         # 保存过滤后的结果
                         self.filtered_results_multi3[project_id] = results
                         if original_file and not results.empty:
@@ -3761,6 +3989,8 @@ class ExcelProcessorApp:
                         # 排除已勾选（已完成）的行
                         if original_file:
                             results = self._exclude_completed_rows(results, original_file)
+                            # 【Registry】排除待确认的任务行
+                            results = self._exclude_pending_confirmation_rows(results, original_file, 4, project_id)
                         # 保存过滤后的结果
                         self.filtered_results_multi4[project_id] = results
                         if original_file and not results.empty:
@@ -3782,6 +4012,8 @@ class ExcelProcessorApp:
                         # 排除已勾选（已完成）的行
                         if original_file:
                             results = self._exclude_completed_rows(results, original_file)
+                            # 【Registry】排除待确认的任务行
+                            results = self._exclude_pending_confirmation_rows(results, original_file, 5, project_id)
                         # 保存过滤后的结果
                         if not hasattr(self, 'filtered_results_multi5'):
                             self.filtered_results_multi5 = {}
@@ -3805,6 +4037,8 @@ class ExcelProcessorApp:
                         # 排除已勾选（已完成）的行
                         if original_file:
                             results = self._exclude_completed_rows(results, original_file)
+                            # 【Registry】排除待确认的任务行
+                            results = self._exclude_pending_confirmation_rows(results, original_file, 6, project_id)
                         # 保存过滤后的结果
                         if not hasattr(self, 'filtered_results_multi6'):
                             self.filtered_results_multi6 = {}
@@ -3846,6 +4080,27 @@ class ExcelProcessorApp:
                     if project_id not in project_stats:
                         project_stats[project_id] = 0
                     project_stats[project_id] += 1
+                    
+                    # 【Registry】调用on_export_done钩子
+                    if registry_hooks:
+                        try:
+                            # 从导出任务名称推断file_type
+                            file_type_map = {
+                                '待处理文件1': 1, '待处理文件2': 2, '待处理文件3': 3,
+                                '待处理文件4': 4, '待处理文件5': 5, '待处理文件6': 6,
+                                '三维提资接口': 5, '收发文函': 6
+                            }
+                            file_type = file_type_map.get(name, 0)
+                            if file_type > 0:
+                                registry_hooks.on_export_done(
+                                    file_type=file_type,
+                                    project_id=project_id,
+                                    export_path=output_path,
+                                    count=len(results) if results is not None else 0,
+                                    now=self.current_datetime
+                                )
+                        except Exception as e:
+                            print(f"[Registry] 导出钩子调用失败: {e}")
                     
                     # 更新进度显示已完成
                     self.update_export_progress(export_dialog, progress_label, i, total_count)
@@ -4673,11 +4928,18 @@ class ExcelProcessorApp:
                 )
                 dialog.wait_window()
                 
-                # 指派完成后，刷新显示
+                # 指派完成后清除缓存并重新处理
                 try:
-                    self.refresh_all_processed_results()
+                    print("[指派] 开始刷新显示...")
+                    # 清除文件缓存（但不清除Registry数据库）
+                    self.file_manager.clear_file_caches_only()
+                    # 重新处理数据
+                    self.start_processing()
+                    print("[指派] 刷新完成")
                 except Exception as e:
-                    print(f"刷新显示失败: {e}")
+                    print(f"[指派] 刷新显示失败: {e}")
+                    import traceback
+                    traceback.print_exc()
             else:
                 # 取消 - 按钮已始终显示，无需额外操作
                 print("[DEBUG] 用户点击取消")
@@ -4711,11 +4973,18 @@ class ExcelProcessorApp:
             )
             dialog.wait_window()
             
-            # 指派完成后刷新显示
+            # 指派完成后清除缓存并重新处理
             try:
-                self.refresh_all_processed_results()
+                print("[指派] 开始刷新显示...")
+                # 清除文件缓存（但不清除Registry数据库）
+                self.file_manager.clear_file_caches_only()
+                # 重新处理数据
+                self.start_processing()
+                print("[指派] 刷新完成")
             except Exception as e:
-                print(f"刷新显示失败: {e}")
+                print(f"[指派] 刷新显示失败: {e}")
+                import traceback
+                traceback.print_exc()
                 
         except Exception as e:
             print(f"指派任务失败: {e}")

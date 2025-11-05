@@ -512,6 +512,39 @@ class FileIdentityManager:
         except Exception as e:
             print(f"清除文件缓存失败: {e}")
     
+    def clear_file_caches_only(self):
+        """
+        仅清除文件处理结果缓存(.pkl文件)，保留用户勾选状态和Registry数据库
+        
+        用于指派后刷新显示
+        """
+        try:
+            print("[缓存] 开始清除文件处理结果缓存...")
+            
+            # 1. 只删除.pkl缓存文件，保留file_cache.json和registry.db
+            deleted_count = 0
+            if os.path.exists(self.result_cache_dir):
+                for filename in os.listdir(self.result_cache_dir):
+                    if filename.endswith('.pkl'):
+                        file_path = os.path.join(self.result_cache_dir, filename)
+                        try:
+                            os.remove(file_path)
+                            deleted_count += 1
+                        except Exception as e:
+                            print(f"[缓存] 删除失败: {filename}, 错误: {e}")
+            
+            # 2. 清空内存中的文件标识（但保留勾选状态）
+            self.file_identities = {}
+            
+            print(f"[缓存] 已删除 {deleted_count} 个.pkl缓存文件（保留勾选状态）")
+            return True
+            
+        except Exception as e:
+            print(f"[缓存] 清除文件缓存失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
     def clear_all_caches(self):
         """
         清除所有缓存（包括结果缓存和勾选状态）
@@ -519,6 +552,14 @@ class FileIdentityManager:
         用于"清除缓存"按钮
         """
         try:
+            # 【Registry】先关闭数据库连接，避免文件占用
+            try:
+                from registry.db import close_connection
+                close_connection()
+                print("已关闭Registry数据库连接")
+            except:
+                pass
+            
             # 1. 清除结果缓存目录
             if os.path.exists(self.result_cache_dir):
                 shutil.rmtree(self.result_cache_dir)

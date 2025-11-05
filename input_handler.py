@@ -11,12 +11,20 @@ from openpyxl import load_workbook
 from datetime import date
 import os
 
+# 导入Registry模块
+try:
+    from registry import hooks as registry_hooks
+except ImportError:
+    print("警告: 未找到registry模块")
+    registry_hooks = None
+
 
 class InterfaceInputDialog(tk.Toplevel):
     """回文单号输入弹窗"""
     
     def __init__(self, parent, interface_id, file_type, file_path, row_index, 
-                 user_name, project_id, source_column=None):
+                 user_name, project_id, source_column=None, file_manager=None, 
+                 viewer=None, item_id=None, columns=None):
         """
         参数:
             parent: 父窗口
@@ -27,6 +35,10 @@ class InterfaceInputDialog(tk.Toplevel):
             user_name: 当前用户姓名
             project_id: 项目号
             source_column: 文件3专用，'M'或'L'，表示筛选来源
+            file_manager: 文件管理器实例（用于自动勾选）
+            viewer: Treeview控件（用于立即刷新显示）
+            item_id: Treeview中的行ID（用于立即刷新显示）
+            columns: 列名列表（用于查找"是否已完成"列索引）
         """
         super().__init__(parent)
         
@@ -37,6 +49,10 @@ class InterfaceInputDialog(tk.Toplevel):
         self.user_name = user_name
         self.project_id = project_id
         self.source_column = source_column
+        self.file_manager = file_manager
+        self.viewer = viewer  # 保存Treeview引用
+        self.item_id = item_id  # 保存行ID
+        self.columns = columns  # 保存列名
         
         self.setup_ui()
     
@@ -96,6 +112,59 @@ class InterfaceInputDialog(tk.Toplevel):
             )
             
             if success:
+                # 【Registry】调用on_response_written钩子
+                if registry_hooks:
+                    try:
+                        # 【修复】去除接口号中的角色后缀，并提取角色信息
+                        # 例如："S-SA---1JT-01-25C1-25E6(设计人员)" -> 接口号="S-SA---1JT-01-25C1-25E6", 角色="设计人员"
+                        import re
+                        clean_interface_id = re.sub(r'\([^)]*\)$', '', self.interface_id).strip()
+                        role_match = re.search(r'\(([^)]+)\)$', self.interface_id)
+                        role = role_match.group(1) if role_match else None
+                        
+                        registry_hooks.on_response_written(
+                            file_type=self.file_type,
+                            file_path=self.file_path,
+                            row_index=self.row_index,
+                            interface_id=clean_interface_id,  # 使用清理后的接口号
+                            response_number=response_number,
+                            user_name=self.user_name,
+                            project_id=self.project_id,
+                            source_column=self.source_column,
+                            role=role  # 传递角色信息
+                        )
+                    except Exception as e:
+                        print(f"[Registry] 回文单号写入钩子调用失败: {e}")
+                
+                # 【自动勾选】设计人员回填后自动勾选"已完成"
+                if self.file_manager:
+                    try:
+                        self.file_manager.set_row_completed(
+                            self.file_path,
+                            self.row_index,
+                            True,
+                            self.user_name
+                        )
+                        print(f"[自动勾选] 已为设计人员{self.user_name}自动勾选行{self.row_index}")
+                    except Exception as e:
+                        print(f"[自动勾选] 失败: {e}")
+                
+                # 【立即刷新显示】直接更新Treeview中的勾选框
+                if self.viewer and self.item_id and self.columns:
+                    try:
+                        # 查找"是否已完成"列的索引
+                        if "是否已完成" in self.columns:
+                            checkbox_idx = self.columns.index("是否已完成")
+                            # 获取当前行的值
+                            current_values = list(self.viewer.item(self.item_id, "values"))
+                            # 更新勾选框为选中状态
+                            if checkbox_idx < len(current_values):
+                                current_values[checkbox_idx] = "☑"
+                                self.viewer.item(self.item_id, values=current_values)
+                                print(f"[立即刷新] Treeview显示已更新")
+                    except Exception as e:
+                        print(f"[立即刷新] 失败: {e}")
+                
                 messagebox.showinfo("成功", "回文单号已保存", parent=self)
                 self.destroy()
             else:

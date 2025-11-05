@@ -508,7 +508,81 @@ class WindowManager:
         # 优化显示列（仅显示关键列）
         display_df = self._create_optimized_display(filtered_df, tab_name, completed_rows=completed_rows_set)
         
-        # 【新增】填充"状态"列：根据"接口时间"判断是否延期
+        # 【Registry状态提醒】批量查询任务状态
+        registry_status_map = {}
+        try:
+            from registry import hooks as registry_hooks
+            from registry.util import extract_interface_id, extract_project_id
+            
+            # 根据tab_name确定file_type
+            file_type_map = {
+                "内部需打开接口": 1,
+                "内部需回复接口": 2,
+                "外部需打开接口": 3,
+                "外部需回复接口": 4,
+                "待处理文件5": 5,
+                "待处理文件6": 6
+            }
+            file_type = file_type_map.get(tab_name)
+            
+            if file_type and source_files:
+                # 构造task_keys
+                task_keys = []
+                for idx in range(len(display_df)):
+                    try:
+                        row_data = display_df.iloc[idx]
+                        interface_id = extract_interface_id(row_data, file_type)
+                        project_id = extract_project_id(row_data, file_type)
+                        row_index = original_row_numbers[idx] if original_row_numbers and idx < len(original_row_numbers) else idx + 2
+                        
+                        # 获取接口时间（用于判断是否延期）
+                        interface_time = ""
+                        if "接口时间" in row_data.index:
+                            time_val = row_data["接口时间"]
+                            if pd.notna(time_val) and str(time_val).strip():
+                                interface_time = str(time_val).strip()
+                        
+                        # 【修复Bug】遍历所有源文件查找匹配的任务
+                        # 因为我们不知道每行数据来自哪个文件，所以尝试所有文件
+                        if interface_id and project_id:
+                            for source_file in source_files:
+                                from registry.util import make_task_id
+                                task_key = {
+                                    'file_type': file_type,
+                                    'project_id': project_id,
+                                    'interface_id': interface_id,
+                                    'source_file': source_file,
+                                    'row_index': row_index,
+                                    'interface_time': interface_time  # 新增：传递接口时间
+                                }
+                                task_keys.append((idx, task_key))
+                    except Exception as e:
+                        continue
+                
+                # 批量查询
+                if task_keys:
+                    task_keys_only = [tk[1] for tk in task_keys]
+                    # 【新增】传递当前用户角色列表
+                    user_roles_str = ','.join(current_user_roles) if current_user_roles else ''
+                    registry_status_map_raw = registry_hooks.get_display_status(task_keys_only, user_roles_str)
+                    
+                    # 映射回display_df的索引（取第一个匹配的状态）
+                    for df_idx, task_key in task_keys:
+                        from registry.util import make_task_id
+                        tid = make_task_id(
+                            task_key['file_type'],
+                            task_key['project_id'],
+                            task_key['interface_id'],
+                            task_key['source_file'],
+                            task_key['row_index']
+                        )
+                        if tid in registry_status_map_raw and df_idx not in registry_status_map:
+                            # 只使用第一个匹配的状态（避免重复）
+                            registry_status_map[df_idx] = registry_status_map_raw[tid]
+        except Exception as e:
+            print(f"[Registry] 状态查询失败（不影响主流程）: {e}")
+        
+        # 【新增】填充"状态"列：优先显示Registry状态，其次显示延期标记
         # 【新增】处理"接口时间"列：空值显示为"-"
         if "接口时间" in display_df.columns:
             # 处理空值
@@ -524,12 +598,17 @@ class WindowManager:
                         time_str = str(time_value).strip()
                     time_values.append(time_str)
                     
-                    # 延期判断（只对有效日期判断）
+                    # 状态判断：优先Registry状态，其次延期标记
                     if "状态" in display_df.columns:
-                        if time_str != '-' and is_date_overdue(time_str):
-                            status_values.append("⚠️")  # 延期标记
+                        if idx in registry_status_map:
+                            # 有Registry状态提醒
+                            status_values.append(registry_status_map[idx])
+                        elif time_str != '-' and is_date_overdue(time_str):
+                            # 延期标记
+                            status_values.append("⚠️")
                         else:
-                            status_values.append("")  # 正常无标记
+                            # 正常无标记
+                            status_values.append("")
                 except Exception:
                     time_values.append('-')
                     if "状态" in display_df.columns:
@@ -565,7 +644,7 @@ class WindowManager:
         # 配置数据列（使用固定列宽方案）
         # 方案C - 平衡布局
         fixed_column_widths = {
-            '状态': 50,
+            '状态': 140,  # 扩大以容纳Emoji状态文本
             '项目号': 75,
             '接口号': 240,
             '接口时间': 85,
@@ -679,7 +758,7 @@ class WindowManager:
         # 【新增】绑定接口号点击事件（用于回文单号输入）
         if "接口号" in columns:
             self._bind_interface_click_event(viewer, df, display_df, columns,
-                                            original_row_numbers, tab_name)
+                                            original_row_numbers, tab_name, file_manager)
         
         print(f"{tab_name}数据加载完成：{len(df)} 行，{len(df.columns)} 列 -> 显示：{max_rows} 行，{len(display_df.columns)} 列")
     
@@ -764,6 +843,9 @@ class WindowManager:
                     current_values[checkbox_col_idx] = "☑" if new_state else "☐"
                     viewer.item(item_id, values=current_values)
                 
+                # 【修复】立即刷新显示，确保勾选框状态可见
+                viewer.update_idletasks()
+                
                 print(f"行{original_row}的完成状态已切换为：{'已完成' if new_state else '未完成'}")
                 
             except Exception as e:
@@ -812,7 +894,7 @@ class WindowManager:
             return source_files[0] if source_files else None
     
     def _bind_interface_click_event(self, viewer, original_df, display_df, columns,
-                                     original_row_numbers, tab_name):
+                                     original_row_numbers, tab_name, file_manager=None):
         """
         绑定Treeview的点击事件，处理"接口号"列的点击（用于回文单号输入）
         
@@ -823,6 +905,7 @@ class WindowManager:
             columns: 显示列名列表
             original_row_numbers: 原始Excel行号列表
             tab_name: 选项卡名称
+            file_manager: 文件管理器实例（用于自动勾选）
         """
         # 检查是否是处理后的数据（包含source_file列）
         if 'source_file' not in original_df.columns:
@@ -931,7 +1014,11 @@ class WindowManager:
                     original_row,
                     user_name,
                     project_id,
-                    source_column
+                    source_column,
+                    file_manager=file_manager,  # 传递file_manager用于自动勾选
+                    viewer=viewer,              # 传递viewer用于立即刷新
+                    item_id=item_id,            # 传递当前行ID
+                    columns=columns             # 传递列名列表
                 )
                 dialog.wait_window()
                 

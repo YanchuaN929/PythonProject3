@@ -275,7 +275,9 @@ def check_unassigned(processed_results, user_roles, project_id=None):
 
 def save_assignment(file_type, file_path, row_index, assigned_name):
     """
-    保存指派结果到Excel的责任人列
+    保存指派结果到Excel的责任人列（单个任务）
+    
+    注意：此函数已废弃，建议使用save_assignments_batch进行批量指派
     
     参数:
         file_type: 文件类型(1-6)
@@ -286,45 +288,177 @@ def save_assignment(file_type, file_path, row_index, assigned_name):
     返回:
         bool: 成功返回True，失败返回False
     """
-    try:
-        # 检查文件是否存在
-        if not os.path.exists(file_path):
-            print(f"文件不存在: {file_path}")
-            return False
-        
-        # 获取责任人列名
-        col_name = get_responsible_column(file_type)
-        if not col_name:
-            print(f"无法确定责任人列: file_type={file_type}")
-            return False
-        
-        # 文件锁定检测
+    # 调用批量指派函数
+    assignments = [{
+        'file_type': file_type,
+        'file_path': file_path,
+        'row_index': row_index,
+        'assigned_name': assigned_name
+    }]
+    
+    results = save_assignments_batch(assignments)
+    return results.get('success_count', 0) > 0
+
+
+def save_assignments_batch(assignments):
+    """
+    批量保存指派结果到Excel（优化版，按文件分组）
+    
+    参数:
+        assignments: 指派列表，每项包含:
+            {
+                'file_type': int,
+                'file_path': str,
+                'row_index': int,
+                'assigned_name': str,
+                'interface_id': str (可选，用于Registry)
+                'project_id': str (可选，用于Registry)
+            }
+    
+    返回:
+        dict: {
+            'success_count': int,  # 成功数量
+            'failed_tasks': list,  # 失败的任务信息
+            'registry_updates': int  # Registry更新数量
+        }
+    """
+    import pandas as pd
+    from collections import defaultdict
+    
+    # 按文件路径分组
+    file_groups = defaultdict(list)
+    for assignment in assignments:
+        file_path = assignment['file_path']
+        file_groups[file_path].append(assignment)
+    
+    success_count = 0
+    failed_tasks = []
+    registry_updates = 0
+    
+    # 按文件批量处理
+    for file_path, file_assignments in file_groups.items():
         try:
-            with open(file_path, 'r+b') as f:
-                pass
-        except PermissionError:
-            messagebox.showerror("文件占用", "有其他用户占用该文件，请稍后再试")
-            return False
-        
-        # 打开Excel
-        wb = load_workbook(file_path)
-        ws = wb.active
-        
-        # 写入责任人
-        ws[f"{col_name}{row_index}"] = assigned_name
-        
-        # 保存
-        wb.save(file_path)
-        wb.close()
-        
-        print(f"成功指派: {file_path}, 行{row_index}, 责任人={assigned_name}")
-        return True
-        
-    except Exception as e:
-        print(f"指派失败: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+            # 1. 检查文件是否存在
+            if not os.path.exists(file_path):
+                print(f"[指派] 文件不存在: {file_path}")
+                for assignment in file_assignments:
+                    failed_tasks.append({
+                        'interface_id': assignment.get('interface_id', '未知'),
+                        'reason': '文件不存在'
+                    })
+                continue
+            
+            # 2. 文件锁定检测
+            try:
+                with open(file_path, 'r+b') as f:
+                    pass
+            except PermissionError:
+                print(f"[指派] 文件被占用: {file_path}")
+                for assignment in file_assignments:
+                    failed_tasks.append({
+                        'interface_id': assignment.get('interface_id', '未知'),
+                        'reason': '文件被占用'
+                    })
+                continue
+            
+            # 3. 打开Excel文件（只打开一次）
+            wb = load_workbook(file_path)
+            ws = wb.active
+            
+            # 4. 读取DataFrame用于Registry（只读一次）
+            df = None
+            try:
+                df = pd.read_excel(file_path, sheet_name=0)
+            except Exception as e:
+                print(f"[指派] 读取DataFrame失败: {e}")
+            
+            # 5. 批量写入责任人
+            for assignment in file_assignments:
+                try:
+                    file_type = assignment['file_type']
+                    row_index = assignment['row_index']
+                    assigned_name = assignment['assigned_name']
+                    
+                    # 获取责任人列名
+                    col_name = get_responsible_column(file_type)
+                    if not col_name:
+                        print(f"[指派] 无法确定责任人列: file_type={file_type}")
+                        failed_tasks.append({
+                            'interface_id': assignment.get('interface_id', '未知'),
+                            'reason': '无法确定责任人列'
+                        })
+                        continue
+                    
+                    # 写入责任人
+                    ws[f"{col_name}{row_index}"] = assigned_name
+                    success_count += 1
+                    
+                    print(f"[指派] 成功: 行{row_index}, 责任人={assigned_name}")
+                    
+                except Exception as e:
+                    print(f"[指派] 单个任务失败: {e}")
+                    failed_tasks.append({
+                        'interface_id': assignment.get('interface_id', '未知'),
+                        'reason': str(e)
+                    })
+            
+            # 6. 保存Excel（只保存一次）
+            wb.save(file_path)
+            wb.close()
+            print(f"[指派] 文件已保存: {file_path}")
+            
+            # 7. 批量调用Registry钩子
+            if df is not None:
+                try:
+                    from registry import hooks as registry_hooks
+                    from registry.util import extract_interface_id, extract_project_id
+                    
+                    for assignment in file_assignments:
+                        try:
+                            row_index = assignment['row_index']
+                            # row_index是Excel行号（包含表头），DataFrame索引需要减2
+                            df_row_idx = row_index - 2
+                            
+                            if 0 <= df_row_idx < len(df):
+                                row_data = df.iloc[df_row_idx]
+                                
+                                interface_id = extract_interface_id(row_data, assignment['file_type'])
+                                project_id = extract_project_id(row_data, assignment['file_type'])
+                                
+                                if interface_id and project_id:
+                                    registry_hooks.on_assigned(
+                                        file_type=assignment['file_type'],
+                                        file_path=file_path,
+                                        row_index=row_index,
+                                        interface_id=interface_id,
+                                        project_id=project_id,
+                                        assigned_by="系统用户",  # TODO: 传递实际用户
+                                        assigned_to=assignment['assigned_name']
+                                    )
+                                    registry_updates += 1
+                        except Exception as e:
+                            print(f"[Registry] 单个任务钩子失败: {e}")
+                    
+                    print(f"[Registry] 共更新 {registry_updates} 个任务")
+                    
+                except Exception as e:
+                    print(f"[Registry] 批量钩子失败: {e}")
+            
+        except Exception as e:
+            print(f"[指派] 文件处理失败: {file_path}, 错误: {e}")
+            import traceback
+            traceback.print_exc()
+            for assignment in file_assignments:
+                failed_tasks.append({
+                    'interface_id': assignment.get('interface_id', '未知'),
+                    'reason': str(e)
+                })
+    
+    return {
+        'success_count': success_count,
+        'failed_tasks': failed_tasks,
+        'registry_updates': registry_updates
+    }
 
 
 class AssignmentDialog(tk.Toplevel):
@@ -344,6 +478,7 @@ class AssignmentDialog(tk.Toplevel):
         self.unassigned_tasks = unassigned_tasks
         self.name_list = name_list
         self.assignment_entries = []  # 存储每行的输入控件
+        self.batch_name_var = tk.StringVar()  # 批量指派的姓名
         
         self.setup_ui()
     
@@ -381,15 +516,37 @@ class AssignmentDialog(tk.Toplevel):
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
         
+        # 批量指派控制栏
+        batch_frame = ttk.Frame(scrollable_frame)
+        batch_frame.pack(fill='x', pady=5)
+        
+        # 全选/全不选按钮
+        ttk.Button(batch_frame, text="全选", command=self.select_all, width=8).pack(side='left', padx=5)
+        ttk.Button(batch_frame, text="全不选", command=self.deselect_all, width=8).pack(side='left', padx=5)
+        
+        # 批量指派输入框
+        ttk.Label(batch_frame, text="批量指派给：").pack(side='left', padx=5)
+        batch_combo = ttk.Combobox(batch_frame, textvariable=self.batch_name_var, values=self.name_list, width=15)
+        batch_combo.pack(side='left', padx=5)
+        batch_combo.bind('<KeyRelease>', lambda e: self.on_batch_search(e, batch_combo))
+        
+        # 批量应用按钮
+        ttk.Button(batch_frame, text="应用到勾选项", command=self.apply_batch_assignment, width=12).pack(side='left', padx=5)
+        
+        # 分隔线
+        ttk.Separator(scrollable_frame, orient='horizontal').pack(fill='x', pady=5)
+        
         # 表头
         header_frame = ttk.Frame(scrollable_frame)
         header_frame.pack(fill='x', pady=5)
         
-        ttk.Label(header_frame, text="文件类型", width=12, font=('Arial', 10, 'bold')).grid(row=0, column=0, padx=5)
-        ttk.Label(header_frame, text="项目号", width=10, font=('Arial', 10, 'bold')).grid(row=0, column=1, padx=5)
-        ttk.Label(header_frame, text="接口号", width=25, font=('Arial', 10, 'bold')).grid(row=0, column=2, padx=5)
-        ttk.Label(header_frame, text="接口时间", width=12, font=('Arial', 10, 'bold')).grid(row=0, column=3, padx=5)
-        ttk.Label(header_frame, text="指派人", width=20, font=('Arial', 10, 'bold')).grid(row=0, column=4, padx=5)
+        # 添加"选择"列
+        ttk.Label(header_frame, text="选择", width=6, font=('Arial', 10, 'bold')).grid(row=0, column=0, padx=5)
+        ttk.Label(header_frame, text="文件类型", width=12, font=('Arial', 10, 'bold')).grid(row=0, column=1, padx=5)
+        ttk.Label(header_frame, text="项目号", width=10, font=('Arial', 10, 'bold')).grid(row=0, column=2, padx=5)
+        ttk.Label(header_frame, text="接口号", width=25, font=('Arial', 10, 'bold')).grid(row=0, column=3, padx=5)
+        ttk.Label(header_frame, text="接口时间", width=12, font=('Arial', 10, 'bold')).grid(row=0, column=4, padx=5)
+        ttk.Label(header_frame, text="指派人", width=20, font=('Arial', 10, 'bold')).grid(row=0, column=5, padx=5)
         
         # 文件类型映射
         file_type_names = {
@@ -406,12 +563,17 @@ class AssignmentDialog(tk.Toplevel):
             row_frame = ttk.Frame(scrollable_frame)
             row_frame.pack(fill='x', pady=2)
             
+            # 选择复选框
+            checkbox_var = tk.BooleanVar(value=False)
+            checkbox = ttk.Checkbutton(row_frame, variable=checkbox_var)
+            checkbox.grid(row=0, column=0, padx=5)
+            
             # 文件类型
             file_type_name = file_type_names.get(task['file_type'], f"文件{task['file_type']}")
-            ttk.Label(row_frame, text=file_type_name, width=12).grid(row=0, column=0, padx=5)
+            ttk.Label(row_frame, text=file_type_name, width=12).grid(row=0, column=1, padx=5)
             
             # 项目号
-            ttk.Label(row_frame, text=str(task['project_id']), width=10).grid(row=0, column=1, padx=5)
+            ttk.Label(row_frame, text=str(task['project_id']), width=10).grid(row=0, column=2, padx=5)
             
             # 接口号（处理空值）
             interface_id = str(task.get('interface_id', ''))
@@ -420,14 +582,14 @@ class AssignmentDialog(tk.Toplevel):
                 print(f"[警告] 任务{i+1}无接口号数据: {task}")
             elif len(interface_id) > 30:
                 interface_id = interface_id[:27] + "..."
-            ttk.Label(row_frame, text=interface_id, width=25).grid(row=0, column=2, padx=5)
+            ttk.Label(row_frame, text=interface_id, width=25).grid(row=0, column=3, padx=5)
             
             # 接口时间
-            ttk.Label(row_frame, text=str(task['interface_time']), width=12).grid(row=0, column=3, padx=5)
+            ttk.Label(row_frame, text=str(task['interface_time']), width=12).grid(row=0, column=4, padx=5)
             
             # 指派人下拉框（带实时搜索）
             combobox = ttk.Combobox(row_frame, values=self.name_list, width=18)
-            combobox.grid(row=0, column=4, padx=5)
+            combobox.grid(row=0, column=5, padx=5)
             
             # 绑定实时搜索 - 在输入时自动弹出下拉菜单
             combobox.bind('<KeyRelease>', lambda event, cb=combobox: self.on_search(event, cb))
@@ -440,7 +602,8 @@ class AssignmentDialog(tk.Toplevel):
             # 保存引用
             self.assignment_entries.append({
                 'task': task,
-                'combobox': combobox
+                'combobox': combobox,
+                'checkbox_var': checkbox_var
             })
         
         # 布局Canvas和Scrollbar
@@ -453,6 +616,49 @@ class AssignmentDialog(tk.Toplevel):
         
         ttk.Button(button_frame, text="确认指派", command=self.on_confirm).pack(side='left', padx=10)
         ttk.Button(button_frame, text="取消", command=self.destroy).pack(side='left', padx=10)
+    
+    def select_all(self):
+        """全选所有任务"""
+        for entry in self.assignment_entries:
+            entry['checkbox_var'].set(True)
+    
+    def deselect_all(self):
+        """全不选所有任务"""
+        for entry in self.assignment_entries:
+            entry['checkbox_var'].set(False)
+    
+    def on_batch_search(self, event, combobox):
+        """批量指派输入框的实时搜索"""
+        search_text = combobox.get().strip()
+        
+        if not search_text:
+            combobox['values'] = self.name_list
+            return
+        
+        filtered = [name for name in self.name_list if search_text in name]
+        combobox['values'] = filtered
+    
+    def apply_batch_assignment(self):
+        """将批量指派的姓名应用到所有勾选的任务"""
+        batch_name = self.batch_name_var.get().strip()
+        
+        if not batch_name:
+            messagebox.showwarning("提示", "请先输入要批量指派的姓名", parent=self)
+            return
+        
+        # 统计勾选数量
+        checked_count = sum(1 for entry in self.assignment_entries if entry['checkbox_var'].get())
+        
+        if checked_count == 0:
+            messagebox.showwarning("提示", "请至少勾选一个任务", parent=self)
+            return
+        
+        # 应用到勾选的任务
+        for entry in self.assignment_entries:
+            if entry['checkbox_var'].get():
+                entry['combobox'].set(batch_name)
+        
+        messagebox.showinfo("成功", f"已将 \"{batch_name}\" 应用到 {checked_count} 个任务", parent=self)
     
     def on_search(self, event, combobox):
         """实时搜索回调 - 只更新下拉列表，不自动弹出"""
@@ -470,7 +676,7 @@ class AssignmentDialog(tk.Toplevel):
         # 不自动弹出下拉菜单，让用户自己点击下拉按钮
     
     def on_confirm(self):
-        """确认指派按钮回调"""
+        """确认指派按钮回调（优化版，使用批量保存）"""
         assignments = []
         
         # 收集所有指派
@@ -487,44 +693,51 @@ class AssignmentDialog(tk.Toplevel):
                 'file_path': task['file_path'],
                 'row_index': task['row_index'],
                 'assigned_name': assigned_name,
-                'interface_id': task['interface_id']
+                'interface_id': task.get('interface_id', '未知'),
+                'project_id': task.get('project_id', '')
             })
         
         if not assignments:
             messagebox.showwarning("提示", "请至少选择一个责任人进行指派", parent=self)
             return
         
-        # 执行指派
-        success_count = 0
-        failed_tasks = []
+        # 显示处理中提示
+        processing_label = ttk.Label(self, text="正在批量指派，请稍候...", font=('Arial', 12))
+        processing_label.pack(pady=10)
+        self.update()
         
-        for assignment in assignments:
-            success = save_assignment(
-                assignment['file_type'],
-                assignment['file_path'],
-                assignment['row_index'],
-                assignment['assigned_name']
-            )
+        # 执行批量指派
+        try:
+            results = save_assignments_batch(assignments)
+            success_count = results['success_count']
+            failed_tasks = results['failed_tasks']
+            registry_updates = results['registry_updates']
             
-            if success:
-                success_count += 1
+            # 隐藏处理中提示
+            processing_label.destroy()
+            
+            # 显示结果
+            if success_count > 0:
+                msg = f"成功指派 {success_count} 个任务"
+                if registry_updates > 0:
+                    msg += f"\nRegistry已更新 {registry_updates} 条记录"
+                if failed_tasks:
+                    msg += f"\n\n失败 {len(failed_tasks)} 个任务：\n"
+                    msg += "\n".join([f"- {t['interface_id']}: {t['reason']}" for t in failed_tasks[:5]])
+                    if len(failed_tasks) > 5:
+                        msg += f"\n... 等共{len(failed_tasks)}个失败"
+                
+                messagebox.showinfo("指派结果", msg, parent=self)
+                
+                if not failed_tasks:
+                    self.destroy()
             else:
-                failed_tasks.append(assignment['interface_id'])
-        
-        # 显示结果
-        if success_count > 0:
-            msg = f"成功指派 {success_count} 个任务"
-            if failed_tasks:
-                msg += f"\n\n失败 {len(failed_tasks)} 个任务：\n" + "\n".join(failed_tasks[:5])
-                if len(failed_tasks) > 5:
-                    msg += f"\n... 等{len(failed_tasks)}个"
-            
-            messagebox.showinfo("指派结果", msg, parent=self)
-            
-            if not failed_tasks:
-                self.destroy()
-        else:
-            messagebox.showerror("失败", "所有任务指派失败，请检查文件是否被占用", parent=self)
+                messagebox.showerror("失败", "所有任务指派失败，请检查文件是否被占用", parent=self)
+        except Exception as e:
+            processing_label.destroy()
+            messagebox.showerror("错误", f"指派过程中发生错误：\n{str(e)}", parent=self)
+            import traceback
+            traceback.print_exc()
 
 
 def show_assignment_dialog(parent, unassigned_tasks, name_list):
