@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+*.log
+*.tmp
+test_cache.json
+
+# User data
+config.json
+file_cache.json
+
+# Result cache (optional - contains processing results)
+# Uncomment if you don't want to track pkl files
+# result_cache/*.pkl
+
+# Excel temporary files
+~$*.xlsx
+~$*.xls
+
