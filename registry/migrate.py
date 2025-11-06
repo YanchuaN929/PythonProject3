@@ -89,8 +89,7 @@ def migrate_if_needed(db_path: str) -> None:
             print("[Registry] 检测到旧版本数据库，开始自动迁移...")
             conn.close()
             migrate_database(db_path)
-        else:
-            print("[Registry] 数据库版本检查通过")
+        # else: 版本检查通过，不输出（避免频繁日志）
     except Exception as e:
         print(f"[Registry] 版本检查失败: {e}")
     finally:

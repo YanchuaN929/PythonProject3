@@ -50,7 +50,7 @@ def load_config(config_path: str = "config.json", data_folder: str = None) -> di
         # 确保目录存在
         try:
             os.makedirs(registry_dir, exist_ok=True)
-            print(f"[Registry] 数据库路径: {config['registry_db_path']}")
+            # 数据库路径信息已在db.py的get_connection中打印，这里不再重复输出
         except Exception as e:
             print(f"[Registry] 创建数据库目录失败: {e}")
             # 回退到本地

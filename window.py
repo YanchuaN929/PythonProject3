@@ -412,7 +412,6 @@ class WindowManager:
         self.buttons['monitor'] = monitor_btn
         
         # 【新增】指派任务按钮
-        print("[调试-window.py] 准备创建指派任务按钮...")
         assignment_btn = ttk.Button(
             button_frame,
             text="📋 指派任务",
@@ -420,8 +419,6 @@ class WindowManager:
         )
         assignment_btn.pack(side=tk.LEFT, padx=(10, 0))
         self.buttons['assignment'] = assignment_btn
-        print(f"[调试-window.py] 指派任务按钮已创建: {assignment_btn}")
-        print(f"[调试-window.py] 按钮已pack，winfo_ismapped: {assignment_btn.winfo_ismapped()}")
     
     def show_empty_message(self, viewer, message):
         """在viewer中显示提示信息"""

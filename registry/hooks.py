@@ -315,9 +315,9 @@ def on_response_written(
         
         # 确定display_status
         if has_assignor:
-            display_status = '待指派人确认'
+            display_status = '待指派人审查'
         else:
-            display_status = '待上级确认'
+            display_status = '待审查'
         
         # 如果提供了角色信息，先更新任务的role字段和display_status
         fields_to_update = {'display_status': display_status}

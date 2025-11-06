@@ -1007,7 +1007,7 @@ class ExcelProcessorApp:
     
     def _exclude_pending_confirmation_rows(self, df, source_file, file_type, project_id):
         """
-        从DataFrame中排除待确认的任务行
+        从DataFrame中排除待确认的任务行（用于导出）
         
         参数:
             df: pandas DataFrame（必须包含"原始行号"、"接口号"列）
@@ -1030,6 +1030,9 @@ class ExcelProcessorApp:
             # 【Registry】查询所有待确认的任务
             from registry import hooks as registry_hooks
             from registry.util import extract_interface_id, extract_project_id, make_task_id
+            
+            print(f"\n========== [Registry导出] 开始过滤 文件类型{file_type} ==========")
+            print(f"[Registry导出] 输入DataFrame: {len(df)}行")
             
             # 构造task_keys
             task_keys = []
@@ -1066,22 +1069,55 @@ class ExcelProcessorApp:
             # 批量查询状态
             status_map = registry_hooks.get_display_status(task_keys)
             
-            # 找出包含"待"字样的任务索引
-            pending_indices = []
-            for tid, status_text in status_map.items():
-                if "待" in status_text and tid in df_index_map:
-                    pending_indices.append(df_index_map[tid])
+            # 【修复】根据用户角色决定过滤逻辑
+            user_roles = getattr(self, 'user_roles', [])
+            if not user_roles:
+                user_role = getattr(self, 'user_role', '').strip()
+                if user_role:
+                    user_roles = [user_role]
             
-            if not pending_indices:
+            # 判断是否为设计人员
+            is_designer = '设计人员' in user_roles
+            is_superior = any(keyword in ' '.join(user_roles) for keyword in ['所领导', '室主任', '接口工程师'])
+            
+            exclude_indices = []
+            
+            if is_designer and not is_superior:
+                # 设计人员：过滤掉"待审查"和"待指派人审查"的任务
+                for tid, status_text in status_map.items():
+                    # 去除emoji和延期前缀
+                    clean_status = status_text.replace('⏳', '').replace('📌', '').replace('❗', '').replace('（已延期）', '').strip()
+                    if clean_status in ['待审查', '待指派人审查', '待上级确认', '待指派人确认'] and tid in df_index_map:
+                        exclude_indices.append(df_index_map[tid])
+                        print(f"[Registry导出调试] 设计人员过滤：{clean_status}, 接口={tid[:20]}...")
+                    # 也过滤已确认的任务
+                    elif not status_text and tid in df_index_map:
+                        exclude_indices.append(df_index_map[tid])
+                        print(f"[Registry导出调试] 过滤已确认任务: 接口={tid[:20]}...")
+            else:
+                # 上级角色：只过滤已确认的任务
+                for tid, status_text in status_map.items():
+                    # 如果status_text为空，说明任务已确认或已归档，不导出
+                    if not status_text and tid in df_index_map:
+                        exclude_indices.append(df_index_map[tid])
+                        print(f"[Registry导出调试] 上级过滤已确认任务: 接口={tid[:20]}...")
+            
+            if not exclude_indices:
                 return df
             
-            # 过滤掉待确认的行
+            # 过滤掉指定的行
             original_count = len(df)
-            df_filtered = df.drop(df.index[pending_indices]).reset_index(drop=True)
-            filtered_count = len(pending_indices)
+            df_filtered = df.drop(df.index[exclude_indices]).reset_index(drop=True)
+            filtered_count = len(exclude_indices)
             
             if filtered_count > 0:
-                print(f"[Registry] 导出过滤: 排除待确认行 {filtered_count} 条")
+                role_desc = "设计人员" if (is_designer and not is_superior) else "上级角色"
+                print(f"[Registry导出] {role_desc}过滤: 排除 {filtered_count} 条")
+                print(f"[Registry导出] 输出DataFrame: {len(df_filtered)}行")
+            else:
+                print(f"[Registry导出] 无需过滤")
+            
+            print(f"========== [Registry导出] 过滤完成 ==========\n")
             
             return df_filtered
             
@@ -4926,23 +4962,30 @@ class ExcelProcessorApp:
                     unassigned,
                     name_list
                 )
+                
+                # 等待对话框关闭
                 dialog.wait_window()
                 
-                # 指派完成后清除缓存并重新处理
-                try:
-                    print("[指派] 开始刷新显示...")
-                    # 清除文件缓存（但不清除Registry数据库）
-                    self.file_manager.clear_file_caches_only()
-                    # 重新处理数据
-                    self.start_processing()
-                    print("[指派] 刷新完成")
-                except Exception as e:
-                    print(f"[指派] 刷新显示失败: {e}")
-                    import traceback
-                    traceback.print_exc()
+                # 【修复】只有在成功指派后才刷新
+                # 检查对话框的结果（需要在AssignmentDialog中添加标记）
+                if hasattr(dialog, 'assignment_successful') and dialog.assignment_successful:
+                    # 指派完成后清除缓存并重新处理
+                    try:
+                        print("[指派] 开始刷新显示...")
+                        # 清除文件缓存（但不清除Registry数据库）
+                        self.file_manager.clear_file_caches_only()
+                        # 重新处理数据
+                        self.start_processing()
+                        print("[指派] 刷新完成")
+                    except Exception as e:
+                        print(f"[指派] 刷新显示失败: {e}")
+                        import traceback
+                        traceback.print_exc()
+                else:
+                    print("[指派] 用户取消或未完成指派，不刷新")
             else:
-                # 取消 - 按钮已始终显示，无需额外操作
-                print("[DEBUG] 用户点击取消")
+                # 用户在提醒弹窗点击"否" - 不打开指派对话框
+                print("[指派] 用户选择暂不指派")
                 
         except Exception as e:
             print(f"❌ 显示指派提醒失败: {e}")

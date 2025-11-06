@@ -133,8 +133,17 @@ class InterfaceInputDialog(tk.Toplevel):
                             source_column=self.source_column,
                             role=role  # 传递角色信息
                         )
+                        print(f"[Registry] ✓ 已记录回文单号写入事件")
                     except Exception as e:
                         print(f"[Registry] 回文单号写入钩子调用失败: {e}")
+                
+                # 【新增】清除该文件的缓存，强制下次重新处理以应用Registry逻辑
+                if self.file_manager:
+                    try:
+                        self.file_manager.clear_file_cache(self.file_path)
+                        print(f"[缓存] ✓ 已清除文件缓存，下次处理将应用Registry逻辑")
+                    except Exception as e:
+                        print(f"[缓存] 清除文件缓存失败: {e}")
                 
                 # 【自动勾选】设计人员回填后自动勾选"已完成"
                 if self.file_manager:
@@ -149,19 +158,60 @@ class InterfaceInputDialog(tk.Toplevel):
                     except Exception as e:
                         print(f"[自动勾选] 失败: {e}")
                 
-                # 【立即刷新显示】直接更新Treeview中的勾选框
+                # 【立即刷新显示】更新Treeview中的勾选框和状态列
                 if self.viewer and self.item_id and self.columns:
                     try:
-                        # 查找"是否已完成"列的索引
+                        # 获取当前行的值
+                        current_values = list(self.viewer.item(self.item_id, "values"))
+                        
+                        # 1. 更新"是否已完成"列（勾选框）
                         if "是否已完成" in self.columns:
                             checkbox_idx = self.columns.index("是否已完成")
-                            # 获取当前行的值
-                            current_values = list(self.viewer.item(self.item_id, "values"))
-                            # 更新勾选框为选中状态
                             if checkbox_idx < len(current_values):
                                 current_values[checkbox_idx] = "☑"
-                                self.viewer.item(self.item_id, values=current_values)
-                                print(f"[立即刷新] Treeview显示已更新")
+                        
+                        # 2. 更新"状态"列（显示"待审查"）
+                        if "状态" in self.columns:
+                            status_idx = self.columns.index("状态")
+                            if status_idx < len(current_values):
+                                # 查询该任务的display_status
+                                try:
+                                    from registry.util import make_task_id
+                                    import re
+                                    
+                                    # 清理接口号
+                                    clean_interface_id = re.sub(r'\([^)]*\)$', '', self.interface_id).strip()
+                                    
+                                    task_key = {
+                                        'file_type': self.file_type,
+                                        'project_id': self.project_id,
+                                        'interface_id': clean_interface_id,
+                                        'source_file': os.path.basename(self.file_path),
+                                        'row_index': self.row_index,
+                                        'interface_time': ''  # 时间信息可选
+                                    }
+                                    
+                                    # 查询状态
+                                    status_map = registry_hooks.get_display_status([task_key], current_user_roles=[])
+                                    tid = make_task_id(
+                                        self.file_type,
+                                        self.project_id,
+                                        clean_interface_id,
+                                        os.path.basename(self.file_path),
+                                        self.row_index
+                                    )
+                                    
+                                    # 更新状态列
+                                    if tid in status_map and status_map[tid]:
+                                        current_values[status_idx] = status_map[tid]
+                                        print(f"[立即刷新] 状态列已更新为: {status_map[tid]}")
+                                except Exception as e:
+                                    print(f"[立即刷新] 查询状态失败: {e}")
+                        
+                        # 应用更新
+                        self.viewer.item(self.item_id, values=current_values)
+                        print(f"[立即刷新] ✓ Treeview显示已更新（勾选框+状态列）")
+                        
                     except Exception as e:
                         print(f"[立即刷新] 失败: {e}")
                 
@@ -255,7 +305,7 @@ def get_write_columns(file_type, row_index, worksheet, source_column=None):
     """
     # 文件类型1-2, 4-6的固定列位置
     column_map = {
-        1: {'response_col': 'S', 'time_col': 'M', 'name_col': 'V'},  # 【修改】时间列从N改为M
+        1: {'response_col': 'S', 'time_col': 'M', 'name_col': 'V'},  
         2: {'response_col': 'P', 'time_col': 'N', 'name_col': 'AL'},
         4: {'response_col': 'U', 'time_col': 'V', 'name_col': 'AT'},
         5: {'response_col': 'V', 'time_col': 'N', 'name_col': 'W'},

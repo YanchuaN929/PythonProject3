@@ -197,7 +197,7 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
     
     返回:
         Dict[task_id, display_status_text]: 任务ID到显示文本的映射
-        例如: {"task_abc123": "📌 待完成", "task_def456": "⏳ 待上级确认"}
+        例如: {"task_abc123": "📌 待完成", "task_def456": "⏳ 待审查"}
     """
     if not task_keys:
         return {}
@@ -291,8 +291,8 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
                     '待完成': '📌',
                     '待设计人员完成': '📌',
                     '请指派': '❗',
-                    '待上级确认': '⏳',
-                    '待指派人确认': '⏳',
+                    '待审查': '⏳',
+                    '待指派人审查': '⏳',
                     '待确认（可自行确认）': '⏳'
                 }
                 
@@ -306,8 +306,9 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
         
         return result
         
-    finally:
-        conn.close()
+    except Exception as e:
+        print(f"[Registry] get_display_status内部错误: {e}")
+        return {}
 
 def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int) -> None:
     """

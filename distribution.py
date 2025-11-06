@@ -479,6 +479,7 @@ class AssignmentDialog(tk.Toplevel):
         self.name_list = name_list
         self.assignment_entries = []  # 存储每行的输入控件
         self.batch_name_var = tk.StringVar()  # 批量指派的姓名
+        self.assignment_successful = False  # 【新增】标记是否成功指派
         
         self.setup_ui()
     
@@ -730,6 +731,7 @@ class AssignmentDialog(tk.Toplevel):
                 messagebox.showinfo("指派结果", msg, parent=self)
                 
                 if not failed_tasks:
+                    self.assignment_successful = True  # 【新增】标记成功
                     self.destroy()
             else:
                 messagebox.showerror("失败", "所有任务指派失败，请检查文件是否被占用", parent=self)
