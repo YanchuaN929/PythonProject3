@@ -374,11 +374,7 @@ def process_target_file(file_path, current_datetime):
     # 计算最终结果：满足处理1、处理2、处理3，但排除处理4
     final_rows = process1_rows & process2_rows & process3_rows - process4_rows
     
-    print(f"调试各步骤 - 处理1符合条件: {len(process1_rows)} 行 {sorted(process1_rows)}")
-    print(f"调试各步骤 - 处理2符合条件: {len(process2_rows)} 行 {sorted(process2_rows)}")
-    print(f"调试各步骤 - 处理3符合条件: {len(process3_rows)} 行 {sorted(process3_rows)}") 
-    print(f"调试各步骤 - 处理4需排除: {len(process4_rows)} 行 {sorted(process4_rows)}")
-    print(f"调试各步骤 - 最终完成处理数据（原始筛选）: {len(final_rows)} 行 {sorted(final_rows)}")
+    print(f"筛选统计 - P1:{len(process1_rows)}行 P2:{len(process2_rows)}行 P3:{len(process3_rows)}行 P4(排除):{len(process4_rows)}行 → 结果:{len(final_rows)}行")
     
     # 【新增】Registry查询：添加M列已填充但待确认的任务
     print(f"\n========== [Registry] 开始查询待审查任务 ==========")
@@ -442,6 +438,9 @@ def process_target_file(file_path, current_datetime):
         
         print(f"[Registry] M列已填充任务: {filled_count}个")
         
+        # 初始化pending_rows
+        pending_rows = set()
+        
         # 【批量查询】一次性查询所有M列已填充的任务
         if filled_tasks:
             task_keys_only = [task[1] for task in filled_tasks]
@@ -453,7 +452,6 @@ def process_target_file(file_path, current_datetime):
             print(f"[Registry] 批量查询完成，返回{len(status_map)}个结果")
             
             # 检查哪些任务有display_status
-            pending_rows = set()
             for idx, task_key in filled_tasks:
                 tid = make_task_id(
                     task_key['file_type'],
@@ -481,7 +479,6 @@ def process_target_file(file_path, current_datetime):
         traceback.print_exc()
     
     print(f"========== [Registry] 查询完成 ==========\n")
-    print(f"调试各步骤 - 最终完成处理数据（含待确认）: {len(final_rows)} 行 {sorted(final_rows)}")
     
     # 记录到监控器
     try:
@@ -502,19 +499,12 @@ def process_target_file(file_path, current_datetime):
     
     # 获取最终结果数据（排除第一行标题行）
     final_indices = [i for i in final_rows if i > 0]  # 排除第一行
-    print(f"调试 - final_rows(pandas索引): {sorted(final_rows)}")
-    print(f"调试 - final_indices(排除表头后): {sorted(final_indices)}")
     
     result_df = df.iloc[final_indices].copy()
     
     # 添加行号信息 - 修正行号计算以匹配用户期望
-    # 用户反馈：筛选出3、5、6行，但程序生成2、4、5行，需要+1修正
-    excel_row_numbers = [i + 2 for i in final_indices]  # pandas索引+2 = 用户期望的Excel行号
-    print(f"调试 - pandas索引final_indices: {sorted(final_indices)}")
-    print(f"调试 - 修正后的Excel行号(+2): {sorted(excel_row_numbers)}")
-    
+    excel_row_numbers = [i + 2 for i in final_indices]  # pandas索引+2 = Excel行号
     result_df['原始行号'] = excel_row_numbers
-    print(f"调试 - 最终使用的Excel行号: {sorted(excel_row_numbers)}")
     # 新增“科室”列（基于H列：25C1/25C2/25C3）
     try:
         department_values = []
@@ -824,17 +814,12 @@ def execute_process3(df):
         a_value = a_column.iloc[idx]
         m_value = m_column.iloc[idx]
         
-        # 添加调试信息
-        if idx <= 5:
-            print(f"处理3调试：检查第{idx+1}行 - A列: '{a_value}', M列: '{m_value}'")
-        
         # 检查A列不为空且M列为空
         a_not_empty = not (pd.isna(a_value) or str(a_value).strip() == "")
         m_is_empty = pd.isna(m_value) or str(m_value).strip() == ""
         
         if a_not_empty and m_is_empty:
             result_rows.add(idx)
-            print(f"处理3：第{idx+1}行符合条件 - A列: '{a_value}', M列: 空值")
     
     print(f"处理3完成（原始筛选）：共找到 {len(result_rows)} 行符合M列空值且A列非空条件")
     
