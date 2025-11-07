@@ -111,7 +111,10 @@ def test_status_display_for_completed_tasks(temp_db_path):
         'department': '测试部门',
         'role': '设计人员',
         'assigned_by': '王工（1818接口工程师）',
-        'display_status': '待完成'
+        'responsible_person': '张三',  # 添加责任人
+        'display_status': '待完成',
+        'interface_time': '2025.11.10',
+        '_completed_col_value': ''  # M列为空
     }
     upsert_task(db_path, wal, key, fields, now)
     
@@ -119,8 +122,12 @@ def test_status_display_for_completed_tasks(temp_db_path):
     from registry.service import mark_completed
     mark_completed(db_path, wal, key, now)
     
-    # 更新display_status为"待指派人确认"
-    fields_update = {'display_status': '待指派人确认'}
+    # 更新display_status为"待指派人审查"（新状态文字）
+    fields_update = {
+        'display_status': '待指派人审查',
+        'interface_time': '2025.11.10',  # 时间不变
+        '_completed_col_value': '2025-11-05'  # M列已填充
+    }
     upsert_task(db_path, wal, key, fields_update, now)
     
     # 查询状态
@@ -135,9 +142,10 @@ def test_status_display_for_completed_tasks(temp_db_path):
     )
     
     assert tid in status_map
-    assert '待指派人确认' in status_map[tid] or '待确认' in status_map[tid]
+    # 更新为新的状态文字
+    assert '待指派人审查' in status_map[tid] or '待审查' in status_map[tid]
     assert status_map[tid].startswith('⏳')  # Emoji前缀
-    print("[OK] Completed task status displayed correctly")
+    print(f"[OK] Completed task status displayed correctly: {status_map[tid]}")
 
 
 def test_status_cleared_after_confirmation(temp_db_path):
@@ -196,12 +204,23 @@ def test_role_decoupling(temp_db_path):
     
     # 角色1：设计人员（行2）
     key1 = {**base_key, 'row_index': 2}
-    fields1 = {'role': '设计人员', 'display_status': '待完成'}
+    fields1 = {
+        'role': '设计人员', 
+        'display_status': '待完成',
+        'interface_time': '2025.11.10',
+        '_completed_col_value': ''
+    }
     upsert_task(db_path, wal, key1, fields1, now)
     
     # 角色2：1818接口工程师（行3，虽然接口号相同，但是不同行）
-    key2 = {**base_key, 'row_index': 3}
-    fields2 = {'role': '1818接口工程师', 'display_status': '待确认（可自行确认）'}
+    # 为避免继承，使用不同的接口号
+    key2 = {**base_key, 'interface_id': 'IF-004-ALT', 'row_index': 3}
+    fields2 = {
+        'role': '1818接口工程师', 
+        'display_status': '待确认（可自行确认）',
+        'interface_time': '2025.11.15',
+        '_completed_col_value': ''
+    }
     upsert_task(db_path, wal, key2, fields2, now)
     
     # 查询状态

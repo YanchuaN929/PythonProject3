@@ -192,7 +192,7 @@ class InterfaceInputDialog(tk.Toplevel):
                                     }
                                     
                                     # 查询状态
-                                    status_map = registry_hooks.get_display_status([task_key], current_user_roles=[])
+                                    status_map = registry_hooks.get_display_status([task_key], current_user_roles_str='')
                                     tid = make_task_id(
                                         self.file_type,
                                         self.project_id,

@@ -840,6 +840,50 @@ class WindowManager:
                     current_values[checkbox_col_idx] = "☑" if new_state else "☐"
                     viewer.item(item_id, values=current_values)
                 
+                # 【新增】上级确认逻辑：如果是上级角色且勾选状态从False→True
+                if new_state:  # 勾选操作
+                    user_roles = getattr(self.app, 'user_roles', [])
+                    # 判断是否为上级角色
+                    is_superior = any(keyword in ''.join(user_roles) for keyword in ['所领导', '室主任', '接口工程师'])
+                    
+                    if is_superior:
+                        # 上级勾选 → 触发confirmed逻辑
+                        try:
+                            from registry import hooks as registry_hooks
+                            from registry.util import extract_interface_id, extract_project_id
+                            
+                            # 获取该行的数据
+                            if item_index < len(original_df):
+                                row_data = original_df.iloc[item_index]
+                                
+                                # 提取接口号和项目号
+                                file_type_map = {
+                                    "内部需打开接口": 1,
+                                    "内部需回复接口": 2,
+                                    "外部需打开接口": 3,
+                                    "外部需回复接口": 4,
+                                    "三维提资接口": 5,
+                                    "收发文函": 6
+                                }
+                                file_type = file_type_map.get(tab_name)
+                                
+                                if file_type:
+                                    interface_id = extract_interface_id(row_data, file_type)
+                                    project_id = extract_project_id(row_data, file_type)
+                                    
+                                    if interface_id and project_id:
+                                        registry_hooks.on_confirmed_by_superior(
+                                            file_type=file_type,
+                                            file_path=source_file,
+                                            row_index=original_row,
+                                            user_name=user_name,
+                                            project_id=project_id,
+                                            interface_id=interface_id
+                                        )
+                                        print(f"[Registry] 上级确认：{interface_id}")
+                        except Exception as e:
+                            print(f"[Registry] 上级确认失败（不影响勾选）: {e}")
+                
                 # 【修复】立即刷新显示，确保勾选框状态可见
                 viewer.update_idletasks()
                 

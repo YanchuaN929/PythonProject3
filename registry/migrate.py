@@ -26,6 +26,7 @@ def migrate_database(db_path: str) -> None:
     - display_status
     - confirmed_by
     - responsible_person
+    - business_id（接口号继承功能）
     """
     if not os.path.exists(db_path):
         print("[Migrate] Database not found, skip")
@@ -42,7 +43,8 @@ def migrate_database(db_path: str) -> None:
             ("assigned_at", "TEXT DEFAULT NULL"),
             ("display_status", "TEXT DEFAULT NULL"),
             ("confirmed_by", "TEXT DEFAULT NULL"),
-            ("responsible_person", "TEXT DEFAULT NULL")
+            ("responsible_person", "TEXT DEFAULT NULL"),
+            ("business_id", "TEXT DEFAULT NULL")
         ]
         
         added_count = 0
@@ -60,6 +62,20 @@ def migrate_database(db_path: str) -> None:
         
         if added_count > 0:
             print(f"[Migrate] Done! Added {added_count} columns")
+            
+            # 【新增】为现有任务填充business_id
+            cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE business_id IS NULL")
+            null_count = cursor.fetchone()[0]
+            
+            if null_count > 0:
+                print(f"[Migrate] 填充{null_count}个任务的business_id...")
+                conn.execute("""
+                    UPDATE tasks 
+                    SET business_id = file_type || '|' || project_id || '|' || interface_id
+                    WHERE business_id IS NULL
+                """)
+                conn.commit()
+                print(f"[Migrate] ✓ business_id填充完成")
         else:
             print("[Migrate] Database is up-to-date")
             
@@ -85,7 +101,7 @@ def migrate_if_needed(db_path: str) -> None:
     conn = sqlite3.connect(db_path)
     try:
         # 检查是否缺少新字段
-        if not check_column_exists(conn, "tasks", "display_status"):
+        if not check_column_exists(conn, "tasks", "display_status") or not check_column_exists(conn, "tasks", "business_id"):
             print("[Registry] 检测到旧版本数据库，开始自动迁移...")
             conn.close()
             migrate_database(db_path)

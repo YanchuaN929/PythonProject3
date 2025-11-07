@@ -376,102 +376,84 @@ def process_target_file(file_path, current_datetime):
     
     print(f"筛选统计 - P1:{len(process1_rows)}行 P2:{len(process2_rows)}行 P3:{len(process3_rows)}行 P4(排除):{len(process4_rows)}行 → 结果:{len(final_rows)}行")
     
-    # 【新增】Registry查询：添加M列已填充但待确认的任务
+    # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
     print(f"\n========== [Registry] 开始查询待审查任务 ==========")
     print(f"[Registry] 总行数: {len(df)}, 原始筛选结果: {len(final_rows)}行")
     
     try:
         from registry import hooks as registry_hooks
-        from registry.util import extract_interface_id, extract_project_id, make_task_id
+        from registry.util import extract_interface_id, extract_project_id, make_task_id, make_business_id
+        from registry.db import get_connection
+        from registry.config import load_config
         
-        # 【优化】收集所有M列已填充的行，批量查询Registry
-        checked_count = 0  # 检查的行数
-        filled_count = 0   # M列已填充的行数
-        filled_tasks = []  # M列已填充的任务列表
+        # 【修复】直接查询数据库中有display_status的任务，按business_id匹配
+        # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
+        from registry.hooks import _cfg
+        cfg = _cfg()
+        db_path = cfg.get('registry_db_path')
         
-        for idx in range(len(df)):
-            if idx == 0 or idx in final_rows:  # 跳过表头和已筛选的行
-                continue
+        if db_path and os.path.exists(db_path):
+            conn = get_connection(db_path, True)
             
-            checked_count += 1
+            # 查询该文件类型下所有有display_status的任务
+            cursor = conn.execute("""
+                SELECT interface_id, project_id, display_status, row_index, source_file
+                FROM tasks
+                WHERE file_type = 1
+                  AND display_status IS NOT NULL
+                  AND display_status != ''
+                  AND status != 'confirmed'
+                  AND status != 'archived'
+            """)
             
-            # 检查M列是否已填充（不满足原始筛选条件）
-            m_value = df.iloc[idx, 12] if len(df.columns) > 12 else None
-            m_is_filled = not (pd.isna(m_value) or str(m_value).strip() == "")
+            registry_tasks = cursor.fetchall()
+            print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个待审查任务")
             
-            if not m_is_filled:
-                continue  # M列为空，不需要查询Registry
+            # 在当前Excel中查找这些接口号
+            pending_rows = set()
             
-            filled_count += 1
+            # 【调试】输出前3个数据库任务的接口号
+            if len(registry_tasks) > 0:
+                print(f"[Registry调试] 数据库待审查任务示例:")
+                for i, task in enumerate(registry_tasks[:3]):
+                    print(f"  {i+1}. 接口={task[0][:40]}, 项目={task[1]}, 状态={task[2]}")
             
-            # 收集任务信息
-            try:
-                row_data = df.iloc[idx]
-                interface_id = extract_interface_id(row_data, 1)  # file_type=1
-                project_id = extract_project_id(row_data, 1)
+            for reg_interface_id, reg_project_id, reg_display_status, _, _ in registry_tasks:
+                found = False
+                # 在当前df中查找该接口号
+                for idx in range(len(df)):
+                    if idx == 0 or idx in final_rows:
+                        continue
+                    
+                    try:
+                        row_data = df.iloc[idx]
+                        df_interface_id = extract_interface_id(row_data, 1)
+                        df_project_id = extract_project_id(row_data, 1)
+                        
+                        # 【调试已删除】避免输出过多
+                        
+                        # 按business_id匹配（不考虑source_file和row_index）
+                        if df_interface_id == reg_interface_id and df_project_id == reg_project_id:
+                            pending_rows.add(idx)
+                            print(f"[Registry] ✓ 发现待审查任务：第{idx+2}行 接口{df_interface_id[:30]} 状态:{reg_display_status}")
+                            found = True
+                            break  # 找到就跳出
+                    except Exception as e:
+                        continue
                 
-                if not interface_id or not project_id:
-                    continue
-                
-                # 获取接口时间（K列，索引10）
-                interface_time = ""
-                try:
-                    k_val = df.iloc[idx, 10] if len(df.columns) > 10 else None
-                    parsed = pd.to_datetime(k_val, errors='coerce')
-                    if not pd.isna(parsed):
-                        interface_time = parsed.strftime('%Y.%m.%d')
-                except:
-                    pass
-                
-                task_key = {
-                    'file_type': 1,
-                    'project_id': project_id,
-                    'interface_id': interface_id,
-                    'source_file': os.path.basename(file_path),
-                    'row_index': idx + 2,  # Excel行号
-                    'interface_time': interface_time
-                }
-                
-                filled_tasks.append((idx, task_key))
-            except Exception as e:
-                continue
-        
-        print(f"[Registry] M列已填充任务: {filled_count}个")
-        
-        # 初始化pending_rows
-        pending_rows = set()
-        
-        # 【批量查询】一次性查询所有M列已填充的任务
-        if filled_tasks:
-            task_keys_only = [task[1] for task in filled_tasks]
-            print(f"[Registry] 批量查询{len(task_keys_only)}个任务的状态...")
+                # 【调试】如果遍历完所有行都没找到
+                if not found:
+                    print(f"[Registry警告] 数据库任务未在Excel中找到: 接口={reg_interface_id[:40]}")
             
-            # 批量查询（只调用一次get_display_status）
-            status_map = registry_hooks.get_display_status(task_keys_only, current_user_roles=[])
-            
-            print(f"[Registry] 批量查询完成，返回{len(status_map)}个结果")
-            
-            # 检查哪些任务有display_status
-            for idx, task_key in filled_tasks:
-                tid = make_task_id(
-                    task_key['file_type'],
-                    task_key['project_id'],
-                    task_key['interface_id'],
-                    task_key['source_file'],
-                    task_key['row_index']
-                )
-                
-                if tid in status_map and status_map[tid]:
-                    pending_rows.add(idx)
-                    print(f"[Registry] ✓ 发现待审查任务：第{task_key['row_index']}行 - 状态：{status_map[tid]}")
+            print(f"\n[Registry] 统计: 数据库中{len(registry_tasks)}个待审查，在Excel中匹配到{len(pending_rows)}行")
         
-        print(f"\n[Registry] 统计: 检查了{checked_count}行, M列已填充{filled_count}行, 找到待审查任务{len(pending_rows)}行")
-        
-        if pending_rows:
-            final_rows = final_rows | pending_rows
-            print(f"[Registry] ✓ 合并{len(pending_rows)}条待审查任务到结果")
+            if pending_rows:
+                final_rows = final_rows | pending_rows
+                print(f"[Registry] ✓ 合并{len(pending_rows)}条待审查任务到结果")
+            else:
+                print(f"[Registry] 未找到待审查任务")
         else:
-            print(f"[Registry] 未找到待审查任务")
+            print(f"[Registry] 数据库不存在或未配置，跳过待审查任务查询")
         
     except Exception as e:
         print(f"[Registry] ❌ 查询待审查任务失败（不影响主流程）: {e}")
@@ -605,14 +587,9 @@ def execute_process1(df):
             
         cell_str = str(cell_value) if cell_value is not None else ""
         
-        # 添加调试信息，确保处理每一行数据
-        if idx <= 5:  # 只显示前5行的调试信息，避免输出过多
-            print(f"处理1调试：检查第{idx+1}行H列数据: '{cell_str}'")
-        
         for target in target_values:
             if target in cell_str:
                 result_rows.add(idx)
-                print(f"处理1：第{idx+1}行H列包含'{target}': {cell_str}")
                 break
     
     print(f"处理1完成：共找到 {len(result_rows)} 行符合H列筛选条件")
@@ -709,13 +686,7 @@ def execute_process2(df, current_datetime):
             continue
         
         if pd.isna(cell_value):
-            if idx <= 5:  # 调试信息
-                print(f"处理2调试：第{idx+1}行K列数据为空，跳过")
             continue
-        
-        # 添加调试信息
-        if idx <= 5:
-            print(f"处理2调试：检查第{idx+1}行K列数据: '{cell_value}'")
         
         try:
             # 尝试解析日期，支持多种格式
@@ -743,7 +714,6 @@ def execute_process2(df, current_datetime):
             # 检查日期是否在筛选范围内
             if start_date <= cell_date <= end_date:
                 result_rows.add(idx)
-                print(f"处理2：第{idx+1}行K列日期符合条件: {cell_date.strftime('%Y-%m-%d')}")
                 
         except Exception as e:
             print(f"处理2：第{idx+1}行K列日期解析失败: {cell_value}, 错误: {e}")
@@ -876,13 +846,8 @@ def execute_process4(df):
             
         cell_str = str(cell_value) if cell_value is not None else ""
         
-        # 添加调试信息
-        if idx <= 5:
-            print(f"处理4调试：检查第{idx+1}行B列数据: '{cell_str}'")
-        
         if "作废" in cell_str:
             result_rows.add(idx)
-            print(f"处理4：第{idx+1}行B列包含'作废': {cell_str}")
     
     print(f"处理4完成：共找到 {len(result_rows)} 行B列包含作废标记（需要排除）")
     try:
@@ -1126,56 +1091,57 @@ def process_target_file2(file_path, current_datetime, project_id=None):
     
     print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
     
-    # 【新增】Registry查询：添加N列已填充但待确认的任务
+    # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
+    print(f"\n========== [Registry] 开始查询待审查任务（文件类型2） ==========")
     try:
-        from registry import hooks as registry_hooks
         from registry.util import extract_interface_id, extract_project_id
+        from registry.db import get_connection
+        from registry.config import load_config
         
-        # 遍历所有不在final_rows中的行，查询Registry
+        # 【修复】直接查询数据库中有display_status的任务，按business_id匹配
+        # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
+        from registry.hooks import _cfg
+        cfg = _cfg()
+        db_path = cfg.get('registry_db_path')
+        
         pending_rows = set()
-        for idx in range(len(df)):
-            if idx == 0 or idx in final_rows:  # 跳过表头和已筛选的行
-                continue
+        
+        if db_path and os.path.exists(db_path):
+            conn = get_connection(db_path, True)
             
-            # 检查N列是否已填充（execute2_process4筛选条件）
-            n_value = df.iloc[idx, 13] if len(df.columns) > 13 else None
-            n_is_filled = not (pd.isna(n_value) or str(n_value).strip() == "")
+            cursor = conn.execute("""
+                SELECT interface_id, project_id, display_status
+                FROM tasks
+                WHERE file_type = 2
+                  AND display_status IS NOT NULL
+                  AND display_status != ''
+                  AND status != 'confirmed'
+                  AND status != 'archived'
+            """)
             
-            if not n_is_filled:
-                continue  # N列为空，不需要查询Registry
+            registry_tasks = cursor.fetchall()
+            print(f"[Registry] 数据库中有{len(registry_tasks)}个待审查任务")
             
-            # 查询Registry
-            try:
-                row_data = df.iloc[idx]
-                interface_id = extract_interface_id(row_data, 2)  # file_type=2
-                proj_id = extract_project_id(row_data, 2) or project_id
-                
-                if not interface_id or not proj_id:
-                    continue
-                
-                task_key = {
-                    'file_type': 2,
-                    'project_id': proj_id,
-                    'interface_id': interface_id,
-                    'source_file': os.path.basename(file_path),
-                    'row_index': idx + 2
-                }
-                
-                # 查询display_status
-                status_map = registry_hooks.get_display_status([task_key])
-                from registry.util import make_task_id
-                tid = make_task_id(2, proj_id, interface_id, os.path.basename(file_path), idx + 2)
-                
-                # 如果有display_status（待确认），添加到结果
-                if tid in status_map and status_map[tid]:
-                    pending_rows.add(idx)
-                    print(f"[Registry] 发现待确认任务：第{idx+2}行（N列已填充）- 状态：{status_map[tid]}")
-            except Exception as e:
-                continue
+            for reg_interface_id, reg_project_id, reg_display_status in registry_tasks:
+                for idx in range(len(df)):
+                    if idx == 0 or idx in final_rows:
+                        continue
+                    
+                    try:
+                        row_data = df.iloc[idx]
+                        df_interface_id = extract_interface_id(row_data, 2)
+                        df_project_id = extract_project_id(row_data, 2)
+                        
+                        if df_interface_id == reg_interface_id and df_project_id == reg_project_id:
+                            pending_rows.add(idx)
+                            print(f"[Registry] ✓ 发现待审查任务：第{idx+2}行 接口{df_interface_id[:30]}")
+                            break
+                    except:
+                        continue
         
         if pending_rows:
             final_rows = final_rows | pending_rows
-            print(f"[Registry] 合并{len(pending_rows)}条待确认任务到结果")
+            print(f"[Registry] ✓ 合并{len(pending_rows)}条待审查任务")
         
     except Exception as e:
         print(f"[Registry] 查询待确认任务失败（不影响主流程）: {e}")
@@ -1600,63 +1566,64 @@ def process_target_file3(file_path, current_datetime):
     
     print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
     
-    # 【新增】Registry查询：添加Q列或T列已填充但待确认的任务
+    # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
+    print(f"\n========== [Registry] 开始查询待审查任务（文件类型3） ==========")
     try:
-        from registry import hooks as registry_hooks
         from registry.util import extract_interface_id, extract_project_id
+        from registry.db import get_connection
+        from registry.config import load_config
         
-        # 遍历所有不在final_rows中的行，查询Registry
+        # 【修复】直接查询数据库中有display_status的任务，按business_id匹配
+        # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
+        from registry.hooks import _cfg
+        cfg = _cfg()
+        db_path = cfg.get('registry_db_path')
+        
         pending_rows = set()
-        for idx in range(len(df)):
-            if idx == 0 or idx in final_rows:  # 跳过表头和已筛选的行
-                continue
+        
+        if db_path and os.path.exists(db_path):
+            conn = get_connection(db_path, True)
             
-            # 检查Q列或T列是否已填充（关键筛选列）
-            q_value = df.iloc[idx, 16] if len(df.columns) > 16 else None
-            t_value = df.iloc[idx, 19] if len(df.columns) > 19 else None
-            q_is_filled = not (pd.isna(q_value) or str(q_value).strip() == "")
-            t_is_filled = not (pd.isna(t_value) or str(t_value).strip() == "")
+            cursor = conn.execute("""
+                SELECT interface_id, project_id, display_status
+                FROM tasks
+                WHERE file_type = 3
+                  AND display_status IS NOT NULL
+                  AND display_status != ''
+                  AND status != 'confirmed'
+                  AND status != 'archived'
+            """)
             
-            if not q_is_filled and not t_is_filled:
-                continue  # Q列和T列都为空，不需要查询Registry
+            registry_tasks = cursor.fetchall()
+            print(f"[Registry] 数据库中有{len(registry_tasks)}个待审查任务")
             
-            # 查询Registry
-            try:
-                row_data = df.iloc[idx]
-                interface_id = extract_interface_id(row_data, 3)  # file_type=3
-                project_id = extract_project_id(row_data, 3)
-                
-                if not interface_id or not project_id:
-                    continue
-                
-                task_key = {
-                    'file_type': 3,
-                    'project_id': project_id,
-                    'interface_id': interface_id,
-                    'source_file': os.path.basename(file_path),
-                    'row_index': idx + 2
-                }
-                
-                # 查询display_status
-                status_map = registry_hooks.get_display_status([task_key])
-                from registry.util import make_task_id
-                tid = make_task_id(3, project_id, interface_id, os.path.basename(file_path), idx + 2)
-                
-                # 如果有display_status（待确认），添加到结果
-                if tid in status_map and status_map[tid]:
-                    pending_rows.add(idx)
-                    print(f"[Registry] 发现待确认任务：第{idx+2}行 - 状态：{status_map[tid]}")
-            except Exception as e:
-                continue
+            for reg_interface_id, reg_project_id, reg_display_status in registry_tasks:
+                for idx in range(len(df)):
+                    if idx == 0 or idx in final_rows:
+                        continue
+                    
+                    try:
+                        row_data = df.iloc[idx]
+                        df_interface_id = extract_interface_id(row_data, 3)
+                        df_project_id = extract_project_id(row_data, 3)
+                        
+                        if df_interface_id == reg_interface_id and df_project_id == reg_project_id:
+                            pending_rows.add(idx)
+                            print(f"[Registry] ✓ 发现待审查任务：第{idx+2}行 接口{df_interface_id[:30]}")
+                            break
+                    except:
+                        continue
         
         if pending_rows:
             final_rows = final_rows | pending_rows
-            print(f"[Registry] 合并{len(pending_rows)}条待确认任务到结果")
+            print(f"[Registry] ✓ 合并{len(pending_rows)}条待审查任务")
         
     except Exception as e:
-        print(f"[Registry] 查询待确认任务失败（不影响主流程）: {e}")
+        print(f"[Registry] 查询待审查任务失败: {e}")
+        import traceback
+        traceback.print_exc()
     
-    print(f"最终完成处理数据（含待确认）: {len(final_rows)} 行")
+    print(f"最终完成处理数据（含待审查）: {len(final_rows)} 行")
     
     # 日志记录
     try:
@@ -2445,59 +2412,47 @@ def process_target_file4(file_path, current_datetime):
     
     print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
     
-    # 【新增】Registry查询：添加V列已填充但待确认的任务
+    # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
     try:
-        from registry import hooks as registry_hooks
         from registry.util import extract_interface_id, extract_project_id
+        from registry.db import get_connection
+        from registry.hooks import _cfg
         
-        # 遍历所有不在final_rows中的行，查询Registry
+        # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
+        cfg = _cfg()
+        db_path = cfg.get('registry_db_path')
         pending_rows = set()
-        for idx in range(len(df)):
-            if idx == 0 or idx in final_rows:  # 跳过表头和已筛选的行
-                continue
+        
+        if db_path and os.path.exists(db_path):
+            conn = get_connection(db_path, True)
+            cursor = conn.execute("""
+                SELECT interface_id, project_id, display_status
+                FROM tasks
+                WHERE file_type = 4
+                  AND display_status IS NOT NULL AND display_status != ''
+                  AND status != 'confirmed' AND status != 'archived'
+            """)
+            registry_tasks = cursor.fetchall()
             
-            # 检查V列是否已填充（execute4_process4筛选条件）
-            v_value = df.iloc[idx, 21] if len(df.columns) > 21 else None
-            v_is_filled = not (pd.isna(v_value) or str(v_value).strip() == "")
-            
-            if not v_is_filled:
-                continue  # V列为空，不需要查询Registry
-            
-            # 查询Registry
-            try:
-                row_data = df.iloc[idx]
-                interface_id = extract_interface_id(row_data, 4)  # file_type=4
-                project_id = extract_project_id(row_data, 4)
-                
-                if not interface_id or not project_id:
-                    continue
-                
-                task_key = {
-                    'file_type': 4,
-                    'project_id': project_id,
-                    'interface_id': interface_id,
-                    'source_file': os.path.basename(file_path),
-                    'row_index': idx + 2
-                }
-                
-                # 查询display_status
-                status_map = registry_hooks.get_display_status([task_key])
-                from registry.util import make_task_id
-                tid = make_task_id(4, project_id, interface_id, os.path.basename(file_path), idx + 2)
-                
-                # 如果有display_status（待确认），添加到结果
-                if tid in status_map and status_map[tid]:
-                    pending_rows.add(idx)
-                    print(f"[Registry] 发现待确认任务：第{idx+2}行（V列已填充）- 状态：{status_map[tid]}")
-            except Exception as e:
-                continue
+            for reg_interface_id, reg_project_id, _ in registry_tasks:
+                for idx in range(len(df)):
+                    if idx == 0 or idx in final_rows:
+                        continue
+                    try:
+                        row_data = df.iloc[idx]
+                        df_interface_id = extract_interface_id(row_data, 4)
+                        df_project_id = extract_project_id(row_data, 4)
+                        if df_interface_id == reg_interface_id and df_project_id == reg_project_id:
+                            pending_rows.add(idx)
+                            break
+                    except:
+                        continue
         
         if pending_rows:
             final_rows = final_rows | pending_rows
-            print(f"[Registry] 合并{len(pending_rows)}条待确认任务到结果")
         
     except Exception as e:
-        print(f"[Registry] 查询待确认任务失败（不影响主流程）: {e}")
+        print(f"[Registry] 查询待审查任务失败: {e}")
     
     print(f"最终完成处理数据（含待确认）: {len(final_rows)} 行")
     
@@ -3103,59 +3058,47 @@ def process_target_file5(file_path, current_datetime):
     
     print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
     
-    # 【新增】Registry查询：添加N列已填充但待确认的任务
+    # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
     try:
-        from registry import hooks as registry_hooks
         from registry.util import extract_interface_id, extract_project_id
+        from registry.db import get_connection
+        from registry.hooks import _cfg
         
-        # 遍历所有不在final_rows中的行，查询Registry
+        # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
+        cfg = _cfg()
+        db_path = cfg.get('registry_db_path')
         pending_rows = set()
-        for idx in range(len(df)):
-            if idx == 0 or idx in final_rows:  # 跳过表头和已筛选的行
-                continue
+        
+        if db_path and os.path.exists(db_path):
+            conn = get_connection(db_path, True)
+            cursor = conn.execute("""
+                SELECT interface_id, project_id, display_status
+                FROM tasks
+                WHERE file_type = 5
+                  AND display_status IS NOT NULL AND display_status != ''
+                  AND status != 'confirmed' AND status != 'archived'
+            """)
+            registry_tasks = cursor.fetchall()
             
-            # 检查N列是否已填充（execute5_process3筛选条件）
-            n_value = df.iloc[idx, 13] if len(df.columns) > 13 else None
-            n_is_filled = not (pd.isna(n_value) or str(n_value).strip() == "")
-            
-            if not n_is_filled:
-                continue  # N列为空，不需要查询Registry
-            
-            # 查询Registry
-            try:
-                row_data = df.iloc[idx]
-                interface_id = extract_interface_id(row_data, 5)  # file_type=5
-                project_id = extract_project_id(row_data, 5)
-                
-                if not interface_id or not project_id:
-                    continue
-                
-                task_key = {
-                    'file_type': 5,
-                    'project_id': project_id,
-                    'interface_id': interface_id,
-                    'source_file': os.path.basename(file_path),
-                    'row_index': idx + 2
-                }
-                
-                # 查询display_status
-                status_map = registry_hooks.get_display_status([task_key])
-                from registry.util import make_task_id
-                tid = make_task_id(5, project_id, interface_id, os.path.basename(file_path), idx + 2)
-                
-                # 如果有display_status（待确认），添加到结果
-                if tid in status_map and status_map[tid]:
-                    pending_rows.add(idx)
-                    print(f"[Registry] 发现待确认任务：第{idx+2}行（N列已填充）- 状态：{status_map[tid]}")
-            except Exception as e:
-                continue
+            for reg_interface_id, reg_project_id, _ in registry_tasks:
+                for idx in range(len(df)):
+                    if idx == 0 or idx in final_rows:
+                        continue
+                    try:
+                        row_data = df.iloc[idx]
+                        df_interface_id = extract_interface_id(row_data, 5)
+                        df_project_id = extract_project_id(row_data, 5)
+                        if df_interface_id == reg_interface_id and df_project_id == reg_project_id:
+                            pending_rows.add(idx)
+                            break
+                    except:
+                        continue
         
         if pending_rows:
             final_rows = final_rows | pending_rows
-            print(f"[Registry] 合并{len(pending_rows)}条待确认任务到结果")
         
     except Exception as e:
-        print(f"[Registry] 查询待确认任务失败（不影响主流程）: {e}")
+        print(f"[Registry] 查询待审查任务失败: {e}")
     
     print(f"最终完成处理数据（含待确认）: {len(final_rows)} 行")
     
@@ -3601,60 +3544,47 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
         final_rows = p1 & p_i_not_empty & p3 & p4
         print(f"最终完成处理数据（原始筛选，普通模式）: {len(final_rows)} 行")
     
-    # 【新增】Registry查询：添加M列已改变但待确认的任务
+    # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
     try:
-        from registry import hooks as registry_hooks
         from registry.util import extract_interface_id, extract_project_id
+        from registry.db import get_connection
+        from registry.hooks import _cfg
         
-        # 遍历所有不在final_rows中的行，查询Registry
+        # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
+        cfg = _cfg()
+        db_path = cfg.get('registry_db_path')
         pending_rows = set()
-        for idx in range(len(df)):
-            if idx == 0 or idx in final_rows:  # 跳过表头和已筛选的行
-                continue
+        
+        if db_path and os.path.exists(db_path):
+            conn = get_connection(db_path, True)
+            cursor = conn.execute("""
+                SELECT interface_id, project_id, display_status
+                FROM tasks
+                WHERE file_type = 6
+                  AND display_status IS NOT NULL AND display_status != ''
+                  AND status != 'confirmed' AND status != 'archived'
+            """)
+            registry_tasks = cursor.fetchall()
             
-            # 检查M列是否不再是"尚未回复"/"超期未回复"（execute6_process4筛选条件）
-            m_value = df.iloc[idx, 12] if len(df.columns) > 12 else None
-            m_str = str(m_value).strip() if m_value else ""
-            m_is_replied = m_str not in ["尚未回复", "超期未回复", ""]
-            
-            if not m_is_replied:
-                continue  # M列仍是待回复状态，不需要查询Registry
-            
-            # 查询Registry
-            try:
-                row_data = df.iloc[idx]
-                interface_id = extract_interface_id(row_data, 6)  # file_type=6
-                project_id = extract_project_id(row_data, 6)
-                
-                if not interface_id or not project_id:
-                    continue
-                
-                task_key = {
-                    'file_type': 6,
-                    'project_id': project_id,
-                    'interface_id': interface_id,
-                    'source_file': os.path.basename(file_path),
-                    'row_index': idx + 2
-                }
-                
-                # 查询display_status
-                status_map = registry_hooks.get_display_status([task_key])
-                from registry.util import make_task_id
-                tid = make_task_id(6, project_id, interface_id, os.path.basename(file_path), idx + 2)
-                
-                # 如果有display_status（待确认），添加到结果
-                if tid in status_map and status_map[tid]:
-                    pending_rows.add(idx)
-                    print(f"[Registry] 发现待确认任务：第{idx+2}行（M列已回复）- 状态：{status_map[tid]}")
-            except Exception as e:
-                continue
+            for reg_interface_id, reg_project_id, _ in registry_tasks:
+                for idx in range(len(df)):
+                    if idx == 0 or idx in final_rows:
+                        continue
+                    try:
+                        row_data = df.iloc[idx]
+                        df_interface_id = extract_interface_id(row_data, 6)
+                        df_project_id = extract_project_id(row_data, 6)
+                        if df_interface_id == reg_interface_id and df_project_id == reg_project_id:
+                            pending_rows.add(idx)
+                            break
+                    except:
+                        continue
         
         if pending_rows:
             final_rows = final_rows | pending_rows
-            print(f"[Registry] 合并{len(pending_rows)}条待确认任务到结果")
         
     except Exception as e:
-        print(f"[Registry] 查询待确认任务失败（不影响主流程）: {e}")
+        print(f"[Registry] 查询待审查任务失败: {e}")
     
     print(f"最终完成处理数据（含待确认）: {len(final_rows)} 行")
     

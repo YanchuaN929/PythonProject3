@@ -874,9 +874,8 @@ class ExcelProcessorApp:
                 excel_row_numbers = list(self.processing_results5['原始行号'])
                 self.display_excel_data_with_original_rows(self.tab5_viewer, self.processing_results5, "三维提资接口", excel_row_numbers)
             elif self.has_processed_results5:
+                # 【修复】处理后无数据，显示空提示，不显示原始数据
                 self.show_empty_message(self.tab5_viewer, "无三维提资接口")
-            elif self.file5_data is not None:
-                self.display_excel_data(self.tab5_viewer, self.file5_data, "三维提资接口")
         elif selected_tab == 5 and getattr(self, 'target_files6', None):  # 收发文函
             if self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
                 # 不要drop原始行号列，因为需要它来加载勾选状态
@@ -2578,9 +2577,7 @@ class ExcelProcessorApp:
                     else:
                         # 处理后无数据
                         self.show_empty_message(self.tab5_viewer, "无三维提资接口")
-                elif self.file5_data is not None:
-                    # 未处理：显示原始数据
-                    self.display_excel_data(self.tab5_viewer, self.file5_data, "三维提资接口")
+                # 【修复】删除else分支，未处理时不显示任何内容，等待用户点击"开始处理"
             elif current_tab == 5 and getattr(self, 'target_files6', None):  # 收发文函
                 # 【修复】区分"已处理"和"未处理"状态
                 if self.has_processed_results6:
@@ -3422,6 +3419,14 @@ class ExcelProcessorApp:
                                 pass
                 
                 def update_display():
+                    # 【新增】执行归档逻辑（标记消失任务，归档超期任务）
+                    try:
+                        from registry import hooks as registry_hooks
+                        batch_tag = self.current_datetime.strftime('%Y%m%d_%H%M%S')
+                        registry_hooks.on_scan_finalize(batch_tag=batch_tag)
+                    except Exception as e:
+                        print(f"[Registry] 归档逻辑执行失败（不影响主流程）: {e}")
+                    
                     # 统一处理结果显示和弹窗（批量处理版本）
                     processed_count = 0
                     completion_messages = []

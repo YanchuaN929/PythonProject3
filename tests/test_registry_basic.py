@@ -86,8 +86,8 @@ class TestRegistryBasic:
         
         assert task is not None
         # 列顺序：id, file_type, project_id, interface_id, source_file, row_index, 
-        #        department, interface_time, role, status, ...
-        assert task[9] == Status.OPEN  # status列（索引9）
+        #        business_id, department, interface_time, role, status, ...
+        assert task[10] == Status.OPEN  # status列（索引10，新增了business_id字段）
         print(f"任务创建成功: {task[0][:8]}...")
         
         # 第二次更新任务（模拟再次扫描）

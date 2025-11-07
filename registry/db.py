@@ -85,6 +85,7 @@ def init_db(conn: sqlite3.Connection) -> None:
             interface_id TEXT NOT NULL,
             source_file TEXT NOT NULL,
             row_index INTEGER NOT NULL,
+            business_id TEXT DEFAULT NULL,
             department TEXT DEFAULT '',
             interface_time TEXT DEFAULT '',
             role TEXT DEFAULT '',
@@ -109,6 +110,7 @@ def init_db(conn: sqlite3.Connection) -> None:
     cur.execute("CREATE INDEX IF NOT EXISTS idx_tasks_ft_pid ON tasks(file_type, project_id);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_tasks_last_seen ON tasks(last_seen_at);")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_tasks_business_id ON tasks(business_id);")
     
     # 创建events表
     cur.execute(

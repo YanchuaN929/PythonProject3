@@ -34,6 +34,25 @@ def make_task_id(file_type: int, project_id: str, interface_id: str, source_file
     # 生成SHA1哈希
     return hashlib.sha1(key_str.encode('utf-8')).hexdigest()
 
+def make_business_id(file_type: int, project_id: str, interface_id: str) -> str:
+    """
+    生成业务ID（用于跨文件匹配接口）
+    
+    业务ID不包含source_file和row_index，只基于业务含义：
+    - file_type: 文件类型
+    - project_id: 项目号
+    - interface_id: 接口号
+    
+    参数:
+        file_type: 文件类型（1-6）
+        project_id: 项目号
+        interface_id: 接口号
+        
+    返回:
+        业务ID字符串，格式：file_type|project_id|interface_id
+    """
+    return f"{file_type}|{project_id}|{interface_id}"
+
 def extract_interface_id(df_row: pd.Series, file_type: int) -> str:
     """
     从DataFrame行中提取接口号
@@ -119,6 +138,56 @@ def extract_department(df_row: pd.Series) -> str:
     """
     if "部门" in df_row.index:
         return str(df_row["部门"]).strip()
+    return ""
+
+def extract_completed_column_value(df_row: pd.Series, file_type: int) -> str:
+    """
+    从DataFrame行中提取完成列的值（用于判断是否已填写回文单号）
+    
+    根据文件类型映射对应的列：
+    - 文件1: M列（索引12）
+    - 文件2: N列（索引13）
+    - 文件3: Q列（索引16）或T列（索引19）
+    - 文件4: V列（索引21）
+    - 文件5: N列（索引13）
+    - 文件6: J列（索引9）
+    
+    参数:
+        df_row: DataFrame的一行
+        file_type: 文件类型（1-6）
+        
+    返回:
+        列值字符串（去除前后空格），如果为空返回空字符串
+    """
+    col_map = {
+        1: 12,   # M列
+        2: 13,   # N列
+        3: (16, 19),  # Q列或T列（返回两者中任一有值的）
+        4: 21,   # V列
+        5: 13,   # N列
+        6: 9,    # J列
+    }
+    
+    col_idx = col_map.get(file_type)
+    if col_idx is None:
+        return ""
+    
+    # 文件3特殊处理（Q列或T列）
+    if file_type == 3 and isinstance(col_idx, tuple):
+        q_val = df_row.iloc[col_idx[0]] if col_idx[0] < len(df_row) else None
+        t_val = df_row.iloc[col_idx[1]] if col_idx[1] < len(df_row) else None
+        
+        q_str = str(q_val).strip() if pd.notna(q_val) else ""
+        t_str = str(t_val).strip() if pd.notna(t_val) else ""
+        
+        # 返回非空的那个，都非空则返回Q列
+        return q_str if q_str else t_str
+    
+    # 其他文件类型
+    if col_idx < len(df_row):
+        val = df_row.iloc[col_idx]
+        return str(val).strip() if pd.notna(val) else ""
+    
     return ""
 
 def extract_interface_time(df_row: pd.Series) -> str:
@@ -221,12 +290,13 @@ def extract_role(value: str) -> str:
     match = re.search(r'\(([^)]+)\)$', value)
     return match.group(1) if match else ""
 
-def build_task_fields_from_row(df_row: pd.Series) -> Dict[str, Any]:
+def build_task_fields_from_row(df_row: pd.Series, file_type: int = None) -> Dict[str, Any]:
     """
     从DataFrame行提取任务附加字段
     
     参数:
         df_row: DataFrame的一行
+        file_type: 文件类型（1-6），用于提取完成列值
         
     返回:
         包含department, interface_time, role等字段的字典
@@ -258,6 +328,11 @@ def build_task_fields_from_row(df_row: pd.Series) -> Dict[str, Any]:
     # 只有当Excel中有责任人时才添加此字段
     if responsible_person:
         fields['responsible_person'] = responsible_person
+    
+    # 【新增】提取完成列的值（用于状态重置判断）
+    if file_type:
+        completed_val = extract_completed_column_value(df_row, file_type)
+        fields['_completed_col_value'] = completed_val
     
     return fields
 

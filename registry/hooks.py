@@ -63,6 +63,8 @@ def get_display_status(task_keys: List[Dict[str, Any]], current_user_roles_str: 
         
     except Exception as e:
         print(f"[Registry] get_display_status 失败: {e}")
+        import traceback
+        traceback.print_exc()
         return {}
 
 def _cfg():
@@ -108,7 +110,7 @@ def on_process_done(
         tasks_data = []
         for _, row in result_df.iterrows():
             key = build_task_key_from_row(row, file_type, source_file)
-            fields = build_task_fields_from_row(row)
+            fields = build_task_fields_from_row(row, file_type)  # 【修改】传递file_type
             tasks_data.append({'key': key, 'fields': fields})
         
         # 批量upsert
@@ -319,13 +321,31 @@ def on_response_written(
         else:
             display_status = '待审查'
         
+        print(f"[Registry] 回文单号写入 - 设置display_status={display_status}, has_assignor={has_assignor}")
+        
+        # 【修复】查询旧任务的interface_time，避免误判为时间变化
+        old_interface_time = ''
+        try:
+            cursor = conn.execute("SELECT interface_time FROM tasks WHERE id=?", (tid,))
+            row = cursor.fetchone()
+            if row and row[0]:
+                old_interface_time = row[0]
+        except:
+            pass
+        
         # 如果提供了角色信息，先更新任务的role字段和display_status
-        fields_to_update = {'display_status': display_status}
+        fields_to_update = {
+            'display_status': display_status,
+            'interface_time': old_interface_time,  # 【新增】保持时间不变，避免误判为时间变化
+            '_completed_col_value': '有值'  # 【新增】标记完成列已填充
+        }
         if role:
             fields_to_update['role'] = role
         
         from .service import upsert_task
         upsert_task(db_path, wal, key, fields_to_update, now)
+        
+        print(f"[Registry] upsert_task完成，应该已设置display_status={display_status}")
         
         # 更新状态为completed
         mark_completed(db_path, wal, key, now)
@@ -439,10 +459,11 @@ def on_scan_finalize(
         wal = bool(cfg.get('registry_wal', True))
         days = int(missing_keep_days if missing_keep_days is not None else int(cfg.get('registry_missing_keep_days', 7)))
         
-        # 阶段1：暂不实现完整的finalize_scan逻辑
-        # finalize_scan(db_path, wal, now, days)
+        # 执行归档逻辑
+        from .service import finalize_scan
+        finalize_scan(db_path, wal, now, days)
         
-        print(f"[Registry] scan_finalize: batch={batch_tag}, missing_keep_days={days} (未实施)")
+        print(f"[Registry] scan_finalize: batch={batch_tag}, missing_keep_days={days}")
         
     except Exception as e:
         print(f"[Registry] on_scan_finalize 失败: {e}")
