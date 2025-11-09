@@ -106,6 +106,8 @@ def extract_project_id(df_row: pd.Series, file_type: int) -> str:
     """
     从DataFrame行中提取项目号
     
+    对于文件1-6，项目号通常从文件名中提取，存储在DataFrame的"项目号"列中
+    
     参数:
         df_row: DataFrame的一行（pd.Series）
         file_type: 文件类型（1-6）
@@ -116,8 +118,15 @@ def extract_project_id(df_row: pd.Series, file_type: int) -> str:
     # 首先尝试使用"项目号"列名
     if "项目号" in df_row.index:
         project_id = str(df_row["项目号"]).strip()
+    elif "source_file" in df_row.index:
+        # 尝试从source_file列提取项目号
+        source_file = str(df_row["source_file"])
+        import re
+        match = re.search(r'(\d{4})', source_file)
+        project_id = match.group(1) if match else ""
     else:
-        # 如果没有项目号列，返回空
+        # 【修复】对于原始Excel行（使用iloc获取的），项目号信息不在行数据中
+        # 需要从外部传入，这里返回空由调用方处理
         project_id = ""
     
     # 文件6特殊处理：空值统一为"未知项目"

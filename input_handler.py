@@ -275,6 +275,53 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
         ws[f"{time_col}{row_index}"] = date.today().strftime('%Y-%m-%d')
         ws[f"{name_col}{row_index}"] = user_name
         
+         # 【新增】文件6特殊逻辑：自动更新M列（回复状态列）
+        if file_type == 6:
+            try:
+                # I列（索引8）是预期时间列
+                expected_time_cell = ws.cell(row_index, 9)  # I列是第9列（A=1）
+                expected_time = expected_time_cell.value
+                
+                # 比较当前日期和预期时间
+                from datetime import datetime
+                today = date.today()
+                
+                # 解析预期时间
+                if expected_time:
+                    try:
+                        # 尝试解析为日期对象
+                        if isinstance(expected_time, datetime):
+                            expected_date = expected_time.date()
+                        elif isinstance(expected_time, date):
+                            expected_date = expected_time
+                        else:
+                            # 尝试字符串解析
+                            import pandas as pd
+                            parsed = pd.to_datetime(expected_time, errors='coerce')
+                            if pd.notna(parsed):
+                                expected_date = parsed.date()
+                            else:
+                                expected_date = None
+                        
+                        # 根据对比结果写入M列（第13列）
+                        if expected_date:
+                            if today <= expected_date:
+                                reply_status = "按时回复"
+                            else:
+                                reply_status = "延期回复"
+                            
+                            ws.cell(row_index, 13, reply_status)  # M列是第13列
+                            print(f"[文件6] 自动更新M列: {reply_status} (预期:{expected_date}, 实际:{today})")
+                        else:
+                            print(f"[文件6] 无法解析预期时间，跳过M列更新")
+                    except Exception as parse_error:
+                        print(f"[文件6] 解析预期时间失败: {parse_error}")
+                else:
+                    print(f"[文件6] I列预期时间为空，跳过M列更新")
+            except Exception as e:
+                print(f"[文件6] 更新M列失败: {e}")
+                # 即使M列更新失败，也不影响回文单号写入
+        
         # 保存
         wb.save(file_path)
         wb.close()

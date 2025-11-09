@@ -105,7 +105,7 @@ def optimized_read_excel(file_path, use_openpyxl_readonly=True):
 
 def concurrent_read_excel_files(file_paths, max_workers=4):
     """
-    并发读取多个Excel文件（方案3：并发读取）
+    并发读取多个Excel文件（并发读取）
     
     参数:
         file_paths: 文件路径列表 [(file_path, file_id), ...]
@@ -211,6 +211,7 @@ class ExcelProcessorApp:
             'on_settings_menu': self.show_settings_menu,
             'on_tab_changed': lambda: self.on_tab_changed(None),  # 包装函数，传递None作为event
             'on_assignment_click': self._on_assignment_button_click,  # 【新增】指派任务回调
+            'on_history_query_click': self._on_history_query_button_click,  # 【新增】历史查询回调
         }
         
         config_data = {
@@ -2520,6 +2521,7 @@ class ExcelProcessorApp:
                 if self.has_processed_results1:
                     # 已处理：显示处理结果或"无数据"
                     if self.processing_results is not None and not self.processing_results.empty:
+                        # 不要drop原始行号列，因为需要它来加载勾选状态
                         excel_row_numbers = list(self.processing_results['原始行号'])
                         self.display_excel_data_with_original_rows(self.tab1_viewer, self.processing_results, "内部需打开接口", excel_row_numbers)
                     else:
@@ -2533,6 +2535,7 @@ class ExcelProcessorApp:
                 if self.has_processed_results2:
                     # 已处理：显示处理结果或"无数据"
                     if self.processing_results2 is not None and not self.processing_results2.empty:
+                        # 【Registry】过滤掉已确认的任务
                         excel_row_numbers = list(self.processing_results2['原始行号'])
                         self.display_excel_data_with_original_rows(self.tab2_viewer, self.processing_results2, "内部需回复接口", excel_row_numbers)
                     else:
@@ -2546,6 +2549,7 @@ class ExcelProcessorApp:
                 if self.has_processed_results3:
                     # 已处理：显示处理结果或"无数据"
                     if self.processing_results3 is not None and not self.processing_results3.empty:
+                        # 【Registry】过滤掉已确认的任务
                         excel_row_numbers = list(self.processing_results3['原始行号'])
                         self.display_excel_data_with_original_rows(self.tab3_viewer, self.processing_results3, "外部需打开接口", excel_row_numbers)
                     else:
@@ -2559,6 +2563,7 @@ class ExcelProcessorApp:
                 if self.has_processed_results4:
                     # 已处理：显示处理结果或"无数据"
                     if self.processing_results4 is not None and not self.processing_results4.empty:
+                        # 【Registry】过滤掉已确认的任务
                         excel_row_numbers = list(self.processing_results4['原始行号'])
                         self.display_excel_data_with_original_rows(self.tab4_viewer, self.processing_results4, "外部需回复接口", excel_row_numbers)
                     else:
@@ -2572,6 +2577,7 @@ class ExcelProcessorApp:
                 if self.has_processed_results5:
                     # 已处理：显示处理结果或"无数据"
                     if self.processing_results5 is not None and not self.processing_results5.empty:
+                        # 【Registry】过滤掉已确认的任务
                         excel_row_numbers = list(self.processing_results5['原始行号'])
                         self.display_excel_data_with_original_rows(self.tab5_viewer, self.processing_results5, "三维提资接口", excel_row_numbers)
                     else:
@@ -2583,6 +2589,7 @@ class ExcelProcessorApp:
                 if self.has_processed_results6:
                     # 已处理：显示处理结果或"无数据"
                     if self.processing_results6 is not None and not self.processing_results6.empty:
+                        # 【Registry】过滤掉已确认的任务
                         excel_row_numbers = list(self.processing_results6['原始行号'])
                         self.display_excel_data_with_original_rows(self.tab6_viewer, self.processing_results6, "收发文函", excel_row_numbers)
                     else:
@@ -5021,21 +5028,50 @@ class ExcelProcessorApp:
             )
             dialog.wait_window()
             
-            # 指派完成后清除缓存并重新处理
-            try:
-                print("[指派] 开始刷新显示...")
-                # 清除文件缓存（但不清除Registry数据库）
-                self.file_manager.clear_file_caches_only()
-                # 重新处理数据
-                self.start_processing()
-                print("[指派] 刷新完成")
-            except Exception as e:
-                print(f"[指派] 刷新显示失败: {e}")
-                import traceback
-                traceback.print_exc()
+            # 【修复】只有成功指派后才刷新
+            if hasattr(dialog, 'assignment_successful') and dialog.assignment_successful:
+                # 指派完成后清除缓存并重新处理
+                try:
+                    print("[指派] 开始刷新显示...")
+                    # 清除文件缓存（但不清除Registry数据库）
+                    self.file_manager.clear_file_caches_only()
+                    # 重新处理数据
+                    self.start_processing()
+                    print("[指派] 刷新完成")
+                except Exception as e:
+                    print(f"[指派] 刷新显示失败: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print("[指派] 用户取消或未完成指派，不刷新")
                 
         except Exception as e:
             print(f"指派任务失败: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def _on_history_query_button_click(self):
+        """历史查询按钮点击"""
+        try:
+            from registry.history_ui import HistoryQueryDialog
+            from registry.hooks import _cfg
+            
+            # 获取数据库路径
+            cfg = _cfg()
+            db_path = cfg.get('registry_db_path')
+            wal = cfg.get('use_wal', True)
+            
+            if not db_path:
+                from tkinter import messagebox
+                messagebox.showerror("错误", "无法获取数据库路径，请确保配置正确", parent=self.root)
+                return
+            
+            # 打开历史查询对话框
+            dialog = HistoryQueryDialog(self.root, db_path, wal)
+            dialog.wait_window()
+            
+        except Exception as e:
+            print(f"历史查询失败: {e}")
             import traceback
             traceback.print_exc()
 

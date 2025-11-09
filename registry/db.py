@@ -97,6 +97,7 @@ def init_db(conn: sqlite3.Connection) -> None:
             display_status TEXT DEFAULT NULL,
             confirmed_by TEXT DEFAULT NULL,
             responsible_person TEXT DEFAULT NULL,
+            response_number TEXT DEFAULT NULL,
             first_seen_at TEXT NOT NULL,
             last_seen_at TEXT NOT NULL,
             missing_since TEXT NULL,

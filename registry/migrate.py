@@ -27,6 +27,7 @@ def migrate_database(db_path: str) -> None:
     - confirmed_by
     - responsible_person
     - business_id（接口号继承功能）
+    - response_number（回文单号记录）
     """
     if not os.path.exists(db_path):
         print("[Migrate] Database not found, skip")
@@ -44,7 +45,8 @@ def migrate_database(db_path: str) -> None:
             ("display_status", "TEXT DEFAULT NULL"),
             ("confirmed_by", "TEXT DEFAULT NULL"),
             ("responsible_person", "TEXT DEFAULT NULL"),
-            ("business_id", "TEXT DEFAULT NULL")
+            ("business_id", "TEXT DEFAULT NULL"),
+            ("response_number", "TEXT DEFAULT NULL")
         ]
         
         added_count = 0

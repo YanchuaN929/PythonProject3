@@ -337,7 +337,8 @@ def on_response_written(
         fields_to_update = {
             'display_status': display_status,
             'interface_time': old_interface_time,  # 【新增】保持时间不变，避免误判为时间变化
-            '_completed_col_value': '有值'  # 【新增】标记完成列已填充
+            '_completed_col_value': '有值',  # 【新增】标记完成列已填充
+            'response_number': response_number  # 【新增】记录回文单号
         }
         if role:
             fields_to_update['role'] = role
@@ -412,8 +413,8 @@ def on_confirmed_by_superior(
             'row_index': int(row_index or 0),
         }
         
-        # 更新状态为confirmed
-        mark_confirmed(db_path, wal, key, now)
+        # 【修复】更新状态为confirmed，传递确认人姓名
+        mark_confirmed(db_path, wal, key, now, confirmed_by=user_name)
         
         # 写入confirmed事件
         write_event(db_path, wal, EventType.CONFIRMED, {

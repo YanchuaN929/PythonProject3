@@ -419,6 +419,15 @@ class WindowManager:
         )
         assignment_btn.pack(side=tk.LEFT, padx=(10, 0))
         self.buttons['assignment'] = assignment_btn
+        
+        # 【新增】历史查询按钮
+        history_btn = ttk.Button(
+            button_frame,
+            text="🔍 历史查询",
+            command=lambda: self._trigger_callback('on_history_query_click')
+        )
+        history_btn.pack(side=tk.LEFT, padx=(10, 0))
+        self.buttons['history_query'] = history_btn
     
     def show_empty_message(self, viewer, message):
         """在viewer中显示提示信息"""
@@ -517,8 +526,8 @@ class WindowManager:
                 "内部需回复接口": 2,
                 "外部需打开接口": 3,
                 "外部需回复接口": 4,
-                "待处理文件5": 5,
-                "待处理文件6": 6
+                "三维提资接口": 5,  # 【修复】应该是"三维提资接口"，不是"待处理文件5"
+                "收发文函": 6       # 【修复】应该是"收发文函"，不是"待处理文件6"
             }
             file_type = file_type_map.get(tab_name)
             
@@ -595,13 +604,19 @@ class WindowManager:
                         time_str = str(time_value).strip()
                     time_values.append(time_str)
                     
-                    # 状态判断：优先Registry状态，其次延期标记
+                    # 【修复】状态判断：延期标记与Registry状态组合显示
                     if "状态" in display_df.columns:
-                        if idx in registry_status_map:
-                            # 有Registry状态提醒
-                            status_values.append(registry_status_map[idx])
-                        elif time_str != '-' and is_date_overdue(time_str):
-                            # 延期标记
+                        registry_status = registry_status_map.get(idx, '')
+                        is_overdue = time_str != '-' and is_date_overdue(time_str)
+                        
+                        if registry_status and is_overdue:
+                            # 既有Registry状态又延期：组合显示
+                            status_values.append(f"（已延期）{registry_status}")
+                        elif registry_status:
+                            # 只有Registry状态
+                            status_values.append(registry_status)
+                        elif is_overdue:
+                            # 只有延期标记
                             status_values.append("⚠️")
                         else:
                             # 正常无标记
@@ -614,6 +629,17 @@ class WindowManager:
             display_df["接口时间"] = time_values
             if "状态" in display_df.columns:
                 display_df["状态"] = status_values
+        
+        # 【新增】过滤掉已确认的任务（status_map中值为空字符串''）
+        if registry_status_map:
+            exclude_indices = []
+            for idx, status_text in registry_status_map.items():
+                if status_text == '':  # 空字符串表示已确认
+                    exclude_indices.append(idx)
+            
+            if exclude_indices:
+                display_df = display_df.drop(display_df.index[exclude_indices]).reset_index(drop=True)
+                print(f"[Registry] 过滤掉{len(exclude_indices)}个已确认的任务，剩余{len(display_df)}行")
         
         # 【新增】处理"责任人"列：空值显示为"无"
         if "责任人" in display_df.columns:

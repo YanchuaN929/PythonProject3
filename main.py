@@ -407,42 +407,58 @@ def process_target_file(file_path, current_datetime):
             """)
             
             registry_tasks = cursor.fetchall()
-            print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个待审查任务")
+            print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个有状态的任务（包括待完成、待审查等）")
             
             # 在当前Excel中查找这些接口号
             pending_rows = set()
             
-            # 【调试】输出前3个数据库任务的接口号
+            # 【调试】输出前3个数据库任务的详细信息
             if len(registry_tasks) > 0:
-                print(f"[Registry调试] 数据库待审查任务示例:")
+                print(f"[Registry调试] 数据库任务示例（前3个）:")
                 for i, task in enumerate(registry_tasks[:3]):
-                    print(f"  {i+1}. 接口={task[0][:40]}, 项目={task[1]}, 状态={task[2]}")
+                    print(f"  {i+1}. 接口={task[0][:40]}, 项目={task[1]}, display_status={task[2]}")
             
-            for reg_interface_id, reg_project_id, reg_display_status, _, _ in registry_tasks:
-                found = False
-                # 在当前df中查找该接口号
-                for idx in range(len(df)):
-                    if idx == 0 or idx in final_rows:
-                        continue
+            # 【优化】先建立Excel接口号索引，提升性能
+            # 【修复】项目号从文件名提取，不从df_row中提取
+            import re
+            filename = os.path.basename(file_path)
+            match = re.search(r'(\d{4})', filename)
+            file_project_id = match.group(1) if match else ""
+            
+            excel_index = {}  # {(interface_id, project_id): [idx1, idx2, ...]}
+            for idx in range(len(df)):
+                if idx == 0:
+                    continue
+                try:
+                    row_data = df.iloc[idx]
+                    df_interface_id = extract_interface_id(row_data, 1)
                     
-                    try:
-                        row_data = df.iloc[idx]
-                        df_interface_id = extract_interface_id(row_data, 1)
-                        df_project_id = extract_project_id(row_data, 1)
-                        
-                        # 【调试已删除】避免输出过多
-                        
-                        # 按business_id匹配（不考虑source_file和row_index）
-                        if df_interface_id == reg_interface_id and df_project_id == reg_project_id:
-                            pending_rows.add(idx)
-                            print(f"[Registry] ✓ 发现待审查任务：第{idx+2}行 接口{df_interface_id[:30]} 状态:{reg_display_status}")
-                            found = True
-                            break  # 找到就跳出
-                    except Exception as e:
-                        continue
+                    if df_interface_id and file_project_id:
+                        key = (df_interface_id, file_project_id)
+                        if key not in excel_index:
+                            excel_index[key] = []
+                        excel_index[key].append(idx)
+                except:
+                    continue
+            
+            print(f"[Registry] Excel索引建立完成（项目{file_project_id}），共{len(excel_index)}个唯一接口")
+            
+            # 【修复】按索引查找，避免双重循环
+            for reg_interface_id, reg_project_id, reg_display_status, _, _ in registry_tasks:
+                key = (reg_interface_id, reg_project_id)
                 
-                # 【调试】如果遍历完所有行都没找到
-                if not found:
+                if key in excel_index:
+                    # 找到匹配的行
+                    matched_indices = excel_index[key]
+                    for idx in matched_indices:
+                        # 如果不在final_rows中，添加
+                        if idx not in final_rows:
+                            pending_rows.add(idx)
+                            print(f"[Registry] ✓ 发现待审查任务：第{idx+2}行 接口{reg_interface_id[:30]} 状态:{reg_display_status}")
+                        else:
+                            # 已经在final_rows中（可能M列实际为空）
+                            print(f"[Registry提示] 接口{reg_interface_id[:30]}已在原始筛选结果中，跳过")
+                else:
                     print(f"[Registry警告] 数据库任务未在Excel中找到: 接口={reg_interface_id[:40]}")
             
             print(f"\n[Registry] 统计: 数据库中{len(registry_tasks)}个待审查，在Excel中匹配到{len(pending_rows)}行")
@@ -1120,28 +1136,40 @@ def process_target_file2(file_path, current_datetime, project_id=None):
             """)
             
             registry_tasks = cursor.fetchall()
-            print(f"[Registry] 数据库中有{len(registry_tasks)}个待审查任务")
+            print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个有状态的任务")
             
+            # 【优化】从文件名提取项目号，建立Excel索引
+            import re
+            filename = os.path.basename(file_path)
+            match = re.search(r'(\d{4})', filename)
+            file_project_id = match.group(1) if match else project_id
+            
+            excel_index = {}
+            for idx in range(len(df)):
+                if idx == 0:
+                    continue
+                try:
+                    row_data = df.iloc[idx]
+                    df_interface_id = extract_interface_id(row_data, 2)
+                    if df_interface_id and file_project_id:
+                        key = (df_interface_id, file_project_id)
+                        if key not in excel_index:
+                            excel_index[key] = []
+                        excel_index[key].append(idx)
+                except:
+                    continue
+            
+            # 按索引查找
             for reg_interface_id, reg_project_id, reg_display_status in registry_tasks:
-                for idx in range(len(df)):
-                    if idx == 0 or idx in final_rows:
-                        continue
-                    
-                    try:
-                        row_data = df.iloc[idx]
-                        df_interface_id = extract_interface_id(row_data, 2)
-                        df_project_id = extract_project_id(row_data, 2)
-                        
-                        if df_interface_id == reg_interface_id and df_project_id == reg_project_id:
+                key = (reg_interface_id, reg_project_id)
+                if key in excel_index:
+                    matched_indices = excel_index[key]
+                    for idx in matched_indices:
+                        if idx not in final_rows:
                             pending_rows.add(idx)
-                            print(f"[Registry] ✓ 发现待审查任务：第{idx+2}行 接口{df_interface_id[:30]}")
-                            break
-                    except:
-                        continue
         
         if pending_rows:
             final_rows = final_rows | pending_rows
-            print(f"[Registry] ✓ 合并{len(pending_rows)}条待审查任务")
         
     except Exception as e:
         print(f"[Registry] 查询待确认任务失败（不影响主流程）: {e}")
@@ -1595,28 +1623,39 @@ def process_target_file3(file_path, current_datetime):
             """)
             
             registry_tasks = cursor.fetchall()
-            print(f"[Registry] 数据库中有{len(registry_tasks)}个待审查任务")
+            print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个有状态的任务")
             
+            # 【优化】从文件名提取项目号，建立Excel索引
+            import re
+            filename = os.path.basename(file_path)
+            match = re.search(r'(\d{4})', filename)
+            file_project_id = match.group(1) if match else ""
+            
+            excel_index = {}
+            for idx in range(len(df)):
+                if idx == 0:
+                    continue
+                try:
+                    row_data = df.iloc[idx]
+                    df_interface_id = extract_interface_id(row_data, 3)
+                    if df_interface_id and file_project_id:
+                        key = (df_interface_id, file_project_id)
+                        if key not in excel_index:
+                            excel_index[key] = []
+                        excel_index[key].append(idx)
+                except:
+                    continue
+            
+            # 按索引查找
             for reg_interface_id, reg_project_id, reg_display_status in registry_tasks:
-                for idx in range(len(df)):
-                    if idx == 0 or idx in final_rows:
-                        continue
-                    
-                    try:
-                        row_data = df.iloc[idx]
-                        df_interface_id = extract_interface_id(row_data, 3)
-                        df_project_id = extract_project_id(row_data, 3)
-                        
-                        if df_interface_id == reg_interface_id and df_project_id == reg_project_id:
+                key = (reg_interface_id, reg_project_id)
+                if key in excel_index:
+                    for idx in excel_index[key]:
+                        if idx not in final_rows:
                             pending_rows.add(idx)
-                            print(f"[Registry] ✓ 发现待审查任务：第{idx+2}行 接口{df_interface_id[:30]}")
-                            break
-                    except:
-                        continue
         
         if pending_rows:
             final_rows = final_rows | pending_rows
-            print(f"[Registry] ✓ 合并{len(pending_rows)}条待审查任务")
         
     except Exception as e:
         print(f"[Registry] 查询待审查任务失败: {e}")
@@ -2434,19 +2473,33 @@ def process_target_file4(file_path, current_datetime):
             """)
             registry_tasks = cursor.fetchall()
             
+            # Excel索引优化
+            import re
+            filename = os.path.basename(file_path)
+            match = re.search(r'(\d{4})', filename)
+            file_project_id = match.group(1) if match else ""
+            
+            excel_index = {}
+            for idx in range(len(df)):
+                if idx == 0:
+                    continue
+                try:
+                    row_data = df.iloc[idx]
+                    df_interface_id = extract_interface_id(row_data, 4)
+                    if df_interface_id and file_project_id:
+                        key = (df_interface_id, file_project_id)
+                        if key not in excel_index:
+                            excel_index[key] = []
+                        excel_index[key].append(idx)
+                except:
+                    continue
+            
             for reg_interface_id, reg_project_id, _ in registry_tasks:
-                for idx in range(len(df)):
-                    if idx == 0 or idx in final_rows:
-                        continue
-                    try:
-                        row_data = df.iloc[idx]
-                        df_interface_id = extract_interface_id(row_data, 4)
-                        df_project_id = extract_project_id(row_data, 4)
-                        if df_interface_id == reg_interface_id and df_project_id == reg_project_id:
+                key = (reg_interface_id, reg_project_id)
+                if key in excel_index:
+                    for idx in excel_index[key]:
+                        if idx not in final_rows:
                             pending_rows.add(idx)
-                            break
-                    except:
-                        continue
         
         if pending_rows:
             final_rows = final_rows | pending_rows
@@ -3080,19 +3133,33 @@ def process_target_file5(file_path, current_datetime):
             """)
             registry_tasks = cursor.fetchall()
             
+            # Excel索引优化+从文件名提取项目号
+            import re
+            filename = os.path.basename(file_path)
+            match = re.search(r'(\d{4})', filename)
+            file_project_id = match.group(1) if match else ""
+            
+            excel_index = {}
+            for idx in range(len(df)):
+                if idx == 0:
+                    continue
+                try:
+                    row_data = df.iloc[idx]
+                    df_interface_id = extract_interface_id(row_data, 5)
+                    if df_interface_id and file_project_id:
+                        key = (df_interface_id, file_project_id)
+                        if key not in excel_index:
+                            excel_index[key] = []
+                        excel_index[key].append(idx)
+                except:
+                    continue
+            
             for reg_interface_id, reg_project_id, _ in registry_tasks:
-                for idx in range(len(df)):
-                    if idx == 0 or idx in final_rows:
-                        continue
-                    try:
-                        row_data = df.iloc[idx]
-                        df_interface_id = extract_interface_id(row_data, 5)
-                        df_project_id = extract_project_id(row_data, 5)
-                        if df_interface_id == reg_interface_id and df_project_id == reg_project_id:
+                key = (reg_interface_id, reg_project_id)
+                if key in excel_index:
+                    for idx in excel_index[key]:
+                        if idx not in final_rows:
                             pending_rows.add(idx)
-                            break
-                    except:
-                        continue
         
         if pending_rows:
             final_rows = final_rows | pending_rows
@@ -3566,19 +3633,33 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
             """)
             registry_tasks = cursor.fetchall()
             
+            # Excel索引优化+从文件名提取项目号
+            import re
+            filename = os.path.basename(file_path)
+            match = re.search(r'(\d{4})', filename)
+            file_project_id = match.group(1) if match else ""
+            
+            excel_index = {}
+            for idx in range(len(df)):
+                if idx == 0:
+                    continue
+                try:
+                    row_data = df.iloc[idx]
+                    df_interface_id = extract_interface_id(row_data, 6)
+                    if df_interface_id and file_project_id:
+                        key = (df_interface_id, file_project_id)
+                        if key not in excel_index:
+                            excel_index[key] = []
+                        excel_index[key].append(idx)
+                except:
+                    continue
+            
             for reg_interface_id, reg_project_id, _ in registry_tasks:
-                for idx in range(len(df)):
-                    if idx == 0 or idx in final_rows:
-                        continue
-                    try:
-                        row_data = df.iloc[idx]
-                        df_interface_id = extract_interface_id(row_data, 6)
-                        df_project_id = extract_project_id(row_data, 6)
-                        if df_interface_id == reg_interface_id and df_project_id == reg_project_id:
+                key = (reg_interface_id, reg_project_id)
+                if key in excel_index:
+                    for idx in excel_index[key]:
+                        if idx not in final_rows:
                             pending_rows.add(idx)
-                            break
-                    except:
-                        continue
         
         if pending_rows:
             final_rows = final_rows | pending_rows

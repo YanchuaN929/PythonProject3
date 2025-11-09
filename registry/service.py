@@ -210,10 +210,10 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
             business_id,
             department, interface_time, role, status, 
             assigned_by, assigned_at, display_status, confirmed_by, responsible_person,
-            completed_at, confirmed_at,
+            response_number, completed_at, confirmed_at,
             first_seen_at, last_seen_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             business_id = excluded.business_id,
             department = excluded.department,
@@ -228,6 +228,7 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
             END,
             confirmed_by = COALESCE(excluded.confirmed_by, confirmed_by),
             responsible_person = COALESCE(excluded.responsible_person, responsible_person),
+            response_number = COALESCE(excluded.response_number, response_number),
             completed_at = COALESCE(excluded.completed_at, completed_at),
             confirmed_at = COALESCE(excluded.confirmed_at, confirmed_at),
             last_seen_at = excluded.last_seen_at
@@ -249,6 +250,7 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
             display_status,  # 【修复】使用变量，确保有默认值
             fields.get('confirmed_by'),  # 确认人
             fields.get('responsible_person'),  # 责任人
+            fields.get('response_number'),  # 【新增】回文单号
             fields.get('completed_at'),  # 完成时间
             fields.get('confirmed_at'),  # 确认时间
             now_str,  # first_seen_at (只在INSERT时设置)
@@ -434,8 +436,9 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
             
             status, display_status, assigned_by, role, confirmed_at, responsible_person = row
             
-            # 如果已确认，不显示状态
+            # 如果已确认，返回空字符串（标记为已确认）
             if confirmed_at:
+                result[tid] = ''  # 空字符串标记已确认
                 continue
             
             # 如果有预设的display_status，根据用户角色调整显示
@@ -609,8 +612,73 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                 key['row_index']
             )
             
-            # 【新增】生成business_id
+            # 【新增】生成business_id并查询旧任务（接口号继承逻辑）
             business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
+            old_task = find_task_by_business_id(db_path, wal, key['file_type'], key['project_id'], key['interface_id'])
+            
+            # 【修复】检查是否需要重置或继承
+            if old_task:
+                new_completed_val = fields.get('_completed_col_value', '')
+                old_completed_val = '有值' if old_task['completed_at'] else ''
+                
+                # 【关键】优先检查完成列是否被清空（包括已确认的任务）
+                if not new_completed_val and old_task['completed_at']:
+                    # 完成列被删除，强制重置（即使是已确认的任务也要重置）
+                    print(f"[Registry] 接口{key['interface_id']}: 完成列被清空，重置状态（old_status={old_task['status']}）")
+                    fields['display_status'] = '待完成' if old_task['responsible_person'] else '请指派'
+                    fields['status'] = Status.OPEN
+                    # 清除完成相关字段
+                    fields['completed_at'] = None
+                    fields['confirmed_at'] = None
+                    fields['confirmed_by'] = None
+                    # 保留指派信息
+                    if old_task['assigned_by']:
+                        fields['assigned_by'] = old_task['assigned_by']
+                        fields['assigned_at'] = old_task['assigned_at']
+                        fields['responsible_person'] = old_task['responsible_person']
+                
+                # 【新增】如果已确认且完成列仍有值，保持确认状态
+                elif old_task['status'] == Status.CONFIRMED and old_task['confirmed_at'] and new_completed_val:
+                    # 已确认且完成列未被清空，保持确认状态
+                    print(f"[Registry] 接口{key['interface_id']}: 已确认且完成列有值，保持确认状态")
+                    fields['status'] = Status.CONFIRMED
+                    fields['display_status'] = None  # 保持不显示
+                    fields['confirmed_at'] = old_task['confirmed_at']
+                    fields['confirmed_by'] = old_task['confirmed_by']
+                    fields['completed_at'] = old_task['completed_at']
+                    if old_task['assigned_by']:
+                        fields['assigned_by'] = old_task['assigned_by']
+                        fields['assigned_at'] = old_task['assigned_at']
+                        fields['responsible_person'] = old_task['responsible_person']
+                
+                # 检查接口时间变化是否需要重置
+                elif should_reset_task_status(old_task['interface_time'], fields.get('interface_time', ''), 
+                                             old_completed_val, new_completed_val):
+                    # 时间列变化，重置
+                    print(f"[Registry] 接口{key['interface_id']}: 接口时间变化，重置状态")
+                    fields['display_status'] = '待完成' if old_task['responsible_person'] else '请指派'
+                    fields['status'] = Status.OPEN
+                    if old_task['assigned_by']:
+                        fields['assigned_by'] = old_task['assigned_by']
+                        fields['assigned_at'] = old_task['assigned_at']
+                        fields['responsible_person'] = old_task['responsible_person']
+                
+                # 其他情况：继承状态
+                else:
+                    # 继承状态
+                    if fields.get('display_status') == '待完成' and old_task['display_status'] and old_task['display_status'] != '待完成':
+                        fields['display_status'] = old_task['display_status']
+                    if old_task['status']:
+                        fields['status'] = old_task['status']
+                    if old_task['completed_at']:
+                        fields['completed_at'] = old_task['completed_at']
+                    if old_task['confirmed_at']:
+                        fields['confirmed_at'] = old_task['confirmed_at']
+                        fields['confirmed_by'] = old_task['confirmed_by']
+                    if old_task['assigned_by']:
+                        fields['assigned_by'] = old_task['assigned_by']
+                        fields['assigned_at'] = old_task['assigned_at']
+                        fields['responsible_person'] = old_task['responsible_person']
             
             status = fields.get('status', Status.OPEN)
             department = fields.get('department', '')
@@ -619,6 +687,13 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             display_status = fields.get('display_status', '待完成')  # 【修复】提供默认值
             responsible_person = fields.get('responsible_person')  # 从Excel中读取
             
+            # 【修复】从fields获取confirmed相关字段
+            confirmed_at = fields.get('confirmed_at')
+            confirmed_by = fields.get('confirmed_by')
+            assigned_by = fields.get('assigned_by')
+            assigned_at = fields.get('assigned_at')
+            completed_at = fields.get('completed_at')
+            
             conn.execute(
                 """
                 INSERT INTO tasks (
@@ -626,15 +701,17 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     business_id,
                     department, interface_time, role, status, display_status,
                     first_seen_at, last_seen_at,
-                    assigned_by, assigned_at, responsible_person, confirmed_by
+                    assigned_by, assigned_at, responsible_person, confirmed_by,
+                    completed_at, confirmed_at, response_number
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     business_id = excluded.business_id,
                     department = excluded.department,
                     interface_time = excluded.interface_time,
                     role = excluded.role,
-                    display_status = COALESCE(display_status, excluded.display_status),
+                    status = excluded.status,  # 【修复】强制更新status（支持重置）
+                    display_status = excluded.display_status,  # 【修复】强制更新（支持重置）
                     last_seen_at = excluded.last_seen_at,
                     assigned_by = COALESCE(excluded.assigned_by, assigned_by),
                     assigned_at = COALESCE(excluded.assigned_at, assigned_at),
@@ -642,7 +719,10 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                         WHEN assigned_by IS NOT NULL THEN responsible_person
                         ELSE COALESCE(excluded.responsible_person, responsible_person)
                     END,
-                    confirmed_by = COALESCE(excluded.confirmed_by, confirmed_by)
+                    confirmed_by = excluded.confirmed_by,  # 【修复】强制更新（支持重置为NULL）
+                    completed_at = excluded.completed_at,  # 【修复】强制更新（支持重置为NULL）
+                    confirmed_at = excluded.confirmed_at,   # 【修复】强制更新（支持重置为NULL）
+                    response_number = COALESCE(excluded.response_number, response_number)  # 【新增】保持已有回文单号
                 """,
                 (
                     tid,
@@ -659,10 +739,13 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     display_status,
                     now_str,
                     now_str,
-                    None,  # assigned_by (INSERT时为NULL，除非通过指派)
-                    None,  # assigned_at (INSERT时为NULL，除非通过指派)
+                    assigned_by,
+                    assigned_at,
                     responsible_person,  # 从Excel中读取的责任人
-                    None   # confirmed_by (INSERT时为NULL)
+                    confirmed_by,
+                    completed_at,
+                    confirmed_at,
+                    fields.get('response_number')  # 【新增】回文单号（通常为None，保持数据库中已有值）
                 )
             )
             count += 1
@@ -674,4 +757,61 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
         conn.rollback()
         print(f"[Registry] 批量upsert失败: {e}")
         raise
+
+
+def query_task_history(db_path: str, wal: bool, project_id: str, interface_id: str, file_type: Optional[int] = None) -> List[Dict[str, Any]]:
+    """
+    查询任务历史记录
+    
+    根据项目号和接口号查询所有历史记录（支持文件类型过滤）
+    
+    参数:
+        db_path: 数据库路径
+        wal: 是否使用WAL模式
+        project_id: 项目号
+        interface_id: 接口号
+        file_type: 文件类型（可选，None表示查询所有类型）
+        
+    返回:
+        历史记录列表（按创建时间倒序）
+    """
+    conn = get_connection(db_path, wal)
+    
+    try:
+        if file_type:
+            # 精确查询特定文件类型
+            business_id = f"{file_type}|{project_id}|{interface_id}"
+            sql = """
+                SELECT * FROM tasks 
+                WHERE business_id = ? 
+                ORDER BY first_seen_at DESC
+            """
+            params = (business_id,)
+        else:
+            # 查询所有文件类型
+            business_id_pattern = f"%|{project_id}|{interface_id}"
+            sql = """
+                SELECT * FROM tasks 
+                WHERE business_id LIKE ? 
+                ORDER BY first_seen_at DESC
+            """
+            params = (business_id_pattern,)
+        
+        cursor = conn.execute(sql, params)
+        rows = cursor.fetchall()
+        
+        # 转换为字典列表
+        columns = [desc[0] for desc in cursor.description]
+        results = []
+        for row in rows:
+            task = dict(zip(columns, row))
+            results.append(task)
+        
+        return results
+        
+    except Exception as e:
+        print(f"[Registry] 查询历史失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
 
