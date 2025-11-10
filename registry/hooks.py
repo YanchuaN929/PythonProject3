@@ -324,14 +324,17 @@ def on_response_written(
         print(f"[Registry] 回文单号写入 - 设置display_status={display_status}, has_assignor={has_assignor}")
         
         # 【修复】查询旧任务的interface_time，避免误判为时间变化
+        # 使用business_id查询，确保能找到同一接口的历史任务（即使row_index变化）
         old_interface_time = ''
         try:
-            cursor = conn.execute("SELECT interface_time FROM tasks WHERE id=?", (tid,))
+            from .util import make_business_id
+            business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
+            cursor = conn.execute("SELECT interface_time FROM tasks WHERE business_id=? ORDER BY last_seen_at DESC LIMIT 1", (business_id,))
             row = cursor.fetchone()
             if row and row[0]:
                 old_interface_time = row[0]
-        except:
-            pass
+        except Exception as e:
+            print(f"[Registry] 查询旧interface_time失败: {e}")
         
         # 如果提供了角色信息，先更新任务的role字段和display_status
         fields_to_update = {

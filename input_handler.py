@@ -112,7 +112,7 @@ class InterfaceInputDialog(tk.Toplevel):
             )
             
             if success:
-                # 【Registry】调用on_response_written钩子
+                # 【关键】Excel写入成功后，才更新Registry
                 if registry_hooks:
                     try:
                         # 【修复】去除接口号中的角色后缀，并提取角色信息
@@ -136,6 +136,9 @@ class InterfaceInputDialog(tk.Toplevel):
                         print(f"[Registry] ✓ 已记录回文单号写入事件")
                     except Exception as e:
                         print(f"[Registry] 回文单号写入钩子调用失败: {e}")
+                        # Registry更新失败不影响Excel写入，但要提示用户
+                        import traceback
+                        traceback.print_exc()
                 
                 # 【新增】清除该文件的缓存，强制下次重新处理以应用Registry逻辑
                 if self.file_manager:
@@ -323,11 +326,29 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
                 # 即使M列更新失败，也不影响回文单号写入
         
         # 保存
-        wb.save(file_path)
-        wb.close()
-        
-        print(f"成功写入: {file_path}, 行{row_index}, 回文单号={response_number}")
-        return True
+        try:
+            wb.save(file_path)
+            wb.close()
+            
+            # 【关键】验证写入是否成功：重新打开文件检查
+            print(f"[验证] 开始验证Excel写入...")
+            verify_wb = load_workbook(file_path, read_only=True)
+            verify_ws = verify_wb.active
+            
+            # 验证回文单号列
+            verify_response = verify_ws[f"{response_col}{row_index}"].value
+            if str(verify_response).strip() != str(response_number).strip():
+                verify_wb.close()
+                raise Exception(f"验证失败：回文单号列写入不匹配。期望:{response_number}, 实际:{verify_response}")
+            
+            verify_wb.close()
+            print(f"[验证] ✓ Excel写入验证成功")
+            print(f"成功写入: {file_path}, 行{row_index}, 回文单号={response_number}")
+            return True
+            
+        except Exception as save_error:
+            print(f"[ERROR] Excel保存或验证失败: {save_error}")
+            raise  # 重新抛出异常，让上层处理
         
     except Exception as e:
         print(f"[ERROR] 写入回文单号失败!")

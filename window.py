@@ -503,6 +503,10 @@ class WindowManager:
             if original_row_numbers is not None and "原始行号" in filtered_df.columns:
                 original_row_numbers = list(filtered_df["原始行号"])
         
+        # 【关键修复】重置索引，确保iloc位置索引与Treeview行索引一致
+        # 避免跨项目错误写入！
+        filtered_df = filtered_df.reset_index(drop=True)
+        
         # 从file_manager获取已完成的行
         # 【修复】获取已完成行时传入用户姓名
         completed_rows_set = set()
@@ -604,19 +608,16 @@ class WindowManager:
                         time_str = str(time_value).strip()
                     time_values.append(time_str)
                     
-                    # 【修复】状态判断：延期标记与Registry状态组合显示
+                    # 【修复】状态判断：Registry状态已包含延期信息，直接使用
                     if "状态" in display_df.columns:
                         registry_status = registry_status_map.get(idx, '')
                         is_overdue = time_str != '-' and is_date_overdue(time_str)
                         
-                        if registry_status and is_overdue:
-                            # 既有Registry状态又延期：组合显示
-                            status_values.append(f"（已延期）{registry_status}")
-                        elif registry_status:
-                            # 只有Registry状态
+                        if registry_status:
+                            # Registry状态（已包含延期前缀，如果适用）
                             status_values.append(registry_status)
                         elif is_overdue:
-                            # 只有延期标记
+                            # 无Registry状态但延期：显示延期标记
                             status_values.append("⚠️")
                         else:
                             # 正常无标记
@@ -726,6 +727,10 @@ class WindowManager:
         except Exception as e:
             print(f"[错误] tag配置失败: {e}")
         
+        # 【关键】创建item元数据映射字典，存储每行的关键信息（不受排序影响）
+        if not hasattr(self, '_item_metadata'):
+            self._item_metadata = {}
+        
         # 添加数据行
         max_rows = len(display_df) if show_all else min(20, len(display_df))
         
@@ -766,6 +771,18 @@ class WindowManager:
             # 应用标签
             tags = ('overdue',) if is_overdue_flag else ()
             item_id = viewer.insert("", "end", text=display_text, values=display_values, tags=tags)
+            
+            # 【关键修复】存储元数据到映射字典，包含原始行信息（不受排序影响）
+            # 这样点击时可以直接从item_id获取正确的元数据，而不依赖位置索引
+            metadata = {
+                'original_index': index,  # 在filtered_df中的索引
+                'original_row': original_row_numbers[index] if original_row_numbers and index < len(original_row_numbers) else index + 2,
+                'source_file': row.get('source_file', '') if 'source_file' in row.index else '',
+                'project_id': row.get('项目号', '') if '项目号' in row.index else '',
+                'interface_id': row.get('接口号', '') if '接口号' in row.index else '',
+                'source_column': row.get('_source_column', None) if '_source_column' in row.index else None,
+            }
+            self._item_metadata[(viewer, item_id)] = metadata
         
         # 如果有更多行未显示，添加提示
         if not show_all and len(display_df) > 20:
@@ -830,28 +847,25 @@ class WindowManager:
                 if col_num != (checkbox_col_idx + 1):
                     return
                 
-                # 获取点击行的索引
-                item_index = viewer.index(item_id)
+                # 【关键修复】从元数据映射字典获取数据，不受排序影响
+                metadata = self._item_metadata.get((viewer, item_id))
+                if not metadata:
+                    # 兜底：使用旧逻辑（位置索引）
+                    print(f"[警告] 未找到item元数据（勾选框），使用位置索引（可能不准确）")
+                    item_index = viewer.index(item_id)
+                    original_row = original_row_numbers[item_index] if original_row_numbers and item_index < len(original_row_numbers) else item_index + 2
+                    source_file = source_files[0] if len(source_files) == 1 else self._find_source_file(original_df, item_index, source_files)
+                else:
+                    # 从元数据提取信息
+                    original_row = metadata['original_row']
+                    source_file = metadata['source_file']
                 
-                # 获取原始行号
-                if not original_row_numbers or item_index >= len(original_row_numbers):
-                    print(f"无法获取原始行号：索引{item_index}")
-                    return
-                
-                original_row = original_row_numbers[item_index]
-                
-                # 确定源文件路径（使用第一个文件，或根据项目号匹配）
                 if not source_files:
                     print("未提供源文件信息")
                     return
                 
-                # 如果有多个文件，根据原始DataFrame中的数据匹配
-                source_file = source_files[0] if len(source_files) == 1 else self._find_source_file(
-                    original_df, item_index, source_files
-                )
-                
                 if not source_file:
-                    print(f"无法确定源文件：行索引{item_index}")
+                    print(f"[错误] 无法确定源文件")
                     return
                 
                 # 【修复】切换勾选状态，传入用户姓名
@@ -878,9 +892,19 @@ class WindowManager:
                             from registry import hooks as registry_hooks
                             from registry.util import extract_interface_id, extract_project_id
                             
-                            # 获取该行的数据
-                            if item_index < len(original_df):
-                                row_data = original_df.iloc[item_index]
+                            # 【修复】从元数据获取数据
+                            if metadata and metadata.get('original_index') is not None:
+                                original_index = metadata['original_index']
+                                if original_index < len(original_df):
+                                    row_data = original_df.iloc[original_index]
+                                else:
+                                    row_data = None
+                            else:
+                                # 兜底：使用位置索引
+                                item_index = viewer.index(item_id)
+                                row_data = original_df.iloc[item_index] if item_index < len(original_df) else None
+                            
+                            if row_data is not None:
                                 
                                 # 提取接口号和项目号
                                 file_type_map = {
@@ -1009,50 +1033,58 @@ class WindowManager:
                 if col_num != (interface_col_idx + 1):
                     return
                 
-                # 获取点击行的索引
-                item_index = viewer.index(item_id)
+                # 【关键修复】从元数据映射字典获取数据，不受排序影响
+                metadata = self._item_metadata.get((viewer, item_id))
+                if not metadata:
+                    # 兜底：使用旧逻辑（位置索引）
+                    print(f"[警告] 未找到item元数据，使用位置索引（可能不准确）")
+                    item_index = viewer.index(item_id)
+                    metadata = {
+                        'original_index': item_index,
+                        'original_row': original_row_numbers[item_index] if original_row_numbers and item_index < len(original_row_numbers) else item_index + 2,
+                        'source_file': original_df.iloc[item_index]['source_file'] if item_index < len(original_df) and 'source_file' in original_df.columns else '',
+                        'project_id': str(original_df.iloc[item_index]['项目号']) if item_index < len(original_df) and '项目号' in original_df.columns else '',
+                        'interface_id': '',
+                        'source_column': None,
+                    }
+                
+                # 从元数据提取信息
+                original_row = metadata['original_row']
+                source_file = metadata['source_file']
+                project_id = str(metadata['project_id'])
+                source_column = metadata['source_column']
                 
                 # 获取行数据
                 item_values = viewer.item(item_id, "values")
                 if not item_values or interface_col_idx >= len(item_values):
                     return
                 
+                # 从UI读取接口号（因为可能带角色后缀）
                 interface_id = item_values[interface_col_idx]
-                
-                # 获取原始行号
-                if not original_row_numbers or item_index >= len(original_row_numbers):
-                    print(f"无法获取原始行号：索引{item_index}")
-                    return
-                
-                original_row = original_row_numbers[item_index]
                 
                 # 获取文件类型（根据选项卡名称）
                 file_type = self._get_file_type_from_tab(tab_name)
                 
-                # 获取源文件路径
-                source_file = None
-                if 'source_file' in original_df.columns:
-                    try:
-                        if item_index < len(original_df):
-                            source_file = original_df.iloc[item_index]['source_file']
-                    except:
-                        pass
+                # 【调试】打印详细信息
+                print(f"[回文输入] item_id: {item_id}")
+                print(f"[回文输入] 接口号(UI): {interface_id}")
+                print(f"[回文输入] 源文件: {os.path.basename(source_file) if source_file else 'N/A'}")
+                print(f"[回文输入] 项目号: {project_id}")
+                print(f"[回文输入] Excel行号: {original_row}")
                 
                 if not source_file:
-                    print(f"无法确定源文件：行索引{item_index}")
+                    print(f"[错误] 无法确定源文件")
                     from tkinter import messagebox
                     messagebox.showerror("错误", "无法获取源文件信息，请联系管理员", parent=viewer)
                     return
                 
-                # 获取项目号
-                project_id = ""
-                if "项目号" in columns:
-                    try:
-                        project_col_idx = columns.index("项目号")
-                        if project_col_idx < len(item_values):
-                            project_id = str(item_values[project_col_idx])
-                    except:
-                        pass
+                if not project_id:
+                    # 尝试从source_file提取
+                    source_file_name = os.path.basename(source_file)
+                    import re
+                    match = re.search(r'(\d{4})', source_file_name)
+                    project_id = match.group(1) if match else ""
+                    print(f"[回文输入] 从文件名提取项目号: {project_id}")
                 
                 # 获取当前用户姓名
                 user_name = getattr(self.app, 'user_name', '').strip()

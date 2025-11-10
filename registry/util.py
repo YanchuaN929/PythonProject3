@@ -113,7 +113,7 @@ def extract_project_id(df_row: pd.Series, file_type: int) -> str:
         file_type: 文件类型（1-6）
         
     返回:
-        项目号字符串（去除前后空格），文件6若为空则返回"未知项目"
+        项目号字符串（去除前后空格）
     """
     # 首先尝试使用"项目号"列名
     if "项目号" in df_row.index:
@@ -129,10 +129,8 @@ def extract_project_id(df_row: pd.Series, file_type: int) -> str:
         # 需要从外部传入，这里返回空由调用方处理
         project_id = ""
     
-    # 文件6特殊处理：空值统一为"未知项目"
-    if file_type == 6 and (not project_id or project_id.lower() in ['nan', 'none', '']):
-        return "未知项目"
-    
+    # 【修复】删除文件6的"未知项目"特殊处理，保持与normalize_project_id一致
+    # 避免business_id不一致导致重复记录
     return project_id
 
 def extract_department(df_row: pd.Series) -> str:

@@ -264,7 +264,8 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
         cursor = conn.execute("SELECT display_status FROM tasks WHERE id=?", (tid,))
         row = cursor.fetchone()
         if row:
-            print(f"[Registry调试] 任务{key.get('interface_id', '?')[:20]}写入后的display_status={row[0]}")
+            # 【修复】不截断接口号，避免误导（之前[:20]会截断长接口号）
+            print(f"[Registry调试] 任务{key.get('interface_id', '?')}写入后的display_status={row[0]}")
 
 def write_event(db_path: str, wal: bool, event_type: str, payload: Dict[str, Any], now: datetime) -> None:
     """
