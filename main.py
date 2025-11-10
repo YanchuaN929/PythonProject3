@@ -557,7 +557,7 @@ def process_target_file(file_path, current_datetime):
         result_df['责任人'] = ""
     
     # 【新增】添加source_file列（用于回文单号输入时定位源文件）
-    result_df['source_file'] = file_path
+    result_df['source_file'] = os.path.abspath(file_path)
 
     return result_df
 
@@ -1214,7 +1214,7 @@ def process_target_file2(file_path, current_datetime, project_id=None):
         result_df['责任人'] = "无"
     
     # 【新增】添加source_file列
-    result_df['source_file'] = file_path
+    result_df['source_file'] = os.path.abspath(file_path)
     # 新增"科室"列（基于I列内容包含：结构一室/结构二室/建筑总图室）
     try:
         department_values = []
@@ -1758,7 +1758,7 @@ def process_target_file3(file_path, current_datetime):
     except Exception:
         result_df['责任人'] = ""
     # 【新增】添加source_file列
-    result_df['source_file'] = file_path
+    result_df['source_file'] = os.path.abspath(file_path)
     return result_df
 
 
@@ -2581,7 +2581,7 @@ def process_target_file4(file_path, current_datetime):
     except Exception:
         result_df['责任人'] = ""
     # 【新增】添加source_file列
-    result_df['source_file'] = file_path
+    result_df['source_file'] = os.path.abspath(file_path)
     return result_df
 
 
@@ -3235,7 +3235,7 @@ def process_target_file5(file_path, current_datetime):
         result_df['责任人'] = ""
     
     # 【新增】添加source_file列
-    result_df['source_file'] = file_path
+    result_df['source_file'] = os.path.abspath(file_path)
 
     return result_df
 
@@ -3715,6 +3715,20 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
     except Exception:
         pass
 
+    # 主办室：W列（索引22）提取多室并列数据
+    try:
+        host_offices = []
+        for idx in result_df.index:
+            cell_val = df.iloc[idx, 22] if 22 < len(df.columns) else None
+            s = str(cell_val) if cell_val is not None and cell_val is not pd.NA else ""
+            s = s.strip()
+            # 保持原格式，不做额外处理（可能包含"结构一室"、"结构二室"、"建筑总图室"等）
+            host_offices.append(s)
+        result_df['主办室'] = host_offices
+    except Exception as e:
+        print(f"提取主办室列失败: {e}")
+        result_df['主办室'] = ""
+
     # 责任人：X列（索引23）按分隔符拆分并保留原始姓名集合（供过滤）
     try:
         owners = []
@@ -3729,7 +3743,10 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
             
             # 【新增】过滤责任人：只保留在姓名角色表中存在的姓名
             if valid_names_set:
-                names_str = filter_valid_names(names_str, valid_names_set)
+                filtered_names = filter_valid_names(names_str, valid_names_set)
+                # 如果过滤后为空，保留原始值（避免变成"请指派"）
+                if filtered_names:
+                    names_str = filtered_names
             
             owners.append(names_str)
         result_df['责任人'] = owners
@@ -3737,7 +3754,7 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
         result_df['责任人'] = ""
     
     # 【新增】添加source_file列
-    result_df['source_file'] = file_path
+    result_df['source_file'] = os.path.abspath(file_path)
 
     return result_df
 

@@ -330,9 +330,16 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
         return True
         
     except Exception as e:
-        print(f"写入失败: {e}")
+        print(f"[ERROR] 写入回文单号失败!")
+        print(f"  文件路径: {file_path}")
+        print(f"  文件类型: {file_type}")
+        print(f"  行号: {row_index}")
+        print(f"  回文单号: {response_number}")
+        print(f"  错误信息: {e}")
         import traceback
         traceback.print_exc()
+        from tkinter import messagebox
+        messagebox.showerror("写入失败", f"无法写入回文单号到Excel文件\n\n错误：{str(e)}")
         return False
 
 

@@ -58,10 +58,6 @@ class HistoryQueryDialog(tk.Toplevel):
         self.geometry("450x280")
         self.resizable(False, False)
         
-        # 居中显示
-        self.transient(parent)
-        self.grab_set()
-        
         self._create_widgets()
         
         # 绑定Enter键到查询按钮
@@ -205,9 +201,6 @@ class HistoryDisplayWindow(tk.Toplevel):
         
         self.title(f"历史查询结果 - 项目{project_id} - 接口{interface_id}")
         self.geometry("1400x700")
-        
-        # 居中显示
-        self.transient(parent)
         
         self._create_widgets()
         self._populate_table()

@@ -227,11 +227,6 @@ def normalize_project_id(pid: str, file_type: int) -> str:
         规范化后的项目号
     """
     pid = str(pid).strip() if pid else ""
-    
-    # 文件6特殊处理
-    if file_type == 6 and (not pid or pid.lower() in ['nan', 'none', '']):
-        return "未知项目"
-    
     return pid
 
 def get_source_basename(path: str) -> str:

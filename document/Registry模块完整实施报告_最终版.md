@@ -408,3 +408,103 @@ df_filtered = df.drop(已确认任务的索引)
 **报告生成时间**：2025-11-05  
 **版本**：Registry v1.0 - 完整版
 
+---
+
+## 📅 2025-11-10 更新：文件6主办室筛选功能
+
+### 问题背景
+
+室主任角色（一室主任、二室主任、建筑总图室主任）无法看到文件6的数据，原因是：
+1. 文件6的"科室"列被强制设置为空字符串
+2. 室主任的筛选逻辑依赖"科室"列进行匹配
+3. 导致所有文件6数据对室主任不可见
+
+### 解决方案
+
+**增加基于W列"主办室"的筛选逻辑**：
+
+#### 1. main.py - process_target_file6 (新增第3718-3730行)
+
+```python
+# 主办室：W列（索引22）提取多室并列数据
+try:
+    host_offices = []
+    for idx in result_df.index:
+        cell_val = df.iloc[idx, 22] if 22 < len(df.columns) else None
+        s = str(cell_val) if cell_val is not None and cell_val is not pd.NA else ""
+        s = s.strip()
+        # 保持原格式，不做额外处理（可能包含"结构一室"、"结构二室"、"建筑总图室"等）
+        host_offices.append(s)
+    result_df['主办室'] = host_offices
+except Exception as e:
+    print(f"提取主办室列失败: {e}")
+    result_df['主办室'] = ""
+```
+
+**特点**：
+- 提取W列（索引22）的"主办室"数据
+- 保持原格式，支持多室并列情况（如"结构一室,结构二室"）
+- 异常处理确保健壮性
+
+#### 2. base.py - _filter_by_single_role (修改第1497-1537行)
+
+```python
+# 3. 一室主任：主办室包含"结构一室" 或 科室 ∈ {结构一室, 请室主任确认}
+if role == '一室主任':
+    # 优先检查"主办室"列（用于文件6）
+    if '主办室' in safe_df.columns:
+        # 使用包含匹配，处理多室并列情况
+        mask = safe_df['主办室'].astype(str).str.contains('结构一室', na=False, regex=False)
+        filtered = safe_df[mask]
+        if not filtered.empty:
+            return filtered
+    # 退回到"科室"列（用于文件1-5）
+    if '科室' in safe_df.columns:
+        return safe_df[safe_df['科室'].isin(['结构一室', '请室主任确认'])]
+    return safe_df
+```
+
+**特点**：
+- **双重筛选逻辑**：优先使用"主办室"列（文件6），退回到"科室"列（文件1-5）
+- **包含匹配**：使用`str.contains`而非精确匹配，支持多室并列
+- **向后兼容**：不影响文件1-5的现有筛选逻辑
+
+### 功能验证
+
+创建测试脚本 `scripts/test_file6_host_office.py`：
+
+**测试内容**：
+1. ✅ 验证W列"主办室"数据正确提取
+2. ✅ 验证包含匹配逻辑（支持多室并列）
+3. ✅ 验证三个室主任角色的筛选规则
+
+**测试用例**：
+```
+主办室 = "结构一室"         → 一室主任可见
+主办室 = "结构二室"         → 二室主任可见
+主办室 = "建筑总图室"       → 建筑总图室主任可见
+主办室 = "结构一室,结构二室" → 一室主任、二室主任均可见
+主办室 = ""                → 无室主任可见（正确）
+```
+
+### 涉及文件
+
+| 文件 | 修改内容 | 行数 |
+|-----|---------|-----|
+| `main.py` | 提取W列"主办室"数据 | +13行 |
+| `base.py` | 修改室主任筛选逻辑 | ~40行 |
+| `scripts/test_file6_host_office.py` | 验证脚本（新建） | +203行 |
+
+### 功能特性
+
+✅ **多室并列支持**：一个接口可能同时属于多个室  
+✅ **向后兼容**：文件1-5仍使用"科室"列筛选  
+✅ **健壮性**：异常处理确保提取失败时不影响其他功能  
+✅ **清晰的调用链**：process_target_file6 → apply_role_based_filter → _filter_by_single_role  
+
+### 完成状态
+
+**完成时间**：2025-11-10  
+**测试状态**：✅ 待用户验证  
+**生产就绪度**：✅ 可用
+

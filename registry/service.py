@@ -243,18 +243,18 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
             business_id,
             department,
             interface_time,
-            fields.get('role', ''),  # 角色信息
+            fields.get('role', ''),
             status,
-            fields.get('assigned_by'),  # 指派人
-            fields.get('assigned_at'),  # 指派时间
-            display_status,  # 【修复】使用变量，确保有默认值
-            fields.get('confirmed_by'),  # 确认人
-            fields.get('responsible_person'),  # 责任人
-            fields.get('response_number'),  # 【新增】回文单号
-            fields.get('completed_at'),  # 完成时间
-            fields.get('confirmed_at'),  # 确认时间
-            now_str,  # first_seen_at (只在INSERT时设置)
-            now_str   # last_seen_at (INSERT和UPDATE都会更新)
+            fields.get('assigned_by'),
+            fields.get('assigned_at'),
+            display_status,
+            fields.get('confirmed_by'),
+            fields.get('responsible_person'),
+            fields.get('response_number'),
+            fields.get('completed_at'),
+            fields.get('confirmed_at'),
+            now_str,
+            now_str
         )
     )
     conn.commit()
@@ -710,8 +710,8 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     department = excluded.department,
                     interface_time = excluded.interface_time,
                     role = excluded.role,
-                    status = excluded.status,  # 【修复】强制更新status（支持重置）
-                    display_status = excluded.display_status,  # 【修复】强制更新（支持重置）
+                    status = excluded.status,
+                    display_status = excluded.display_status,
                     last_seen_at = excluded.last_seen_at,
                     assigned_by = COALESCE(excluded.assigned_by, assigned_by),
                     assigned_at = COALESCE(excluded.assigned_at, assigned_at),
@@ -719,10 +719,10 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                         WHEN assigned_by IS NOT NULL THEN responsible_person
                         ELSE COALESCE(excluded.responsible_person, responsible_person)
                     END,
-                    confirmed_by = excluded.confirmed_by,  # 【修复】强制更新（支持重置为NULL）
-                    completed_at = excluded.completed_at,  # 【修复】强制更新（支持重置为NULL）
-                    confirmed_at = excluded.confirmed_at,   # 【修复】强制更新（支持重置为NULL）
-                    response_number = COALESCE(excluded.response_number, response_number)  # 【新增】保持已有回文单号
+                    confirmed_by = excluded.confirmed_by,
+                    completed_at = excluded.completed_at,
+                    confirmed_at = excluded.confirmed_at,
+                    response_number = COALESCE(excluded.response_number, response_number)
                 """,
                 (
                     tid,
@@ -741,11 +741,11 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     now_str,
                     assigned_by,
                     assigned_at,
-                    responsible_person,  # 从Excel中读取的责任人
+                    responsible_person,
                     confirmed_by,
                     completed_at,
                     confirmed_at,
-                    fields.get('response_number')  # 【新增】回文单号（通常为None，保持数据库中已有值）
+                    fields.get('response_number')
                 )
             )
             count += 1

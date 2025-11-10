@@ -1494,20 +1494,44 @@ class ExcelProcessorApp:
                     return safe_df[safe_df['责任人'].astype(str).str.strip() == user_name]
                 return safe_df
             
-            # 3. 一室主任：科室 ∈ {结构一室, 请室主任确认}
+            # 3. 一室主任：主办室包含"结构一室" 或 科室 ∈ {结构一室, 请室主任确认}
             if role == '一室主任':
+                # 优先检查"主办室"列（用于文件6）
+                if '主办室' in safe_df.columns:
+                    # 使用包含匹配，处理多室并列情况
+                    mask = safe_df['主办室'].astype(str).str.contains('结构一室', na=False, regex=False)
+                    filtered = safe_df[mask]
+                    if not filtered.empty:
+                        return filtered
+                # 退回到"科室"列（用于文件1-5）
                 if '科室' in safe_df.columns:
                     return safe_df[safe_df['科室'].isin(['结构一室', '请室主任确认'])]
                 return safe_df
             
-            # 4. 二室主任：科室 ∈ {结构二室, 请室主任确认}
+            # 4. 二室主任：主办室包含"结构二室" 或 科室 ∈ {结构二室, 请室主任确认}
             if role == '二室主任':
+                # 优先检查"主办室"列（用于文件6）
+                if '主办室' in safe_df.columns:
+                    # 使用包含匹配，处理多室并列情况
+                    mask = safe_df['主办室'].astype(str).str.contains('结构二室', na=False, regex=False)
+                    filtered = safe_df[mask]
+                    if not filtered.empty:
+                        return filtered
+                # 退回到"科室"列（用于文件1-5）
                 if '科室' in safe_df.columns:
                     return safe_df[safe_df['科室'].isin(['结构二室', '请室主任确认'])]
                 return safe_df
             
-            # 5. 建筑总图室主任：科室 ∈ {建筑总图室, 请室主任确认}
+            # 5. 建筑总图室主任：主办室包含"建筑总图室" 或 科室 ∈ {建筑总图室, 请室主任确认}
             if role == '建筑总图室主任':
+                # 优先检查"主办室"列（用于文件6）
+                if '主办室' in safe_df.columns:
+                    # 使用包含匹配，处理多室并列情况
+                    mask = safe_df['主办室'].astype(str).str.contains('建筑总图室', na=False, regex=False)
+                    filtered = safe_df[mask]
+                    if not filtered.empty:
+                        return filtered
+                # 退回到"科室"列（用于文件1-5）
                 if '科室' in safe_df.columns:
                     return safe_df[safe_df['科室'].isin(['建筑总图室', '请室主任确认'])]
                 return safe_df
@@ -5038,6 +5062,7 @@ class ExcelProcessorApp:
                     # 重新处理数据
                     self.start_processing()
                     print("[指派] 刷新完成")
+                    
                 except Exception as e:
                     print(f"[指派] 刷新显示失败: {e}")
                     import traceback

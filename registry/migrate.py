@@ -102,9 +102,16 @@ def migrate_if_needed(db_path: str) -> None:
     
     conn = sqlite3.connect(db_path)
     try:
-        # 检查是否缺少新字段
-        if not check_column_exists(conn, "tasks", "display_status") or not check_column_exists(conn, "tasks", "business_id"):
-            print("[Registry] 检测到旧版本数据库，开始自动迁移...")
+        # 检查是否缺少新字段（需要检查所有关键字段）
+        missing_fields = []
+        required_fields = ["display_status", "business_id", "response_number"]
+        
+        for field in required_fields:
+            if not check_column_exists(conn, "tasks", field):
+                missing_fields.append(field)
+        
+        if missing_fields:
+            print(f"[Registry] 检测到数据库缺少字段: {', '.join(missing_fields)}，开始自动迁移...")
             conn.close()
             migrate_database(db_path)
         # else: 版本检查通过，不输出（避免频繁日志）
