@@ -735,12 +735,17 @@ class WindowManager:
         max_rows = len(display_df) if show_all else min(20, len(display_df))
         
         for index in range(max_rows):
-            row = display_df.iloc[index]
+            # 用于显示的行（display_df）
+            display_row = display_df.iloc[index]
+            
+            # 【关键修复】用于元数据的行（filtered_df，包含完整原始数据）
+            # display_df可能不包含source_file等列，必须从filtered_df读取
+            metadata_row = filtered_df.iloc[index] if index < len(filtered_df) else display_row
             
             # 处理数据显示格式（仅显示过滤后的列，不包括"接口时间"）
             display_values = []
             for col in columns:  # 只遍历要显示的列
-                val = row[col]
+                val = display_row[col]
                 
                 if pd.isna(val):
                     display_values.append("")
@@ -773,16 +778,20 @@ class WindowManager:
             item_id = viewer.insert("", "end", text=display_text, values=display_values, tags=tags)
             
             # 【关键修复】存储元数据到映射字典，包含原始行信息（不受排序影响）
-            # 这样点击时可以直接从item_id获取正确的元数据，而不依赖位置索引
+            # 注意：必须从filtered_df（原始完整数据）读取，而不是display_df（优化显示数据）
             metadata = {
                 'original_index': index,  # 在filtered_df中的索引
                 'original_row': original_row_numbers[index] if original_row_numbers and index < len(original_row_numbers) else index + 2,
-                'source_file': row.get('source_file', '') if 'source_file' in row.index else '',
-                'project_id': row.get('项目号', '') if '项目号' in row.index else '',
-                'interface_id': row.get('接口号', '') if '接口号' in row.index else '',
-                'source_column': row.get('_source_column', None) if '_source_column' in row.index else None,
+                'source_file': metadata_row.get('source_file', '') if 'source_file' in metadata_row.index else '',
+                'project_id': str(metadata_row.get('项目号', '')) if '项目号' in metadata_row.index else '',
+                'interface_id': metadata_row.get('接口号', '') if '接口号' in metadata_row.index else '',
+                'source_column': metadata_row.get('_source_column', None) if '_source_column' in metadata_row.index else None,
             }
             self._item_metadata[(viewer, item_id)] = metadata
+            
+            # 【调试】如果source_file为空，打印警告
+            if not metadata['source_file']:
+                print(f"[警告] 第{index}行元数据source_file为空，项目号: {metadata['project_id']}, 接口号: {metadata['interface_id']}")
         
         # 如果有更多行未显示，添加提示
         if not show_all and len(display_df) > 20:
