@@ -19,6 +19,7 @@ import pandas as pd
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from openpyxl import load_workbook
+from typing import List, Dict, Any
 
 # 导入窗口管理器
 from window import WindowManager
@@ -212,6 +213,7 @@ class ExcelProcessorApp:
             'on_tab_changed': lambda: self.on_tab_changed(None),  # 包装函数，传递None作为event
             'on_assignment_click': self._on_assignment_button_click,  # 【新增】指派任务回调
             'on_history_query_click': self._on_history_query_button_click,  # 【新增】历史查询回调
+            'on_ignore_overdue_click': self._on_ignore_overdue_button_click,  # 【新增】忽略延期项回调
         }
         
         config_data = {
@@ -940,6 +942,39 @@ class ExcelProcessorApp:
         if source_files is None:
             source_files = self._get_source_files_for_tab(tab_name)
         
+        # 【关键修复】在显示前过滤已完成/已确认的任务
+        if source_files and len(source_files) > 0:
+            source_file = source_files[0]  # 获取第一个源文件
+            
+            # 根据tab_name确定file_type
+            file_type_map = {
+                "内部需打开接口": 1,
+                "内部需回复接口": 2,
+                "外部需打开接口": 3,
+                "外部需回复接口": 4,
+                "三维提资接口": 5,
+                "收发文函": 6
+            }
+            file_type = file_type_map.get(tab_name)
+            
+            # 从df中提取项目号
+            project_id = None
+            if '项目号' in df.columns and not df.empty:
+                project_id = str(df.iloc[0]['项目号'])
+            
+            if file_type and project_id:
+                # 调用过滤函数
+                original_count = len(df)
+                df = self._exclude_pending_confirmation_rows(df, source_file, file_type, project_id)
+                filtered_count = original_count - len(df)
+                
+                if filtered_count > 0:
+                    print(f"[显示过滤] {tab_name}: 已过滤{filtered_count}行已完成/已确认任务，剩余{len(df)}行")
+                    
+                    # 更新original_row_numbers以匹配过滤后的df
+                    if "原始行号" in df.columns:
+                        original_row_numbers = list(df["原始行号"])
+        
         # 【新增】获取当前用户的角色列表
         user_roles = getattr(self, 'user_roles', [])
         if not user_roles:
@@ -1083,24 +1118,26 @@ class ExcelProcessorApp:
             exclude_indices = []
             
             if is_designer and not is_superior:
-                # 设计人员：过滤掉"待审查"和"待指派人审查"的任务
+                # 设计人员：过滤掉"待审查"和"待指派人审查"的任务，以及已确认的任务
                 for tid, status_text in status_map.items():
                     # 去除emoji和延期前缀
                     clean_status = status_text.replace('⏳', '').replace('📌', '').replace('❗', '').replace('（已延期）', '').strip()
-                    if clean_status in ['待审查', '待指派人审查', '待上级确认', '待指派人确认'] and tid in df_index_map:
+                    if clean_status in ['待审查', '待指派人审查', '待上级确认', '待指派人确认', '已审查'] and tid in df_index_map:
                         exclude_indices.append(df_index_map[tid])
                         print(f"[Registry导出调试] 设计人员过滤：{clean_status}, 接口={tid[:20]}...")
-                    # 也过滤已确认的任务
+                    # 也过滤空状态的任务（已归档等）
                     elif not status_text and tid in df_index_map:
                         exclude_indices.append(df_index_map[tid])
-                        print(f"[Registry导出调试] 过滤已确认任务: 接口={tid[:20]}...")
+                        print(f"[Registry导出调试] 过滤空状态任务: 接口={tid[:20]}...")
             else:
-                # 上级角色：只过滤已确认的任务
+                # 上级角色：过滤已确认的任务和空状态任务
                 for tid, status_text in status_map.items():
-                    # 如果status_text为空，说明任务已确认或已归档，不导出
-                    if not status_text and tid in df_index_map:
+                    # 去除emoji和延期前缀
+                    clean_status = status_text.replace('⏳', '').replace('📌', '').replace('❗', '').replace('（已延期）', '').strip()
+                    # 如果是"已审查"或status_text为空，说明任务已确认或已归档，不显示
+                    if (clean_status == '已审查' or not status_text) and tid in df_index_map:
                         exclude_indices.append(df_index_map[tid])
-                        print(f"[Registry导出调试] 上级过滤已确认任务: 接口={tid[:20]}...")
+                        print(f"[Registry导出调试] 上级过滤已确认任务: {clean_status or '空状态'}, 接口={tid[:20]}...")
             
             if not exclude_indices:
                 return df
@@ -3476,11 +3513,18 @@ class ExcelProcessorApp:
                         total_files_processed += file_count
                         
                         if not results1.empty:
+                            # 【关键修复】统计前也应用过滤，确保弹窗数字与实际显示一致
+                            display_count = len(results1)
+                            if self.target_files1 and len(self.target_files1) > 0:
+                                source_file = self.target_files1[0][0]
+                                project_id = self.target_files1[0][1]
+                                display_count = len(self._exclude_pending_confirmation_rows(results1.copy(), source_file, 1, project_id))
+                            
                             processed_count += 1
                             if project_count > 1:
-                                completion_messages.append(f"内部需打开接口：{len(results1)} 行数据 ({project_count}个项目)")
+                                completion_messages.append(f"内部需打开接口：{display_count} 行数据 ({project_count}个项目)")
                             else:
-                                completion_messages.append(f"内部需打开接口：{len(results1)} 行数据")
+                                completion_messages.append(f"内部需打开接口：{display_count} 行数据")
                         else:
                             completion_messages.append("内部需打开接口：无符合条件的数据")
                     
@@ -3494,11 +3538,18 @@ class ExcelProcessorApp:
                         total_files_processed += file_count
                         
                         if not results2.empty:
+                            # 【关键修复】统计前也应用过滤
+                            display_count = len(results2)
+                            if self.target_files2 and len(self.target_files2) > 0:
+                                source_file = self.target_files2[0][0]
+                                project_id = self.target_files2[0][1]
+                                display_count = len(self._exclude_pending_confirmation_rows(results2.copy(), source_file, 2, project_id))
+                            
                             processed_count += 1
                             if project_count > 1:
-                                completion_messages.append(f"内部需回复接口：{len(results2)} 行数据 ({project_count}个项目)")
+                                completion_messages.append(f"内部需回复接口：{display_count} 行数据 ({project_count}个项目)")
                             else:
-                                completion_messages.append(f"内部需回复接口：{len(results2)} 行数据")
+                                completion_messages.append(f"内部需回复接口：{display_count} 行数据")
                         else:
                             completion_messages.append("内部需回复接口：无符合条件的数据")
                     
@@ -3512,11 +3563,18 @@ class ExcelProcessorApp:
                         total_files_processed += file_count
                         
                         if not results3.empty:
+                            # 【关键修复】统计前也应用过滤
+                            display_count = len(results3)
+                            if self.target_files3 and len(self.target_files3) > 0:
+                                source_file = self.target_files3[0][0]
+                                project_id = self.target_files3[0][1]
+                                display_count = len(self._exclude_pending_confirmation_rows(results3.copy(), source_file, 3, project_id))
+                            
                             processed_count += 1
                             if project_count > 1:
-                                completion_messages.append(f"外部需打开接口：{len(results3)} 行数据 ({project_count}个项目)")
+                                completion_messages.append(f"外部需打开接口：{display_count} 行数据 ({project_count}个项目)")
                             else:
-                                completion_messages.append(f"外部需打开接口：{len(results3)} 行数据")
+                                completion_messages.append(f"外部需打开接口：{display_count} 行数据")
                         else:
                             completion_messages.append("外部需打开接口：无符合条件的数据")
                     
@@ -3712,6 +3770,14 @@ class ExcelProcessorApp:
                             combined_message += "• 导出结果将按项目号自动分文件夹存放\n"
                             combined_message += "• 主界面显示的是所有项目的合并数据"
                         messagebox.showinfo("批量处理完成", combined_message)
+                        
+                        # 【非自动模式】立即显示指派和忽略提示
+                        if not getattr(self, 'auto_mode', False):
+                            # 所领导角色：提示忽略延期项
+                            self._show_ignore_overdue_reminder()
+                            # 接口工程师/室主任：提示指派任务
+                            if distribution and self._should_show_assignment_reminder():
+                                self.root.after(500, self._show_assignment_reminder)
 
                     # 自动模式下，仅当非手动操作时才自动导出（避免手动操作被联动）
                     if getattr(self, 'auto_mode', False) and not self._manual_operation:
@@ -3729,15 +3795,22 @@ class ExcelProcessorApp:
                                 txt_path = getattr(self, 'last_summary_written_path', None)
                                 if txt_path and os.path.exists(txt_path):
                                     self._show_summary_popup(txt_path)
-                            except Exception:
-                                pass
+                                    
+                                # 【自动模式】在导出结果弹窗后显示指派和忽略提示
+                                # 延迟3秒，确保用户看到了导出结果
+                                def show_reminders():
+                                    # 所领导角色：提示忽略延期项
+                                    self._show_ignore_overdue_reminder()
+                                    # 接口工程师/室主任：提示指派任务
+                                    if distribution and self._should_show_assignment_reminder():
+                                        self.root.after(500, self._show_assignment_reminder)
+                                
+                                self.root.after(3000, show_reminders)
+                            except Exception as e:
+                                print(f"[导出后提示] 失败: {e}")
                         self.root.after(2500, after_export_summary)
                     
                     self.process_button.config(state='normal', text="开始处理")
-                    
-                    # 【新增】检测是否需要指派任务（仅接口工程师和室主任）
-                    if distribution and self._should_show_assignment_reminder():
-                        self.root.after(500, self._show_assignment_reminder)
                     
                     # 重置手动操作标志
                     self._manual_operation = False
@@ -5099,6 +5172,216 @@ class ExcelProcessorApp:
             print(f"历史查询失败: {e}")
             import traceback
             traceback.print_exc()
+    
+    def _on_ignore_overdue_button_click(self):
+        """忽略延期项按钮点击"""
+        try:
+            from tkinter import messagebox
+            
+            # 1. 检查是否是所领导角色
+            user_role = getattr(self, 'user_role', '').strip()
+            user_roles = getattr(self, 'user_roles', [])
+            
+            # 组合所有角色进行检查
+            all_roles = user_roles if user_roles else ([user_role] if user_role else [])
+            is_leader = any('所领导' in role for role in all_roles)
+            
+            if not is_leader:
+                messagebox.showwarning("权限不足", "只有所领导角色可以使用此功能", parent=self.root)
+                return
+            
+            # 2. 收集所有已延期的任务
+            overdue_tasks = self._collect_overdue_tasks()
+            
+            if not overdue_tasks:
+                messagebox.showinfo("提示", "当前没有已延期的任务", parent=self.root)
+                return
+            
+            # 3. 显示批量忽略对话框
+            from ignore_overdue_dialog import IgnoreOverdueDialog
+            
+            user_name = getattr(self, 'user_name', '').strip()
+            dialog = IgnoreOverdueDialog(
+                self.root,
+                overdue_tasks,
+                user_name
+            )
+            dialog.wait_window()
+            
+            # 4. 如果成功忽略，刷新显示
+            if hasattr(dialog, 'ignore_successful') and dialog.ignore_successful:
+                try:
+                    print("[忽略延期] 开始刷新显示...")
+                    # 清除文件缓存
+                    self.file_manager.clear_file_caches_only()
+                    # 重新处理数据
+                    self.start_processing()
+                    print("[忽略延期] 刷新完成")
+                    
+                except Exception as e:
+                    print(f"[忽略延期] 刷新显示失败: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print("[忽略延期] 用户取消或未完成操作")
+                
+        except Exception as e:
+            print(f"忽略延期任务失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def _show_ignore_overdue_reminder(self):
+        """所领导角色：显示忽略延期任务提示"""
+        try:
+            from tkinter import messagebox
+            
+            user_role = getattr(self, 'user_role', '').strip()
+            user_roles = getattr(self, 'user_roles', [])
+            all_roles = user_roles if user_roles else ([user_role] if user_role else [])
+            is_leader = any('所领导' in role for role in all_roles)
+            
+            if not is_leader:
+                return
+            
+            # 收集延期任务
+            overdue_tasks = self._collect_overdue_tasks()
+            
+            if overdue_tasks and len(overdue_tasks) > 0:
+                # 询问是否要批量忽略
+                response = messagebox.askyesno(
+                    "延期任务提示",
+                    f"检测到 {len(overdue_tasks)} 个已延期的任务。\n\n"
+                    f"是否要打开批量忽略功能？\n\n"
+                    f"（被忽略的任务将不再显示，直到预期时间发生变化）",
+                    parent=self.root
+                )
+                
+                if response:
+                    # 用户选择是，打开忽略对话框
+                    from ignore_overdue_dialog import IgnoreOverdueDialog
+                    user_name = getattr(self, 'user_name', '').strip()
+                    dialog = IgnoreOverdueDialog(
+                        self.root,
+                        overdue_tasks,
+                        user_name
+                    )
+                    dialog.wait_window()
+                    
+                    # 如果成功忽略，刷新显示
+                    if hasattr(dialog, 'ignore_successful') and dialog.ignore_successful:
+                        print("[忽略延期] 开始刷新显示...")
+                        self.file_manager.clear_file_caches_only()
+                        messagebox.showinfo(
+                            "提示",
+                            "忽略操作已完成！\n请点击'开始处理'按钮刷新显示。",
+                            parent=self.root
+                        )
+        except Exception as e:
+            print(f"[忽略延期提示] 失败: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def _collect_overdue_tasks(self) -> List[Dict[str, Any]]:
+        """
+        收集当前所有已延期的任务
+        
+        【关键改进】直接从数据库读取，而不是从UI的viewer中读取
+        这样更可靠，不依赖UI状态
+        
+        返回:
+            List[Dict]: 延期任务列表
+        """
+        from date_utils import is_date_overdue
+        import registry.hooks as registry_hooks
+        
+        overdue_tasks = []
+        
+        try:
+            # 获取registry配置
+            cfg = registry_hooks._cfg()
+            if not cfg:
+                print("[收集延期任务] Registry未配置")
+                return []
+            
+            db_path = cfg.get('registry_db_path')
+            wal = cfg.get('wal', True)
+            
+            if not db_path:
+                print("[收集延期任务] 数据库路径未设置")
+                return []
+            
+            # 直接从数据库读取所有未忽略的任务
+            import sqlite3
+            conn = sqlite3.connect(db_path)
+            cursor = conn.execute("""
+                SELECT 
+                    file_type, project_id, interface_id, source_file, 
+                    row_index, interface_time, status, display_status,
+                    responsible_person, department, role
+                FROM tasks
+                WHERE status NOT IN ('archived')
+                  AND (ignored IS NULL OR ignored = 0)
+                ORDER BY file_type, project_id, interface_id
+            """)
+            
+            rows = cursor.fetchall()
+            print(f"[收集延期任务] 从数据库读取到 {len(rows)} 个未归档且未忽略的任务")
+            
+            # 文件类型映射到选项卡名称
+            file_type_names = {
+                1: '内部需打开接口',
+                2: '内部需回复接口',
+                3: '外部需打开接口',
+                4: '外部需回复接口',
+                5: '三维提资接口',
+                6: '收发文函'
+            }
+            
+            # 检查每个任务是否延期
+            for row in rows:
+                try:
+                    file_type, project_id, interface_id, source_file, row_index, interface_time, status, display_status, responsible_person, department, role = row
+                    
+                    # 检查接口时间是否有效
+                    if not interface_time or str(interface_time).strip() in ['', '-', 'nan', 'None', '未知']:
+                        continue
+                    
+                    # 判断是否延期
+                    if not is_date_overdue(str(interface_time)):
+                        continue
+                    
+                    # 构建任务信息
+                    task = {
+                        'file_type': file_type,
+                        'project_id': str(project_id),
+                        'interface_id': str(interface_id),
+                        'source_file': str(source_file) if source_file else '',
+                        'row_index': row_index if row_index else 0,
+                        'interface_time': str(interface_time).strip(),
+                        'status': str(status) if status else '',
+                        'display_status': str(display_status) if display_status else '',
+                        'responsible_person': str(responsible_person) if responsible_person else '',
+                        'department': str(department) if department else '',
+                        'role': str(role) if role else '',
+                        'tab_name': file_type_names.get(file_type, f'文件类型{file_type}')
+                    }
+                    
+                    overdue_tasks.append(task)
+                    print(f"  [延期] {interface_id} ({project_id}) - {interface_time} [{file_type_names.get(file_type)}]")
+                    
+                except Exception as e:
+                    print(f"[收集延期任务] 处理任务失败: {e}")
+                    continue
+            
+            conn.close()
+            
+        except Exception as e:
+            print(f"[收集延期任务] 数据库查询失败: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        print(f"[收集延期任务] ✓ 共找到 {len(overdue_tasks)} 个延期任务")
+        return overdue_tasks
 
 
 def main():

@@ -33,7 +33,8 @@ def find_task_by_business_id(db_path: str, wal: bool, file_type: int, project_id
     cursor = conn.execute("""
         SELECT id, source_file, row_index, interface_time, 
                status, display_status, responsible_person,
-               assigned_by, assigned_at, confirmed_by, completed_at, confirmed_at
+               assigned_by, assigned_at, confirmed_by, completed_at, completed_by, confirmed_at,
+               ignored, interface_time_when_ignored
         FROM tasks
         WHERE business_id = ?
         ORDER BY last_seen_at DESC
@@ -54,7 +55,10 @@ def find_task_by_business_id(db_path: str, wal: bool, file_type: int, project_id
             'assigned_at': row[8],
             'confirmed_by': row[9],
             'completed_at': row[10],
-            'confirmed_at': row[11]
+            'completed_by': row[11],
+            'confirmed_at': row[12],
+            'ignored': row[13],
+            'interface_time_when_ignored': row[14]
         }
     return None
 
@@ -125,6 +129,23 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
     business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
     old_task = find_task_by_business_id(db_path, wal, key['file_type'], key['project_id'], key['interface_id'])
     
+    # 【新增】在更新任务前，检查是否需要自动取消忽略
+    if old_task and old_task.get('ignored') == 1:
+        old_interface_time = old_task.get('interface_time_when_ignored', '')
+        current_interface_time = fields.get('interface_time', '')
+        
+        if current_interface_time != old_interface_time:
+            # 自动取消忽略
+            fields['ignored'] = 0
+            fields['ignored_at'] = None
+            fields['ignored_by'] = None
+            fields['interface_time_when_ignored'] = None
+            fields['ignored_reason'] = None
+            
+            print(f"[Registry自动取消忽略] ✓ {key['interface_id']}")
+            print(f"  原预期时间: {old_interface_time}")
+            print(f"  新预期时间: {current_interface_time}")
+    
     if old_task:
         # 检查是否需要重置状态
         # 【修复】判断完成列变化的逻辑：
@@ -147,15 +168,83 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
                 new_completed_val
             )
         
+        # 【历史记录版本化】检测是否需要创建新轮次记录
+        # 条件：completed_at变空 且 interface_time变化 且 之前有完整数据链（completed_at和confirmed_at都存在）
+        if need_reset and old_task.get('completed_at') and old_task.get('confirmed_at'):
+            # 有完整数据链，创建新轮次记录
+            # 策略：归档旧记录（修改row_index释放UNIQUE约束），新记录使用当前row_index
+            print(f"[Registry版本化] {key['interface_id']} 检测到更新/重置，之前有完整数据链，归档旧记录并创建新轮次")
+            
+            # 1. 归档旧记录，修改row_index避免UNIQUE约束冲突
+            # 使用负数row_index标记归档记录：-1000000 - 时间戳后6位 - 原row_index后3位
+            import time
+            old_tid = old_task['id']
+            old_row_index = old_task['row_index']
+            archived_row_index = -1000000 - int(time.time() % 1000000) - (old_row_index % 1000)
+            now_str = now.isoformat()
+            
+            # 先修改row_index和id（释放UNIQUE约束和主键冲突），再修改status
+            # 新的id基于归档后的row_index计算
+            from .util import make_task_id as calc_tid
+            archived_tid = calc_tid(
+                key['file_type'],
+                key['project_id'],
+                key['interface_id'],
+                old_task['source_file'],
+                archived_row_index
+            )
+            conn.execute("""
+                UPDATE tasks
+                SET id = ?,
+                    row_index = ?,
+                    status = 'archived',
+                    archive_reason = 'updated',
+                    archived_at = ?
+                WHERE id = ?
+            """, (archived_tid, archived_row_index, now_str, old_tid))
+            conn.commit()
+            print(f"[Registry版本化] 已归档旧记录: {old_tid} -> {archived_tid}，row_index {old_row_index} -> {archived_row_index}")
+            
+            # 2. 设置新记录的first_seen_at为更新日期格式
+            update_date = now.strftime('%Y-%m-%d')
+            fields['_versioned_first_seen'] = f"(更新日期){update_date}"
+            # 3. 强制清空继承字段，确保是全新记录
+            fields['status'] = Status.OPEN
+            fields['display_status'] = '待完成' if old_task.get('responsible_person') else '请指派'
+            # 【关键】显式设置为None，而不是不设置（避免后续继承逻辑覆盖）
+            fields['completed_at'] = None
+            fields['completed_by'] = None
+            fields['confirmed_at'] = None
+            fields['confirmed_by'] = None
+            fields['response_number'] = None
+            # 4. 保留指派信息
+            if old_task.get('assigned_by'):
+                fields['assigned_by'] = old_task['assigned_by']
+                fields['assigned_at'] = old_task['assigned_at']
+                fields['responsible_person'] = old_task['responsible_person']
+            # 5. 跳过后续的need_reset逻辑（已经处理完毕）
+            need_reset = False
+            # 6. 标记old_task为None，避免后续继承逻辑
+            old_task = None
+            print(f"[Registry版本化] 新轮次记录的首次发现时间标注为: {fields['_versioned_first_seen']}")
+        
         if need_reset:
             # 重置状态，但保留指派信息
             fields['status'] = Status.OPEN
-            fields['display_status'] = '待完成' if old_task['responsible_person'] else '请指派'
+            fields['display_status'] = '待完成' if old_task and old_task.get('responsible_person') else '请指派'
             fields['completed_at'] = None
+            fields['completed_by'] = None
             fields['confirmed_at'] = None
             fields['confirmed_by'] = None
+            # 【新增】重置时也确保清空忽略标记（如果之前自动取消忽略没触发）
+            if not fields.get('ignored'):  # 如果没有显式设置，确保为0
+                fields['ignored'] = 0
+                fields['ignored_at'] = None
+                fields['ignored_by'] = None
+                fields['interface_time_when_ignored'] = None
+                fields['ignored_reason'] = None
             
-            if old_task['assigned_by'] and not fields.get('assigned_by'):
+            if old_task and old_task.get('assigned_by') and not fields.get('assigned_by'):
                 fields['assigned_by'] = old_task['assigned_by']
                 fields['assigned_at'] = old_task['assigned_at']
                 fields['responsible_person'] = old_task['responsible_person']
@@ -167,40 +256,46 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
             # 但如果新状态是明确设置的其他值（如'待审查'），则使用新值
             current_display_status = fields.get('display_status')
             
-            if current_display_status == '待完成' and old_task['display_status'] and old_task['display_status'] != '待完成':
+            if old_task and current_display_status == '待完成' and old_task['display_status'] and old_task['display_status'] != '待完成':
                 # 默认值'待完成'，继承旧状态
                 fields['display_status'] = old_task['display_status']
                 print(f"[Registry继承] {key['interface_id']} 未变化，继承状态: {old_task['display_status']}")
             elif current_display_status and current_display_status != '待完成':
                 # 明确设置的其他状态（如'待审查'），使用新值，不继承
                 print(f"[Registry] {key['interface_id']} 状态明确设置为: {current_display_status}，不继承")
-            elif not current_display_status and old_task['display_status']:
+            elif old_task and not current_display_status and old_task['display_status']:
                 # 没有设置display_status，继承旧值
                 fields['display_status'] = old_task['display_status']
                 print(f"[Registry继承] {key['interface_id']} 继承旧状态: {old_task['display_status']}")
             
-            # 继承其他状态字段
-            if not fields.get('status'):
-                fields['status'] = old_task['status']
-            if not fields.get('completed_at'):
-                fields['completed_at'] = old_task['completed_at']
-            if not fields.get('confirmed_at'):
-                fields['confirmed_at'] = old_task['confirmed_at']
-            if not fields.get('confirmed_by'):
-                fields['confirmed_by'] = old_task['confirmed_by']
-            
-            # 继承指派信息
-            if old_task['assigned_by'] and not fields.get('assigned_by'):
-                fields['assigned_by'] = old_task['assigned_by']
-                fields['assigned_at'] = old_task['assigned_at']
-            if old_task['responsible_person'] and not fields.get('responsible_person'):
-                fields['responsible_person'] = old_task['responsible_person']
+            # 继承其他状态字段（仅当old_task存在时）
+            if old_task:
+                if not fields.get('status'):
+                    fields['status'] = old_task['status']
+                if not fields.get('completed_at'):
+                    fields['completed_at'] = old_task['completed_at']
+                if not fields.get('completed_by'):
+                    fields['completed_by'] = old_task['completed_by']
+                if not fields.get('confirmed_at'):
+                    fields['confirmed_at'] = old_task['confirmed_at']
+                if not fields.get('confirmed_by'):
+                    fields['confirmed_by'] = old_task['confirmed_by']
+                
+                # 继承指派信息
+                if old_task['assigned_by'] and not fields.get('assigned_by'):
+                    fields['assigned_by'] = old_task['assigned_by']
+                    fields['assigned_at'] = old_task['assigned_at']
+                if old_task['responsible_person'] and not fields.get('responsible_person'):
+                    fields['responsible_person'] = old_task['responsible_person']
     
     status = fields.get('status', Status.OPEN)
     department = fields.get('department', '')
     interface_time = fields.get('interface_time', '')
     display_status = fields.get('display_status', '待完成')  # 【修复】确保总是有默认值
     now_str = now.isoformat()
+    
+    # 【历史记录版本化】使用自定义的first_seen_at（如果是新轮次记录）
+    first_seen_at = fields.get('_versioned_first_seen', now_str)
     
     # 使用 INSERT ... ON CONFLICT 实现 upsert
     conn.execute(
@@ -210,15 +305,17 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
             business_id,
             department, interface_time, role, status, 
             assigned_by, assigned_at, display_status, confirmed_by, responsible_person,
-            response_number, completed_at, confirmed_at,
+            response_number, completed_at, completed_by, confirmed_at,
+            ignored, ignored_at, ignored_by, interface_time_when_ignored, ignored_reason,
             first_seen_at, last_seen_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             business_id = excluded.business_id,
             department = excluded.department,
             interface_time = excluded.interface_time,
             role = excluded.role,
+            status = excluded.status,
             assigned_by = COALESCE(excluded.assigned_by, assigned_by),
             assigned_at = COALESCE(excluded.assigned_at, assigned_at),
             display_status = CASE 
@@ -229,8 +326,14 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
             confirmed_by = COALESCE(excluded.confirmed_by, confirmed_by),
             responsible_person = COALESCE(excluded.responsible_person, responsible_person),
             response_number = COALESCE(excluded.response_number, response_number),
-            completed_at = COALESCE(excluded.completed_at, completed_at),
-            confirmed_at = COALESCE(excluded.confirmed_at, confirmed_at),
+            completed_at = excluded.completed_at,
+            completed_by = excluded.completed_by,
+            confirmed_at = excluded.confirmed_at,
+            ignored = COALESCE(excluded.ignored, 0),
+            ignored_at = excluded.ignored_at,
+            ignored_by = excluded.ignored_by,
+            interface_time_when_ignored = excluded.interface_time_when_ignored,
+            ignored_reason = excluded.ignored_reason,
             last_seen_at = excluded.last_seen_at
         """,
         (
@@ -252,8 +355,14 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
             fields.get('responsible_person'),
             fields.get('response_number'),
             fields.get('completed_at'),
+            fields.get('completed_by'),
             fields.get('confirmed_at'),
-            now_str,
+            fields.get('ignored', 0),
+            fields.get('ignored_at'),
+            fields.get('ignored_by'),
+            fields.get('interface_time_when_ignored'),
+            fields.get('ignored_reason'),
+            first_seen_at,
             now_str
         )
     )
@@ -322,13 +431,24 @@ def mark_completed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime) 
         now: 当前时间
     """
     conn = get_connection(db_path, wal)
-    tid = make_task_id(
-        key['file_type'], 
-        key['project_id'], 
-        key['interface_id'], 
-        key['source_file'], 
-        key['row_index']
-    )
+    
+    # 【版本化修复】使用business_id查找最新的非归档任务
+    business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
+    
+    cursor = conn.execute("""
+        SELECT id FROM tasks
+        WHERE business_id = ?
+          AND status != 'archived'
+        ORDER BY last_seen_at DESC
+        LIMIT 1
+    """, (business_id,))
+    
+    row = cursor.fetchone()
+    if not row:
+        print(f"[Registry] mark_completed警告: 找不到非归档任务 {key['interface_id']}")
+        return
+    
+    tid = row[0]
     
     conn.execute(
         "UPDATE tasks SET status = ?, completed_at = ? WHERE id = ?",
@@ -350,20 +470,176 @@ def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, 
         confirmed_by: 确认人姓名（可选）
     """
     conn = get_connection(db_path, wal)
-    tid = make_task_id(
-        key['file_type'], 
-        key['project_id'], 
-        key['interface_id'], 
-        key['source_file'], 
-        key['row_index']
-    )
     
-    # 【状态提醒】确认时清除display_status和设置confirmed_by
+    # 【版本化修复】使用business_id查找最新的非归档任务，而不是使用计算的tid
+    # 因为归档后旧记录的id已被修改，直接用tid可能找不到记录
+    business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
+    
+    # 查找最新的非归档任务
+    cursor = conn.execute("""
+        SELECT id FROM tasks
+        WHERE business_id = ?
+          AND status != 'archived'
+        ORDER BY last_seen_at DESC
+        LIMIT 1
+    """, (business_id,))
+    
+    row = cursor.fetchone()
+    if not row:
+        print(f"[Registry] mark_confirmed警告: 找不到非归档任务 {key['interface_id']}")
+        return
+    
+    tid = row[0]
+    
+    # 【状态提醒】确认时设置confirmed_by，并更新display_status为"已审查"
+    # 【修复】确认后，display_status应该反映真实状态"已审查"
     conn.execute(
-        "UPDATE tasks SET status = ?, confirmed_at = ?, display_status = NULL, confirmed_by = ? WHERE id = ?",
-        (Status.CONFIRMED, now.isoformat(), confirmed_by, tid)
+        "UPDATE tasks SET status = ?, confirmed_at = ?, confirmed_by = ?, display_status = ? WHERE id = ?",
+        (Status.CONFIRMED, now.isoformat(), confirmed_by, '已审查', tid)
     )
     conn.commit()
+
+def mark_unconfirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime) -> None:
+    """
+    取消确认任务（上级角色取消勾选）
+    
+    参数:
+        db_path: 数据库路径
+        wal: 是否使用WAL模式
+        key: 任务key (file_type, project_id, interface_id, source_file, row_index)
+        now: 当前时间
+    """
+    conn = get_connection(db_path, wal)
+    
+    # 【版本化修复】使用business_id查找最新的非归档任务
+    business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
+    
+    cursor = conn.execute("""
+        SELECT id FROM tasks
+        WHERE business_id = ?
+          AND status != 'archived'
+        ORDER BY last_seen_at DESC
+        LIMIT 1
+    """, (business_id,))
+    
+    row = cursor.fetchone()
+    if not row:
+        print(f"[Registry] mark_unconfirmed警告: 找不到非归档任务 {key['interface_id']}")
+        return
+    
+    tid = row[0]
+    
+    # 取消确认：清除confirmed_at和confirmed_by，status改回COMPLETED，display_status改回"待审查"
+    conn.execute(
+        "UPDATE tasks SET status = ?, confirmed_at = NULL, confirmed_by = NULL, display_status = ? WHERE id = ?",
+        (Status.COMPLETED, '待审查', tid)
+    )
+    conn.commit()
+    print(f"[Registry] 已取消确认任务: {key['interface_id']}")
+
+def mark_ignored_batch(
+    db_path: str, 
+    wal: bool, 
+    task_keys: List[Dict[str, Any]], 
+    ignored_by: str,
+    ignored_reason: str = "",
+    now: datetime = None
+) -> Dict[str, Any]:
+    """
+    批量标记任务为"忽略"状态
+    
+    参数:
+        db_path: 数据库路径
+        wal: 是否使用WAL模式
+        task_keys: 任务key列表，每个key包含 file_type, project_id, interface_id, 
+                   source_file, row_index, interface_time
+        ignored_by: 忽略操作人
+        ignored_reason: 忽略原因（可选）
+        now: 当前时间
+    
+    返回:
+        {
+            'success_count': int,  # 成功标记的数量
+            'failed_tasks': [...]  # 失败的任务列表
+        }
+    """
+    if now is None:
+        now = datetime.now()
+    
+    conn = get_connection(db_path, wal)
+    success_count = 0
+    failed_tasks = []
+    
+    for key in task_keys:
+        try:
+            # 1. 查找任务（使用business_id查找最新非归档任务）
+            business_id = make_business_id(
+                key['file_type'], 
+                key['project_id'], 
+                key['interface_id']
+            )
+            
+            cursor = conn.execute("""
+                SELECT id, status, ignored 
+                FROM tasks
+                WHERE business_id = ?
+                  AND status != 'archived'
+                ORDER BY last_seen_at DESC
+                LIMIT 1
+            """, (business_id,))
+            
+            row = cursor.fetchone()
+            if not row:
+                failed_tasks.append({
+                    'interface_id': key['interface_id'],
+                    'reason': '任务不存在'
+                })
+                continue
+            
+            tid, status, already_ignored = row
+            
+            # 2. 检查是否已经被忽略
+            if already_ignored == 1:
+                failed_tasks.append({
+                    'interface_id': key['interface_id'],
+                    'reason': '已经被忽略'
+                })
+                continue
+            
+            # 3. 标记为忽略
+            interface_time = key.get('interface_time', '')
+            conn.execute("""
+                UPDATE tasks
+                SET ignored = 1,
+                    ignored_at = ?,
+                    ignored_by = ?,
+                    interface_time_when_ignored = ?,
+                    ignored_reason = ?
+                WHERE id = ?
+            """, (
+                now.isoformat(),
+                ignored_by,
+                interface_time,
+                ignored_reason,
+                tid
+            ))
+            
+            success_count += 1
+            print(f"[Registry忽略] ✓ 已忽略: {key['interface_id']} (预期时间: {interface_time})")
+            
+        except Exception as e:
+            failed_tasks.append({
+                'interface_id': key.get('interface_id', '未知'),
+                'reason': str(e)
+            })
+            print(f"[Registry忽略] ✗ 失败: {key.get('interface_id', '未知')} - {e}")
+    
+    conn.commit()
+    
+    return {
+        'success_count': success_count,
+        'failed_tasks': failed_tasks
+    }
 
 def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]], current_user_roles: List[str] = None) -> Dict[str, str]:
     """
@@ -423,7 +699,7 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
             # 查询任务信息
             cursor = conn.execute(
                 """
-                SELECT status, display_status, assigned_by, role, confirmed_at, responsible_person
+                SELECT status, display_status, assigned_by, role, confirmed_at, responsible_person, ignored
                 FROM tasks
                 WHERE id = ?
                 """,
@@ -435,11 +711,22 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
                 # 任务不存在，不显示状态
                 continue
             
-            status, display_status, assigned_by, role, confirmed_at, responsible_person = row
+            status, display_status, assigned_by, role, confirmed_at, responsible_person, ignored = row
             
-            # 如果已确认，返回空字符串（标记为已确认）
+            # 【新增】如果任务被忽略，不返回任何状态（UI中会被过滤）
+            if ignored == 1:
+                result[tid] = ''  # 空字符串，表示不显示
+                continue
+            
+            # 【修复】如果已确认，直接使用display_status（应该已经是"已审查"）
             if confirmed_at:
-                result[tid] = ''  # 空字符串标记已确认
+                # 已确认的任务，display_status应该已经是"已审查"
+                # 如果不是（旧数据），使用"已审查"作为默认值
+                display_text = display_status if display_status == '已审查' else '已审查'
+                # 如果任务延期，在状态前加"（已延期）"
+                if is_overdue:
+                    display_text = f"（已延期）{display_text}"
+                result[tid] = display_text
                 continue
             
             # 如果有预设的display_status，根据用户角色调整显示
@@ -505,6 +792,11 @@ def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int
     - 如果距离现在超过 missing_keep_days 天
     - 则归档：status='archived', archive_reason='missing_from_source'
     
+    阶段3：确认后7天归档
+    - 遍历所有 status='confirmed' 的任务
+    - 如果确认时间超过7天
+    - 则归档：status='archived', archive_reason='confirmed_expired'
+    
     参数:
         db_path: 数据库路径
         wal: 是否使用WAL模式
@@ -537,7 +829,7 @@ def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int
             conn.commit()
             print(f"[Registry归档] 标记{len(missing_tasks)}个消失的任务")
         
-        # 阶段2：归档超期任务
+        # 阶段2：归档超期任务（消失任务）
         from datetime import timedelta
         cutoff_date = (now - timedelta(days=missing_keep_days)).isoformat()
         
@@ -555,9 +847,10 @@ def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int
                 conn.execute("""
                     UPDATE tasks
                     SET status = 'archived',
-                        archive_reason = 'missing_from_source'
+                        archive_reason = 'missing_from_source',
+                        archived_at = ?
                     WHERE id = ?
-                """, (task_id,))
+                """, (now_str, task_id))
                 
                 # 写入归档事件
                 write_event(db_path, wal, EventType.ARCHIVED, {
@@ -571,6 +864,41 @@ def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int
             
             conn.commit()
             print(f"[Registry归档] 归档{len(archive_tasks)}个超过{missing_keep_days}天未见的任务")
+        
+        # 阶段3：确认后7天归档
+        confirmed_cutoff_date = (now - timedelta(days=7)).isoformat()
+        
+        cursor = conn.execute("""
+            SELECT id, interface_id, confirmed_at FROM tasks
+            WHERE status = 'confirmed'
+              AND confirmed_at IS NOT NULL
+              AND confirmed_at < ?
+        """, (confirmed_cutoff_date,))
+        
+        confirmed_archive_tasks = cursor.fetchall()
+        
+        if confirmed_archive_tasks:
+            for task_id, interface_id, confirmed_at in confirmed_archive_tasks:
+                conn.execute("""
+                    UPDATE tasks
+                    SET status = 'archived',
+                        archive_reason = 'confirmed_expired',
+                        archived_at = ?
+                    WHERE id = ?
+                """, (now_str, task_id))
+                
+                # 写入归档事件
+                write_event(db_path, wal, EventType.ARCHIVED, {
+                    'task_id': task_id,
+                    'interface_id': interface_id,
+                    'extra': {
+                        'reason': 'confirmed_expired',
+                        'confirmed_at': confirmed_at
+                    }
+                }, now)
+            
+            conn.commit()
+            print(f"[Registry归档] 归档{len(confirmed_archive_tasks)}个确认超过7天的任务")
         
     except Exception as e:
         print(f"[Registry] finalize_scan失败: {e}")
@@ -617,6 +945,20 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
             old_task = find_task_by_business_id(db_path, wal, key['file_type'], key['project_id'], key['interface_id'])
             
+            # 【新增】自动取消忽略：如果预期时间变化
+            if old_task and old_task.get('ignored') == 1:
+                old_interface_time = old_task.get('interface_time_when_ignored', '')
+                current_interface_time = fields.get('interface_time', '')
+                
+                if old_interface_time and current_interface_time and old_interface_time != current_interface_time:
+                    print(f"[Registry自动取消忽略] {key['interface_id']}: 预期时间变化 {old_interface_time} -> {current_interface_time}")
+                    # 取消忽略标记
+                    fields['ignored'] = 0
+                    fields['ignored_at'] = None
+                    fields['ignored_by'] = None
+                    fields['interface_time_when_ignored'] = None
+                    fields['ignored_reason'] = None
+            
             # 【修复】检查是否需要重置或继承
             if old_task:
                 new_completed_val = fields.get('_completed_col_value', '')
@@ -630,6 +972,7 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     fields['status'] = Status.OPEN
                     # 清除完成相关字段
                     fields['completed_at'] = None
+                    fields['completed_by'] = None
                     fields['confirmed_at'] = None
                     fields['confirmed_by'] = None
                     # 保留指派信息
@@ -643,10 +986,18 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     # 已确认且完成列未被清空，保持确认状态
                     print(f"[Registry] 接口{key['interface_id']}: 已确认且完成列有值，保持确认状态")
                     fields['status'] = Status.CONFIRMED
-                    fields['display_status'] = None  # 保持不显示
+                    # 【修复】如果旧状态是"已审查"则保持，否则设置为"已审查"
+                    # 因为已确认的任务，其display_status应该反映真实状态
+                    old_display_status = old_task.get('display_status') or ''
+                    if old_display_status == '已审查':
+                        fields['display_status'] = '已审查'
+                    else:
+                        # 旧数据可能是"待审查"等，统一更正为"已审查"
+                        fields['display_status'] = '已审查'
                     fields['confirmed_at'] = old_task['confirmed_at']
                     fields['confirmed_by'] = old_task['confirmed_by']
                     fields['completed_at'] = old_task['completed_at']
+                    fields['completed_by'] = old_task['completed_by']
                     if old_task['assigned_by']:
                         fields['assigned_by'] = old_task['assigned_by']
                         fields['assigned_at'] = old_task['assigned_at']
@@ -695,6 +1046,13 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             assigned_at = fields.get('assigned_at')
             completed_at = fields.get('completed_at')
             
+            # 【新增】从fields获取ignored相关字段
+            ignored = fields.get('ignored', 0)
+            ignored_at = fields.get('ignored_at')
+            ignored_by = fields.get('ignored_by')
+            interface_time_when_ignored = fields.get('interface_time_when_ignored')
+            ignored_reason = fields.get('ignored_reason')
+            
             conn.execute(
                 """
                 INSERT INTO tasks (
@@ -703,9 +1061,10 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     department, interface_time, role, status, display_status,
                     first_seen_at, last_seen_at,
                     assigned_by, assigned_at, responsible_person, confirmed_by,
-                    completed_at, confirmed_at, response_number
+                    completed_at, completed_by, confirmed_at, response_number,
+                    ignored, ignored_at, ignored_by, interface_time_when_ignored, ignored_reason
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     business_id = excluded.business_id,
                     department = excluded.department,
@@ -722,8 +1081,14 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     END,
                     confirmed_by = excluded.confirmed_by,
                     completed_at = excluded.completed_at,
+                    completed_by = COALESCE(excluded.completed_by, completed_by),
                     confirmed_at = excluded.confirmed_at,
-                    response_number = COALESCE(excluded.response_number, response_number)
+                    response_number = COALESCE(excluded.response_number, response_number),
+                    ignored = excluded.ignored,
+                    ignored_at = excluded.ignored_at,
+                    ignored_by = excluded.ignored_by,
+                    interface_time_when_ignored = excluded.interface_time_when_ignored,
+                    ignored_reason = excluded.ignored_reason
                 """,
                 (
                     tid,
@@ -745,8 +1110,14 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     responsible_person,
                     confirmed_by,
                     completed_at,
+                    fields.get('completed_by'),
                     confirmed_at,
-                    fields.get('response_number')
+                    fields.get('response_number'),
+                    ignored,
+                    ignored_at,
+                    ignored_by,
+                    interface_time_when_ignored,
+                    ignored_reason
                 )
             )
             count += 1

@@ -1,142 +1,410 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-测试上级确认UI集成
-
-验证：
-1. 上级角色勾选触发confirmed
-2. 设计人员角色勾选不触发confirmed（仍是completed）
-3. confirmed后display_status被清除
-4. CONFIRMED事件正确记录
+测试Registry的上级确认功能
 """
-
 import os
-import sys
 import tempfile
-import shutil
-from datetime import datetime
+import pytest
+from datetime import datetime, timedelta
+from registry.service import (
+    upsert_task, mark_completed, mark_confirmed, mark_unconfirmed,
+    query_task_history, get_display_status
+)
+from registry.db import init_db
+from registry.util import make_task_id, make_business_id
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from registry import hooks as registry_hooks
-from registry.db import get_connection
-from registry.models import Status
-
-
-def test_superior_confirm():
-    """测试上级角色确认任务"""
-    temp_dir = tempfile.mkdtemp()
-    temp_db = os.path.join(temp_dir, "test.db")
+@pytest.fixture
+def temp_db():
+    """创建临时数据库"""
+    fd, path = tempfile.mkstemp(suffix='.db')
+    os.close(fd)
     
-    try:
-        # 设置测试环境
-        os.environ['REGISTRY_DB_PATH'] = temp_db
-        registry_hooks.set_data_folder(temp_dir)
-        
-        now = datetime(2025, 11, 5, 10, 0, 0)
-        
-        # 步骤1：创建已完成的任务（status=completed）
-        print("\n[步骤1] 创建已完成待审查的任务")
-        registry_hooks.on_response_written(
-            file_type=1,
-            file_path='test_file.xlsx',
-            row_index=10,
-            interface_id='TEST-001',
-            response_number='R-001',
-            user_name='张三',
-            project_id='2016',
-            now=now
-        )
-        
-        # 验证任务状态
-        conn = get_connection(temp_db, True)
-        cursor = conn.execute("""
-            SELECT status, display_status, confirmed_at
-            FROM tasks
-            WHERE interface_id = 'TEST-001'
-        """)
-        row = cursor.fetchone()
-        
-        assert row is not None
-        assert row[0] == Status.COMPLETED, f"应该是completed，实际：{row[0]}"
-        assert row[1] in ['待审查', '待指派人审查'], f"应该是待审查，实际：{row[1]}"
-        assert row[2] is None, "confirmed_at应该是NULL"
-        print(f"  [OK] 任务已完成待审查: status={row[0]}, display_status={row[1]}")
-        
-        # 步骤2：上级确认
-        print("\n[步骤2] 上级角色确认任务")
-        registry_hooks.on_confirmed_by_superior(
-            file_type=1,
-            file_path='test_file.xlsx',
-            row_index=10,
-            user_name='王工',
-            project_id='2016',
-            interface_id='TEST-001',
-            now=now
-        )
-        
-        # 验证确认后状态
-        cursor = conn.execute("""
-            SELECT status, display_status, confirmed_at, confirmed_by
-            FROM tasks
-            WHERE interface_id = 'TEST-001'
-        """)
-        row = cursor.fetchone()
-        
-        assert row is not None
-        assert row[0] == Status.CONFIRMED, f"应该是confirmed，实际：{row[0]}"
-        assert row[1] is None, f"display_status应该被清除，实际：{row[1]}"
-        assert row[2] is not None, "confirmed_at应该有值"
-        # confirmed_by暂时可能没有记录（取决于mark_confirmed的实现）
-        print(f"  [OK] 任务已确认: status={row[0]}, display_status={row[1]}, confirmed_at={row[2]}")
-        
-        # 验证CONFIRMED事件
-        cursor = conn.execute("""
-            SELECT event FROM events
-            WHERE event = 'confirmed'
-        """)
-        event_row = cursor.fetchone()
-        assert event_row is not None, "应该记录CONFIRMED事件"
-        print(f"  [OK] CONFIRMED事件已记录")
-        
-        print("\n[SUCCESS] 上级确认测试通过")
-        
-    finally:
-        # 清理
-        if 'REGISTRY_DB_PATH' in os.environ:
-            del os.environ['REGISTRY_DB_PATH']
-        if os.path.exists(temp_dir):
-            try:
-                from registry.db import close_connection
-                close_connection()
-                import time
-                time.sleep(0.1)
-                shutil.rmtree(temp_dir)
-            except:
-                pass
-
-
-def test_designer_cannot_confirm():
-    """测试设计人员勾选不触发confirmed（这个测试需要UI层面，暂时跳过）"""
-    # 注意：此测试需要实际的UI交互，pytest难以模拟
-    # 实际使用时需要手动测试
-    print("\n[INFO] 设计人员勾选测试需要手动验证（UI层面）")
-    print("  测试步骤：")
-    print("  1. 以设计人员身份登录")
-    print("  2. 勾选一个任务的'已完成'")
-    print("  3. 验证：任务仍显示（不应该消失）")
-    print("  4. 查询数据库：status应该仍是completed（不是confirmed）")
-
-
-if __name__ == "__main__":
-    print("=" * 80)
-    print("上级确认功能测试")
-    print("=" * 80)
+    # 初始化数据库
+    from registry.db import get_connection
+    conn = get_connection(path, wal=False)
+    init_db(conn)
+    conn.close()
     
-    test_superior_confirm()
-    test_designer_cannot_confirm()
+    yield path
     
-    print("\n" + "=" * 80)
-    print("测试完成！")
-    print("=" * 80)
+    # 清理：关闭所有连接
+    from registry.db import _CONN
+    if _CONN and hasattr(_CONN, 'close'):
+        try:
+            _CONN.close()
+        except:
+            pass
+    
+    # 延迟删除文件
+    import time
+    for _ in range(3):
+        try:
+            if os.path.exists(path):
+                os.unlink(path)
+            break
+        except PermissionError:
+            time.sleep(0.1)
 
+
+def test_superior_confirm_after_designer_completes(temp_db):
+    """
+    测试场景：设计人员完成任务后，上级点击勾选框确认
+    """
+    now = datetime.now()
+    
+    # 1. 设计人员填写回文单号（模拟on_response_written）
+    key = {
+        'file_type': 1,
+        'project_id': '2016',
+        'interface_id': 'S-SA---1JJ-01-25C1-25C3',  # 不含角色后缀
+        'source_file': 'test.xlsx',
+        'row_index': 89
+    }
+    
+    fields = {
+        'department': '一室',
+        'interface_time': '2025-01-15',
+        'role': '设计人员(一室主任)',
+        'status': 'open',
+        'display_status': '待完成',
+        'responsible_person': '张三',
+        'response_number': 'HW-2025-001',
+        'completed_by': '张三'
+    }
+    
+    # 创建任务
+    upsert_task(temp_db, False, key, fields, now)
+    
+    # 标记为已完成
+    mark_completed(temp_db, False, key, now)
+    
+    # 验证任务状态
+    history = query_task_history(temp_db, False, key['project_id'], key['interface_id'], key['file_type'])
+    assert len(history) == 1
+    task = history[0]
+    assert task['status'] == 'completed'
+    assert task['completed_by'] == '张三'
+    assert task['confirmed_at'] is None
+    
+    # 2. 上级点击勾选框确认（模拟on_confirmed_by_superior）
+    mark_confirmed(temp_db, False, key, now + timedelta(seconds=10), confirmed_by='李主任')
+    
+    # 3. 验证确认后的状态
+    history = query_task_history(temp_db, False, key['project_id'], key['interface_id'], key['file_type'])
+    assert len(history) == 1
+    task = history[0]
+    assert task['status'] == 'confirmed'
+    assert task['confirmed_by'] == '李主任'
+    assert task['confirmed_at'] is not None
+    assert task['completed_by'] == '张三'  # 完成人不变
+    
+    # 4. 验证display_status
+    task_key_for_status = {
+        'file_type': key['file_type'],
+        'project_id': key['project_id'],
+        'interface_id': key['interface_id'],
+        'source_file': key['source_file'],
+        'row_index': key['row_index'],
+        'interface_time': fields['interface_time']
+    }
+    display_status = get_display_status(temp_db, False, [task_key_for_status], [])
+    tid = make_task_id(
+        key['file_type'],
+        key['project_id'],
+        key['interface_id'],
+        key['source_file'],
+        key['row_index']
+    )
+    assert tid in display_status
+    assert '已审查' in display_status[tid]
+    
+    print("测试通过: 设计人员完成后上级确认")
+
+
+def test_superior_unconfirm(temp_db):
+    """
+    测试场景：上级取消确认
+    """
+    now = datetime.now()
+    
+    # 1. 创建已确认的任务
+    key = {
+        'file_type': 1,
+        'project_id': '2016',
+        'interface_id': 'S-SA---1JJ-01-25C1-25C3',
+        'source_file': 'test.xlsx',
+        'row_index': 89
+    }
+    
+    fields = {
+        'department': '一室',
+        'interface_time': '2025-01-15',
+        'role': '设计人员(一室主任)',
+        'status': 'completed',
+        'display_status': '已审查',
+        'responsible_person': '张三',
+        'response_number': 'HW-2025-001',
+        'completed_by': '张三',
+        'confirmed_by': '李主任',
+        'confirmed_at': now.isoformat()
+    }
+    
+    upsert_task(temp_db, False, key, fields, now)
+    mark_confirmed(temp_db, False, key, now, confirmed_by='李主任')
+    
+    # 验证已确认
+    history = query_task_history(temp_db, False, key['project_id'], key['interface_id'], key['file_type'])
+    assert len(history) == 1
+    task = history[0]
+    assert task['status'] == 'confirmed'
+    assert task['confirmed_by'] == '李主任'
+    
+    # 2. 上级取消确认
+    mark_unconfirmed(temp_db, False, key, now + timedelta(seconds=10))
+    
+    # 3. 验证取消确认后的状态
+    history = query_task_history(temp_db, False, key['project_id'], key['interface_id'], key['file_type'])
+    assert len(history) == 1
+    task = history[0]
+    assert task['status'] == 'completed'
+    assert task['confirmed_by'] is None
+    assert task['confirmed_at'] is None
+    assert task['completed_by'] == '张三'  # 完成人不变
+    
+    # 4. 验证display_status变为"待审查"
+    task_key_for_status = {
+        'file_type': key['file_type'],
+        'project_id': key['project_id'],
+        'interface_id': key['interface_id'],
+        'source_file': key['source_file'],
+        'row_index': key['row_index'],
+        'interface_time': fields['interface_time']
+    }
+    display_status = get_display_status(temp_db, False, [task_key_for_status], [])
+    tid = make_task_id(
+        key['file_type'],
+        key['project_id'],
+        key['interface_id'],
+        key['source_file'],
+        key['row_index']
+    )
+    assert tid in display_status
+    assert '待审查' in display_status[tid]
+    
+    print("测试通过: 上级取消确认")
+
+
+def test_interface_id_with_role_suffix_removed(temp_db):
+    """
+    测试场景：接口号包含角色后缀时，能正确去除后缀并找到任务
+    
+    这是修复的关键场景：
+    - 显示的接口号：S-SA---1JJ-01-25C1-25C3(一室主任)
+    - Registry存储的接口号：S-SA---1JJ-01-25C1-25C3
+    """
+    now = datetime.now()
+    
+    # 1. 创建任务（不含角色后缀）
+    key = {
+        'file_type': 1,
+        'project_id': '2016',
+        'interface_id': 'S-SA---1JJ-01-25C1-25C3',  # 不含角色后缀
+        'source_file': 'test.xlsx',
+        'row_index': 89
+    }
+    
+    fields = {
+        'department': '一室',
+        'interface_time': '2025-01-15',
+        'role': '设计人员(一室主任)',
+        'status': 'completed',
+        'display_status': '待审查',
+        'responsible_person': '张三',
+        'response_number': 'HW-2025-001',
+        'completed_by': '张三'
+    }
+    
+    upsert_task(temp_db, False, key, fields, now)
+    mark_completed(temp_db, False, key, now)
+    
+    # 2. 模拟window.py从metadata获取到带角色后缀的接口号
+    # 在window.py中会去除后缀：
+    # interface_id = 'S-SA---1JJ-01-25C1-25C3(一室主任)'
+    # interface_id_clean = re.sub(r'\([^)]*\)$', '', interface_id).strip()
+    # -> 'S-SA---1JJ-01-25C1-25C3'
+    
+    import re
+    interface_id_with_suffix = 'S-SA---1JJ-01-25C1-25C3(一室主任)'
+    interface_id_clean = re.sub(r'\([^)]*\)$', '', interface_id_with_suffix).strip()
+    
+    # 3. 使用清理后的接口号确认
+    key_clean = key.copy()
+    key_clean['interface_id'] = interface_id_clean
+    
+    mark_confirmed(temp_db, False, key_clean, now + timedelta(seconds=10), confirmed_by='李主任')
+    
+    # 4. 验证能正确找到并更新任务
+    history = query_task_history(temp_db, False, key['project_id'], key['interface_id'], key['file_type'])
+    assert len(history) == 1
+    task = history[0]
+    assert task['status'] == 'confirmed'
+    assert task['confirmed_by'] == '李主任'
+    assert task['confirmed_at'] is not None
+    
+    print("测试通过: 接口号含角色后缀时能正确去除并找到任务")
+
+
+def test_superior_self_complete_and_auto_confirm(temp_db):
+    """
+    测试场景：上级自己填写回文单号，自动确认
+    """
+    now = datetime.now()
+    
+    # 1. 上级填写回文单号（模拟on_response_written，is_superior=True）
+    key = {
+        'file_type': 1,
+        'project_id': '2016',
+        'interface_id': 'S-SA---1JJ-01-25C1-25C3',
+        'source_file': 'test.xlsx',
+        'row_index': 89
+    }
+    
+    fields = {
+        'department': '一室',
+        'interface_time': '2025-01-15',
+        'role': '一室主任',
+        'status': 'open',
+        'display_status': '已审查',  # 上级自己填写，直接设为已审查
+        'responsible_person': '李主任',
+        'response_number': 'HW-2025-002',
+        'completed_by': '李主任',
+        'confirmed_by': '李主任',
+        'confirmed_at': now.isoformat()
+    }
+    
+    # 创建任务
+    upsert_task(temp_db, False, key, fields, now)
+    
+    # 标记为已完成
+    mark_completed(temp_db, False, key, now)
+    
+    # 自动确认
+    mark_confirmed(temp_db, False, key, now, confirmed_by='李主任')
+    
+    # 2. 验证状态
+    history = query_task_history(temp_db, False, key['project_id'], key['interface_id'], key['file_type'])
+    assert len(history) == 1
+    task = history[0]
+    assert task['status'] == 'confirmed'
+    assert task['completed_by'] == '李主任'
+    assert task['confirmed_by'] == '李主任'
+    assert task['confirmed_at'] is not None
+    
+    # 3. 验证display_status
+    task_key_for_status = {
+        'file_type': key['file_type'],
+        'project_id': key['project_id'],
+        'interface_id': key['interface_id'],
+        'source_file': key['source_file'],
+        'row_index': key['row_index'],
+        'interface_time': fields['interface_time']
+    }
+    display_status = get_display_status(temp_db, False, [task_key_for_status], [])
+    tid = make_task_id(
+        key['file_type'],
+        key['project_id'],
+        key['interface_id'],
+        key['source_file'],
+        key['row_index']
+    )
+    assert tid in display_status
+    assert '已审查' in display_status[tid]
+    
+    print("测试通过: 上级自己填写回文单号自动确认")
+
+
+def test_confirm_after_versioning(temp_db):
+    """
+    测试场景：历史记录版本化后，确认功能仍然能找到最新的任务
+    """
+    now = datetime.now()
+    
+    # 1. 创建第一轮任务并完成确认
+    key = {
+        'file_type': 1,
+        'project_id': '2016',
+        'interface_id': 'S-SA---1JJ-01-25C1-25C3',
+        'source_file': 'test.xlsx',
+        'row_index': 89
+    }
+    
+    fields = {
+        'department': '一室',
+        'interface_time': '2025-01-15',
+        'role': '设计人员(一室主任)',
+        'status': 'completed',
+        'display_status': '已审查',
+        'responsible_person': '张三',
+        'response_number': 'HW-2025-001',
+        'completed_by': '张三',
+        'confirmed_by': '李主任',
+        'confirmed_at': now.isoformat()
+    }
+    
+    upsert_task(temp_db, False, key, fields, now)
+    mark_completed(temp_db, False, key, now)
+    mark_confirmed(temp_db, False, key, now, confirmed_by='李主任')
+    
+    # 2. 模拟接口更新（interface_time变化，completed_at清空）
+    # 这会触发历史记录版本化，旧记录被归档，创建新记录
+    fields_new = {
+        'department': '一室',
+        'interface_time': '2025-02-01',  # 时间变化
+        'role': '设计人员(一室主任)',
+        'status': 'open',
+        'display_status': '待完成',
+        'responsible_person': '张三',
+        '_completed_col_value': ''  # 完成列清空
+    }
+    
+    upsert_task(temp_db, False, key, fields_new, now + timedelta(days=1))
+    
+    # 3. 新一轮：设计人员完成
+    fields_complete = {
+        'response_number': 'HW-2025-003',
+        'completed_by': '张三',
+        '_completed_col_value': '有值'
+    }
+    upsert_task(temp_db, False, key, fields_complete, now + timedelta(days=2))
+    mark_completed(temp_db, False, key, now + timedelta(days=2))
+    
+    # 4. 上级确认新一轮任务
+    mark_confirmed(temp_db, False, key, now + timedelta(days=3), confirmed_by='王所长')
+    
+    # 5. 验证历史记录
+    history = query_task_history(temp_db, False, key['project_id'], key['interface_id'], key['file_type'])
+    # 应该有2条记录：1条归档的旧记录，1条当前的新记录
+    assert len(history) >= 2
+    
+    # 找到非归档记录
+    active_tasks = [t for t in history if t['status'] != 'archived']
+    assert len(active_tasks) == 1
+    
+    active_task = active_tasks[0]
+    assert active_task['status'] == 'confirmed'
+    assert active_task['confirmed_by'] == '王所长'
+    assert active_task['response_number'] == 'HW-2025-003'
+    
+    # 找到归档记录
+    archived_tasks = [t for t in history if t['status'] == 'archived']
+    assert len(archived_tasks) >= 1
+    
+    archived_task = archived_tasks[0]
+    assert archived_task['confirmed_by'] == '李主任'
+    assert archived_task['response_number'] == 'HW-2025-001'
+    
+    print("测试通过: 版本化后确认功能正常")
+
+
+if __name__ == '__main__':
+    pytest.main([__file__, '-v', '-s'])

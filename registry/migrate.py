@@ -24,10 +24,11 @@ def migrate_database(db_path: str) -> None:
     - assigned_by
     - assigned_at
     - display_status
-    - confirmed_by
+    - confirmed_by（确认人姓名）
     - responsible_person
     - business_id（接口号继承功能）
     - response_number（回文单号记录）
+    - completed_by（完成人姓名）
     """
     if not os.path.exists(db_path):
         print("[Migrate] Database not found, skip")
@@ -38,15 +39,29 @@ def migrate_database(db_path: str) -> None:
     conn = sqlite3.connect(db_path)
     
     try:
-        # 检查并添加新字段
+        # 检查并添加新字段（包括所有可能缺失的列）
         new_columns = [
+            # 基础列（某些旧版本可能缺失）
+            ("first_seen_at", "TEXT NOT NULL DEFAULT ''"),
+            ("last_seen_at", "TEXT NOT NULL DEFAULT ''"),
+            ("missing_since", "TEXT DEFAULT NULL"),
+            ("archive_reason", "TEXT DEFAULT NULL"),
+            # 功能扩展列
             ("assigned_by", "TEXT DEFAULT NULL"),
             ("assigned_at", "TEXT DEFAULT NULL"),
             ("display_status", "TEXT DEFAULT NULL"),
             ("confirmed_by", "TEXT DEFAULT NULL"),
             ("responsible_person", "TEXT DEFAULT NULL"),
             ("business_id", "TEXT DEFAULT NULL"),
-            ("response_number", "TEXT DEFAULT NULL")
+            ("response_number", "TEXT DEFAULT NULL"),
+            ("completed_by", "TEXT DEFAULT NULL"),
+            ("archived_at", "TEXT DEFAULT NULL"),
+            # 忽略功能列
+            ("ignored", "INTEGER DEFAULT 0"),
+            ("ignored_at", "TEXT DEFAULT NULL"),
+            ("ignored_by", "TEXT DEFAULT NULL"),
+            ("interface_time_when_ignored", "TEXT DEFAULT NULL"),
+            ("ignored_reason", "TEXT DEFAULT NULL")
         ]
         
         added_count = 0
@@ -104,7 +119,8 @@ def migrate_if_needed(db_path: str) -> None:
     try:
         # 检查是否缺少新字段（需要检查所有关键字段）
         missing_fields = []
-        required_fields = ["display_status", "business_id", "response_number"]
+        required_fields = ["display_status", "business_id", "response_number", "completed_by", "archived_at", 
+                          "ignored", "ignored_at", "ignored_by", "interface_time_when_ignored", "ignored_reason"]
         
         for field in required_fields:
             if not check_column_exists(conn, "tasks", field):

@@ -262,16 +262,18 @@ def on_response_written(
     
     当设计人员写入回文单号后调用，将任务状态从 open 更新为 completed
     
+    特殊处理：如果填写人是上级角色（室主任、所领导、接口工程师），则自动完成确认
+    
     参数:
         file_type: 文件类型（1-6）
         file_path: 源文件路径
         row_index: Excel原始行号
         interface_id: 接口号（不含角色后缀）
         response_number: 回文单号
-        user_name: 操作用户
+        user_name: 操作用户姓名
         project_id: 项目号
         source_column: 写入列名（可选）
-        role: 角色信息（可选，如"设计人员"、"接口工程师"）
+        role: 角色信息（可选，如"设计人员"、"接口工程师"、"一室主任"、"所领导"）
         now: 当前时间（可选）
     """
     try:
@@ -336,23 +338,43 @@ def on_response_written(
         except Exception as e:
             print(f"[Registry] 查询旧interface_time失败: {e}")
         
-        # 如果提供了角色信息，先更新任务的role字段和display_status
+        # 【关键】判断是否为上级角色（自动确认逻辑）
+        superior_roles = ['一室主任', '二室主任', '建筑总图室主任', '所长', '所领导', '接口工程师']
+        is_superior = role and any(sup_role in role for sup_role in superior_roles)
+        
+        # 【修复】如果是上级角色填写，直接设置display_status为"已审查"
+        if is_superior:
+            display_status = '已审查'  # 上级自己填写，已完成审查
+            print(f"[Registry] 上级角色{role}填写回文单号，自动完成确认，设置状态为'已审查'")
+        
+        # 更新任务字段（包含completed_by和response_number）
         fields_to_update = {
-            'display_status': display_status,
-            'interface_time': old_interface_time,  # 【新增】保持时间不变，避免误判为时间变化
-            '_completed_col_value': '有值',  # 【新增】标记完成列已填充
-            'response_number': response_number  # 【新增】记录回文单号
+            'display_status': display_status,  # 保持"待审查"或"待指派人审查"
+            'interface_time': old_interface_time,  # 保持时间不变，避免误判为时间变化
+            '_completed_col_value': '有值',  # 标记完成列已填充
+            'response_number': response_number,  # 记录回文单号
+            'completed_by': user_name  # 【新增】记录完成人姓名
         }
         if role:
             fields_to_update['role'] = role
         
+        # 如果是上级自动确认，设置confirmed_by和confirmed_at
+        if is_superior:
+            fields_to_update['confirmed_by'] = user_name
+            fields_to_update['confirmed_at'] = now.isoformat()  # 【新增】明确设置确认时间
+        
         from .service import upsert_task
         upsert_task(db_path, wal, key, fields_to_update, now)
         
-        print(f"[Registry] upsert_task完成，应该已设置display_status={display_status}")
+        print(f"[Registry] upsert_task完成，display_status={display_status}, completed_by={user_name}")
         
         # 更新状态为completed
         mark_completed(db_path, wal, key, now)
+        
+        # 如果是上级角色，同时更新状态为confirmed
+        if is_superior:
+            mark_confirmed(db_path, wal, key, now, confirmed_by=user_name)
+            print(f"[Registry] 上级角色{role}自动确认完成")
         
         # 写入response_written事件
         write_event(db_path, wal, EventType.RESPONSE_WRITTEN, {
@@ -382,6 +404,7 @@ def on_confirmed_by_superior(
     user_name: str,
     project_id: str,
     interface_id: Optional[str] = None,
+    role: Optional[str] = None,
     now: Optional[datetime] = None
 ) -> None:
     """
@@ -393,9 +416,10 @@ def on_confirmed_by_superior(
         file_type: 文件类型（1-6）
         file_path: 源文件路径
         row_index: Excel原始行号
-        user_name: 操作用户（上级）
+        user_name: 操作用户（上级）姓名
         project_id: 项目号
         interface_id: 接口号（可选，如果有则使用）
+        role: 角色信息（可选，用于日志）
         now: 当前时间（可选）
     """
     try:
@@ -433,6 +457,37 @@ def on_confirmed_by_superior(
         
     except Exception as e:
         print(f"[Registry] on_confirmed_by_superior 失败: {e}")
+        import traceback
+        traceback.print_exc()
+
+def on_unconfirmed_by_superior(
+    key: Dict[str, Any],
+    user_name: str = None
+) -> None:
+    """
+    上级角色取消确认（取消勾选）
+    
+    参数:
+        key: 任务key（必须包含: file_type, project_id, interface_id, source_file, row_index）
+        user_name: 操作人姓名
+    """
+    try:
+        from .service import mark_unconfirmed
+        
+        cfg = _cfg()
+        if not _enabled(cfg):
+            return
+        
+        now = safe_now()
+        db_path = cfg['registry_db_path']
+        wal = bool(cfg.get('registry_wal', True))
+        
+        print(f"[Registry] 上级取消确认: 文件类型={key['file_type']}, 项目={key['project_id']}, 接口={key['interface_id']}, 用户={user_name}")
+        
+        mark_unconfirmed(db_path, wal, key, now)
+        
+    except Exception as e:
+        print(f"[Registry] on_unconfirmed_by_superior 失败: {e}")
         import traceback
         traceback.print_exc()
 

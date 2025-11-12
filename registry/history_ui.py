@@ -37,13 +37,18 @@ def format_time(time_str):
     if not time_str or time_str == '-' or time_str == 'None':
         return '-'
     
+    # 【历史记录版本化】如果是更新日期格式（如"(更新日期)2025-11-11"），直接返回
+    str_val = str(time_str)
+    if str_val.startswith('(更新日期)'):
+        return str_val
+    
     try:
         # 尝试解析ISO格式
-        dt = datetime.fromisoformat(str(time_str))
+        dt = datetime.fromisoformat(str_val)
         return dt.strftime('%Y-%m-%d %H:%M')
     except:
         # 如果失败，返回原始字符串
-        return str(time_str) if time_str else '-'
+        return str_val if time_str else '-'
 
 
 class HistoryQueryDialog(tk.Toplevel):
@@ -224,8 +229,8 @@ class HistoryDisplayWindow(tk.Toplevel):
         
         # 创建Treeview
         columns = (
-            '序号', '文件类型', '状态', '首次发现', '完成时间', 
-            '确认时间', '归档时间', '指派人', '设计人员', '上级人员',
+            '序号', '文件类型', '状态', '首次发现', '完成时间', '完成人',
+            '确认时间', '确认人', '归档时间', '指派人', '设计人员', '上级人员',
             '回文单号', '接口时间', '最后出现', '消失时间'
         )
         
@@ -325,7 +330,9 @@ class HistoryDisplayWindow(tk.Toplevel):
                 display_status,
                 format_time(task.get('first_seen_at')),  # 修复：使用first_seen_at
                 format_time(task.get('completed_at')),
+                task.get('completed_by') or '-',  # 【新增】完成人
                 format_time(task.get('confirmed_at')),
+                task.get('confirmed_by') or '-',  # 【新增】确认人
                 format_time(task.get('archived_at')) if task.get('archive_reason') else '-',  # 只有归档原因存在时才显示归档时间
                 assignor_display,
                 assignee_name,
@@ -381,7 +388,9 @@ class HistoryDisplayWindow(tk.Toplevel):
                     '状态': display_status,
                     '首次发现': format_time(task.get('first_seen_at')),  # 修复：使用first_seen_at
                     '完成时间': format_time(task.get('completed_at')),
+                    '完成人': task.get('completed_by') or '-',  # 【新增】完成人
                     '确认时间': format_time(task.get('confirmed_at')),
+                    '确认人': task.get('confirmed_by') or '-',  # 【新增】确认人
                     '归档时间': format_time(task.get('archived_at')) if task.get('archive_reason') else '-',
                     '归档原因': task.get('archive_reason') or '-',
                     '指派人': assignor_display,

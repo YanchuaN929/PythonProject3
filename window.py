@@ -428,6 +428,15 @@ class WindowManager:
         )
         history_btn.pack(side=tk.LEFT, padx=(10, 0))
         self.buttons['history_query'] = history_btn
+        
+        # 【新增】忽略延期项按钮（仅所领导可见）
+        ignore_overdue_btn = ttk.Button(
+            button_frame,
+            text="🚫 忽略延期项",
+            command=lambda: self._trigger_callback('on_ignore_overdue_click')
+        )
+        ignore_overdue_btn.pack(side=tk.LEFT, padx=(10, 0))
+        self.buttons['ignore_overdue'] = ignore_overdue_btn
     
     def show_empty_message(self, viewer, message):
         """在viewer中显示提示信息"""
@@ -507,22 +516,21 @@ class WindowManager:
         # 避免跨项目错误写入！
         filtered_df = filtered_df.reset_index(drop=True)
         
-        # 从file_manager获取已完成的行
-        # 【修复】获取已完成行时传入用户姓名
-        completed_rows_set = set()
-        if file_manager and source_files:
-            user_name = getattr(self.app, 'user_name', '').strip()
-            for file_path in source_files:
-                completed_rows_set.update(file_manager.get_completed_rows(file_path, user_name))
+        # 【重大修复】勾选框状态从Registry读取，不再依赖缓存
+        # completed_rows_set现在用于存储confirmed_at的task_id
+        completed_rows_set = set()  # 暂时保留，后面改为从Registry读取
         
         # 优化显示列（仅显示关键列）
         display_df = self._create_optimized_display(filtered_df, tab_name, completed_rows=completed_rows_set)
         
-        # 【Registry状态提醒】批量查询任务状态
+        # 【Registry状态提醒】批量查询任务状态和确认状态
         registry_status_map = {}
+        registry_confirmed_map = {}  # 【新增】存储确认状态 {df_idx: (confirmed_by, current_user_name)}
         try:
             from registry import hooks as registry_hooks
             from registry.util import extract_interface_id, extract_project_id
+            from registry.db import get_connection
+            from registry.config import load_config
             
             # 根据tab_name确定file_type
             file_type_map = {
@@ -576,6 +584,13 @@ class WindowManager:
                     user_roles_str = ','.join(current_user_roles) if current_user_roles else ''
                     registry_status_map_raw = registry_hooks.get_display_status(task_keys_only, user_roles_str)
                     
+                    # 【新增】查询确认状态（confirmed_at, confirmed_by）
+                    cfg = load_config()
+                    db_path = cfg.get('registry_db_path', 'registry/task_registry.db')
+                    wal = cfg.get('registry_use_wal', True)
+                    conn = get_connection(db_path, wal)
+                    current_user_name = getattr(self.app, 'user_name', '').strip()
+                    
                     # 映射回display_df的索引（取第一个匹配的状态）
                     for df_idx, task_key in task_keys:
                         from registry.util import make_task_id
@@ -589,8 +604,29 @@ class WindowManager:
                         if tid in registry_status_map_raw and df_idx not in registry_status_map:
                             # 只使用第一个匹配的状态（避免重复）
                             registry_status_map[df_idx] = registry_status_map_raw[tid]
+                        
+                        # 查询confirmed_by
+                        if df_idx not in registry_confirmed_map:
+                            try:
+                                row = conn.execute(
+                                    "SELECT confirmed_by FROM tasks WHERE id = ?",
+                                    (tid,)
+                                ).fetchone()
+                                if row and row[0]:
+                                    registry_confirmed_map[df_idx] = (row[0], current_user_name)
+                            except:
+                                pass
         except Exception as e:
             print(f"[Registry] 状态查询失败（不影响主流程）: {e}")
+        
+        # 【关键修复】根据registry_confirmed_map更新勾选框状态
+        if registry_confirmed_map and "是否已完成" in display_df.columns:
+            checkbox_col_idx = list(display_df.columns).index("是否已完成")
+            for df_idx, (confirmed_by, current_user) in registry_confirmed_map.items():
+                if df_idx < len(display_df):
+                    # 有confirmed_by说明已确认，显示勾选
+                    display_df.iloc[df_idx, checkbox_col_idx] = "☑"
+            print(f"[Registry] 已从Registry读取{len(registry_confirmed_map)}个确认状态")
         
         # 【新增】填充"状态"列：优先显示Registry状态，其次显示延期标记
         # 【新增】处理"接口时间"列：空值显示为"-"
@@ -779,15 +815,37 @@ class WindowManager:
             
             # 【关键修复】存储元数据到映射字典，包含原始行信息（不受排序影响）
             # 注意：必须从filtered_df（原始完整数据）读取，而不是display_df（优化显示数据）
+            
+            # 获取项目号
+            project_id_val = ''
+            if '项目号' in metadata_row.index:
+                project_id_val = str(metadata_row.get('项目号', ''))
+            elif '项目号' in display_row.index:
+                project_id_val = str(display_row.get('项目号', ''))
+            
+            # 获取接口号（尝试多个可能的列名）
+            interface_id_val = ''
+            for col_name in ['接口号', 'interface_id', '接口编号']:
+                if col_name in metadata_row.index:
+                    interface_id_val = str(metadata_row.get(col_name, ''))
+                    break
+                elif col_name in display_row.index:
+                    interface_id_val = str(display_row.get(col_name, ''))
+                    break
+            
             metadata = {
                 'original_index': index,  # 在filtered_df中的索引
                 'original_row': original_row_numbers[index] if original_row_numbers and index < len(original_row_numbers) else index + 2,
                 'source_file': metadata_row.get('source_file', '') if 'source_file' in metadata_row.index else '',
-                'project_id': str(metadata_row.get('项目号', '')) if '项目号' in metadata_row.index else '',
-                'interface_id': metadata_row.get('接口号', '') if '接口号' in metadata_row.index else '',
+                'project_id': project_id_val,
+                'interface_id': interface_id_val,
                 'source_column': metadata_row.get('_source_column', None) if '_source_column' in metadata_row.index else None,
             }
             self._item_metadata[(viewer, item_id)] = metadata
+            
+            # 【调试】如果关键字段为空，打印警告
+            if not interface_id_val:
+                print(f"[警告] 第{index}行元数据interface_id为空，项目号: {project_id_val}, display_row列: {list(display_row.index)[:10]}")
             
             # 【调试】如果source_file为空，打印警告
             if not metadata['source_file']:
@@ -877,76 +935,165 @@ class WindowManager:
                     print(f"[错误] 无法确定源文件")
                     return
                 
-                # 【修复】切换勾选状态，传入用户姓名
+                # 【重大修复】勾选框逻辑从Registry读取和写入，不再使用缓存
                 user_name = getattr(self.app, 'user_name', '').strip()
-                is_completed = file_manager.is_row_completed(source_file, original_row, user_name)
-                new_state = not is_completed
-                file_manager.set_row_completed(source_file, original_row, new_state, user_name)
+                user_roles = getattr(self.app, 'user_roles', [])
                 
-                # 更新显示（切换符号）
+                # 判断是否为上级角色
+                is_superior = any(keyword in ''.join(user_roles) for keyword in ['所领导', '室主任', '接口工程师'])
+                
+                # 获取当前勾选状态（从UI读取）
                 current_values = list(viewer.item(item_id, "values"))
-                if checkbox_col_idx < len(current_values):
-                    current_values[checkbox_col_idx] = "☑" if new_state else "☐"
-                    viewer.item(item_id, values=current_values)
+                if checkbox_col_idx >= len(current_values):
+                    return
                 
-                # 【新增】上级确认逻辑：如果是上级角色且勾选状态从False→True
-                if new_state:  # 勾选操作
-                    user_roles = getattr(self.app, 'user_roles', [])
-                    # 判断是否为上级角色
-                    is_superior = any(keyword in ''.join(user_roles) for keyword in ['所领导', '室主任', '接口工程师'])
-                    
-                    if is_superior:
-                        # 上级勾选 → 触发confirmed逻辑
+                current_checkbox = current_values[checkbox_col_idx]
+                is_currently_checked = (current_checkbox == "☑")
+                
+                # 【核心逻辑】上级角色点击勾选框 = 确认/取消确认
+                if is_superior:
+                    try:
+                        from registry import hooks as registry_hooks
+                        
+                        # 根据tab_name确定file_type
+                        file_type_map = {
+                            "内部需打开接口": 1,
+                            "内部需回复接口": 2,
+                            "外部需打开接口": 3,
+                            "外部需回复接口": 4,
+                            "三维提资接口": 5,
+                            "收发文函": 6
+                        }
+                        file_type = file_type_map.get(tab_name)
+                        
+                        if not file_type:
+                            print(f"[错误] 无法识别tab_name: {tab_name}")
+                            return
+                        
+                        # 从元数据获取项目号和接口号
+                        project_id = metadata.get('project_id', '')
+                        interface_id = metadata.get('interface_id', '')
+                        
+                        if not project_id or not interface_id:
+                            print(f"[错误] 无法获取项目号或接口号")
+                            return
+                        
+                        # 【关键修复】去除接口号中的角色后缀（如"(一室主任)"）
+                        # 因为Registry中存储的接口号不含角色后缀
+                        import re
+                        interface_id_clean = re.sub(r'\([^)]*\)$', '', interface_id).strip()
+                        print(f"[Registry] 接口号处理: {interface_id} -> {interface_id_clean}")
+                        
+                        # 构造task_key（使用清理后的接口号）
+                        task_key = {
+                            'file_type': file_type,
+                            'project_id': project_id,
+                            'interface_id': interface_id_clean,
+                            'source_file': source_file,
+                            'row_index': original_row
+                        }
+                        
+                        # 【关键修复】查询任务的当前状态，确保只能确认已完成的任务
+                        from registry.util import make_task_id
+                        from registry.db import get_connection
+                        
+                        # 获取Registry配置
                         try:
-                            from registry import hooks as registry_hooks
-                            from registry.util import extract_interface_id, extract_project_id
+                            cfg = registry_hooks._cfg()
+                            db_path = cfg.get('registry_db_path')
+                            wal = bool(cfg.get('registry_wal', True))
+                        except:
+                            print(f"[Registry] 无法获取数据库配置")
+                            return
+                        
+                        # 查询任务状态
+                        tid = make_task_id(
+                            file_type, project_id, interface_id_clean,
+                            source_file, original_row
+                        )
+                        
+                        conn = get_connection(db_path, wal)
+                        cursor = conn.execute(
+                            "SELECT status, confirmed_at FROM tasks WHERE id = ?",
+                            (tid,)
+                        )
+                        task_row = cursor.fetchone()
+                        
+                        if not task_row:
+                            print(f"[Registry] 警告：找不到任务记录 {interface_id_clean}")
+                            import tkinter.messagebox as messagebox
+                            messagebox.showwarning("提示", f"找不到任务记录：{interface_id_clean}")
+                            return
+                        
+                        task_status, confirmed_at = task_row
+                        
+                        if is_currently_checked:
+                            # 当前已勾选 → 取消确认
+                            # 只有已确认的任务（status='confirmed'）才能取消确认
+                            if task_status != 'confirmed':
+                                print(f"[Registry] 错误：任务状态不是已确认，无法取消确认 (status={task_status})")
+                                import tkinter.messagebox as messagebox
+                                messagebox.showwarning("操作失败", f"该任务状态不是已确认，无法取消确认\n当前状态：{task_status}")
+                                return
                             
-                            # 【修复】从元数据获取数据
-                            if metadata and metadata.get('original_index') is not None:
-                                original_index = metadata['original_index']
-                                if original_index < len(original_df):
-                                    row_data = original_df.iloc[original_index]
+                            registry_hooks.on_unconfirmed_by_superior(
+                                key=task_key,
+                                user_name=user_name
+                            )
+                            print(f"[Registry] 取消确认：{interface_id_clean}")
+                            
+                            # 更新UI
+                            current_values[checkbox_col_idx] = "☐"
+                            viewer.item(item_id, values=current_values)
+                        else:
+                            # 当前未勾选 → 确认
+                            # 【严格权限控制】只有已完成的任务（status='completed'）才能被确认
+                            if task_status != 'completed':
+                                print(f"[Registry] 权限检查失败：任务状态不是待审查，无法确认 (status={task_status})")
+                                import tkinter.messagebox as messagebox
+                                if task_status == 'open':
+                                    messagebox.showwarning(
+                                        "操作失败", 
+                                        f"该任务尚未完成，无法确认\n\n接口号：{interface_id_clean}\n当前状态：待完成\n\n只有设计人员完成后（状态变为\"待审查\"），上级才能进行确认。"
+                                    )
+                                elif task_status == 'confirmed':
+                                    messagebox.showinfo("提示", f"该任务已经被确认过了\n接口号：{interface_id_clean}")
                                 else:
-                                    row_data = None
-                            else:
-                                # 兜底：使用位置索引
-                                item_index = viewer.index(item_id)
-                                row_data = original_df.iloc[item_index] if item_index < len(original_df) else None
+                                    messagebox.showwarning("操作失败", f"该任务状态异常，无法确认\n接口号：{interface_id_clean}\n当前状态：{task_status}")
+                                return
                             
-                            if row_data is not None:
-                                
-                                # 提取接口号和项目号
-                                file_type_map = {
-                                    "内部需打开接口": 1,
-                                    "内部需回复接口": 2,
-                                    "外部需打开接口": 3,
-                                    "外部需回复接口": 4,
-                                    "三维提资接口": 5,
-                                    "收发文函": 6
-                                }
-                                file_type = file_type_map.get(tab_name)
-                                
-                                if file_type:
-                                    interface_id = extract_interface_id(row_data, file_type)
-                                    project_id = extract_project_id(row_data, file_type)
-                                    
-                                    if interface_id and project_id:
-                                        registry_hooks.on_confirmed_by_superior(
-                                            file_type=file_type,
-                                            file_path=source_file,
-                                            row_index=original_row,
-                                            user_name=user_name,
-                                            project_id=project_id,
-                                            interface_id=interface_id
-                                        )
-                                        print(f"[Registry] 上级确认：{interface_id}")
-                        except Exception as e:
-                            print(f"[Registry] 上级确认失败（不影响勾选）: {e}")
-                
-                # 【修复】立即刷新显示，确保勾选框状态可见
-                viewer.update_idletasks()
-                
-                print(f"行{original_row}的完成状态已切换为：{'已完成' if new_state else '未完成'}")
+                            # 状态检查通过，执行确认
+                            registry_hooks.on_confirmed_by_superior(
+                                file_type=file_type,
+                                file_path=source_file,
+                                row_index=original_row,
+                                user_name=user_name,
+                                project_id=project_id,
+                                interface_id=interface_id_clean
+                            )
+                            print(f"[Registry] 确认成功：{interface_id_clean} (status=completed -> confirmed)")
+                            
+                            # 更新UI：先标记为已勾选
+                            current_values[checkbox_col_idx] = "☑"
+                            viewer.item(item_id, values=current_values)
+                        
+                        # 【关键修复】确认/取消确认后，延迟刷新整个tab显示
+                        # 这样已确认的任务会被过滤掉，不再显示
+                        if hasattr(self, 'app') and self.app:
+                            # 使用after延迟100ms执行，确保Registry操作完成
+                            viewer.after(100, self.app.refresh_current_tab_display)
+                            print(f"[Registry] 已触发刷新显示")
+                        else:
+                            # 兜底：至少刷新UI
+                            viewer.update_idletasks()
+                        
+                    except Exception as e:
+                        print(f"[Registry] 确认/取消确认失败: {e}")
+                        import traceback
+                        traceback.print_exc()
+                else:
+                    # 设计人员角色：不应该通过勾选框操作，应该通过填写回文单号来完成
+                    print(f"[提示] 设计人员角色请通过填写回文单号来标记完成，勾选框仅供上级角色使用")
                 
             except Exception as e:
                 print(f"点击事件处理失败: {e}")

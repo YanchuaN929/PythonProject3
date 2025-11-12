@@ -54,14 +54,14 @@ def get_connection(db_path: str, wal: bool = True) -> sqlite3.Connection:
         except Exception as e:
             print(f"[Registry] 数据库配置失败: {e}")
         
-        init_db(conn)
-        
-        # 【数据库迁移】检查并升级旧数据库
+        # 【关键修复】先检查并迁移数据库，再初始化（避免索引创建失败）
         try:
             from .migrate import migrate_if_needed
             migrate_if_needed(db_path)
         except Exception as e:
             print(f"[Registry] 数据库迁移检查失败: {e}")
+        
+        init_db(conn)
         
         _CONN = conn
         return conn
@@ -91,18 +91,24 @@ def init_db(conn: sqlite3.Connection) -> None:
             role TEXT DEFAULT '',
             status TEXT NOT NULL DEFAULT 'open',
             completed_at TEXT NULL,
+            completed_by TEXT DEFAULT NULL,
             confirmed_at TEXT NULL,
+            confirmed_by TEXT DEFAULT NULL,
             assigned_by TEXT DEFAULT NULL,
             assigned_at TEXT DEFAULT NULL,
             display_status TEXT DEFAULT NULL,
-            confirmed_by TEXT DEFAULT NULL,
             responsible_person TEXT DEFAULT NULL,
             response_number TEXT DEFAULT NULL,
+            ignored INTEGER DEFAULT 0,
+            ignored_at TEXT DEFAULT NULL,
+            ignored_by TEXT DEFAULT NULL,
+            interface_time_when_ignored TEXT DEFAULT NULL,
+            ignored_reason TEXT DEFAULT NULL,
             first_seen_at TEXT NOT NULL,
             last_seen_at TEXT NOT NULL,
             missing_since TEXT NULL,
             archive_reason TEXT NULL,
-            UNIQUE(file_type, project_id, interface_id, source_file, row_index)
+            archived_at TEXT NULL
         );
         """
     )
@@ -112,6 +118,7 @@ def init_db(conn: sqlite3.Connection) -> None:
     cur.execute("CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_tasks_last_seen ON tasks(last_seen_at);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_tasks_business_id ON tasks(business_id);")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_tasks_ignored ON tasks(ignored, status);")
     
     # 创建events表
     cur.execute(
