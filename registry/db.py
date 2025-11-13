@@ -142,6 +142,29 @@ def init_db(conn: sqlite3.Connection) -> None:
     cur.execute("CREATE INDEX IF NOT EXISTS idx_events_type ON events(event);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_events_ft_pid ON events(file_type, project_id);")
     
+    # 创建ignored_snapshots表（忽略时的快照数据，用于检测变化）
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ignored_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_type INTEGER NOT NULL,
+            project_id TEXT NOT NULL,
+            interface_id TEXT NOT NULL,
+            source_file TEXT NOT NULL,
+            row_index INTEGER NOT NULL,
+            snapshot_interface_time TEXT,
+            snapshot_completed_col TEXT,
+            ignored_at TEXT NOT NULL,
+            ignored_by TEXT,
+            ignored_reason TEXT,
+            UNIQUE(file_type, project_id, interface_id, source_file, row_index)
+        );
+        """
+    )
+    
+    # 为ignored_snapshots表创建索引
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_ignored_snapshots_key ON ignored_snapshots(file_type, project_id, interface_id);")
+    
     conn.commit()
 
 def close_connection():

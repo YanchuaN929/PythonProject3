@@ -1117,27 +1117,40 @@ class ExcelProcessorApp:
             
             exclude_indices = []
             
+            # 【新增】先过滤所有不在status_map中的任务（已忽略/已归档）
+            for tid in df_index_map.keys():
+                if tid not in status_map:
+                    exclude_indices.append(df_index_map[tid])
+                    print(f"[Registry导出调试] 过滤不在status_map的任务（可能已忽略/已归档）: 接口={tid[:20]}...")
+            
             if is_designer and not is_superior:
                 # 设计人员：过滤掉"待审查"和"待指派人审查"的任务，以及已确认的任务
                 for tid, status_text in status_map.items():
+                    if tid not in df_index_map:
+                        continue
                     # 去除emoji和延期前缀
                     clean_status = status_text.replace('⏳', '').replace('📌', '').replace('❗', '').replace('（已延期）', '').strip()
-                    if clean_status in ['待审查', '待指派人审查', '待上级确认', '待指派人确认', '已审查'] and tid in df_index_map:
-                        exclude_indices.append(df_index_map[tid])
-                        print(f"[Registry导出调试] 设计人员过滤：{clean_status}, 接口={tid[:20]}...")
+                    if clean_status in ['待审查', '待指派人审查', '待上级确认', '待指派人确认', '已审查']:
+                        if df_index_map[tid] not in exclude_indices:  # 避免重复添加
+                            exclude_indices.append(df_index_map[tid])
+                            print(f"[Registry导出调试] 设计人员过滤：{clean_status}, 接口={tid[:20]}...")
                     # 也过滤空状态的任务（已归档等）
-                    elif not status_text and tid in df_index_map:
-                        exclude_indices.append(df_index_map[tid])
-                        print(f"[Registry导出调试] 过滤空状态任务: 接口={tid[:20]}...")
+                    elif not status_text:
+                        if df_index_map[tid] not in exclude_indices:  # 避免重复添加
+                            exclude_indices.append(df_index_map[tid])
+                            print(f"[Registry导出调试] 过滤空状态任务: 接口={tid[:20]}...")
             else:
                 # 上级角色：过滤已确认的任务和空状态任务
                 for tid, status_text in status_map.items():
+                    if tid not in df_index_map:
+                        continue
                     # 去除emoji和延期前缀
                     clean_status = status_text.replace('⏳', '').replace('📌', '').replace('❗', '').replace('（已延期）', '').strip()
                     # 如果是"已审查"或status_text为空，说明任务已确认或已归档，不显示
-                    if (clean_status == '已审查' or not status_text) and tid in df_index_map:
-                        exclude_indices.append(df_index_map[tid])
-                        print(f"[Registry导出调试] 上级过滤已确认任务: {clean_status or '空状态'}, 接口={tid[:20]}...")
+                    if clean_status == '已审查' or not status_text:
+                        if df_index_map[tid] not in exclude_indices:  # 避免重复添加
+                            exclude_indices.append(df_index_map[tid])
+                            print(f"[Registry导出调试] 上级过滤已确认任务: {clean_status or '空状态'}, 接口={tid[:20]}...")
             
             if not exclude_indices:
                 return df
@@ -5121,7 +5134,9 @@ class ExcelProcessorApp:
             dialog = distribution.AssignmentDialog(
                 self.root,
                 unassigned,
-                name_list
+                name_list,
+                user_name=self.user_name,  # 传递用户姓名
+                user_roles=self.user_roles  # 传递用户角色
             )
             dialog.wait_window()
             
@@ -5208,20 +5223,10 @@ class ExcelProcessorApp:
             )
             dialog.wait_window()
             
-            # 4. 如果成功忽略，刷新显示
+            # 4. 如果成功忽略，只提示用户
             if hasattr(dialog, 'ignore_successful') and dialog.ignore_successful:
-                try:
-                    print("[忽略延期] 开始刷新显示...")
-                    # 清除文件缓存
-                    self.file_manager.clear_file_caches_only()
-                    # 重新处理数据
-                    self.start_processing()
-                    print("[忽略延期] 刷新完成")
-                    
-                except Exception as e:
-                    print(f"[忽略延期] 刷新显示失败: {e}")
-                    import traceback
-                    traceback.print_exc()
+                print("[忽略延期] ✓ 成功忽略延期任务")
+                print("[忽略延期] 已忽略的任务将在下次点击'开始处理'时自动过滤")
             else:
                 print("[忽略延期] 用户取消或未完成操作")
                 
@@ -5269,13 +5274,8 @@ class ExcelProcessorApp:
                     
                     # 如果成功忽略，刷新显示
                     if hasattr(dialog, 'ignore_successful') and dialog.ignore_successful:
-                        print("[忽略延期] 开始刷新显示...")
-                        self.file_manager.clear_file_caches_only()
-                        messagebox.showinfo(
-                            "提示",
-                            "忽略操作已完成！\n请点击'开始处理'按钮刷新显示。",
-                            parent=self.root
-                        )
+                        print("[忽略延期] 成功忽略延期任务")
+                        print("[忽略延期] 已忽略的任务将在下次刷新时自动过滤")
         except Exception as e:
             print(f"[忽略延期提示] 失败: {e}")
             import traceback

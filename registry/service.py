@@ -34,9 +34,10 @@ def find_task_by_business_id(db_path: str, wal: bool, file_type: int, project_id
         SELECT id, source_file, row_index, interface_time, 
                status, display_status, responsible_person,
                assigned_by, assigned_at, confirmed_by, completed_at, completed_by, confirmed_at,
-               ignored, interface_time_when_ignored
+               ignored, ignored_at, ignored_by, interface_time_when_ignored, ignored_reason
         FROM tasks
         WHERE business_id = ?
+          AND status != 'archived'
         ORDER BY last_seen_at DESC
         LIMIT 1
     """, (business_id,))
@@ -58,7 +59,10 @@ def find_task_by_business_id(db_path: str, wal: bool, file_type: int, project_id
             'completed_by': row[11],
             'confirmed_at': row[12],
             'ignored': row[13],
-            'interface_time_when_ignored': row[14]
+            'ignored_at': row[14],
+            'ignored_by': row[15],
+            'interface_time_when_ignored': row[16],
+            'ignored_reason': row[17]
         }
     return None
 
@@ -90,8 +94,25 @@ def should_reset_task_status(old_interface_time: str, new_interface_time: str,
     old_comp = str(old_completed_val).strip() if old_completed_val else ""
     new_comp = str(new_completed_val).strip() if new_completed_val else ""
     
+    # 【修复】标准化时间格式进行比较（避免格式差异导致误判）
+    # 统一将 "." 替换为 "-"，并去除多余空格
+    def normalize_time(time_str):
+        if not time_str:
+            return ""
+        # 统一格式：2025.11.07 -> 2025-11-07，2025年11月7日 -> 2025-11-07
+        import re
+        # 提取数字
+        numbers = re.findall(r'\d+', time_str)
+        if len(numbers) >= 3:
+            # 至少有年月日
+            return '-'.join(numbers[:3])
+        return time_str.replace('.', '-').replace('/', '-').strip()
+    
+    old_time_norm = normalize_time(old_time)
+    new_time_norm = normalize_time(new_time)
+    
     # 条件1：时间列变化
-    if old_time != new_time:
+    if old_time_norm != new_time_norm:
         return True
     
     # 条件2：完成列从有值变为空
@@ -290,6 +311,9 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
     
     status = fields.get('status', Status.OPEN)
     department = fields.get('department', '')
+    # 【修复】如果department为空，设置为"请室主任确认"
+    if not department or str(department).strip() == '':
+        department = '请室主任确认'
     interface_time = fields.get('interface_time', '')
     display_status = fields.get('display_status', '待完成')  # 【修复】确保总是有默认值
     now_str = now.isoformat()
@@ -329,11 +353,26 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
             completed_at = excluded.completed_at,
             completed_by = excluded.completed_by,
             confirmed_at = excluded.confirmed_at,
-            ignored = COALESCE(excluded.ignored, 0),
-            ignored_at = excluded.ignored_at,
-            ignored_by = excluded.ignored_by,
-            interface_time_when_ignored = excluded.interface_time_when_ignored,
-            ignored_reason = excluded.ignored_reason,
+            ignored = CASE 
+                WHEN excluded.ignored IS NOT NULL THEN excluded.ignored
+                ELSE ignored
+            END,
+            ignored_at = CASE 
+                WHEN excluded.ignored IS NOT NULL THEN excluded.ignored_at
+                ELSE ignored_at
+            END,
+            ignored_by = CASE 
+                WHEN excluded.ignored IS NOT NULL THEN excluded.ignored_by
+                ELSE ignored_by
+            END,
+            interface_time_when_ignored = CASE 
+                WHEN excluded.ignored IS NOT NULL THEN excluded.interface_time_when_ignored
+                ELSE interface_time_when_ignored
+            END,
+            ignored_reason = CASE 
+                WHEN excluded.ignored IS NOT NULL THEN excluded.ignored_reason
+                ELSE ignored_reason
+            END,
             last_seen_at = excluded.last_seen_at
         """,
         (
@@ -357,11 +396,11 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
             fields.get('completed_at'),
             fields.get('completed_by'),
             fields.get('confirmed_at'),
-            fields.get('ignored', 0),
-            fields.get('ignored_at'),
-            fields.get('ignored_by'),
-            fields.get('interface_time_when_ignored'),
-            fields.get('ignored_reason'),
+            fields.get('ignored', None),
+            fields.get('ignored_at', None),
+            fields.get('ignored_by', None),
+            fields.get('interface_time_when_ignored', None),
+            fields.get('ignored_reason', None),
             first_seen_at,
             now_str
         )
@@ -566,21 +605,29 @@ def mark_ignored_batch(
     if now is None:
         now = datetime.now()
     
+    print(f"\n[标记忽略] 开始批量忽略 {len(task_keys)} 个任务")
+    print(f"[标记忽略] 操作人: {ignored_by}")
+    print(f"[标记忽略] 原因: {ignored_reason if ignored_reason else '(无)'}")
+    
     conn = get_connection(db_path, wal)
     success_count = 0
     failed_tasks = []
     
-    for key in task_keys:
+    for idx, key in enumerate(task_keys, 1):
         try:
+            interface_id = key['interface_id']
+            print(f"\n[标记忽略] [{idx}/{len(task_keys)}] 处理接口: {interface_id}")
+            
             # 1. 查找任务（使用business_id查找最新非归档任务）
             business_id = make_business_id(
                 key['file_type'], 
                 key['project_id'], 
                 key['interface_id']
             )
+            print(f"[标记忽略]   business_id: {business_id}")
             
             cursor = conn.execute("""
-                SELECT id, status, ignored 
+                SELECT id, status, ignored, responsible_person, completed_by, interface_time
                 FROM tasks
                 WHERE business_id = ?
                   AND status != 'archived'
@@ -590,24 +637,33 @@ def mark_ignored_batch(
             
             row = cursor.fetchone()
             if not row:
+                print(f"[标记忽略]   ✗ 任务不存在")
                 failed_tasks.append({
-                    'interface_id': key['interface_id'],
+                    'interface_id': interface_id,
                     'reason': '任务不存在'
                 })
                 continue
             
-            tid, status, already_ignored = row
+            tid, status, already_ignored, resp_person, completed_by, interface_time = row
+            print(f"[标记忽略]   任务ID: {tid}")
+            print(f"[标记忽略]   当前状态: {status}")
+            print(f"[标记忽略]   已忽略: {already_ignored}")
+            print(f"[标记忽略]   责任人: {resp_person if resp_person else '(无)'}")
+            print(f"[标记忽略]   完成人: {completed_by if completed_by else '(无)'}")
+            print(f"[标记忽略]   预期时间: {interface_time if interface_time else '(无)'}")
             
             # 2. 检查是否已经被忽略
             if already_ignored == 1:
+                print(f"[标记忽略]   ✗ 已经被忽略")
                 failed_tasks.append({
-                    'interface_id': key['interface_id'],
+                    'interface_id': interface_id,
                     'reason': '已经被忽略'
                 })
                 continue
             
-            # 3. 标记为忽略
-            interface_time = key.get('interface_time', '')
+            # 3. 标记为忽略（使用从数据库查询到的interface_time）
+            print(f"[标记忽略]   执行UPDATE...")
+            
             conn.execute("""
                 UPDATE tasks
                 SET ignored = 1,
@@ -624,17 +680,42 @@ def mark_ignored_batch(
                 tid
             ))
             
+            # 4. 创建忽略快照（用于后续变化检测）
+            print(f"[标记忽略]   创建快照记录...")
+            conn.execute("""
+                INSERT OR REPLACE INTO ignored_snapshots (
+                    file_type, project_id, interface_id, source_file, row_index,
+                    snapshot_interface_time, snapshot_completed_col,
+                    ignored_at, ignored_by, ignored_reason
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                key['file_type'],
+                key['project_id'],
+                key['interface_id'],
+                key['source_file'],
+                key['row_index'],
+                interface_time,  # 快照：预期时间
+                None,  # 快照：完成时间列（暂时为None，后续可扩展）
+                now.isoformat(),
+                ignored_by,
+                ignored_reason
+            ))
+            
             success_count += 1
-            print(f"[Registry忽略] ✓ 已忽略: {key['interface_id']} (预期时间: {interface_time})")
+            print(f"[标记忽略]   ✓ 成功（已创建快照）")
             
         except Exception as e:
+            print(f"[标记忽略]   ✗ 失败: {e}")
+            import traceback
+            traceback.print_exc()
             failed_tasks.append({
                 'interface_id': key.get('interface_id', '未知'),
                 'reason': str(e)
             })
-            print(f"[Registry忽略] ✗ 失败: {key.get('interface_id', '未知')} - {e}")
     
     conn.commit()
+    print(f"\n[标记忽略] 完成! 成功{success_count}个，失败{len(failed_tasks)}个\n")
     
     return {
         'success_count': success_count,
@@ -713,9 +794,8 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
             
             status, display_status, assigned_by, role, confirmed_at, responsible_person, ignored = row
             
-            # 【新增】如果任务被忽略，不返回任何状态（UI中会被过滤）
+            # 【新增】如果任务被忽略，完全不返回（UI中会被过滤）
             if ignored == 1:
-                result[tid] = ''  # 空字符串，表示不显示
                 continue
             
             # 【修复】如果已确认，直接使用display_status（应该已经是"已审查"）
@@ -945,27 +1025,120 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
             old_task = find_task_by_business_id(db_path, wal, key['file_type'], key['project_id'], key['interface_id'])
             
-            # 【新增】自动取消忽略：如果预期时间变化
-            if old_task and old_task.get('ignored') == 1:
-                old_interface_time = old_task.get('interface_time_when_ignored', '')
+        # 【修正】row_index不匹配时的智能判断
+        # 如果row_index差距较小（±100行以内），可能是Excel文件编辑导致的行号偏移，应该继承状态
+        # 如果差距很大，可能是真正的不同任务，但仍然继承状态（避免状态丢失）
+        # 注意：只有当接口时间等关键字段变化时才会重置状态，row_index变化本身不重置
+        if old_task and old_task['row_index'] != key['row_index']:
+            row_diff = abs(old_task['row_index'] - key['row_index'])
+            if key['file_type'] == 2 and row_diff > 100:  # 文件2特别容易出现重复接口号
+                print(f"[Registry调试] 接口{key['interface_id']}: 行号变化较大(旧行={old_task['row_index']}, 新行={key['row_index']}, 差距={row_diff})，但仍继承状态")
+            # 不将old_task设为None，继续使用它来继承状态
+            
+        # 【新增】基于快照检测预期时间变化并自动取消忽略
+        if old_task and old_task.get('ignored') == 1:
+            # 查询忽略快照（使用key的信息，因为快照记录的是当时的row_index）
+            cursor = conn.execute("""
+                SELECT snapshot_interface_time, ignored_at, ignored_by, ignored_reason, row_index
+                FROM ignored_snapshots
+                WHERE file_type = ? AND project_id = ? AND interface_id = ?
+                ORDER BY ignored_at DESC
+                LIMIT 1
+            """, (
+                key['file_type'],
+                key['project_id'],
+                key['interface_id']
+            ))
+            snapshot = cursor.fetchone()
+            
+            if snapshot:
+                snapshot_time, _, _, _, snapshot_row = snapshot
                 current_interface_time = fields.get('interface_time', '')
                 
-                if old_interface_time and current_interface_time and old_interface_time != current_interface_time:
-                    print(f"[Registry自动取消忽略] {key['interface_id']}: 预期时间变化 {old_interface_time} -> {current_interface_time}")
+                def normalize_time_for_ignore(time_str):
+                    if not time_str: return ""
+                    import re
+                    numbers = re.findall(r'\d+', str(time_str))
+                    if len(numbers) >= 3:
+                        return '-'.join(numbers[:3])
+                    return str(time_str).replace('.', '-').replace('/', '-').strip()
+                
+                snapshot_time_norm = normalize_time_for_ignore(snapshot_time)
+                current_time_norm = normalize_time_for_ignore(current_interface_time)
+                
+                print(f"[忽略快照检查] 接口{key['interface_id']}")
+                print(f"  快照时间: '{snapshot_time}' -> 标准化: '{snapshot_time_norm}'")
+                print(f"  当前时间: '{current_interface_time}' -> 标准化: '{current_time_norm}'")
+                print(f"  快照行号: {snapshot_row}, 当前行号: {key['row_index']}")
+                
+                if snapshot_time_norm and current_time_norm and snapshot_time_norm != current_time_norm:
+                    print(f"[Registry自动取消忽略] {key['interface_id']}: 预期时间变化 ({snapshot_time_norm} -> {current_time_norm})")
+                    
                     # 取消忽略标记
                     fields['ignored'] = 0
                     fields['ignored_at'] = None
                     fields['ignored_by'] = None
                     fields['interface_time_when_ignored'] = None
                     fields['ignored_reason'] = None
+                    
+                    # 删除快照记录
+                    conn.execute("""
+                        DELETE FROM ignored_snapshots
+                        WHERE file_type = ? AND project_id = ? AND interface_id = ?
+                    """, (
+                        key['file_type'],
+                        key['project_id'],
+                        key['interface_id']
+                    ))
+                    print(f"[Registry] 已删除忽略快照记录")
+            else:
+                print(f"[Registry调试] 接口{key['interface_id']}: 已忽略但没有找到快照记录")
             
             # 【修复】检查是否需要重置或继承
+            # 【关键】如果刚刚取消了忽略（因为时间变化），标记need_force_reset
+            need_force_reset = (old_task and 
+                               old_task.get('ignored') == 1 and 
+                               fields.get('ignored') == 0)
+            
             if old_task:
                 new_completed_val = fields.get('_completed_col_value', '')
                 old_completed_val = '有值' if old_task['completed_at'] else ''
                 
                 # 【关键】优先检查完成列是否被清空（包括已确认的任务）
                 if not new_completed_val and old_task['completed_at']:
+                    # 【修复】如果有完整数据链（completed_at和confirmed_at都存在），先归档旧记录
+                    if old_task.get('completed_at') and old_task.get('confirmed_at'):
+                        print(f"[Registry版本化-批量] {key['interface_id']} 完成列被清空，之前有完整数据链，归档旧记录")
+                        
+                        # 归档旧记录
+                        import time as time_module
+                        old_tid = old_task['id']
+                        old_row_index = old_task['row_index']
+                        archived_row_index = -1000000 - int(time_module.time() % 1000000) - (old_row_index % 1000)
+                        now_str = now.isoformat()
+                        
+                        from .util import make_task_id as calc_tid
+                        archived_tid = calc_tid(
+                            key['file_type'],
+                            key['project_id'],
+                            key['interface_id'],
+                            old_task['source_file'],
+                            archived_row_index
+                        )
+                        
+                        # 更新旧记录：修改id、row_index、status、archived_at
+                        conn.execute("""
+                            UPDATE tasks
+                            SET id = ?,
+                                row_index = ?,
+                                status = ?,
+                                archived_at = ?,
+                                archive_reason = ?
+                            WHERE id = ?
+                        """, (archived_tid, archived_row_index, Status.ARCHIVED, now_str, 'task_reset_completed_cleared', old_tid))
+                        
+                        print(f"[Registry版本化-批量] 旧记录已归档: {old_tid} -> {archived_tid}")
+                    
                     # 完成列被删除，强制重置（即使是已确认的任务也要重置）
                     print(f"[Registry] 接口{key['interface_id']}: 完成列被清空，重置状态（old_status={old_task['status']}）")
                     fields['display_status'] = '待完成' if old_task['responsible_person'] else '请指派'
@@ -981,8 +1154,8 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                         fields['assigned_at'] = old_task['assigned_at']
                         fields['responsible_person'] = old_task['responsible_person']
                 
-                # 【新增】如果已确认且完成列仍有值，保持确认状态
-                elif old_task['status'] == Status.CONFIRMED and old_task['confirmed_at'] and new_completed_val:
+                # 【新增】如果已确认且完成列仍有值，且未被取消忽略，保持确认状态
+                elif old_task['status'] == Status.CONFIRMED and old_task['confirmed_at'] and new_completed_val and not need_force_reset:
                     # 已确认且完成列未被清空，保持确认状态
                     print(f"[Registry] 接口{key['interface_id']}: 已确认且完成列有值，保持确认状态")
                     fields['status'] = Status.CONFIRMED
@@ -1006,10 +1179,49 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                 # 检查接口时间变化是否需要重置
                 elif should_reset_task_status(old_task['interface_time'], fields.get('interface_time', ''), 
                                              old_completed_val, new_completed_val):
+                    # 【新增】如果有完整数据链（completed_at和confirmed_at都存在），归档旧记录
+                    if old_task.get('completed_at') and old_task.get('confirmed_at'):
+                        print(f"[Registry版本化-批量] {key['interface_id']} 检测到更新/重置，之前有完整数据链，归档旧记录")
+                        
+                        # 归档旧记录
+                        import time as time_module
+                        old_tid = old_task['id']
+                        old_row_index = old_task['row_index']
+                        archived_row_index = -1000000 - int(time_module.time() % 1000000) - (old_row_index % 1000)
+                        now_str = now.isoformat()
+                        
+                        from .util import make_task_id as calc_tid
+                        archived_tid = calc_tid(
+                            key['file_type'],
+                            key['project_id'],
+                            key['interface_id'],
+                            old_task['source_file'],
+                            archived_row_index
+                        )
+                        
+                        # 更新旧记录：修改id、row_index、status、archived_at
+                        conn.execute("""
+                            UPDATE tasks
+                            SET id = ?,
+                                row_index = ?,
+                                status = ?,
+                                archived_at = ?,
+                                archive_reason = ?
+                            WHERE id = ?
+                        """, (archived_tid, archived_row_index, Status.ARCHIVED, now_str, 'task_reset_with_history', old_tid))
+                        
+                        print(f"[Registry版本化-批量] 旧记录已归档: {old_tid} -> {archived_tid}")
+                    
                     # 时间列变化，重置
                     print(f"[Registry] 接口{key['interface_id']}: 接口时间变化，重置状态")
                     fields['display_status'] = '待完成' if old_task['responsible_person'] else '请指派'
                     fields['status'] = Status.OPEN
+                    # 清除完成和确认相关字段
+                    fields['completed_at'] = None
+                    fields['completed_by'] = None
+                    fields['confirmed_at'] = None
+                    fields['confirmed_by'] = None
+                    # 保留指派信息
                     if old_task['assigned_by']:
                         fields['assigned_by'] = old_task['assigned_by']
                         fields['assigned_at'] = old_task['assigned_at']
@@ -1031,9 +1243,20 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                         fields['assigned_by'] = old_task['assigned_by']
                         fields['assigned_at'] = old_task['assigned_at']
                         fields['responsible_person'] = old_task['responsible_person']
+                    # 【修复】不继承ignored状态，如果已经明确设置了ignored=0（取消忽略），应该保持
+                    # 如果fields中没有设置ignored，则继承旧值
+                    if 'ignored' not in fields and old_task.get('ignored'):
+                        fields['ignored'] = old_task['ignored']
+                        fields['ignored_at'] = old_task.get('ignored_at')
+                        fields['ignored_by'] = old_task.get('ignored_by')
+                        fields['interface_time_when_ignored'] = old_task.get('interface_time_when_ignored')
+                        fields['ignored_reason'] = old_task.get('ignored_reason')
             
             status = fields.get('status', Status.OPEN)
             department = fields.get('department', '')
+            # 【修复】如果department为空，设置为"请室主任确认"
+            if not department or str(department).strip() == '':
+                department = '请室主任确认'
             interface_time = fields.get('interface_time', '')
             role = fields.get('role', '')
             display_status = fields.get('display_status', '待完成')  # 【修复】提供默认值
@@ -1047,7 +1270,8 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             completed_at = fields.get('completed_at')
             
             # 【新增】从fields获取ignored相关字段
-            ignored = fields.get('ignored', 0)
+            # 【修复】默认值改为None，避免覆盖已忽略的任务
+            ignored = fields.get('ignored', None)
             ignored_at = fields.get('ignored_at')
             ignored_by = fields.get('ignored_by')
             interface_time_when_ignored = fields.get('interface_time_when_ignored')
@@ -1084,11 +1308,11 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     completed_by = COALESCE(excluded.completed_by, completed_by),
                     confirmed_at = excluded.confirmed_at,
                     response_number = COALESCE(excluded.response_number, response_number),
-                    ignored = excluded.ignored,
-                    ignored_at = excluded.ignored_at,
-                    ignored_by = excluded.ignored_by,
-                    interface_time_when_ignored = excluded.interface_time_when_ignored,
-                    ignored_reason = excluded.ignored_reason
+                    ignored = COALESCE(excluded.ignored, ignored),
+                    ignored_at = COALESCE(excluded.ignored_at, ignored_at),
+                    ignored_by = COALESCE(excluded.ignored_by, ignored_by),
+                    interface_time_when_ignored = COALESCE(excluded.interface_time_when_ignored, interface_time_when_ignored),
+                    ignored_reason = COALESCE(excluded.ignored_reason, ignored_reason)
                 """,
                 (
                     tid,

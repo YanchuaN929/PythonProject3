@@ -48,7 +48,7 @@ class IgnoreOverdueDialog(tk.Toplevel):
         
         # 居中显示
         self.transient(self.master)
-        self.grab_set()
+       
         
         # 标题
         title_label = ttk.Label(
@@ -118,6 +118,14 @@ class IgnoreOverdueDialog(tk.Toplevel):
         self.tree.pack(side='left', fill='both', expand=True)
         scrollbar.pack(side='right', fill='y')
         
+        # 【新增】绑定右键菜单
+        self.tree.bind('<Button-3>', self._show_context_menu)  # Windows/Linux
+        self.tree.bind('<Button-2>', self._show_context_menu)  # Mac
+        
+        # 创建右键菜单
+        self.context_menu = tk.Menu(self, tearoff=0)
+        self.context_menu.add_command(label="复制接口号", command=self._copy_interface_id)
+        
         # 文件类型映射
         file_type_names = {
             1: '内部需打开',
@@ -169,6 +177,37 @@ class IgnoreOverdueDialog(tk.Toplevel):
         
         # 绑定点击事件（切换选中状态）
         self.tree.bind('<Button-1>', self._on_tree_click)
+    
+    def _show_context_menu(self, event):
+        """显示右键菜单"""
+        # 确定点击的行
+        item_id = self.tree.identify_row(event.y)
+        if not item_id:
+            return
+        
+        # 选择该行
+        self.tree.selection_set(item_id)
+        
+        # 显示菜单
+        self.context_menu.post(event.x_root, event.y_root)
+    
+    def _copy_interface_id(self):
+        """复制选中行的接口号到剪贴板"""
+        selection = self.tree.selection()
+        if not selection:
+            return
+        
+        # 获取第一个选中项的接口号（列索引2）
+        values = self.tree.item(selection[0], 'values')
+        if len(values) > 2:
+            interface_id = values[2]  # '接口号'列
+            
+            # 复制到剪贴板
+            self.clipboard_clear()
+            self.clipboard_append(interface_id)
+            self.update()  # 更新剪贴板
+            
+            print(f"[复制] 接口号已复制: {interface_id}")
     
     def _on_tree_click(self, event):
         """点击任务行，切换选中状态"""
@@ -438,11 +477,11 @@ class IgnoreOverdueDialog(tk.Toplevel):
             
             # 调用Registry服务
             from registry import service as registry_service
-            from registry.config import get_config
+            from registry import hooks as registry_hooks
             
-            cfg = get_config()
-            db_path = cfg['db_path']
-            wal = cfg.get('wal', True)
+            cfg = registry_hooks._cfg()
+            db_path = cfg['registry_db_path']
+            wal = cfg.get('registry_wal', True)
             
             task_keys = []
             for task in selected_tasks:

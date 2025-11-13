@@ -229,7 +229,7 @@ class HistoryDisplayWindow(tk.Toplevel):
         
         # 创建Treeview
         columns = (
-            '序号', '文件类型', '状态', '首次发现', '完成时间', '完成人',
+            '序号', '文件类型', '状态', '是否忽略', '忽略时间', '忽略人', '忽略原因', '首次发现', '完成时间', '完成人',
             '确认时间', '确认人', '归档时间', '指派人', '设计人员', '上级人员',
             '回文单号', '接口时间', '最后出现', '消失时间'
         )
@@ -241,9 +241,15 @@ class HistoryDisplayWindow(tk.Toplevel):
             '序号': 50,
             '文件类型': 110,
             '状态': 100,
+            '是否忽略': 80,  # 【新增】是否忽略
+            '忽略时间': 135,  # 【新增】忽略时间
+            '忽略人': 80,  # 【新增】忽略人
+            '忽略原因': 150,  # 【新增】忽略原因
             '首次发现': 135,  # 修复：列名改为"首次发现"
             '完成时间': 135,
+            '完成人': 80,
             '确认时间': 135,
+            '确认人': 80,
             '归档时间': 135,
             '指派人': 130,
             '设计人员': 90,
@@ -324,10 +330,21 @@ class HistoryDisplayWindow(tk.Toplevel):
             # 【新增】回文单号
             response_number = task.get('response_number') or '-'
             
+            # 【新增】是否忽略相关字段
+            ignored = task.get('ignored', 0)
+            ignored_display = '是' if ignored == 1 else '否'
+            ignored_at = format_time(task.get('ignored_at')) if ignored == 1 else '-'
+            ignored_by = task.get('ignored_by') or '-' if ignored == 1 else '-'
+            ignored_reason = task.get('ignored_reason') or '-' if ignored == 1 else '-'
+            
             values = (
                 idx,
                 file_type_name,
                 display_status,
+                ignored_display,  # 【新增】是否忽略
+                ignored_at,  # 【新增】忽略时间
+                ignored_by,  # 【新增】忽略人
+                ignored_reason,  # 【新增】忽略原因
                 format_time(task.get('first_seen_at')),  # 修复：使用first_seen_at
                 format_time(task.get('completed_at')),
                 task.get('completed_by') or '-',  # 【新增】完成人
@@ -380,12 +397,23 @@ class HistoryDisplayWindow(tk.Toplevel):
                 # 【新增】回文单号
                 response_number = task.get('response_number') or '-'
                 
+                # 【新增】是否忽略相关字段
+                ignored = task.get('ignored', 0)
+                ignored_display = '是' if ignored == 1 else '否'
+                ignored_at = format_time(task.get('ignored_at')) if ignored == 1 else '-'
+                ignored_by = task.get('ignored_by') or '-' if ignored == 1 else '-'
+                ignored_reason = task.get('ignored_reason') or '-' if ignored == 1 else '-'
+                
                 export_data.append({
                     '序号': idx,
                     '文件类型': file_type_name,
                     '项目号': task.get('project_id', ''),
                     '接口号': task.get('interface_id', ''),
                     '状态': display_status,
+                    '是否忽略': ignored_display,  # 【新增】是否忽略
+                    '忽略时间': ignored_at,  # 【新增】忽略时间
+                    '忽略人': ignored_by,  # 【新增】忽略人
+                    '忽略原因': ignored_reason,  # 【新增】忽略原因
                     '首次发现': format_time(task.get('first_seen_at')),  # 修复：使用first_seen_at
                     '完成时间': format_time(task.get('completed_at')),
                     '完成人': task.get('completed_by') or '-',  # 【新增】完成人

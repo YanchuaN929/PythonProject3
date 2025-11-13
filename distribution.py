@@ -426,13 +426,15 @@ def save_assignments_batch(assignments):
                                 project_id = extract_project_id(row_data, assignment['file_type'])
                                 
                                 if interface_id and project_id:
+                                    # 【修复】使用实际的指派人信息
+                                    assigned_by = assignment.get('assigned_by', '系统用户')
                                     registry_hooks.on_assigned(
                                         file_type=assignment['file_type'],
                                         file_path=file_path,
                                         row_index=row_index,
                                         interface_id=interface_id,
                                         project_id=project_id,
-                                        assigned_by="系统用户",  # TODO: 传递实际用户
+                                        assigned_by=assigned_by,
                                         assigned_to=assignment['assigned_name']
                                     )
                                     registry_updates += 1
@@ -464,7 +466,7 @@ def save_assignments_batch(assignments):
 class AssignmentDialog(tk.Toplevel):
     """任务指派界面"""
     
-    def __init__(self, parent, unassigned_tasks, name_list):
+    def __init__(self, parent, unassigned_tasks, name_list, user_name=None, user_roles=None):
         """
         初始化任务指派对话框
         
@@ -472,11 +474,15 @@ class AssignmentDialog(tk.Toplevel):
             parent: 父窗口
             unassigned_tasks: 未指派任务列表
             name_list: 姓名列表（从姓名角色表读取）
+            user_name: 当前用户姓名（可选）
+            user_roles: 当前用户角色列表（可选）
         """
         super().__init__(parent)
         
         self.unassigned_tasks = unassigned_tasks
         self.name_list = name_list
+        self.user_name = user_name or "未知用户"
+        self.user_roles = user_roles or []
         self.assignment_entries = []  # 存储每行的输入控件
         self.batch_name_var = tk.StringVar()  # 批量指派的姓名
         self.assignment_successful = False  # 【新增】标记是否成功指派
@@ -680,6 +686,13 @@ class AssignmentDialog(tk.Toplevel):
         """确认指派按钮回调（优化版，使用批量保存）"""
         assignments = []
         
+        # 构建指派人信息（姓名+角色）
+        assigned_by = self.user_name
+        if self.user_roles:
+            # 如果有多个角色，只取第一个主要角色
+            role = self.user_roles[0] if self.user_roles else ""
+            assigned_by = f"{self.user_name}（{role}）"
+        
         # 收集所有指派
         for entry in self.assignment_entries:
             task = entry['task']
@@ -694,6 +707,7 @@ class AssignmentDialog(tk.Toplevel):
                 'file_path': task['file_path'],
                 'row_index': task['row_index'],
                 'assigned_name': assigned_name,
+                'assigned_by': assigned_by,  # 【新增】指派人信息
                 'interface_id': task.get('interface_id', '未知'),
                 'project_id': task.get('project_id', '')
             })

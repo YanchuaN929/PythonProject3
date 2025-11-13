@@ -135,16 +135,26 @@ def extract_project_id(df_row: pd.Series, file_type: int) -> str:
 
 def extract_department(df_row: pd.Series) -> str:
     """
-    从DataFrame行中提取部门信息
+    从DataFrame行中提取部门/科室信息
     
     参数:
         df_row: DataFrame的一行（pd.Series）
         
     返回:
-        部门字符串（去除前后空格）
+        部门/科室字符串（去除前后空格）
     """
+    # 优先查找"科室"列（常用）
+    if "科室" in df_row.index:
+        dept = str(df_row["科室"]).strip()
+        if dept and dept.lower() not in ['nan', 'none', '']:
+            return dept
+    
+    # 其次查找"部门"列
     if "部门" in df_row.index:
-        return str(df_row["部门"]).strip()
+        dept = str(df_row["部门"]).strip()
+        if dept and dept.lower() not in ['nan', 'none', '']:
+            return dept
+    
     return ""
 
 def extract_completed_column_value(df_row: pd.Series, file_type: int) -> str:
