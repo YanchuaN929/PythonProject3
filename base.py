@@ -19,7 +19,7 @@ import pandas as pd
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from openpyxl import load_workbook
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 # 导入窗口管理器
 from window import WindowManager
@@ -37,6 +37,22 @@ try:
 except ImportError:
     print("警告: 未找到registry模块")
     registry_hooks = None
+
+# 自动更新模块
+try:
+    from update import UpdateManager, UpdateReason
+    from update.versioning import read_version as read_version_file, DEFAULT_VERSION
+except ImportError:
+    UpdateManager = None
+    DEFAULT_VERSION = "0.0.0.0"
+
+    def read_version_file(_path: str) -> str:
+        return DEFAULT_VERSION
+
+    class UpdateReason:  # type: ignore
+        AUTO_FLOW = "auto_flow"
+        START_PROCESSING = "start_processing"
+        EXPORT_RESULTS = "export_results"
 
 def get_resource_path(relative_path):
     """获取资源文件的绝对路径，兼容开发环境和打包环境"""
@@ -142,10 +158,14 @@ def concurrent_read_excel_files(file_paths, max_workers=4):
 class ExcelProcessorApp:
     """主应用程序类"""
     
-    def __init__(self, auto_mode: bool = False):
+    def __init__(self, auto_mode: bool = False, resume_action: str = ""):
         self.auto_mode = auto_mode
+        self.resume_action = resume_action or ""
         self._manual_operation = False  # 标记当前操作是否为手动触发（用于弹窗控制）
+        self.app_root = self._detect_app_root()
+        self.current_version = self._load_current_version()
         self.root = tk.Tk()
+        self.update_manager = self._create_update_manager()
         self.load_config()
         
         # 【多用户协作】如果配置中已有数据文件夹路径，立即设置
@@ -339,6 +359,8 @@ class ExcelProcessorApp:
                 self.root.after(300, self._run_auto_flow)
             except Exception:
                 pass
+        
+        self._schedule_resume_action()
     
     def _should_show_popup(self):
         """
@@ -353,6 +375,117 @@ class ExcelProcessorApp:
             return True
         # 否则（auto模式且非手动操作），不显示弹窗
         return False
+
+    # ------------------------------------------------------------------
+    # 自动更新相关辅助方法
+    # ------------------------------------------------------------------
+    def _detect_app_root(self) -> str:
+        if getattr(sys, 'frozen', False):
+            return os.path.dirname(sys.executable)
+        return os.path.dirname(os.path.abspath(__file__))
+
+    def _create_update_manager(self):
+        if not UpdateManager:
+            return None
+        try:
+            main_exec = os.path.basename(sys.executable) if getattr(sys, 'frozen', False) else ""
+            return UpdateManager(
+                app_root=self.app_root,
+                main_executable=main_exec,
+                log_fn=self._log_update_message,
+            )
+        except Exception as e:
+            print(f"[Update] 初始化失败: {e}")
+            return None
+
+    def _log_update_message(self, message: str):
+        print(f"[Update] {message}")
+        try:
+            import Monitor
+            Monitor.log_info(message)
+        except Exception:
+            pass
+
+    def _schedule_resume_action(self):
+        if not getattr(self, 'resume_action', ''):
+            return
+        try:
+            self.root.after(800, self._handle_resume_action)
+        except Exception:
+            pass
+
+    def _handle_resume_action(self):
+        action = getattr(self, 'resume_action', '') or ''
+        if not action:
+            return
+        # auto模式本身会自动执行，不需要额外触发
+        if action == UpdateReason.AUTO_FLOW and getattr(self, 'auto_mode', False):
+            self.resume_action = ""
+            return
+
+        self.resume_action = ""
+
+        if action == UpdateReason.START_PROCESSING:
+            self._manual_operation = True
+            self.start_processing()
+        elif action == UpdateReason.EXPORT_RESULTS:
+            self._manual_operation = True
+            self.export_results()
+        elif action == UpdateReason.AUTO_FLOW:
+            self._run_auto_flow()
+
+    def _ensure_up_to_date(self, reason: str, resume_action: Optional[str] = None) -> bool:
+        """
+        调用更新管理器进行版本校验；返回True代表可继续后续流程。
+        """
+        manager = getattr(self, 'update_manager', None)
+        if not manager:
+            return True
+
+        folder_path = ""
+        try:
+            if hasattr(self, 'path_var'):
+                folder_path = self.path_var.get().strip()
+            if not folder_path:
+                folder_path = self.config.get('folder_path', '').strip()
+        except Exception:
+            folder_path = ""
+
+        try:
+            return manager.check_and_update(
+                folder_path=folder_path,
+                reason=reason,
+                resume_action=resume_action or reason,
+                auto_mode=getattr(self, 'auto_mode', False),
+                parent_window=self.root,
+            )
+        except Exception as e:
+            print(f"[Update] 版本检查失败: {e}")
+            return True
+
+    def _load_current_version(self) -> str:
+        candidate_paths = []
+        try:
+            resource_path = get_resource_path("version.json")
+            if resource_path:
+                candidate_paths.append(resource_path)
+        except Exception:
+            pass
+
+        candidate_paths.append(os.path.join(self.app_root, "version.json"))
+
+        seen = set()
+        for path in candidate_paths:
+            if not path or path in seen:
+                continue
+            seen.add(path)
+            if os.path.exists(path):
+                try:
+                    return read_version_file(path)
+                except Exception:
+                    continue
+
+        return DEFAULT_VERSION
     
     def get_enabled_projects(self):
         """
@@ -726,10 +859,15 @@ class ExcelProcessorApp:
         except Exception:
             pass
 
-        # 右下角水印
+        # 右下角水印 + 版本
         try:
-            watermark = ttk.Label(main_frame, text="——by 建筑结构所，王任超", foreground="gray")
-            watermark.grid(row=4, column=2, sticky=tk.E, padx=(0, 4), pady=(6, 2))
+            footer_frame = ttk.Frame(main_frame)
+            footer_frame.grid(row=4, column=2, sticky=tk.E, padx=(0, 4), pady=(6, 2))
+            watermark = tk.Label(footer_frame, text="——by 建筑结构所，王任超", fg="#666666", bg=footer_frame.cget("background"))
+            watermark.pack(anchor=tk.E)
+            version_text = getattr(self, 'current_version', DEFAULT_VERSION) or DEFAULT_VERSION
+            version_label = tk.Label(footer_frame, text=f"版本：{version_text}", fg="#666666", bg=footer_frame.cget("background"))
+            version_label.pack(anchor=tk.E)
         except Exception:
             pass
 
@@ -3127,6 +3265,10 @@ class ExcelProcessorApp:
     def start_processing(self):
         """开始处理Excel文件"""
         
+        if not self._ensure_up_to_date(UpdateReason.START_PROCESSING, UpdateReason.START_PROCESSING):
+            self._manual_operation = False
+            return
+        
         # 姓名必填校验
         try:
             if (not self.config.get("user_name", "").strip()) and self._should_show_popup():
@@ -4023,6 +4165,11 @@ class ExcelProcessorApp:
 
     def export_results(self):
         current_tab = self.notebook.index(self.notebook.select())
+        
+        if not self._ensure_up_to_date(UpdateReason.EXPORT_RESULTS, UpdateReason.EXPORT_RESULTS):
+            self._manual_operation = False
+            return
+        
         # 姓名必填校验
         try:
             if (not self.config.get("user_name", "").strip()) and self._should_show_popup():
@@ -4834,6 +4981,8 @@ class ExcelProcessorApp:
     def _run_auto_flow(self):
         """自动模式流程：校验路径→刷新→开始处理（导出与汇总弹窗由处理完成逻辑触发）"""
         try:
+            if not self._ensure_up_to_date(UpdateReason.AUTO_FLOW, UpdateReason.AUTO_FLOW):
+                return
             # 路径判定：导出结果位置优先，其次文件夹路径
             export_root = (self.export_path_var.get().strip() if hasattr(self, 'export_path_var') else '')
             folder_path = self.path_var.get().strip() if hasattr(self, 'path_var') else ''
@@ -5384,15 +5533,26 @@ class ExcelProcessorApp:
         return overdue_tasks
 
 
+def parse_cli_args(argv):
+    auto_mode = False
+    resume_action = ""
+    idx = 0
+    while idx < len(argv):
+        arg = argv[idx]
+        if arg == "--auto":
+            auto_mode = True
+        elif arg == "--resume":
+            if idx + 1 < len(argv):
+                resume_action = argv[idx + 1]
+                idx += 1
+        idx += 1
+    return auto_mode, resume_action
+
+
 def main():
     """主函数"""
-    # 识别 --auto 参数
-    auto_mode = False
-    try:
-        auto_mode = any(arg == "--auto" for arg in sys.argv[1:])
-    except Exception:
-        auto_mode = False
-    app = ExcelProcessorApp(auto_mode=auto_mode)
+    auto_mode, resume_action = parse_cli_args(sys.argv[1:])
+    app = ExcelProcessorApp(auto_mode=auto_mode, resume_action=resume_action)
     app.run()
 
 

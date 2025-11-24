@@ -178,10 +178,25 @@ class WindowManager:
         self.create_tabs_section(main_frame)
         self.create_button_section(main_frame)
         
-        # 右下角水印
+        # 右下角水印 + 版本号
         try:
-            watermark = ttk.Label(main_frame, text="——by 建筑结构所,王任超", foreground="gray")
-            watermark.grid(row=5, column=2, sticky=tk.E, padx=(0, 4), pady=(6, 2))
+            footer_frame = ttk.Frame(main_frame)
+            footer_frame.grid(row=5, column=2, sticky=tk.E, padx=(0, 4), pady=(6, 2))
+            watermark = ttk.Label(footer_frame, text="——by 建筑结构所,王任超", foreground="gray")
+            watermark.pack(anchor=tk.E)
+            version_text = ""
+            try:
+                app_ref = getattr(self, 'app', None)
+                if app_ref:
+                    version_text = getattr(app_ref, 'current_version', '') or ""
+            except Exception:
+                version_text = ""
+            if not version_text:
+                version_text = "版本：未知"
+            else:
+                version_text = f"版本：{version_text}"
+            version_label = ttk.Label(footer_frame, text=version_text, foreground="gray")
+            version_label.pack(anchor=tk.E)
         except Exception:
             pass
     

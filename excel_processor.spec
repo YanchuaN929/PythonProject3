@@ -13,6 +13,7 @@ a = Analysis(
         ('window.py', '.'),
         ('file_manager.py', '.'),
         ('config.json', '.'),
+        ('version.json', '.'),
         ('ico_bin/tubiao.ico', 'ico_bin'),
         ('excel_bin/姓名角色表.xlsx', 'excel_bin'),
     ],
@@ -48,7 +49,20 @@ a = Analysis(
         'shutil',
         'sys',
         'os',
-        'typing'
+        'typing',
+        'registry',
+        'registry.hooks',
+        'registry.config',
+        'registry.db',
+        'registry.service',
+        'registry.util',
+        'registry.models',
+        'registry.history_ui',
+        'registry.migrate',
+        'update',
+        'update.manager',
+        'update.versioning',
+        'update.updater_cli',
     ],
     hookspath=[],
     hooksconfig={},
@@ -60,7 +74,24 @@ a = Analysis(
     noarchive=False,
 )
 
+update_analysis = Analysis(
+    ['update/updater_cli.py'],
+    pathex=['.'],
+    binaries=[],
+    datas=[],
+    hiddenimports=[],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+update_pyz = PYZ(update_analysis.pure, update_analysis.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
@@ -80,8 +111,27 @@ exe = EXE(
     icon='ico_bin/tubiao.ico'
 )
 
+update_exe = EXE(
+    update_pyz,
+    update_analysis.scripts,
+    [],
+    exclude_binaries=True,
+    name='update',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    console=True,
+    disable_windowed_traceback=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon='ico_bin/tubiao.ico'
+)
+
 coll = COLLECT(
     exe,
+    update_exe,
     a.binaries,
     a.zipfiles,
     a.datas,
