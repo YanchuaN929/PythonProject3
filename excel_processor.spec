@@ -7,22 +7,37 @@ a = Analysis(
     pathex=['.'],
     binaries=[],
     datas=[
+        # 核心模块
         ('main.py', '.'),
         ('main2.py', '.'),
         ('Monitor.py', '.'),
         ('window.py', '.'),
         ('file_manager.py', '.'),
+        # 功能模块（之前缺失）
+        ('ignore_overdue_dialog.py', '.'),
+        ('date_utils.py', '.'),
+        ('input_handler.py', '.'),
+        ('distribution.py', '.'),
+        # 配置文件
         ('config.json', '.'),
         ('version.json', '.'),
+        # 资源文件
         ('ico_bin/tubiao.ico', 'ico_bin'),
         ('excel_bin/姓名角色表.xlsx', 'excel_bin'),
     ],
     hiddenimports=[
+        # 核心模块
         'main',
         'main2',
         'Monitor',
         'window',
         'file_manager',
+        # 功能模块（之前缺失）
+        'ignore_overdue_dialog',
+        'date_utils',
+        'input_handler',
+        'distribution',
+        # 第三方库
         'pandas',
         'openpyxl',
         'xlrd', 
@@ -30,11 +45,13 @@ a = Analysis(
         'pystray',
         'PIL',
         'PIL.Image',
+        # tkinter相关
         'tkinter',
         'tkinter.ttk',
         'tkinter.filedialog',
         'tkinter.messagebox',
         'tkinter.scrolledtext',
+        # 标准库
         'winreg',
         'threading',
         'json',
@@ -50,6 +67,12 @@ a = Analysis(
         'sys',
         'os',
         'typing',
+        'traceback',
+        'tempfile',
+        'argparse',
+        'time',
+        'sqlite3',
+        # registry模块
         'registry',
         'registry.hooks',
         'registry.config',
@@ -59,6 +82,7 @@ a = Analysis(
         'registry.models',
         'registry.history_ui',
         'registry.migrate',
+        # update模块
         'update',
         'update.manager',
         'update.versioning',

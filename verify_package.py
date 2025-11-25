@@ -51,6 +51,14 @@ def check_pre_build():
     all_ok &= check_file("file_manager.py", "文件管理模块")
     print()
     
+    # 检查功能模块（之前缺失的）
+    print("【功能模块】")
+    all_ok &= check_file("ignore_overdue_dialog.py", "忽略延期对话框")
+    all_ok &= check_file("date_utils.py", "日期工具模块")
+    all_ok &= check_file("input_handler.py", "输入处理模块")
+    all_ok &= check_file("distribution.py", "任务指派模块")
+    print()
+    
     # 检查配置文件
     print("【配置文件】")
     all_ok &= check_file("config.json", "配置文件")
@@ -140,31 +148,48 @@ def check_post_build():
     
     # 检查Python模块
     print("【核心模块】")
-    all_ok &= check_file(os.path.join(dist_dir, "main.py"), "处理模块1")
-    all_ok &= check_file(os.path.join(dist_dir, "main2.py"), "处理模块2")
-    all_ok &= check_file(os.path.join(dist_dir, "Monitor.py"), "监控模块")
-    all_ok &= check_file(os.path.join(dist_dir, "window.py"), "窗口管理模块")
-    all_ok &= check_file(os.path.join(dist_dir, "file_manager.py"), "文件管理模块")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "main.py"), "处理模块1")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "main2.py"), "处理模块2")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "Monitor.py"), "监控模块")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "window.py"), "窗口管理模块")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "file_manager.py"), "文件管理模块")
+    print()
+    
+    # 检查功能模块（之前缺失的）
+    print("【功能模块】")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "ignore_overdue_dialog.py"), "忽略延期对话框")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "date_utils.py"), "日期工具模块")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "input_handler.py"), "输入处理模块")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "distribution.py"), "任务指派模块")
     print()
     
     # 检查配置文件
     print("【配置文件】")
-    all_ok &= check_file(os.path.join(dist_dir, "config.json"), "配置文件")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "config.json"), "配置文件")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "version.json"), "版本文件")
     print()
     
     # 检查资源文件
     print("【资源文件】")
-    all_ok &= check_file(os.path.join(dist_dir, "ico_bin/tubiao.ico"), "程序图标")
-    all_ok &= check_file(os.path.join(dist_dir, "excel_bin/姓名角色表.xlsx"), "角色表")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "ico_bin", "tubiao.ico"), "程序图标")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "excel_bin", "姓名角色表.xlsx"), "角色表")
+    print()
+    
+    # 检查更新程序
+    print("【更新程序】")
+    all_ok &= check_file(os.path.join(dist_dir, "update.exe"), "更新程序")
     print()
     
     # 检查依赖库
     print("【依赖库】")
-    dll_files = [f for f in os.listdir(dist_dir) if f.endswith('.dll')]
-    pyd_files = [f for f in os.listdir(dist_dir) if f.endswith('.pyd')]
-    
-    print_ok(f"找到 {len(dll_files)} 个DLL文件")
-    print_ok(f"找到 {len(pyd_files)} 个PYD文件")
+    internal_dir = os.path.join(dist_dir, "_internal")
+    if os.path.exists(internal_dir):
+        dll_files = [f for f in os.listdir(internal_dir) if f.endswith('.dll')]
+        pyd_files = [f for f in os.listdir(internal_dir) if f.endswith('.pyd')]
+        print_ok(f"找到 {len(dll_files)} 个DLL文件")
+        print_ok(f"找到 {len(pyd_files)} 个PYD文件")
+    else:
+        print_error("_internal目录不存在")
     print()
     
     # 总结
