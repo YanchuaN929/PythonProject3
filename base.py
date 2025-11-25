@@ -13,6 +13,7 @@ import sys
 import json
 import datetime
 import threading
+import time
 import winreg
 from pathlib import Path
 import pandas as pd
@@ -162,6 +163,7 @@ class ExcelProcessorApp:
         self.auto_mode = auto_mode
         self.resume_action = resume_action or ""
         self._manual_operation = False  # 标记当前操作是否为手动触发（用于弹窗控制）
+        self._update_shutdown_scheduled = False
         self.app_root = self._detect_app_root()
         self.current_version = self._load_current_version()
         self.root = tk.Tk()
@@ -406,6 +408,36 @@ class ExcelProcessorApp:
         except Exception:
             pass
 
+    def _schedule_exit_for_update(self):
+        if getattr(self, "_update_shutdown_scheduled", False):
+            return
+        self._update_shutdown_scheduled = True
+        self._log_update_message("已触发自动更新，程序即将退出以完成更新")
+
+        def _perform_shutdown():
+            try:
+                root = getattr(self, 'root', None)
+                if root:
+                    try:
+                        root.quit()
+                    except Exception:
+                        pass
+                    try:
+                        root.destroy()
+                    except Exception:
+                        pass
+            finally:
+                os._exit(0)
+
+        try:
+            self.root.after(500, _perform_shutdown)
+        except Exception:
+            def _delayed_exit():
+                time.sleep(0.5)
+                _perform_shutdown()
+
+            threading.Thread(target=_delayed_exit, daemon=True).start()
+
     def _schedule_resume_action(self):
         if not getattr(self, 'resume_action', ''):
             return
@@ -452,13 +484,16 @@ class ExcelProcessorApp:
             folder_path = ""
 
         try:
-            return manager.check_and_update(
+            should_continue = manager.check_and_update(
                 folder_path=folder_path,
                 reason=reason,
                 resume_action=resume_action or reason,
                 auto_mode=getattr(self, 'auto_mode', False),
                 parent_window=self.root,
             )
+            if not should_continue:
+                self._schedule_exit_for_update()
+            return should_continue
         except Exception as e:
             print(f"[Update] 版本检查失败: {e}")
             return True
