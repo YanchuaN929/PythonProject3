@@ -645,6 +645,13 @@ class ExcelProcessorApp:
             os.makedirs(user_config_dir, exist_ok=True)
         self.config_file = os.path.join(user_config_dir, "config.json")
         self.yaml_config_file = os.path.join(user_config_dir, "config.yaml")
+        
+        # 【默认路径配置】
+        # 默认数据文件夹：公共盘接口文件位置
+        DEFAULT_FOLDER_PATH = "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册"
+        # 默认导出位置
+        DEFAULT_EXPORT_PATH = "D:/jilu"
+        
         self.default_config = {
             "folder_path": "",
             "export_folder_path": "",
@@ -673,6 +680,16 @@ class ExcelProcessorApp:
                 self.config = self.default_config.copy()
         except:
             self.config = self.default_config.copy()
+
+        # 【默认路径填充】对于未设置路径的用户，使用默认路径
+        # 规则：已有选过路径的用户优先使用其记忆的地址
+        if not self.config.get("folder_path", "").strip():
+            self.config["folder_path"] = DEFAULT_FOLDER_PATH
+            print(f"[配置] 使用默认数据文件夹: {DEFAULT_FOLDER_PATH}")
+        
+        if not self.config.get("export_folder_path", "").strip():
+            self.config["export_folder_path"] = DEFAULT_EXPORT_PATH
+            print(f"[配置] 使用默认导出位置: {DEFAULT_EXPORT_PATH}")
 
         # 填充缺省的 role_export_days（向后兼容旧配置）
         try:
@@ -1239,8 +1256,8 @@ class ExcelProcessorApp:
             from registry import hooks as registry_hooks
             from registry.util import extract_interface_id, extract_project_id, make_task_id
             
-            print(f"\n========== [Registry导出] 开始过滤 文件类型{file_type} ==========")
-            print(f"[Registry导出] 输入DataFrame: {len(df)}行")
+            # 【优化】减少日志输出，只在调试模式下显示详细信息
+            _debug_export = False  # 设为True可启用详细调试日志
             
             # 构造task_keys
             task_keys = []
@@ -1291,11 +1308,13 @@ class ExcelProcessorApp:
             exclude_indices = []
             
             # 【新增】先过滤所有不在status_map中的任务（已忽略/已归档）
+            not_in_map_count = 0
             for tid in df_index_map.keys():
                 if tid not in status_map:
                     exclude_indices.append(df_index_map[tid])
-                    print(f"[Registry导出调试] 过滤不在status_map的任务（可能已忽略/已归档）: 接口={tid[:20]}...")
+                    not_in_map_count += 1
             
+            status_filter_count = 0
             if is_designer and not is_superior:
                 # 设计人员：过滤掉"待审查"和"待指派人审查"的任务，以及已确认的任务
                 for tid, status_text in status_map.items():
@@ -1304,26 +1323,23 @@ class ExcelProcessorApp:
                     # 去除emoji和延期前缀
                     clean_status = status_text.replace('⏳', '').replace('📌', '').replace('❗', '').replace('（已延期）', '').strip()
                     if clean_status in ['待审查', '待指派人审查', '待上级确认', '待指派人确认', '已审查']:
-                        if df_index_map[tid] not in exclude_indices:  # 避免重复添加
+                        if df_index_map[tid] not in exclude_indices:
                             exclude_indices.append(df_index_map[tid])
-                            print(f"[Registry导出调试] 设计人员过滤：{clean_status}, 接口={tid[:20]}...")
-                    # 也过滤空状态的任务（已归档等）
+                            status_filter_count += 1
                     elif not status_text:
-                        if df_index_map[tid] not in exclude_indices:  # 避免重复添加
+                        if df_index_map[tid] not in exclude_indices:
                             exclude_indices.append(df_index_map[tid])
-                            print(f"[Registry导出调试] 过滤空状态任务: 接口={tid[:20]}...")
+                            status_filter_count += 1
             else:
                 # 上级角色：过滤已确认的任务和空状态任务
                 for tid, status_text in status_map.items():
                     if tid not in df_index_map:
                         continue
-                    # 去除emoji和延期前缀
                     clean_status = status_text.replace('⏳', '').replace('📌', '').replace('❗', '').replace('（已延期）', '').strip()
-                    # 如果是"已审查"或status_text为空，说明任务已确认或已归档，不显示
                     if clean_status == '已审查' or not status_text:
-                        if df_index_map[tid] not in exclude_indices:  # 避免重复添加
+                        if df_index_map[tid] not in exclude_indices:
                             exclude_indices.append(df_index_map[tid])
-                            print(f"[Registry导出调试] 上级过滤已确认任务: {clean_status or '空状态'}, 接口={tid[:20]}...")
+                            status_filter_count += 1
             
             if not exclude_indices:
                 return df
@@ -1333,14 +1349,11 @@ class ExcelProcessorApp:
             df_filtered = df.drop(df.index[exclude_indices]).reset_index(drop=True)
             filtered_count = len(exclude_indices)
             
+            # 【优化】简洁的汇总输出
             if filtered_count > 0:
-                role_desc = "设计人员" if (is_designer and not is_superior) else "上级角色"
-                print(f"[Registry导出] {role_desc}过滤: 排除 {filtered_count} 条")
-                print(f"[Registry导出] 输出DataFrame: {len(df_filtered)}行")
-            else:
-                print(f"[Registry导出] 无需过滤")
-            
-            print(f"========== [Registry导出] 过滤完成 ==========\n")
+                role_desc = "设计人员" if (is_designer and not is_superior) else "上级"
+                print(f"[Registry过滤] 文件{file_type}: {original_count}→{len(df_filtered)}行 "
+                      f"(排除{not_in_map_count}个无状态+{status_filter_count}个{role_desc}过滤)")
             
             return df_filtered
             
@@ -3417,6 +3430,8 @@ class ExcelProcessorApp:
                         
                         self.processing_results_multi1 = {}
                         combined_results = []
+                        # 【修复】保存原始结果（角色筛选前），用于Registry写入
+                        raw_results_for_registry = {}
                         
                         for file_path, project_id in self.target_files1:
                             try:
@@ -3431,18 +3446,27 @@ class ExcelProcessorApp:
                                 result = self._process_with_cache(file_path, project_id, 'file1', 
                                                                  main.process_target_file, self.current_datetime)
                                 
+                                # 【调试】打印处理结果
+                                print(f"[调试] 文件1处理返回: result={type(result)}, 行数={len(result) if result is not None else 'None'}")
+                                
                                 if result is not None and not result.empty:
-                                    # 【新增】应用角色筛选（传递项目号）
-                                    result = self.apply_role_based_filter(result, project_id=project_id)
-                                    if result is not None and not result.empty:
+                                    # 【修复】先保存原始结果用于Registry（与角色无关）
+                                    raw_result = result.copy()
+                                    raw_result['项目号'] = project_id
+                                    raw_results_for_registry[project_id] = (file_path, raw_result)
+                                    print(f"[调试] 已保存原始结果到raw_results_for_registry: 项目{project_id}, {len(raw_result)}行")
+                                    
+                                    # 【显示用】应用角色筛选（仅影响显示，不影响Registry）
+                                    filtered_result = self.apply_role_based_filter(result, project_id=project_id)
+                                    if filtered_result is not None and not filtered_result.empty:
                                         # 添加项目号列
-                                        result['项目号'] = project_id
-                                        self.processing_results_multi1[project_id] = result
-                                        combined_results.append(result)
-                                    print(f"项目{project_id}文件1处理完成: {len(result)} 行")
+                                        filtered_result['项目号'] = project_id
+                                        self.processing_results_multi1[project_id] = filtered_result
+                                        combined_results.append(filtered_result)
+                                    print(f"项目{project_id}文件1处理完成: 原始{len(result)}行，角色筛选后{len(filtered_result) if filtered_result is not None else 0}行")
                                     try:
                                         import Monitor
-                                        Monitor.log_success(f"项目{project_id}文件1处理完成: {len(result)} 行数据")
+                                        Monitor.log_success(f"项目{project_id}文件1处理完成: 原始{len(result)}行，显示{len(filtered_result) if filtered_result is not None else 0}行")
                                     except:
                                         pass
                                 else:
@@ -3460,39 +3484,46 @@ class ExcelProcessorApp:
                                 except:
                                     pass
                         
-                        # 合并所有结果（兼容性）
+                        # 【修复】Registry写入：使用原始结果（角色筛选前），确保所有任务都被标记状态
+                        print(f"[调试] 准备写入Registry: registry_hooks={registry_hooks is not None}, raw_results_for_registry有{len(raw_results_for_registry)}个项目")
+                        if registry_hooks and raw_results_for_registry:
+                            try:
+                                for project_id, (source_file, raw_df) in raw_results_for_registry.items():
+                                    print(f"[调试] 处理项目{project_id}: raw_df={raw_df is not None}, 行数={len(raw_df) if raw_df is not None else 'None'}")
+                                    if raw_df is not None and not raw_df.empty:
+                                        print(f"[Registry] 正在调用on_process_done: file_type=1, project_id={project_id}, rows={len(raw_df)}")
+                                        registry_hooks.on_process_done(
+                                            file_type=1,
+                                            project_id=project_id,
+                                            source_file=source_file,
+                                            result_df=raw_df,
+                                            now=self.current_datetime
+                                        )
+                                        print(f"[Registry] ✓ 文件1项目{project_id}: 写入{len(raw_df)}个任务")
+                                        Monitor.log_info(f"Registry: 文件1项目{project_id}写入{len(raw_df)}个任务")
+                            except Exception as e:
+                                print(f"[Registry] 文件1钩子调用失败: {e}")
+                                import traceback
+                                traceback.print_exc()
+                        else:
+                            print(f"[调试] 跳过Registry写入: registry_hooks={registry_hooks is not None}, raw_results_for_registry={len(raw_results_for_registry)}个")
+                        
+                        # 合并所有结果（用于显示）
                         if combined_results:
                             results1 = pd.concat(combined_results, ignore_index=True)
-                            print(f"文件1批量处理完成，总计: {len(results1)} 行")
+                            print(f"文件1批量处理完成，显示: {len(results1)} 行")
                             try:
                                 import Monitor
-                                Monitor.log_success(f"待处理文件1批量处理完成: 总计{len(results1)}行数据，来自{len(combined_results)}个项目")
+                                Monitor.log_success(f"待处理文件1批量处理完成: 显示{len(results1)}行数据")
                             except:
                                 pass
-                            
-                            # 【Registry】调用on_process_done钩子
-                            if registry_hooks:
-                                try:
-                                    for project_id, df in self.processing_results_multi1.items():
-                                        if df is not None and not df.empty:
-                                            # 找到对应的源文件
-                                            source_file = next((fp for fp, pid in self.target_files1 if pid == project_id), "")
-                                            registry_hooks.on_process_done(
-                                                file_type=1,
-                                                project_id=project_id,
-                                                source_file=source_file,
-                                                result_df=df,
-                                                now=self.current_datetime
-                                            )
-                                except Exception as e:
-                                    print(f"[Registry] 文件1钩子调用失败: {e}")
                         else:
-                            # 所有项目都没有结果，创建空DataFrame以确保显示"无数据"
+                            # 所有项目都没有结果（角色筛选后），创建空DataFrame
                             results1 = pd.DataFrame()
-                            print(f"文件1批量处理完成，所有项目都无符合条件的数据")
+                            print(f"文件1批量处理完成，角色筛选后无符合条件的数据")
                             try:
                                 import Monitor
-                                Monitor.log_warning(f"待处理文件1批量处理完成: 所有项目都无符合条件的数据")
+                                Monitor.log_warning(f"待处理文件1批量处理完成: 角色筛选后无显示数据")
                             except:
                                 pass
                 
@@ -3509,6 +3540,8 @@ class ExcelProcessorApp:
                         
                         self.processing_results_multi2 = {}
                         combined_results = []
+                        # 【修复】保存原始结果（角色筛选前），用于Registry写入
+                        raw_results_for_registry = {}
                         
                         for file_path, project_id in self.target_files2:
                             try:
@@ -3517,48 +3550,53 @@ class ExcelProcessorApp:
                                 result = self._process_with_cache(file_path, project_id, 'file2', 
                                                                  main.process_target_file2, self.current_datetime, project_id)
                                 if result is not None and not result.empty:
-                                    # 【新增】应用角色筛选（传递项目号）
-                                    result = self.apply_role_based_filter(result, project_id=project_id)
-                                    if result is not None and not result.empty:
+                                    # 【修复】先保存原始结果用于Registry（与角色无关）
+                                    raw_result = result.copy()
+                                    raw_result['项目号'] = project_id
+                                    raw_results_for_registry[project_id] = (file_path, raw_result)
+                                    
+                                    # 【显示用】应用角色筛选（仅影响显示，不影响Registry）
+                                    filtered_result = self.apply_role_based_filter(result, project_id=project_id)
+                                    if filtered_result is not None and not filtered_result.empty:
                                         # 添加项目号列
-                                        result['项目号'] = project_id
-                                        self.processing_results_multi2[project_id] = result
-                                        combined_results.append(result)
-                                        print(f"项目{project_id}文件2处理完成: {len(result)} 行")
+                                        filtered_result['项目号'] = project_id
+                                        self.processing_results_multi2[project_id] = filtered_result
+                                        combined_results.append(filtered_result)
+                                        print(f"项目{project_id}文件2处理完成: 原始{len(result)}行，显示{len(filtered_result)}行")
                                     else:
-                                        print(f"项目{project_id}文件2处理结果为空")
+                                        print(f"项目{project_id}文件2处理完成: 原始{len(result)}行，角色筛选后为空")
                                 else:
                                     print(f"项目{project_id}文件2处理结果为空")
                             except Exception as e:
                                 print(f"项目{project_id}文件2处理失败: {e}")
                         
-                        # 合并所有结果（兼容性）
+                        # 【修复】Registry写入：使用原始结果（角色筛选前）
+                        if registry_hooks and raw_results_for_registry:
+                            try:
+                                for project_id, (source_file, raw_df) in raw_results_for_registry.items():
+                                    if raw_df is not None and not raw_df.empty:
+                                        registry_hooks.on_process_done(
+                                            file_type=2,
+                                            project_id=project_id,
+                                            source_file=source_file,
+                                            result_df=raw_df,
+                                            now=self.current_datetime
+                                        )
+                                        print(f"[Registry] ✓ 文件2项目{project_id}: 写入{len(raw_df)}个任务")
+                                        Monitor.log_info(f"Registry: 文件2项目{project_id}写入{len(raw_df)}个任务")
+                            except Exception as e:
+                                print(f"[Registry] 文件2钩子调用失败: {e}")
+                        
+                        # 合并所有结果（用于显示）
                         if combined_results:
                             results2 = pd.concat(combined_results, ignore_index=True)
-                            print(f"文件2批量处理完成，总计: {len(results2)} 行")
-                            
-                            # 【Registry】调用on_process_done钩子
-                            if registry_hooks:
-                                try:
-                                    for project_id, df in self.processing_results_multi2.items():
-                                        if df is not None and not df.empty:
-                                            source_file = next((fp for fp, pid in self.target_files2 if pid == project_id), "")
-                                            registry_hooks.on_process_done(
-                                                file_type=2,
-                                                project_id=project_id,
-                                                source_file=source_file,
-                                                result_df=df,
-                                                now=self.current_datetime
-                                            )
-                                except Exception as e:
-                                    print(f"[Registry] 文件2钩子调用失败: {e}")
+                            print(f"文件2批量处理完成，显示: {len(results2)} 行")
                         else:
-                            # 所有项目都没有结果，创建空DataFrame以确保显示"无数据"
                             results2 = pd.DataFrame()
-                            print(f"文件2批量处理完成，所有项目都无符合条件的数据")
+                            print(f"文件2批量处理完成，角色筛选后无显示数据")
                             try:
                                 import Monitor
-                                Monitor.log_warning(f"待处理文件2批量处理完成: 所有项目都无符合条件的数据")
+                                Monitor.log_warning(f"待处理文件2批量处理完成: 角色筛选后无显示数据")
                             except:
                                 pass
                 
@@ -3568,6 +3606,8 @@ class ExcelProcessorApp:
                         print(f"开始批量处理文件3类型，共 {len(self.target_files3)} 个文件")
                         self.processing_results_multi3 = {}
                         combined_results = []
+                        # 【修复】保存原始结果（角色筛选前），用于Registry写入
+                        raw_results_for_registry = {}
                         
                         for file_path, project_id in self.target_files3:
                             try:
@@ -3576,46 +3616,50 @@ class ExcelProcessorApp:
                                 result = self._process_with_cache(file_path, project_id, 'file3', 
                                                                  main.process_target_file3, self.current_datetime)
                                 if result is not None and not result.empty:
-                                    # 【新增】应用角色筛选（传递项目号）
-                                    result = self.apply_role_based_filter(result, project_id=project_id)
-                                    if result is not None and not result.empty:
-                                        # 添加项目号列
-                                        result['项目号'] = project_id
-                                        self.processing_results_multi3[project_id] = result
-                                        combined_results.append(result)
-                                    print(f"项目{project_id}文件3处理完成: {len(result)} 行")
+                                    # 【修复】先保存原始结果用于Registry（与角色无关）
+                                    raw_result = result.copy()
+                                    raw_result['项目号'] = project_id
+                                    raw_results_for_registry[project_id] = (file_path, raw_result)
+                                    
+                                    # 【显示用】应用角色筛选
+                                    filtered_result = self.apply_role_based_filter(result, project_id=project_id)
+                                    if filtered_result is not None and not filtered_result.empty:
+                                        filtered_result['项目号'] = project_id
+                                        self.processing_results_multi3[project_id] = filtered_result
+                                        combined_results.append(filtered_result)
+                                    print(f"项目{project_id}文件3处理完成: 原始{len(result)}行，显示{len(filtered_result) if filtered_result is not None else 0}行")
                                 else:
                                     print(f"项目{project_id}文件3处理结果为空")
                             except Exception as e:
                                 print(f"项目{project_id}文件3处理失败: {e}")
                         
-                        # 合并所有结果（兼容性）
+                        # 【修复】Registry写入：使用原始结果（角色筛选前）
+                        if registry_hooks and raw_results_for_registry:
+                            try:
+                                for project_id, (source_file, raw_df) in raw_results_for_registry.items():
+                                    if raw_df is not None and not raw_df.empty:
+                                        registry_hooks.on_process_done(
+                                            file_type=3,
+                                            project_id=project_id,
+                                            source_file=source_file,
+                                            result_df=raw_df,
+                                            now=self.current_datetime
+                                        )
+                                        print(f"[Registry] ✓ 文件3项目{project_id}: 写入{len(raw_df)}个任务")
+                                        Monitor.log_info(f"Registry: 文件3项目{project_id}写入{len(raw_df)}个任务")
+                            except Exception as e:
+                                print(f"[Registry] 文件3钩子调用失败: {e}")
+                        
+                        # 合并所有结果（用于显示）
                         if combined_results:
                             results3 = pd.concat(combined_results, ignore_index=True)
-                            print(f"文件3批量处理完成，总计: {len(results3)} 行")
-                            
-                            # 【Registry】调用on_process_done钩子
-                            if registry_hooks:
-                                try:
-                                    for project_id, df in self.processing_results_multi3.items():
-                                        if df is not None and not df.empty:
-                                            source_file = next((fp for fp, pid in self.target_files3 if pid == project_id), "")
-                                            registry_hooks.on_process_done(
-                                                file_type=3,
-                                                project_id=project_id,
-                                                source_file=source_file,
-                                                result_df=df,
-                                                now=self.current_datetime
-                                            )
-                                except Exception as e:
-                                    print(f"[Registry] 文件3钩子调用失败: {e}")
+                            print(f"文件3批量处理完成，显示: {len(results3)} 行")
                         else:
-                            # 所有项目都没有结果，创建空DataFrame以确保显示"无数据"
                             results3 = pd.DataFrame()
-                            print(f"文件3批量处理完成，所有项目都无符合条件的数据")
+                            print(f"文件3批量处理完成，角色筛选后无显示数据")
                             try:
                                 import Monitor
-                                Monitor.log_warning(f"待处理文件3批量处理完成: 所有项目都无符合条件的数据")
+                                Monitor.log_warning(f"待处理文件3批量处理完成: 角色筛选后无显示数据")
                             except:
                                 pass
                 
@@ -3625,6 +3669,8 @@ class ExcelProcessorApp:
                         print(f"开始批量处理文件4类型，共 {len(self.target_files4)} 个文件")
                         self.processing_results_multi4 = {}
                         combined_results = []
+                        # 【修复】保存原始结果（角色筛选前），用于Registry写入
+                        raw_results_for_registry = {}
                         
                         for file_path, project_id in self.target_files4:
                             try:
@@ -3633,46 +3679,50 @@ class ExcelProcessorApp:
                                 result = self._process_with_cache(file_path, project_id, 'file4', 
                                                                  main.process_target_file4, self.current_datetime)
                                 if result is not None and not result.empty:
-                                    # 【新增】应用角色筛选（传递项目号）
-                                    result = self.apply_role_based_filter(result, project_id=project_id)
-                                    if result is not None and not result.empty:
-                                        # 添加项目号列
-                                        result['项目号'] = project_id
-                                        self.processing_results_multi4[project_id] = result
-                                        combined_results.append(result)
-                                    print(f"项目{project_id}文件4处理完成: {len(result)} 行")
+                                    # 【修复】先保存原始结果用于Registry（与角色无关）
+                                    raw_result = result.copy()
+                                    raw_result['项目号'] = project_id
+                                    raw_results_for_registry[project_id] = (file_path, raw_result)
+                                    
+                                    # 【显示用】应用角色筛选
+                                    filtered_result = self.apply_role_based_filter(result, project_id=project_id)
+                                    if filtered_result is not None and not filtered_result.empty:
+                                        filtered_result['项目号'] = project_id
+                                        self.processing_results_multi4[project_id] = filtered_result
+                                        combined_results.append(filtered_result)
+                                    print(f"项目{project_id}文件4处理完成: 原始{len(result)}行，显示{len(filtered_result) if filtered_result is not None else 0}行")
                                 else:
                                     print(f"项目{project_id}文件4处理结果为空")
                             except Exception as e:
                                 print(f"项目{project_id}文件4处理失败: {e}")
                         
-                        # 合并所有结果（兼容性）
+                        # 【修复】Registry写入：使用原始结果（角色筛选前）
+                        if registry_hooks and raw_results_for_registry:
+                            try:
+                                for project_id, (source_file, raw_df) in raw_results_for_registry.items():
+                                    if raw_df is not None and not raw_df.empty:
+                                        registry_hooks.on_process_done(
+                                            file_type=4,
+                                            project_id=project_id,
+                                            source_file=source_file,
+                                            result_df=raw_df,
+                                            now=self.current_datetime
+                                        )
+                                        print(f"[Registry] ✓ 文件4项目{project_id}: 写入{len(raw_df)}个任务")
+                                        Monitor.log_info(f"Registry: 文件4项目{project_id}写入{len(raw_df)}个任务")
+                            except Exception as e:
+                                print(f"[Registry] 文件4钩子调用失败: {e}")
+                        
+                        # 合并所有结果（用于显示）
                         if combined_results:
                             results4 = pd.concat(combined_results, ignore_index=True)
-                            print(f"文件4批量处理完成，总计: {len(results4)} 行")
-                            
-                            # 【Registry】调用on_process_done钩子
-                            if registry_hooks:
-                                try:
-                                    for project_id, df in self.processing_results_multi4.items():
-                                        if df is not None and not df.empty:
-                                            source_file = next((fp for fp, pid in self.target_files4 if pid == project_id), "")
-                                            registry_hooks.on_process_done(
-                                                file_type=4,
-                                                project_id=project_id,
-                                                source_file=source_file,
-                                                result_df=df,
-                                                now=self.current_datetime
-                                            )
-                                except Exception as e:
-                                    print(f"[Registry] 文件4钩子调用失败: {e}")
+                            print(f"文件4批量处理完成，显示: {len(results4)} 行")
                         else:
-                            # 所有项目都没有结果，创建空DataFrame以确保显示"无数据"
                             results4 = pd.DataFrame()
-                            print(f"文件4批量处理完成，所有项目都无符合条件的数据")
+                            print(f"文件4批量处理完成，角色筛选后无显示数据")
                             try:
                                 import Monitor
-                                Monitor.log_warning(f"待处理文件4批量处理完成: 所有项目都无符合条件的数据")
+                                Monitor.log_warning(f"待处理文件4批量处理完成: 角色筛选后无显示数据")
                             except:
                                 pass
                 
@@ -3799,6 +3849,9 @@ class ExcelProcessorApp:
                                 pass
                             self.processing_results_multi5 = {}
                             combined_results = []
+                            # 【修复】保存原始结果（角色筛选前），用于Registry写入
+                            raw_results_for_registry = {}
+                            
                             for file_path, project_id in self.target_files5:
                                 try:
                                     print(f"处理项目{project_id}的文件5: {os.path.basename(file_path)}")
@@ -3806,33 +3859,39 @@ class ExcelProcessorApp:
                                     result = self._process_with_cache(file_path, project_id, 'file5', 
                                                                      main.process_target_file5, self.current_datetime)
                                     if result is not None and not result.empty:
-                                        # 【新增】应用角色筛选（传递项目号）
-                                        result = self.apply_role_based_filter(result, project_id=project_id)
-                                        if result is not None and not result.empty:
-                                            # 添加项目号列
-                                            result['项目号'] = project_id
-                                            self.processing_results_multi5[project_id] = result
-                                            combined_results.append(result)
+                                        # 【修复】先保存原始结果用于Registry（与角色无关）
+                                        raw_result = result.copy()
+                                        raw_result['项目号'] = project_id
+                                        raw_results_for_registry[project_id] = (file_path, raw_result)
+                                        
+                                        # 【显示用】应用角色筛选
+                                        filtered_result = self.apply_role_based_filter(result, project_id=project_id)
+                                        if filtered_result is not None and not filtered_result.empty:
+                                            filtered_result['项目号'] = project_id
+                                            self.processing_results_multi5[project_id] = filtered_result
+                                            combined_results.append(filtered_result)
                                 except Exception as e:
                                     print(f"处理文件5失败: {file_path} - {e}")
+                            
+                            # 【修复】Registry写入：使用原始结果（角色筛选前）
+                            if registry_hooks and raw_results_for_registry:
+                                try:
+                                    for project_id, (source_file, raw_df) in raw_results_for_registry.items():
+                                        if raw_df is not None and not raw_df.empty:
+                                            registry_hooks.on_process_done(
+                                                file_type=5,
+                                                project_id=project_id,
+                                                source_file=source_file,
+                                                result_df=raw_df,
+                                                now=self.current_datetime
+                                            )
+                                            print(f"[Registry] ✓ 文件5项目{project_id}: 写入{len(raw_df)}个任务")
+                                            Monitor.log_info(f"Registry: 文件5项目{project_id}写入{len(raw_df)}个任务")
+                                except Exception as e:
+                                    print(f"[Registry] 文件5钩子调用失败: {e}")
+                            
                             if combined_results:
                                 results5 = pd.concat(combined_results, ignore_index=True)
-                                
-                                # 【Registry】调用on_process_done钩子
-                                if registry_hooks:
-                                    try:
-                                        for project_id, df in self.processing_results_multi5.items():
-                                            if df is not None and not df.empty:
-                                                source_file = next((fp for fp, pid in self.target_files5 if pid == project_id), "")
-                                                registry_hooks.on_process_done(
-                                                    file_type=5,
-                                                    project_id=project_id,
-                                                    source_file=source_file,
-                                                    result_df=df,
-                                                    now=self.current_datetime
-                                                )
-                                    except Exception as e:
-                                        print(f"[Registry] 文件5钩子调用失败: {e}")
                                 
                                 try:
                                     self.display_results5(results5, show_popup=False)
@@ -3869,6 +3928,9 @@ class ExcelProcessorApp:
                             
                             self.processing_results_multi6 = {}
                             combined_results = []
+                            # 【修复】保存原始结果（角色筛选前），用于Registry写入
+                            raw_results_for_registry = {}
+                            
                             for file_path, project_id in self.target_files6:
                                 try:
                                     print(f"处理文件6: {os.path.basename(file_path)}")
@@ -3879,33 +3941,39 @@ class ExcelProcessorApp:
                                     result = self._process_with_cache(file_path, project_id, 'file6', 
                                                                      main.process_target_file6, self.current_datetime, skip_date_filter, valid_names_set)
                                     if result is not None and not result.empty:
-                                        # 【新增】应用角色筛选（传递项目号）
-                                        result = self.apply_role_based_filter(result, project_id=project_id)
-                                        if result is not None and not result.empty:
-                                            # 添加项目号列
-                                            result['项目号'] = project_id
-                                            self.processing_results_multi6[project_id] = result
-                                            combined_results.append(result)
+                                        # 【修复】先保存原始结果用于Registry（与角色无关）
+                                        raw_result = result.copy()
+                                        raw_result['项目号'] = project_id
+                                        raw_results_for_registry[project_id] = (file_path, raw_result)
+                                        
+                                        # 【显示用】应用角色筛选
+                                        filtered_result = self.apply_role_based_filter(result, project_id=project_id)
+                                        if filtered_result is not None and not filtered_result.empty:
+                                            filtered_result['项目号'] = project_id
+                                            self.processing_results_multi6[project_id] = filtered_result
+                                            combined_results.append(filtered_result)
                                 except Exception as e:
                                     print(f"处理文件6失败: {file_path} - {e}")
+                            
+                            # 【修复】Registry写入：使用原始结果（角色筛选前）
+                            if registry_hooks and raw_results_for_registry:
+                                try:
+                                    for project_id, (source_file, raw_df) in raw_results_for_registry.items():
+                                        if raw_df is not None and not raw_df.empty:
+                                            registry_hooks.on_process_done(
+                                                file_type=6,
+                                                project_id=project_id,
+                                                source_file=source_file,
+                                                result_df=raw_df,
+                                                now=self.current_datetime
+                                            )
+                                            print(f"[Registry] ✓ 文件6项目{project_id}: 写入{len(raw_df)}个任务")
+                                            Monitor.log_info(f"Registry: 文件6项目{project_id}写入{len(raw_df)}个任务")
+                                except Exception as e:
+                                    print(f"[Registry] 文件6钩子调用失败: {e}")
+                            
                             if combined_results:
                                 results6 = pd.concat(combined_results, ignore_index=True)
-                                
-                                # 【Registry】调用on_process_done钩子
-                                if registry_hooks:
-                                    try:
-                                        for project_id, df in self.processing_results_multi6.items():
-                                            if df is not None and not df.empty:
-                                                source_file = next((fp for fp, pid in self.target_files6 if pid == project_id), "")
-                                                registry_hooks.on_process_done(
-                                                    file_type=6,
-                                                    project_id=project_id,
-                                                    source_file=source_file,
-                                                    result_df=df,
-                                                    now=self.current_datetime
-                                                )
-                                    except Exception as e:
-                                        print(f"[Registry] 文件6钩子调用失败: {e}")
                                 
                                 try:
                                     self.display_results6(results6, show_popup=False)

@@ -124,7 +124,9 @@ def on_process_done(
             'extra': {'count': count}
         }, now)
         
-        print(f"[Registry] process_done: file_type={file_type}, project_id={project_id}, tasks={count}")
+        # 【优化】简化日志，详细信息由调用方（base.py）输出
+        if count == 0:
+            print(f"[Registry] ⚠ 文件{file_type}项目{project_id}: 写入0条（数据库可能未正确初始化）")
         
     except Exception as e:
         print(f"[Registry] on_process_done 失败: {e}")

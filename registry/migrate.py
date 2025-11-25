@@ -38,6 +38,13 @@ def migrate_database(db_path: str) -> None:
     
     conn = sqlite3.connect(db_path)
     
+    # 先检查tasks表是否存在
+    cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'")
+    if not cursor.fetchone():
+        print("[Migrate] tasks表不存在，跳过迁移（将由init_db创建）")
+        conn.close()
+        return
+    
     try:
         # 检查并添加新字段（包括所有可能缺失的列）
         new_columns = [
@@ -65,36 +72,35 @@ def migrate_database(db_path: str) -> None:
         ]
         
         added_count = 0
+        skipped_count = 0
         for col_name, col_def in new_columns:
             if not check_column_exists(conn, "tasks", col_name):
                 try:
                     conn.execute(f"ALTER TABLE tasks ADD COLUMN {col_name} {col_def}")
                     conn.commit()
-                    print(f"  [OK] Added column: {col_name}")
                     added_count += 1
                 except Exception as e:
-                    print(f"  [FAIL] Failed to add {col_name}: {e}")
+                    # 静默处理失败（可能是表不存在，由init_db创建）
+                    pass
             else:
-                print(f"  [SKIP] Column exists: {col_name}")
+                skipped_count += 1
         
         if added_count > 0:
-            print(f"[Migrate] Done! Added {added_count} columns")
+            print(f"[Migrate] 已添加{added_count}个新列")
             
             # 【新增】为现有任务填充business_id
             cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE business_id IS NULL")
             null_count = cursor.fetchone()[0]
             
             if null_count > 0:
-                print(f"[Migrate] 填充{null_count}个任务的business_id...")
                 conn.execute("""
                     UPDATE tasks 
                     SET business_id = file_type || '|' || project_id || '|' || interface_id
                     WHERE business_id IS NULL
                 """)
                 conn.commit()
-                print(f"[Migrate] ✓ business_id填充完成")
-        else:
-            print("[Migrate] Database is up-to-date")
+                print(f"[Migrate] 已填充{null_count}个任务的business_id")
+        # 数据库已最新时不输出（减少噪音）
             
     except Exception as e:
         print(f"[Migrate] Failed: {e}")

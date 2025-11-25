@@ -858,13 +858,27 @@ class WindowManager:
             }
             self._item_metadata[(viewer, item_id)] = metadata
             
-            # 【调试】如果关键字段为空，打印警告
+            # 【优化】收集警告，循环结束后汇总输出
             if not interface_id_val:
-                print(f"[警告] 第{index}行元数据interface_id为空，项目号: {project_id_val}, display_row列: {list(display_row.index)[:10]}")
-            
-            # 【调试】如果source_file为空，打印警告
+                _empty_interface_count = getattr(self, '_empty_interface_count', 0) + 1
+                setattr(self, '_empty_interface_count', _empty_interface_count)
             if not metadata['source_file']:
-                print(f"[警告] 第{index}行元数据source_file为空，项目号: {metadata['project_id']}, 接口号: {metadata['interface_id']}")
+                _empty_source_count = getattr(self, '_empty_source_count', 0) + 1
+                setattr(self, '_empty_source_count', _empty_source_count)
+        
+        # 【优化】汇总输出警告
+        _empty_interface_count = getattr(self, '_empty_interface_count', 0)
+        _empty_source_count = getattr(self, '_empty_source_count', 0)
+        if _empty_interface_count > 0 or _empty_source_count > 0:
+            warn_parts = []
+            if _empty_interface_count > 0:
+                warn_parts.append(f"{_empty_interface_count}行接口号为空")
+            if _empty_source_count > 0:
+                warn_parts.append(f"{_empty_source_count}行source_file为空")
+            print(f"[警告] {tab_name}: {', '.join(warn_parts)}")
+        # 重置计数器
+        self._empty_interface_count = 0
+        self._empty_source_count = 0
         
         # 如果有更多行未显示，添加提示
         if not show_all and len(display_df) > 20:
