@@ -1,6 +1,24 @@
 {
-  "folder_path": "D:/Programs/接口筛选/测试文件",
+  "folder_path": "",
+  "export_folder_path": "",
+  "user_name": "",
   "auto_startup": false,
   "minimize_to_tray": true,
-  "dont_ask_again": false
+  "dont_ask_again": false,
+  "hide_previous_months": false,
+  "simple_export_mode": false,
+
+  "defaults": {
+    "folder_path": "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册",
+    "export_path": "D:/jilu"
+  },
+
+  "role_export_days": {
+    "一室主任": 7,
+    "二室主任": 7,
+    "建筑总图室主任": 7,
+    "所领导": 2,
+    "管理员": null,
+    "设计人员": null
+  }
 }

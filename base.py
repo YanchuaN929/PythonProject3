@@ -39,6 +39,21 @@ except ImportError:
     print("警告: 未找到registry模块")
     registry_hooks = None
 
+# 导入数据库状态显示器
+try:
+    from db_status import (
+        DatabaseStatusIndicator, 
+        set_db_status_indicator,
+        notify_syncing, 
+        notify_connected, 
+        notify_error
+    )
+except ImportError:
+    print("警告: 未找到db_status模块")
+    DatabaseStatusIndicator = None
+    set_db_status_indicator = None
+    notify_syncing = notify_connected = notify_error = lambda *args, **kwargs: None
+
 # 自动更新模块
 try:
     from update import UpdateManager, UpdateReason
@@ -236,6 +251,7 @@ class ExcelProcessorApp:
             'on_assignment_click': self._on_assignment_button_click,  # 【新增】指派任务回调
             'on_history_query_click': self._on_history_query_button_click,  # 【新增】历史查询回调
             'on_ignore_overdue_click': self._on_ignore_overdue_button_click,  # 【新增】忽略延期项回调
+            'on_show_help': self.show_help_window,  # 【新增】帮助文档回调
         }
         
         config_data = {
@@ -646,12 +662,7 @@ class ExcelProcessorApp:
         self.config_file = os.path.join(user_config_dir, "config.json")
         self.yaml_config_file = os.path.join(user_config_dir, "config.yaml")
         
-        # 【默认路径配置】
-        # 默认数据文件夹：公共盘接口文件位置
-        DEFAULT_FOLDER_PATH = "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册"
-        # 默认导出位置
-        DEFAULT_EXPORT_PATH = "D:/jilu"
-        
+        # 【默认配置】从项目根目录的config.json读取默认值
         self.default_config = {
             "folder_path": "",
             "export_folder_path": "",
@@ -660,8 +671,11 @@ class ExcelProcessorApp:
             "minimize_to_tray": True,
             "dont_ask_again": False,
             "hide_previous_months": False,
-            "simple_export_mode": False,  # 简洁导出模式（仅管理员可用，导出时只显示个数不显示接口号）
-            # 自动运行导出日期窗口（按角色）。含义：截止日期与今天的天数差 <= 指定天数 才导出；允许为负（已超期）
+            "simple_export_mode": False,
+            "defaults": {
+                "folder_path": "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册",
+                "export_path": "D:/jilu"
+            },
             "role_export_days": {
                 "一室主任": 7,
                 "二室主任": 7,
@@ -672,6 +686,25 @@ class ExcelProcessorApp:
             }
         }
         
+        # 尝试从项目根目录的config.json读取默认配置
+        try:
+            project_config_path = get_resource_path("config.json")
+            if os.path.exists(project_config_path):
+                with open(project_config_path, 'r', encoding='utf-8') as f:
+                    project_defaults = json.load(f)
+                    # 合并项目默认配置到self.default_config
+                    for key, value in project_defaults.items():
+                        if key in self.default_config:
+                            if isinstance(value, dict) and isinstance(self.default_config[key], dict):
+                                self.default_config[key].update(value)
+                            else:
+                                self.default_config[key] = value
+                        else:
+                            self.default_config[key] = value
+        except Exception as e:
+            print(f"[配置] 读取项目默认配置失败: {e}")
+        
+        # 加载用户配置
         try:
             if os.path.exists(self.config_file):
                 with open(self.config_file, 'r', encoding='utf-8') as f:
@@ -683,13 +716,19 @@ class ExcelProcessorApp:
 
         # 【默认路径填充】对于未设置路径的用户，使用默认路径
         # 规则：已有选过路径的用户优先使用其记忆的地址
+        defaults = self.config.get("defaults", self.default_config.get("defaults", {}))
+        default_folder = defaults.get("folder_path", "")
+        default_export = defaults.get("export_path", "")
+        
         if not self.config.get("folder_path", "").strip():
-            self.config["folder_path"] = DEFAULT_FOLDER_PATH
-            print(f"[配置] 使用默认数据文件夹: {DEFAULT_FOLDER_PATH}")
+            self.config["folder_path"] = default_folder
+            if default_folder:
+                print(f"[配置] 使用默认数据文件夹: {default_folder}")
         
         if not self.config.get("export_folder_path", "").strip():
-            self.config["export_folder_path"] = DEFAULT_EXPORT_PATH
-            print(f"[配置] 使用默认导出位置: {DEFAULT_EXPORT_PATH}")
+            self.config["export_folder_path"] = default_export
+            if default_export:
+                print(f"[配置] 使用默认导出位置: {default_export}")
 
         # 填充缺省的 role_export_days（向后兼容旧配置）
         try:
@@ -910,18 +949,23 @@ class ExcelProcessorApp:
             self._enforce_user_name_gate(show_popup=False)
         except Exception:
             pass
-
-        # 右下角水印 + 版本
+        
+        # 【注意】数据库状态显示器和版本号由window.py的WindowManager控制
+        # 这里通过window_manager初始化数据库状态
         try:
-            footer_frame = ttk.Frame(main_frame)
-            footer_frame.grid(row=4, column=2, sticky=tk.E, padx=(0, 4), pady=(6, 2))
-            watermark = tk.Label(footer_frame, text="——by 建筑结构所，王任超", fg="#666666", bg=footer_frame.cget("background"))
-            watermark.pack(anchor=tk.E)
-            version_text = getattr(self, 'current_version', DEFAULT_VERSION) or DEFAULT_VERSION
-            version_label = tk.Label(footer_frame, text=f"版本：{version_text}", fg="#666666", bg=footer_frame.cget("background"))
-            version_label.pack(anchor=tk.E)
-        except Exception:
-            pass
+            self.db_status = getattr(self.window_manager, 'db_status', None)
+            if self.db_status:
+                folder_path = self.config.get('folder_path', '').strip()
+                if folder_path:
+                    from registry.config import load_config
+                    cfg = load_config(data_folder=folder_path)
+                    db_path = cfg.get('registry_db_path', '')
+                    self.db_status.set_connected(db_path=db_path)
+                else:
+                    self.db_status.set_not_configured()
+        except Exception as e:
+            print(f"[数据库状态] 初始化失败: {e}")
+            self.db_status = None
 
     def create_tabs(self):
         """创建选项卡"""
@@ -1730,91 +1774,113 @@ class ExcelProcessorApp:
                     return safe_df[safe_df['责任人'].astype(str).str.strip() == user_name]
                 return safe_df
             
-            # 3. 一室主任：主办室包含"结构一室" 或 科室 ∈ {结构一室, 请室主任确认}
-            if role == '一室主任':
+            # 3-5. 室主任：科室过滤 + 时间窗口过滤（与导出统一）
+            director_roles = {
+                '一室主任': '结构一室',
+                '二室主任': '结构二室',
+                '建筑总图室主任': '建筑总图室'
+            }
+            
+            if role in director_roles:
+                target_dept = director_roles[role]
+                
+                # 第一步：科室过滤
                 # 优先检查"主办室"列（用于文件6）
                 if '主办室' in safe_df.columns:
-                    # 使用包含匹配，处理多室并列情况
-                    mask = safe_df['主办室'].astype(str).str.contains('结构一室', na=False, regex=False)
+                    mask = safe_df['主办室'].astype(str).str.contains(target_dept, na=False, regex=False)
                     filtered = safe_df[mask]
                     if not filtered.empty:
-                        return filtered
-                # 退回到"科室"列（用于文件1-5）
-                if '科室' in safe_df.columns:
-                    return safe_df[safe_df['科室'].isin(['结构一室', '请室主任确认'])]
-                return safe_df
-            
-            # 4. 二室主任：主办室包含"结构二室" 或 科室 ∈ {结构二室, 请室主任确认}
-            if role == '二室主任':
-                # 优先检查"主办室"列（用于文件6）
-                if '主办室' in safe_df.columns:
-                    # 使用包含匹配，处理多室并列情况
-                    mask = safe_df['主办室'].astype(str).str.contains('结构二室', na=False, regex=False)
-                    filtered = safe_df[mask]
-                    if not filtered.empty:
-                        return filtered
-                # 退回到"科室"列（用于文件1-5）
-                if '科室' in safe_df.columns:
-                    return safe_df[safe_df['科室'].isin(['结构二室', '请室主任确认'])]
-                return safe_df
-            
-            # 5. 建筑总图室主任：主办室包含"建筑总图室" 或 科室 ∈ {建筑总图室, 请室主任确认}
-            if role == '建筑总图室主任':
-                # 优先检查"主办室"列（用于文件6）
-                if '主办室' in safe_df.columns:
-                    # 使用包含匹配，处理多室并列情况
-                    mask = safe_df['主办室'].astype(str).str.contains('建筑总图室', na=False, regex=False)
-                    filtered = safe_df[mask]
-                    if not filtered.empty:
-                        return filtered
-                # 退回到"科室"列（用于文件1-5）
-                if '科室' in safe_df.columns:
-                    return safe_df[safe_df['科室'].isin(['建筑总图室', '请室主任确认'])]
-                return safe_df
-            
-            # 6. 所领导：不区分科室，但需应用2个工作日的时间窗口
-            #    时间窗口定义：所有已延期数据 + 未来2个工作日内到期的数据
-            if role == '所领导':
-                # 检查是否有"接口时间"列
+                        safe_df = filtered
+                    elif '科室' in safe_df.columns:
+                        safe_df = safe_df[safe_df['科室'].isin([target_dept, '请室主任确认'])]
+                elif '科室' in safe_df.columns:
+                    safe_df = safe_df[safe_df['科室'].isin([target_dept, '请室主任确认'])]
+                
+                if safe_df.empty:
+                    return safe_df
+                
+                # 第二步：时间窗口过滤（与导出统一，使用role_export_days配置）
+                # 从config读取天数限制，延期任务始终保留
+                role_days_map = self.config.get("role_export_days", {})
+                max_workdays = role_days_map.get(role, 7)  # 默认7个工作日
+                
+                if max_workdays is None:
+                    # None表示无限制
+                    return safe_df
+                
                 if '接口时间' not in safe_df.columns:
                     return safe_df
                 
-                # 应用2个工作日的时间窗口过滤
                 from datetime import date
                 from date_utils import get_workday_difference, parse_mmdd_to_date
                 
                 today = date.today()
-                max_workdays = 2  # 所领导：未来2个工作日
-                
                 kept_idx = []
+                
                 for idx, time_val in safe_df["接口时间"].items():
                     if pd.isna(time_val) or str(time_val).strip() in ['', '-']:
-                        # 空值不保留
                         continue
                     
                     try:
-                        # 使用统一的日期解析函数（正确处理跨年和跨月）
                         due_date = parse_mmdd_to_date(str(time_val).strip(), today)
                         if due_date is None:
                             continue
                         
-                        # 使用工作日计算（参数：目标日期，参考日期）
                         workday_diff = get_workday_difference(due_date, today)
                         
-                        # 保留条件：
+                        # 保留条件（与导出统一）：
                         # 1. 已延期（workday_diff < 0）：全部保留
-                        # 2. 今天到期（workday_diff == 0）：保留
-                        # 3. 未来2个工作日内（0 < workday_diff <= 2）：保留
-                        # 4. 超过2个工作日（workday_diff > 2）：不保留
+                        # 2. 未来N个工作日内（workday_diff <= max_workdays）：保留
                         if workday_diff <= max_workdays:
                             kept_idx.append(idx)
-                    except Exception as e:
-                        # 解析失败，不保留（调试时可打印错误）
-                        # print(f"日期解析失败 [{time_val}]: {e}")
+                    except Exception:
                         continue
                 
                 if not kept_idx:
-                    return safe_df.iloc[0:0]  # 返回空DataFrame
+                    return safe_df.iloc[0:0]
+                
+                return safe_df.loc[kept_idx]
+            
+            # 6. 所领导：不区分科室，但需应用时间窗口过滤（与导出统一）
+            #    时间窗口定义：所有已延期数据 + 未来N个工作日内到期的数据
+            if role == '所领导':
+                if '接口时间' not in safe_df.columns:
+                    return safe_df
+                
+                # 从role_export_days读取天数限制（与导出统一）
+                role_days_map = self.config.get("role_export_days", {})
+                max_workdays = role_days_map.get('所领导', 2)  # 默认2个工作日
+                
+                if max_workdays is None:
+                    return safe_df
+                
+                from datetime import date
+                from date_utils import get_workday_difference, parse_mmdd_to_date
+                
+                today = date.today()
+                kept_idx = []
+                
+                for idx, time_val in safe_df["接口时间"].items():
+                    if pd.isna(time_val) or str(time_val).strip() in ['', '-']:
+                        continue
+                    
+                    try:
+                        due_date = parse_mmdd_to_date(str(time_val).strip(), today)
+                        if due_date is None:
+                            continue
+                        
+                        workday_diff = get_workday_difference(due_date, today)
+                        
+                        # 保留条件（与导出统一）：
+                        # 1. 已延期（workday_diff < 0）：全部保留
+                        # 2. 未来N个工作日内（workday_diff <= max_workdays）：保留
+                        if workday_diff <= max_workdays:
+                            kept_idx.append(idx)
+                    except Exception:
+                        continue
+                
+                if not kept_idx:
+                    return safe_df.iloc[0:0]
                 
                 return safe_df.loc[kept_idx]
             
@@ -2143,6 +2209,20 @@ class ExcelProcessorApp:
             self.export_path_var.set(folder_path)
             self.config["export_folder_path"] = folder_path
             self.save_config()
+
+    def show_help_window(self):
+        """显示帮助文档窗口"""
+        try:
+            from help_viewer import HelpViewer
+            user_role = getattr(self, 'role', None)
+            viewer = HelpViewer(self.root, user_role=user_role)
+            viewer.show()
+        except ImportError as e:
+            print(f"[帮助] 无法加载帮助模块: {e}")
+            from tkinter import messagebox
+            messagebox.showinfo("帮助", "帮助文档模块未找到，请确保 help_viewer.py 文件存在。")
+        except Exception as e:
+            print(f"[帮助] 显示帮助窗口失败: {e}")
 
     def show_settings_menu(self):
         """显示设置菜单"""
@@ -3421,6 +3501,8 @@ class ExcelProcessorApp:
                 if process_file1 and self.target_files1:
                     if hasattr(main, 'process_target_file'):
                         print(f"开始批量处理文件1类型，共 {len(self.target_files1)} 个文件")
+                        # 更新数据库状态为同步中
+                        notify_syncing()
                         try:
                             import Monitor
                             project_ids = list(set([pid for _, pid in self.target_files1]))
@@ -3732,8 +3814,16 @@ class ExcelProcessorApp:
                         from registry import hooks as registry_hooks
                         batch_tag = self.current_datetime.strftime('%Y%m%d_%H%M%S')
                         registry_hooks.on_scan_finalize(batch_tag=batch_tag)
+                        # 更新数据库状态为已连接
+                        folder_path = self.config.get('folder_path', '').strip()
+                        if folder_path:
+                            from registry.config import load_config
+                            cfg = load_config(data_folder=folder_path)
+                            db_path = cfg.get('registry_db_path', '')
+                            notify_connected(db_path=db_path)
                     except Exception as e:
                         print(f"[Registry] 归档逻辑执行失败（不影响主流程）: {e}")
+                        notify_error(str(e), show_dialog=False)  # 轻量级错误，不弹窗
                     
                     # 统一处理结果显示和弹窗（批量处理版本）
                     processed_count = 0

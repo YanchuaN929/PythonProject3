@@ -1356,6 +1356,17 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
     except Exception as e:
         conn.rollback()
         print(f"[Registry] 批量upsert失败: {e}")
+        
+        # 通知数据库状态显示器
+        try:
+            from db_status import notify_error
+            if "database is locked" in str(e).lower():
+                notify_error("数据库被锁定，请稍后重试", show_dialog=True)
+            else:
+                notify_error(f"数据写入失败: {str(e)[:50]}", show_dialog=True)
+        except ImportError:
+            pass
+        
         raise
 
 

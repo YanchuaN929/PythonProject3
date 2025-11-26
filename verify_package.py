@@ -57,6 +57,7 @@ def check_pre_build():
     all_ok &= check_file("date_utils.py", "日期工具模块")
     all_ok &= check_file("input_handler.py", "输入处理模块")
     all_ok &= check_file("distribution.py", "任务指派模块")
+    all_ok &= check_file("db_status.py", "数据库状态显示器")
     print()
     
     # 检查配置文件
@@ -161,6 +162,7 @@ def check_post_build():
     all_ok &= check_file(os.path.join(dist_dir, "_internal", "date_utils.py"), "日期工具模块")
     all_ok &= check_file(os.path.join(dist_dir, "_internal", "input_handler.py"), "输入处理模块")
     all_ok &= check_file(os.path.join(dist_dir, "_internal", "distribution.py"), "任务指派模块")
+    all_ok &= check_file(os.path.join(dist_dir, "_internal", "db_status.py"), "数据库状态显示器")
     print()
     
     # 检查配置文件

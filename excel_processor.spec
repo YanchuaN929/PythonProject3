@@ -18,9 +18,13 @@ a = Analysis(
         ('date_utils.py', '.'),
         ('input_handler.py', '.'),
         ('distribution.py', '.'),
+        ('db_status.py', '.'),
+        ('help_viewer.py', '.'),
         # 配置文件
         ('config.json', '.'),
         ('version.json', '.'),
+        # 文档文件
+        ('document/4_使用说明.md', 'document'),
         # 资源文件
         ('ico_bin/tubiao.ico', 'ico_bin'),
         ('excel_bin/姓名角色表.xlsx', 'excel_bin'),
@@ -37,6 +41,8 @@ a = Analysis(
         'date_utils',
         'input_handler',
         'distribution',
+        'db_status',
+        'help_viewer',
         # 第三方库
         'pandas',
         'openpyxl',

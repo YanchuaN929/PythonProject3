@@ -19,6 +19,88 @@ except ImportError:
     registry_hooks = None
 
 
+def get_excel_lock_owner(file_path: str) -> str:
+    """
+    获取Excel文件的占用者用户名
+    
+    Excel打开文件时会创建 ~$文件名 的临时锁定文件，
+    其中包含打开文件的用户名信息。
+    
+    参数:
+        file_path: Excel文件的完整路径
+        
+    返回:
+        占用者用户名，如果无法获取则返回空字符串
+    """
+    try:
+        dir_path = os.path.dirname(file_path)
+        file_name = os.path.basename(file_path)
+        
+        # Excel临时文件格式: ~$文件名
+        # 对于长文件名，Excel会截取前面部分
+        lock_file_name = "~$" + file_name
+        lock_file_path = os.path.join(dir_path, lock_file_name)
+        
+        # 如果标准锁定文件不存在，尝试查找以 ~$ 开头的文件
+        if not os.path.exists(lock_file_path):
+            # 搜索目录中所有以 ~$ 开头的文件
+            for f in os.listdir(dir_path):
+                if f.startswith("~$"):
+                    # 检查是否与目标文件相关（去掉 ~$ 后是否匹配）
+                    potential_name = f[2:]  # 去掉 ~$
+                    if file_name.startswith(potential_name) or potential_name in file_name:
+                        lock_file_path = os.path.join(dir_path, f)
+                        break
+        
+        if not os.path.exists(lock_file_path):
+            return ""
+        
+        # 读取锁定文件内容获取用户名
+        # Excel锁定文件是二进制格式，用户名通常在文件开头以Unicode编码存储
+        with open(lock_file_path, 'rb') as f:
+            content = f.read()
+        
+        # 尝试解码用户名
+        # 方法1: 直接解码 UTF-16-LE（Windows常用编码）
+        try:
+            # 跳过前面可能的字节，用户名通常在前128字节内
+            # 查找连续的可打印Unicode字符
+            decoded = content[:128].decode('utf-16-le', errors='ignore')
+            # 过滤出有效字符（字母、数字、中文等）
+            user_name = ""
+            for char in decoded:
+                if char.isprintable() and char not in '\x00\x01\x02\x03\x04\x05\x06\x07\x08':
+                    user_name += char
+                elif user_name:  # 遇到非法字符且已有用户名，停止
+                    break
+            
+            if user_name and len(user_name) >= 2:
+                return user_name.strip()
+        except:
+            pass
+        
+        # 方法2: 尝试 GBK 解码（中文Windows系统）
+        try:
+            decoded = content[:64].decode('gbk', errors='ignore')
+            user_name = ""
+            for char in decoded:
+                if char.isprintable() and ord(char) > 31:
+                    user_name += char
+                elif user_name:
+                    break
+            
+            if user_name and len(user_name) >= 2:
+                return user_name.strip()
+        except:
+            pass
+        
+        return ""
+        
+    except Exception as e:
+        print(f"[文件锁定] 获取占用者信息失败: {e}")
+        return ""
+
+
 class InterfaceInputDialog(tk.Toplevel):
     """回文单号输入弹窗"""
     
@@ -255,7 +337,12 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
             with open(file_path, 'r+b') as f:
                 pass
         except PermissionError:
-            messagebox.showerror("文件占用", "有其他用户占用该文件，请稍后再试")
+            # 尝试获取占用者信息
+            lock_owner = get_excel_lock_owner(file_path)
+            if lock_owner:
+                messagebox.showerror("文件占用", f"文件正被 【{lock_owner}】 占用，请稍后再试")
+            else:
+                messagebox.showerror("文件占用", "有其他用户占用该文件，请稍后再试")
             return False
         
         # 使用openpyxl打开

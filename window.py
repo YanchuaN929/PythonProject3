@@ -13,6 +13,13 @@ import os
 import sys
 from date_utils import is_date_overdue
 
+# 导入数据库状态显示器
+try:
+    from db_status import DatabaseStatusIndicator, set_db_status_indicator
+except ImportError:
+    DatabaseStatusIndicator = None
+    set_db_status_indicator = None
+
 
 def get_resource_path(relative_path):
     """获取资源文件的绝对路径，兼容开发环境和打包环境"""
@@ -178,6 +185,16 @@ class WindowManager:
         self.create_tabs_section(main_frame)
         self.create_button_section(main_frame)
         
+        # 左下角数据库状态显示器
+        self.db_status = None
+        try:
+            if DatabaseStatusIndicator:
+                self.db_status = DatabaseStatusIndicator(main_frame, row=5, column=0)
+                if set_db_status_indicator:
+                    set_db_status_indicator(self.db_status)
+        except Exception as e:
+            print(f"[数据库状态] 初始化失败: {e}")
+        
         # 右下角水印 + 版本号
         try:
             footer_frame = ttk.Frame(main_frame)
@@ -227,6 +244,15 @@ class WindowManager:
             command=lambda: self._trigger_callback('on_settings_menu')
         )
         settings_btn.grid(row=0, column=3, sticky=tk.E, padx=(20, 0))
+        
+        # 帮助按钮
+        help_btn = ttk.Button(
+            path_frame, 
+            text="❓", 
+            width=3,
+            command=lambda: self._trigger_callback('on_show_help')
+        )
+        help_btn.grid(row=0, column=4, sticky=tk.E, padx=(5, 0))
         
         # 导出结果位置
         ttk.Label(path_frame, text="导出结果位置:").grid(

@@ -132,6 +132,17 @@ def on_process_done(
         print(f"[Registry] on_process_done 失败: {e}")
         import traceback
         traceback.print_exc()
+        
+        # 通知数据库状态显示器
+        try:
+            from db_status import notify_error
+            # 检查是否是锁定错误
+            if "database is locked" in str(e).lower():
+                notify_error("数据库被其他用户锁定，请稍后重试", show_dialog=True)
+            else:
+                notify_error(str(e), show_dialog=True)
+        except ImportError:
+            pass
 
 def on_export_done(
     file_type: int, 

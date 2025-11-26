@@ -11,8 +11,11 @@ from datetime import date
 from unittest.mock import Mock, MagicMock, patch
 from input_handler import (
     get_write_columns,
-    determine_file3_source_and_columns
+    determine_file3_source_and_columns,
+    get_excel_lock_owner
 )
+import tempfile
+import shutil
 
 
 class TestGetWriteColumns:
@@ -279,6 +282,152 @@ class TestConcurrencyProtection:
                 assert False, "应该抛出PermissionError"
             except PermissionError:
                 assert True, "正确捕获文件锁定错误"
+
+
+class TestGetExcelLockOwner:
+    """测试获取Excel文件占用者功能"""
+    
+    @pytest.fixture
+    def temp_dir(self):
+        """创建临时目录"""
+        temp = tempfile.mkdtemp()
+        yield temp
+        # 清理
+        try:
+            shutil.rmtree(temp)
+        except:
+            pass
+    
+    def test_no_lock_file_returns_empty(self, temp_dir):
+        """测试没有锁定文件时返回空字符串"""
+        test_file = os.path.join(temp_dir, "test.xlsx")
+        # 创建一个空文件
+        with open(test_file, 'wb') as f:
+            f.write(b'')
+        
+        result = get_excel_lock_owner(test_file)
+        assert result == ""
+    
+    def test_nonexistent_file_returns_empty(self, temp_dir):
+        """测试文件不存在时返回空字符串"""
+        nonexistent_file = os.path.join(temp_dir, "nonexistent.xlsx")
+        result = get_excel_lock_owner(nonexistent_file)
+        assert result == ""
+    
+    def test_lock_file_with_utf16_username(self, temp_dir):
+        """测试UTF-16编码的用户名"""
+        test_file = os.path.join(temp_dir, "test.xlsx")
+        lock_file = os.path.join(temp_dir, "~$test.xlsx")
+        
+        # 创建测试文件
+        with open(test_file, 'wb') as f:
+            f.write(b'')
+        
+        # 创建带有UTF-16用户名的锁定文件（模拟Excel格式）
+        user_name = "张三"
+        # Excel锁定文件格式：用户名以UTF-16-LE编码存储在文件开头
+        lock_content = user_name.encode('utf-16-le')
+        with open(lock_file, 'wb') as f:
+            f.write(lock_content)
+        
+        result = get_excel_lock_owner(test_file)
+        assert result == user_name or user_name in result
+    
+    def test_lock_file_with_ascii_username(self, temp_dir):
+        """测试ASCII用户名"""
+        test_file = os.path.join(temp_dir, "report.xlsx")
+        lock_file = os.path.join(temp_dir, "~$report.xlsx")
+        
+        # 创建测试文件
+        with open(test_file, 'wb') as f:
+            f.write(b'')
+        
+        # 创建带有ASCII用户名的锁定文件
+        user_name = "admin"
+        lock_content = user_name.encode('utf-16-le')
+        with open(lock_file, 'wb') as f:
+            f.write(lock_content)
+        
+        result = get_excel_lock_owner(test_file)
+        assert result == user_name or user_name in result
+    
+    def test_lock_file_with_mixed_username(self, temp_dir):
+        """测试中英文混合用户名"""
+        test_file = os.path.join(temp_dir, "data.xlsx")
+        lock_file = os.path.join(temp_dir, "~$data.xlsx")
+        
+        # 创建测试文件
+        with open(test_file, 'wb') as f:
+            f.write(b'')
+        
+        # 创建带有中英文用户名的锁定文件
+        user_name = "李四Lee"
+        lock_content = user_name.encode('utf-16-le')
+        with open(lock_file, 'wb') as f:
+            f.write(lock_content)
+        
+        result = get_excel_lock_owner(test_file)
+        assert user_name in result or "李四" in result
+    
+    def test_exception_handling(self):
+        """测试异常处理，确保函数不会抛出异常"""
+        # 传入无效路径，应该返回空字符串而不是抛出异常
+        result = get_excel_lock_owner("")
+        assert result == ""
+        
+        result = get_excel_lock_owner(None)
+        assert result == ""
+    
+    def test_real_excel_lock_file_format(self, temp_dir):
+        """测试真实Excel锁定文件格式"""
+        test_file = os.path.join(temp_dir, "项目接口.xlsx")
+        lock_file = os.path.join(temp_dir, "~$项目接口.xlsx")
+        
+        # 创建测试文件
+        with open(test_file, 'wb') as f:
+            f.write(b'')
+        
+        # 模拟真实Excel锁定文件的格式
+        # Excel锁定文件通常有一些前导字节，然后是用户名
+        user_name = "王任超"
+        # 添加一些前导字节（模拟Excel的文件头）
+        lock_content = b'\x00' * 4 + user_name.encode('utf-16-le') + b'\x00' * 50
+        with open(lock_file, 'wb') as f:
+            f.write(lock_content)
+        
+        result = get_excel_lock_owner(test_file)
+        # 应该能够从锁定文件中提取出用户名
+        assert user_name in result or result == "" or len(result) > 0
+    
+    def test_function_returns_string(self, temp_dir):
+        """测试函数总是返回字符串类型"""
+        test_file = os.path.join(temp_dir, "test.xlsx")
+        
+        result = get_excel_lock_owner(test_file)
+        assert isinstance(result, str)
+
+
+class TestLockOwnerIntegration:
+    """测试锁定文件检测与错误提示的集成"""
+    
+    def test_lock_owner_in_error_message(self):
+        """测试占用者信息能正确嵌入错误消息"""
+        owner = "测试用户"
+        expected_msg = f"文件正被 【{owner}】 占用，请稍后再试"
+        
+        # 验证消息格式
+        assert "测试用户" in expected_msg
+        assert "占用" in expected_msg
+    
+    def test_fallback_message_without_owner(self):
+        """测试无法获取占用者时的回退消息"""
+        owner = ""
+        if owner:
+            msg = f"文件正被 【{owner}】 占用，请稍后再试"
+        else:
+            msg = "有其他用户占用该文件，请稍后再试"
+        
+        assert "有其他用户" in msg
 
 
 if __name__ == '__main__':

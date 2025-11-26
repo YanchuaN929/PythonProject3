@@ -12,6 +12,12 @@ from openpyxl import load_workbook
 import os
 import sys
 
+# 导入文件锁定检测函数
+try:
+    from input_handler import get_excel_lock_owner
+except ImportError:
+    get_excel_lock_owner = None
+
 
 def get_resource_path(relative_path):
     """获取资源文件的绝对路径（支持打包后的exe）"""
@@ -353,11 +359,22 @@ def save_assignments_batch(assignments):
                 with open(file_path, 'r+b') as f:
                     pass
             except PermissionError:
-                print(f"[指派] 文件被占用: {file_path}")
+                # 尝试获取占用者信息
+                lock_owner = ""
+                if get_excel_lock_owner:
+                    lock_owner = get_excel_lock_owner(file_path)
+                
+                if lock_owner:
+                    print(f"[指派] 文件被占用: {file_path} (占用者: {lock_owner})")
+                    reason = f'文件被 {lock_owner} 占用'
+                else:
+                    print(f"[指派] 文件被占用: {file_path}")
+                    reason = '文件被占用'
+                
                 for assignment in file_assignments:
                     failed_tasks.append({
                         'interface_id': assignment.get('interface_id', '未知'),
-                        'reason': '文件被占用'
+                        'reason': reason
                     })
                 continue
             
