@@ -193,7 +193,7 @@ def get_interface_id_column_index(file_type):
     return column_map.get(file_type, 0)
 
 
-def check_unassigned(processed_results, user_roles, project_id=None):
+def check_unassigned(processed_results, user_roles, project_id=None, config=None):
     """
     检测所有处理结果中没有责任人的数据
     
@@ -201,6 +201,7 @@ def check_unassigned(processed_results, user_roles, project_id=None):
         processed_results: 6个文件的处理结果字典 {file_type: DataFrame}
         user_roles: 当前用户角色列表
         project_id: 项目号（接口工程师需要）
+        config: 配置字典（用于自动过滤超期任务）
     
     返回:
         list: 未指派任务列表，每个任务包含：
@@ -211,6 +212,13 @@ def check_unassigned(processed_results, user_roles, project_id=None):
               - row_index: Excel行号
     """
     unassigned = []
+    
+    # 【新增】获取超期过滤配置
+    auto_hide_enabled = False
+    threshold_days = 30
+    if config:
+        auto_hide_enabled = config.get("auto_hide_overdue_enabled", True)
+        threshold_days = config.get("auto_hide_overdue_days", 30)
     
     for file_type, df in processed_results.items():
         if df is None or df.empty:
@@ -274,6 +282,23 @@ def check_unassigned(processed_results, user_roles, project_id=None):
             
             # 确保有必要的字段
             if task['file_path'] and task['row_index']:
+                # 【新增】超期过滤：如果开启自动隐藏，过滤超期太久的任务
+                if auto_hide_enabled and threshold_days > 0:
+                    interface_time = task.get('interface_time', '')
+                    if interface_time and str(interface_time).strip() not in ['', '-', 'nan', 'None', '未知']:
+                        try:
+                            from date_utils import parse_mmdd_to_date, get_workday_difference
+                            from datetime import date
+                            today = date.today()
+                            due_date = parse_mmdd_to_date(str(interface_time).strip(), today)
+                            if due_date:
+                                workday_diff = get_workday_difference(due_date, today)
+                                if workday_diff < 0 and abs(workday_diff) > threshold_days:
+                                    # 超期太久，跳过此任务
+                                    continue
+                        except Exception:
+                            pass
+                
                 unassigned.append(task)
     
     return unassigned

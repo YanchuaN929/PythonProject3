@@ -26,9 +26,10 @@ class TestProjectFilterVariables:
                 with patch('base.tk.Tk', return_value=root):
                     app = ExcelProcessorApp(auto_mode=False)
                     
-                    # 验证6个项目号变量都被初始化
+                    # 验证7个项目号变量都被初始化
                     assert hasattr(app, 'project_1818_var')
                     assert hasattr(app, 'project_1907_var')
+                    assert hasattr(app, 'project_1915_var')
                     assert hasattr(app, 'project_1916_var')
                     assert hasattr(app, 'project_2016_var')
                     assert hasattr(app, 'project_2026_var')
@@ -37,6 +38,7 @@ class TestProjectFilterVariables:
                     # 验证默认都是选中状态
                     assert app.project_1818_var.get() == True
                     assert app.project_1907_var.get() == True
+                    assert app.project_1915_var.get() == True
                     assert app.project_1916_var.get() == True
                     assert app.project_2016_var.get() == True
                     assert app.project_2026_var.get() == True
@@ -56,9 +58,10 @@ class TestGetEnabledProjects:
             app = ExcelProcessorApp(auto_mode=False)
             enabled = app.get_enabled_projects()
             
-            assert len(enabled) == 6
+            assert len(enabled) == 7
             assert '1818' in enabled
             assert '1907' in enabled
+            assert '1915' in enabled
             assert '1916' in enabled
             assert '2016' in enabled
             assert '2026' in enabled
@@ -79,6 +82,7 @@ class TestGetEnabledProjects:
                     
                     # 取消勾选部分项目
                     app.project_1907_var.set(False)
+                    app.project_1915_var.set(False)
                     app.project_2016_var.set(False)
                     app.project_2306_var.set(False)
                     
@@ -89,6 +93,7 @@ class TestGetEnabledProjects:
                     assert '1916' in enabled
                     assert '2026' in enabled
                     assert '1907' not in enabled
+                    assert '1915' not in enabled
                     assert '2016' not in enabled
                     assert '2306' not in enabled
         finally:
@@ -110,6 +115,7 @@ class TestGetEnabledProjects:
                     # 取消勾选所有项目
                     app.project_1818_var.set(False)
                     app.project_1907_var.set(False)
+                    app.project_1915_var.set(False)
                     app.project_1916_var.set(False)
                     app.project_2016_var.set(False)
                     app.project_2026_var.set(False)
@@ -232,6 +238,7 @@ class TestProjectFilterIntegration:
             
             assert '1818' in project_vars
             assert '1907' in project_vars
+            assert '1915' in project_vars
             assert '1916' in project_vars
             assert '2016' in project_vars
             assert '2026' in project_vars

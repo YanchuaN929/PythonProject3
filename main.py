@@ -17,11 +17,6 @@ from copy import copy
 # 忽略pandas警告
 warnings.filterwarnings('ignore')
 
-## 日期筛选逻辑开关：由上层程序设置
-# False: 使用新逻辑（当年1月1日~当月末/次月末）
-# True:  使用旧逻辑（当月或当月+次月；文件6为未来14天）
-USE_OLD_DATE_LOGIC = False
-
 
 def process_excel_files(excel_files, current_datetime):
     """
@@ -395,14 +390,14 @@ def process_target_file(file_path, current_datetime):
         if db_path and os.path.exists(db_path):
             conn = get_connection(db_path, True)
             
-            # 查询该文件类型下所有有display_status的任务
+            # 【方案A】只查询"待审查"状态的任务（设计人员已填写回文单号，等待确认）
+            # 不加回"待完成"或"请指派"状态，这些应该依赖Excel筛选条件
             cursor = conn.execute("""
                 SELECT interface_id, project_id, display_status, row_index, source_file
                 FROM tasks
                 WHERE file_type = 1
-                  AND display_status IS NOT NULL
-                  AND display_status != ''
-                  AND status != 'confirmed'
+                  AND display_status IN ('待审查', '待指派人审查')
+                  AND ignored = 0
                   AND status != 'archived'
             """)
             
@@ -444,6 +439,7 @@ def process_target_file(file_path, current_datetime):
             print(f"[Registry] Excel索引建立完成（项目{file_project_id}），共{len(excel_index)}个唯一接口")
             
             # 【修复】按索引查找，避免双重循环
+            # 【方案A】加回时必须通过科室筛选（process1_rows）
             for reg_interface_id, reg_project_id, reg_display_status, _, _ in registry_tasks:
                 key = (reg_interface_id, reg_project_id)
                 
@@ -451,6 +447,9 @@ def process_target_file(file_path, current_datetime):
                     # 找到匹配的行
                     matched_indices = excel_index[key]
                     for idx in matched_indices:
+                        # 【关键】必须通过科室筛选
+                        if idx not in process1_rows:
+                            continue
                         # 如果不在final_rows中，添加
                         if idx not in final_rows:
                             pending_rows.add(idx)
@@ -458,8 +457,6 @@ def process_target_file(file_path, current_datetime):
                         else:
                             # 已经在final_rows中（可能M列实际为空）
                             print(f"[Registry提示] 接口{reg_interface_id[:30]}已在原始筛选结果中，跳过")
-                else:
-                    print(f"[Registry警告] 数据库任务未在Excel中找到: 接口={reg_interface_id[:40]}")
             
             print(f"\n[Registry] 统计: 数据库中{len(registry_tasks)}个待审查，在Excel中匹配到{len(pending_rows)}行")
         
@@ -660,40 +657,22 @@ def execute_process2(df, current_datetime):
     
     print(f"当前日期：{current_datetime.strftime('%Y-%m-%d')}，今天是{current_day}号")
     
-    if USE_OLD_DATE_LOGIC:
-        # 旧逻辑：
-        # 1~19：当月
-        # 20~31：当月+次月
-        start_date = datetime.datetime(current_year, current_month, 1)
-        if current_day <= 19:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year, 12, 31)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
+    # 新逻辑：
+    # 1~19：当年1月1日 ~ 当月末
+    # 20~31：当年1月1日 ~ 次月末
+    start_date = datetime.datetime(current_year, 1, 1)
+    if current_day <= 19:
+        if current_month == 12:
+            end_date = datetime.datetime(current_year, 12, 31)
         else:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-            elif current_month == 11:
-                end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
+            end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
     else:
-        # 新逻辑：
-        # 1~19：当年1月1日 ~ 当月末
-        # 20~31：当年1月1日 ~ 次月末
-        start_date = datetime.datetime(current_year, 1, 1)
-        if current_day <= 19:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year, 12, 31)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
+        if current_month == 12:
+            end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
+        elif current_month == 11:
+            end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
         else:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-            elif current_month == 11:
-                end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
+            end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
     print(f"当日为{current_day}号，筛选范围：{start_date.strftime('%Y-%m-%d')} 至 {end_date.strftime('%Y-%m-%d')}")
     
     # 遍历K列数据进行筛选
@@ -1125,13 +1104,13 @@ def process_target_file2(file_path, current_datetime, project_id=None):
         if db_path and os.path.exists(db_path):
             conn = get_connection(db_path, True)
             
+            # 【方案A】只查询"待审查"状态的任务（设计人员已填写回文单号，等待确认）
             cursor = conn.execute("""
                 SELECT interface_id, project_id, display_status
                 FROM tasks
                 WHERE file_type = 2
-                  AND display_status IS NOT NULL
-                  AND display_status != ''
-                  AND status != 'confirmed'
+                  AND display_status IN ('待审查', '待指派人审查')
+                  AND ignored = 0
                   AND status != 'archived'
             """)
             
@@ -1159,17 +1138,22 @@ def process_target_file2(file_path, current_datetime, project_id=None):
                 except:
                     continue
             
-            # 按索引查找
+            # 【方案A】按索引查找，必须通过科室筛选
             for reg_interface_id, reg_project_id, reg_display_status in registry_tasks:
                 key = (reg_interface_id, reg_project_id)
                 if key in excel_index:
                     matched_indices = excel_index[key]
                     for idx in matched_indices:
+                        # 【关键】必须通过科室筛选
+                        if idx not in process1_rows:
+                            continue
                         if idx not in final_rows:
                             pending_rows.add(idx)
+                            print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
         
         if pending_rows:
             final_rows = final_rows | pending_rows
+            print(f"[Registry] 共加回{len(pending_rows)}条待审查任务")
         
     except Exception as e:
         print(f"[Registry] 查询待确认任务失败（不影响主流程）: {e}")
@@ -1274,34 +1258,19 @@ def execute2_process2(df, current_datetime):
     current_day = current_datetime.day
     current_year = current_datetime.year
     current_month = current_datetime.month
-    if USE_OLD_DATE_LOGIC:
-        start_date = datetime.datetime(current_year, current_month, 1)
-        if current_day <= 19:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year, 12, 31)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
+    start_date = datetime.datetime(current_year, 1, 1)
+    if current_day <= 19:
+        if current_month == 12:
+            end_date = datetime.datetime(current_year, 12, 31)
         else:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-            elif current_month == 11:
-                end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
+            end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
     else:
-        start_date = datetime.datetime(current_year, 1, 1)
-        if current_day <= 19:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year, 12, 31)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
+        if current_month == 12:
+            end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
+        elif current_month == 11:
+            end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
         else:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-            elif current_month == 11:
-                end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
+            end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
     for idx, val in m_column.items():
         if idx == 0:
             continue
@@ -1612,13 +1581,13 @@ def process_target_file3(file_path, current_datetime):
         if db_path and os.path.exists(db_path):
             conn = get_connection(db_path, True)
             
+            # 【方案A】只查询"待审查"状态的任务
             cursor = conn.execute("""
                 SELECT interface_id, project_id, display_status
                 FROM tasks
                 WHERE file_type = 3
-                  AND display_status IS NOT NULL
-                  AND display_status != ''
-                  AND status != 'confirmed'
+                  AND display_status IN ('待审查', '待指派人审查')
+                  AND ignored = 0
                   AND status != 'archived'
             """)
             
@@ -1646,16 +1615,22 @@ def process_target_file3(file_path, current_datetime):
                 except:
                     continue
             
-            # 按索引查找
+            # 【方案A】按索引查找，必须通过科室筛选(process1_rows & process2_rows)
+            base_filter = process1_rows & process2_rows
             for reg_interface_id, reg_project_id, reg_display_status in registry_tasks:
                 key = (reg_interface_id, reg_project_id)
                 if key in excel_index:
                     for idx in excel_index[key]:
+                        # 【关键】必须通过科室筛选
+                        if idx not in base_filter:
+                            continue
                         if idx not in final_rows:
                             pending_rows.add(idx)
+                            print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
         
         if pending_rows:
             final_rows = final_rows | pending_rows
+            print(f"[Registry] 共加回{len(pending_rows)}条待审查任务")
         
     except Exception as e:
         print(f"[Registry] 查询待审查任务失败: {e}")
@@ -1907,34 +1882,19 @@ def execute3_process3(df, current_datetime):
         current_year = current_datetime.year
         current_month = current_datetime.month
         
-        if USE_OLD_DATE_LOGIC:
-            start_date = datetime.datetime(current_year, current_month, 1)
-            if 1 <= current_day <= 19:
-                if current_month == 12:
-                    end_date = datetime.datetime(current_year, 12, 31)
-                else:
-                    end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
+        start_date = datetime.datetime(current_year, 1, 1)
+        if 1 <= current_day <= 19:
+            if current_month == 12:
+                end_date = datetime.datetime(current_year, 12, 31)
             else:
-                if current_month == 11:
-                    end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-                elif current_month == 12:
-                    end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-                else:
-                    end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
+                end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
         else:
-            start_date = datetime.datetime(current_year, 1, 1)
-            if 1 <= current_day <= 19:
-                if current_month == 12:
-                    end_date = datetime.datetime(current_year, 12, 31)
-                else:
-                    end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
+            if current_month == 11:
+                end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
+            elif current_month == 12:
+                end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
             else:
-                if current_month == 11:
-                    end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-                elif current_month == 12:
-                    end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-                else:
-                    end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
+                end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
         
         print(f"筛选日期范围: {start_date.strftime('%Y-%m-%d')} 到 {end_date.strftime('%Y-%m-%d')}")
         
@@ -2023,34 +1983,19 @@ def execute3_process4(df, current_datetime):
         current_year = current_datetime.year
         current_month = current_datetime.month
         
-        if USE_OLD_DATE_LOGIC:
-            start_date = datetime.datetime(current_year, current_month, 1)
-            if 1 <= current_day <= 19:
-                if current_month == 12:
-                    end_date = datetime.datetime(current_year, 12, 31)
-                else:
-                    end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
+        start_date = datetime.datetime(current_year, 1, 1)
+        if 1 <= current_day <= 19:
+            if current_month == 12:
+                end_date = datetime.datetime(current_year, 12, 31)
             else:
-                if current_month == 11:
-                    end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-                elif current_month == 12:
-                    end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-                else:
-                    end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
+                end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
         else:
-            start_date = datetime.datetime(current_year, 1, 1)
-            if 1 <= current_day <= 19:
-                if current_month == 12:
-                    end_date = datetime.datetime(current_year, 12, 31)
-                else:
-                    end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
+            if current_month == 11:
+                end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
+            elif current_month == 12:
+                end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
             else:
-                if current_month == 11:
-                    end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-                elif current_month == 12:
-                    end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-                else:
-                    end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
+                end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
         
         print(f"筛选日期范围: {start_date.strftime('%Y-%m-%d')} 到 {end_date.strftime('%Y-%m-%d')}")
         
@@ -2464,12 +2409,14 @@ def process_target_file4(file_path, current_datetime):
         
         if db_path and os.path.exists(db_path):
             conn = get_connection(db_path, True)
+            # 【方案A】只查询"待审查"状态的任务
             cursor = conn.execute("""
                 SELECT interface_id, project_id, display_status
                 FROM tasks
                 WHERE file_type = 4
-                  AND display_status IS NOT NULL AND display_status != ''
-                  AND status != 'confirmed' AND status != 'archived'
+                  AND display_status IN ('待审查', '待指派人审查')
+                  AND ignored = 0
+                  AND status != 'archived'
             """)
             registry_tasks = cursor.fetchall()
             
@@ -2494,15 +2441,22 @@ def process_target_file4(file_path, current_datetime):
                 except:
                     continue
             
+            # 【方案A】必须通过科室筛选(process1_rows & process2_rows)
+            base_filter = process1_rows & process2_rows
             for reg_interface_id, reg_project_id, _ in registry_tasks:
                 key = (reg_interface_id, reg_project_id)
                 if key in excel_index:
                     for idx in excel_index[key]:
+                        # 【关键】必须通过科室筛选
+                        if idx not in base_filter:
+                            continue
                         if idx not in final_rows:
                             pending_rows.add(idx)
+                            print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
         
         if pending_rows:
             final_rows = final_rows | pending_rows
+            print(f"[Registry] 共加回{len(pending_rows)}条待审查任务")
         
     except Exception as e:
         print(f"[Registry] 查询待审查任务失败: {e}")
@@ -3124,12 +3078,14 @@ def process_target_file5(file_path, current_datetime):
         
         if db_path and os.path.exists(db_path):
             conn = get_connection(db_path, True)
+            # 【方案A】只查询"待审查"状态的任务
             cursor = conn.execute("""
                 SELECT interface_id, project_id, display_status
                 FROM tasks
                 WHERE file_type = 5
-                  AND display_status IS NOT NULL AND display_status != ''
-                  AND status != 'confirmed' AND status != 'archived'
+                  AND display_status IN ('待审查', '待指派人审查')
+                  AND ignored = 0
+                  AND status != 'archived'
             """)
             registry_tasks = cursor.fetchall()
             
@@ -3154,15 +3110,21 @@ def process_target_file5(file_path, current_datetime):
                 except:
                     continue
             
+            # 【方案A】必须通过科室筛选(p1)
             for reg_interface_id, reg_project_id, _ in registry_tasks:
                 key = (reg_interface_id, reg_project_id)
                 if key in excel_index:
                     for idx in excel_index[key]:
+                        # 【关键】必须通过科室筛选
+                        if idx not in p1:
+                            continue
                         if idx not in final_rows:
                             pending_rows.add(idx)
+                            print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
         
         if pending_rows:
             final_rows = final_rows | pending_rows
+            print(f"[Registry] 共加回{len(pending_rows)}条待审查任务")
         
     except Exception as e:
         print(f"[Registry] 查询待审查任务失败: {e}")
@@ -3264,34 +3226,19 @@ def execute5_process2(df, current_datetime):
     current_day = current_datetime.day
     current_year = current_datetime.year
     current_month = current_datetime.month
-    if USE_OLD_DATE_LOGIC:
-        start_date = datetime.datetime(current_year, current_month, 1)
-        if current_day <= 19:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year, 12, 31)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
+    start_date = datetime.datetime(current_year, 1, 1)
+    if current_day <= 19:
+        if current_month == 12:
+            end_date = datetime.datetime(current_year, 12, 31)
         else:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-            elif current_month == 11:
-                end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
+            end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
     else:
-        start_date = datetime.datetime(current_year, 1, 1)
-        if current_day <= 19:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year, 12, 31)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
+        if current_month == 12:
+            end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
+        elif current_month == 11:
+            end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
         else:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-            elif current_month == 11:
-                end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
+            end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
     for idx, val in l_column.items():
         if idx == 0:
             continue
@@ -3624,12 +3571,14 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
         
         if db_path and os.path.exists(db_path):
             conn = get_connection(db_path, True)
+            # 【方案A】只查询"待审查"状态的任务
             cursor = conn.execute("""
                 SELECT interface_id, project_id, display_status
                 FROM tasks
                 WHERE file_type = 6
-                  AND display_status IS NOT NULL AND display_status != ''
-                  AND status != 'confirmed' AND status != 'archived'
+                  AND display_status IN ('待审查', '待指派人审查')
+                  AND ignored = 0
+                  AND status != 'archived'
             """)
             registry_tasks = cursor.fetchall()
             
@@ -3654,15 +3603,21 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
                 except:
                     continue
             
+            # 【方案A】必须通过科室筛选(p1)
             for reg_interface_id, reg_project_id, _ in registry_tasks:
                 key = (reg_interface_id, reg_project_id)
                 if key in excel_index:
                     for idx in excel_index[key]:
+                        # 【关键】必须通过科室筛选
+                        if idx not in p1:
+                            continue
                         if idx not in final_rows:
                             pending_rows.add(idx)
+                            print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
         
         if pending_rows:
             final_rows = final_rows | pending_rows
+            print(f"[Registry] 共加回{len(pending_rows)}条待审查任务")
         
     except Exception as e:
         print(f"[Registry] 查询待审查任务失败: {e}")
@@ -3815,41 +3770,23 @@ def execute6_process3(df, current_datetime):
     if len(df.columns) <= 8:
         return result_rows
     i_column = df.iloc[:, 8]
-    if USE_OLD_DATE_LOGIC:
-        # 旧逻辑：当日及之前 + 未来14天（即日期 <= 今天+14天）
-        today = current_datetime.date()
-        for idx, val in i_column.items():
-            if idx == 0:
+    # 新逻辑：与旧逻辑相同，待处理文件6不使用月度范围，而是使用简单的日期窗口
+    # 当日及之前 + 未来14天（即日期 <= 今天+14天）
+    today = current_datetime.date()
+    for idx, val in i_column.items():
+        if idx == 0:
+            continue
+        try:
+            parsed = pd.to_datetime(val, errors='coerce')
+            if pd.isna(parsed):
                 continue
-            try:
-                parsed = pd.to_datetime(val, errors='coerce')
-                if pd.isna(parsed):
-                    continue
-                d = parsed.date()
-                delta = (d - today).days
-                # 修改：包含过去的日期（delta < 0）+ 今天和未来14天（0 <= delta <= 14）
-                if delta <= 14:
-                    result_rows.add(idx)
-            except Exception:
-                continue
-    else:
-        # 新逻辑：与旧逻辑相同，待处理文件6不使用月度范围，而是使用简单的日期窗口
-        # 当日及之前 + 未来14天（即日期 <= 今天+14天）
-        today = current_datetime.date()
-        for idx, val in i_column.items():
-            if idx == 0:
-                continue
-            try:
-                parsed = pd.to_datetime(val, errors='coerce')
-                if pd.isna(parsed):
-                    continue
-                d = parsed.date()
-                delta = (d - today).days
-                # 包含过去的日期（delta < 0）+ 今天和未来14天（0 <= delta <= 14）
-                if delta <= 14:
-                    result_rows.add(idx)
-            except Exception:
-                continue
+            d = parsed.date()
+            delta = (d - today).days
+            # 包含过去的日期（delta < 0）+ 今天和未来14天（0 <= delta <= 14）
+            if delta <= 14:
+                result_rows.add(idx)
+        except Exception:
+            continue
     return result_rows
 
 

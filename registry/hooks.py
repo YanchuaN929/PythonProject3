@@ -5,9 +5,13 @@
 """
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+import time
+import random
+import sqlite3
 import pandas as pd
 from .config import load_config
 from .service import upsert_task, write_event, mark_completed, mark_confirmed, finalize_scan, batch_upsert_tasks
+from .db import close_connection, is_network_database
 from .models import EventType, Status
 from .util import (
     build_task_key_from_row, 
@@ -16,6 +20,35 @@ from .util import (
     safe_now,
     normalize_project_id
 )
+
+
+def _retry_on_lock(operation_name: str, func, max_retries: int = 5):
+    """
+    带重试的数据库操作包装器（专门应对网络盘锁定问题）
+    """
+    last_error = None
+    
+    for attempt in range(max_retries + 1):
+        try:
+            return func()
+        except sqlite3.OperationalError as e:
+            error_msg = str(e).lower()
+            if "locked" in error_msg or "busy" in error_msg:
+                last_error = e
+                if attempt < max_retries:
+                    # 指数退避 + 随机抖动
+                    delay = min(1.0 * (2 ** attempt) + random.uniform(0, 1), 15.0)
+                    print(f"[Registry] {operation_name}锁定中，{delay:.1f}秒后重试 ({attempt + 1}/{max_retries})")
+                    # 关闭当前连接，释放锁
+                    close_connection()
+                    time.sleep(delay)
+                    continue
+            raise
+        except Exception:
+            raise
+    
+    if last_error:
+        raise last_error
 
 # 【多用户协作】全局数据文件夹路径，用于确定共享数据库位置
 _DATA_FOLDER = None
@@ -86,6 +119,7 @@ def on_process_done(
     处理完成钩子
     
     当某类文件处理完成后调用，逐行upsert任务到数据库
+    带自动重试机制，应对网络盘锁定问题。
     
     参数:
         file_type: 文件类型（1-6）
@@ -110,21 +144,26 @@ def on_process_done(
         tasks_data = []
         for _, row in result_df.iterrows():
             key = build_task_key_from_row(row, file_type, source_file)
-            fields = build_task_fields_from_row(row, file_type)  # 【修改】传递file_type
+            fields = build_task_fields_from_row(row, file_type)
             tasks_data.append({'key': key, 'fields': fields})
         
-        # 批量upsert
-        count = batch_upsert_tasks(db_path, wal, tasks_data, now)
+        # 【关键改进】使用重试机制执行批量upsert
+        def do_batch_upsert():
+            return batch_upsert_tasks(db_path, wal, tasks_data, now)
         
-        # 写入process_done事件
-        write_event(db_path, wal, EventType.PROCESS_DONE, {
-            'file_type': file_type,
-            'project_id': normalize_project_id(project_id, file_type),
-            'source_file': get_source_basename(source_file),
-            'extra': {'count': count}
-        }, now)
+        count = _retry_on_lock("批量写入任务", do_batch_upsert)
         
-        # 【优化】简化日志，详细信息由调用方（base.py）输出
+        # 写入process_done事件（也使用重试）
+        def do_write_event():
+            write_event(db_path, wal, EventType.PROCESS_DONE, {
+                'file_type': file_type,
+                'project_id': normalize_project_id(project_id, file_type),
+                'source_file': get_source_basename(source_file),
+                'extra': {'count': count}
+            }, now)
+        
+        _retry_on_lock("写入事件", do_write_event)
+        
         if count == 0:
             print(f"[Registry] ⚠ 文件{file_type}项目{project_id}: 写入0条（数据库可能未正确初始化）")
         
@@ -136,8 +175,7 @@ def on_process_done(
         # 通知数据库状态显示器
         try:
             from db_status import notify_error
-            # 检查是否是锁定错误
-            if "database is locked" in str(e).lower():
+            if "database is locked" in str(e).lower() or "busy" in str(e).lower():
                 notify_error("数据库被其他用户锁定，请稍后重试", show_dialog=True)
             else:
                 notify_error(str(e), show_dialog=True)
@@ -563,4 +601,136 @@ def write_event_only(event: str, payload: dict) -> None:
         
     except Exception as e:
         print(f"[Registry] write_event_only 失败: {e}")
+
+
+# ============================================================
+# 第二/第三阶段优化：缓存和队列支持
+# ============================================================
+
+def invalidate_cache():
+    """
+    使本地读缓存失效
+    
+    在执行写入操作后调用此函数，确保下次读取获取最新数据。
+    如果本地缓存未启用，此函数无操作。
+    """
+    try:
+        from .db import invalidate_read_cache
+        invalidate_read_cache()
+    except Exception as e:
+        print(f"[Registry] invalidate_cache 失败: {e}")
+
+
+def force_sync_cache() -> bool:
+    """
+    强制同步本地缓存
+    
+    用于用户手动刷新数据时调用。
+    
+    返回:
+        True = 同步成功，False = 同步失败或未启用
+    """
+    try:
+        from .db import force_sync_cache as db_force_sync
+        return db_force_sync()
+    except Exception as e:
+        print(f"[Registry] force_sync_cache 失败: {e}")
+        return False
+
+
+def get_cache_status() -> dict:
+    """
+    获取缓存状态信息
+    
+    返回:
+        包含缓存状态的字典，用于调试或状态显示
+    """
+    try:
+        from .db import get_cache_info
+        return get_cache_info()
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def get_write_queue_stats() -> dict:
+    """
+    获取写入队列统计信息
+    
+    返回:
+        包含队列状态的字典
+    """
+    try:
+        cfg = _cfg()
+        if not cfg.get('registry_write_queue_enabled', False):
+            return {'enabled': False}
+        
+        from .write_queue import get_write_queue
+        queue = get_write_queue()
+        stats = queue.get_stats()
+        stats['queue_size'] = queue.get_queue_size()
+        stats['enabled'] = queue.is_enabled()
+        return stats
+    except Exception as e:
+        return {'error': str(e)}
+
+
+def flush_write_queue(timeout: float = 10.0) -> bool:
+    """
+    刷新写入队列，等待所有待处理请求完成
+    
+    在程序退出前调用此函数，确保所有写入操作已完成。
+    
+    参数:
+        timeout: 最大等待时间（秒）
+        
+    返回:
+        True = 队列已清空，False = 超时或未启用
+    """
+    try:
+        cfg = _cfg()
+        if not cfg.get('registry_write_queue_enabled', False):
+            return True  # 未启用队列，无需刷新
+        
+        from .write_queue import get_write_queue
+        queue = get_write_queue()
+        return queue.flush(timeout)
+    except Exception as e:
+        print(f"[Registry] flush_write_queue 失败: {e}")
+        return False
+
+
+def shutdown():
+    """
+    关闭 Registry 模块
+    
+    在程序退出前调用，确保：
+    1. 写入队列中的请求已处理完成
+    2. 数据库连接已关闭
+    3. 本地缓存已清理
+    """
+    try:
+        # 1. 刷新写入队列
+        flush_write_queue(timeout=5.0)
+        
+        # 2. 关闭写入队列
+        try:
+            from .write_queue import shutdown_write_queue
+            shutdown_write_queue()
+        except ImportError:
+            pass
+        
+        # 3. 清理本地缓存
+        try:
+            from .local_cache import cleanup_global_cache
+            cleanup_global_cache()
+        except ImportError:
+            pass
+        
+        # 4. 关闭数据库连接
+        close_connection()
+        
+        print("[Registry] 模块已关闭")
+        
+    except Exception as e:
+        print(f"[Registry] shutdown 失败: {e}")
 

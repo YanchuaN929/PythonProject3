@@ -11,6 +11,6 @@ Pillow==8.4.0
 # seaborn==0.11.1    # 用于高级图表
 # xlsxwriter==3.0.3  # 用于Excel写入
 # python-dateutil==2.8.1  # 用于日期解析
-#Remove-Item -Recurse -Force .\dist, .\build -ErrorAction SilentlyContinue
-#pyinstaller -y excel_processor.spec
-#python base.py --auto
+# Remove-Item -Recurse -Force .\dist, .\build -ErrorAction SilentlyContinue
+# pyinstaller -y excel_processor.spec
+# python base.py --auto

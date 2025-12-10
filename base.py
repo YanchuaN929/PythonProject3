@@ -194,6 +194,14 @@ class ExcelProcessorApp:
             except Exception as e:
                 print(f"[Registry] 设置数据文件夹失败: {e}")
         
+        # 【启动时同步 update.exe】
+        # 因为 update.exe 在运行时无法更新自己，所以由主程序负责更新它
+        if self.update_manager and folder_path:
+            try:
+                self.update_manager.sync_update_executable(folder_path)
+            except Exception as e:
+                print(f"[Update] 同步 update.exe 失败: {e}")
+        
         # 【修复】加载用户角色（必须在load_config之后，确保能读取默认姓名）
         try:
             self.load_user_role()
@@ -208,9 +216,10 @@ class ExcelProcessorApp:
         from file_manager import get_file_manager
         self.file_manager = get_file_manager()
         
-        # 项目号筛选变量（6个项目号，默认全选）
+        # 项目号筛选变量（7个项目号，默认全选）
         self.project_1818_var = tk.BooleanVar(master=self.root, value=True)
         self.project_1907_var = tk.BooleanVar(master=self.root, value=True)
+        self.project_1915_var = tk.BooleanVar(master=self.root, value=True)
         self.project_1916_var = tk.BooleanVar(master=self.root, value=True)
         self.project_2016_var = tk.BooleanVar(master=self.root, value=True)
         self.project_2026_var = tk.BooleanVar(master=self.root, value=True)
@@ -262,6 +271,7 @@ class ExcelProcessorApp:
         project_vars = {
             '1818': self.project_1818_var,
             '1907': self.project_1907_var,
+            '1915': self.project_1915_var,
             '1916': self.project_1916_var,
             '2016': self.project_2016_var,
             '2026': self.project_2026_var,
@@ -292,6 +302,12 @@ class ExcelProcessorApp:
         self.tab6_viewer = self.window_manager.viewers['tab6']
         self.tray_icon = None
         self.is_closing = False
+        
+        # 【新增】初始化忽略延期项按钮状态
+        try:
+            self._update_ignore_overdue_button_state()
+        except Exception:
+            pass
         
         # 绑定窗口关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self.on_window_close)
@@ -548,6 +564,8 @@ class ExcelProcessorApp:
             enabled_projects.append('1818')
         if self.project_1907_var.get():
             enabled_projects.append('1907')
+        if self.project_1915_var.get():
+            enabled_projects.append('1915')
         if self.project_1916_var.get():
             enabled_projects.append('1916')
         if self.project_2016_var.get():
@@ -1178,8 +1196,6 @@ class ExcelProcessorApp:
         
         # 【关键修复】在显示前过滤已完成/已确认的任务
         if source_files and len(source_files) > 0:
-            source_file = source_files[0]  # 获取第一个源文件
-            
             # 根据tab_name确定file_type
             file_type_map = {
                 "内部需打开接口": 1,
@@ -1191,15 +1207,13 @@ class ExcelProcessorApp:
             }
             file_type = file_type_map.get(tab_name)
             
-            # 从df中提取项目号
-            project_id = None
-            if '项目号' in df.columns and not df.empty:
-                project_id = str(df.iloc[0]['项目号'])
+            # 【修复】获取项目号到源文件的映射（支持多项目）
+            project_source_map = self._get_project_source_file_map(tab_name)
             
-            if file_type and project_id:
-                # 调用过滤函数
+            if file_type and (project_source_map or source_files):
+                # 调用过滤函数，传入项目号到源文件的映射
                 original_count = len(df)
-                df = self._exclude_pending_confirmation_rows(df, source_file, file_type, project_id)
+                df = self._exclude_pending_confirmation_rows(df, source_files[0], file_type, None, project_source_map)
                 filtered_count = original_count - len(df)
                 
                 if filtered_count > 0:
@@ -1274,15 +1288,16 @@ class ExcelProcessorApp:
             traceback.print_exc()
             return df  # 出错时返回原始数据，确保导出不受影响
     
-    def _exclude_pending_confirmation_rows(self, df, source_file, file_type, project_id):
+    def _exclude_pending_confirmation_rows(self, df, source_file, file_type, project_id, project_source_map=None):
         """
         从DataFrame中排除待确认的任务行（用于导出）
         
         参数:
             df: pandas DataFrame（必须包含"原始行号"、"接口号"列）
-            source_file: 源文件路径
+            source_file: 源文件路径（兜底使用）
             file_type: 文件类型（1-6）
-            project_id: 项目号
+            project_id: 项目号（兜底使用）
+            project_source_map: 项目号到源文件的映射（支持多项目）
             
         返回:
             过滤后的DataFrame
@@ -1303,6 +1318,10 @@ class ExcelProcessorApp:
             # 【优化】减少日志输出，只在调试模式下显示详细信息
             _debug_export = False  # 设为True可启用详细调试日志
             
+            # 如果没有提供映射，使用默认的source_file
+            if project_source_map is None:
+                project_source_map = {}
+            
             # 构造task_keys
             task_keys = []
             df_index_map = {}  # task_id -> df_index映射
@@ -1313,12 +1332,15 @@ class ExcelProcessorApp:
                     proj_id = extract_project_id(row_data, file_type) or project_id
                     row_index = row_data.get("原始行号", idx + 2)
                     
+                    # 【修复】根据项目号获取对应的源文件，支持多项目
+                    row_source_file = project_source_map.get(str(proj_id), source_file) if proj_id else source_file
+                    
                     if interface_id and proj_id:
                         task_key = {
                             'file_type': file_type,
                             'project_id': proj_id,
                             'interface_id': interface_id,
-                            'source_file': source_file,
+                            'source_file': row_source_file,  # 使用对应项目的源文件
                             'row_index': row_index
                         }
                         task_keys.append(task_key)
@@ -1326,7 +1348,7 @@ class ExcelProcessorApp:
                         # 记录映射关系
                         tid = make_task_id(
                             file_type, proj_id, interface_id,
-                            source_file, row_index
+                            row_source_file, row_index  # 使用对应项目的源文件
                         )
                         df_index_map[tid] = idx
                 except Exception as e:
@@ -1386,23 +1408,97 @@ class ExcelProcessorApp:
                             status_filter_count += 1
             
             if not exclude_indices:
-                return df
+                df_filtered = df
+            else:
+                # 过滤掉指定的行
+                original_count = len(df)
+                df_filtered = df.drop(df.index[exclude_indices]).reset_index(drop=True)
+                filtered_count = len(exclude_indices)
+                
+                # 【优化】简洁的汇总输出
+                if filtered_count > 0:
+                    role_desc = "设计人员" if (is_designer and not is_superior) else "上级"
+                    print(f"[Registry过滤] 文件{file_type}: {original_count}→{len(df_filtered)}行 "
+                          f"(排除{not_in_map_count}个无状态+{status_filter_count}个{role_desc}过滤)")
             
-            # 过滤掉指定的行
-            original_count = len(df)
-            df_filtered = df.drop(df.index[exclude_indices]).reset_index(drop=True)
-            filtered_count = len(exclude_indices)
-            
-            # 【优化】简洁的汇总输出
-            if filtered_count > 0:
-                role_desc = "设计人员" if (is_designer and not is_superior) else "上级"
-                print(f"[Registry过滤] 文件{file_type}: {original_count}→{len(df_filtered)}行 "
-                      f"(排除{not_in_map_count}个无状态+{status_filter_count}个{role_desc}过滤)")
+            # 【新增】自动隐藏超期任务过滤
+            df_filtered = self._apply_overdue_filter(df_filtered, file_type)
             
             return df_filtered
             
         except Exception as e:
             print(f"[Registry] 排除待确认行时出错（不影响主流程）: {e}")
+            return df
+    
+    def _apply_overdue_filter(self, df, file_type):
+        """
+        应用超期任务过滤（自动隐藏超过设定工作日的超期任务）
+        
+        参数:
+            df: pandas DataFrame
+            file_type: 文件类型（1-6）
+            
+        返回:
+            过滤后的DataFrame
+        """
+        try:
+            # 检查是否启用自动隐藏
+            if not self.config.get("auto_hide_overdue_enabled", True):
+                return df
+            
+            if df is None or df.empty:
+                return df
+            
+            # 检查是否有接口时间列
+            if "接口时间" not in df.columns:
+                return df
+            
+            # 获取阈值天数
+            threshold_days = self.config.get("auto_hide_overdue_days", 30)
+            if threshold_days <= 0:
+                return df
+            
+            from date_utils import parse_mmdd_to_date, get_workday_difference
+            from datetime import date
+            
+            today = date.today()
+            exclude_indices = []
+            
+            for idx in range(len(df)):
+                try:
+                    interface_time = df.iloc[idx].get("接口时间", "")
+                    if not interface_time or str(interface_time).strip() in ['', '-', 'nan', 'None', '未知']:
+                        continue
+                    
+                    # 解析日期
+                    due_date = parse_mmdd_to_date(str(interface_time).strip(), today)
+                    if due_date is None:
+                        continue
+                    
+                    # 计算工作日差
+                    workday_diff = get_workday_difference(due_date, today)
+                    
+                    # 如果超期工作日超过阈值，标记为排除
+                    if workday_diff < 0 and abs(workday_diff) > threshold_days:
+                        exclude_indices.append(idx)
+                        
+                except Exception:
+                    continue
+            
+            if not exclude_indices:
+                return df
+            
+            # 过滤掉超期任务
+            original_count = len(df)
+            df_filtered = df.drop(df.index[exclude_indices]).reset_index(drop=True)
+            
+            print(f"[超期过滤] 文件{file_type}: 隐藏{len(exclude_indices)}个超期>{threshold_days}工作日的任务 "
+                  f"({original_count}→{len(df_filtered)}行)")
+            
+            return df_filtered
+            
+        except Exception as e:
+            print(f"[超期过滤] 过滤时出错（不影响主流程）: {e}")
             return df
     
     def _get_source_files_for_tab(self, tab_name):
@@ -1442,6 +1538,48 @@ class ExcelProcessorApp:
         except Exception as e:
             print(f"获取源文件列表失败: {e}")
             return []
+
+    def _get_project_source_file_map(self, tab_name):
+        """
+        根据tab名称获取项目号到源文件的映射
+        
+        参数:
+            tab_name: 选项卡名称
+            
+        返回:
+            Dict[project_id, source_file]: 项目号到源文件路径的映射
+        """
+        try:
+            tab_file_mapping = {
+                "内部需打开接口": "target_files1",
+                "内部需回复接口": "target_files2",
+                "外部需打开接口": "target_files3",
+                "外部需回复接口": "target_files4",
+                "三维提资接口": "target_files5",
+                "收发文函": "target_files6"
+            }
+            
+            attr_name = tab_file_mapping.get(tab_name)
+            if not attr_name:
+                return {}
+            
+            target_files = getattr(self, attr_name, None)
+            if not target_files:
+                return {}
+            
+            # target_files格式: [(file_path, project_id), ...]
+            # 构建项目号到源文件的映射
+            project_file_map = {}
+            for item in target_files:
+                if isinstance(item, tuple) and len(item) >= 2:
+                    file_path, project_id = item[0], item[1]
+                    project_file_map[str(project_id)] = file_path
+            
+            return project_file_map
+            
+        except Exception as e:
+            print(f"获取项目源文件映射失败: {e}")
+            return {}
 
     def calculate_column_widths(self, df, columns):
         """基于第二行数据计算列宽，确保内容完全显示"""
@@ -2305,19 +2443,6 @@ class ExcelProcessorApp:
         )
         close_dialog_check.pack(anchor=tk.W, pady=(0, 10))
 
-        # 不显示前月数据（影响日期筛选逻辑开关）
-        self.hide_previous_months_var = tk.BooleanVar(value=self.config.get("hide_previous_months", False))
-        def on_toggle_hide_prev():
-            self.config["hide_previous_months"] = self.hide_previous_months_var.get()
-            self.save_config()
-        hide_prev_check = ttk.Checkbutton(
-            frame,
-            text="不显示前月数据",
-            variable=self.hide_previous_months_var,
-            command=on_toggle_hide_prev
-        )
-        hide_prev_check.pack(anchor=tk.W, pady=(0, 10))
-
         # 简洁显示模式（仅管理员可见）
         self.simple_export_mode_var = tk.BooleanVar(value=self.config.get("simple_export_mode", False))
         def on_toggle_simple_export():
@@ -2334,6 +2459,57 @@ class ExcelProcessorApp:
         # 仅当用户角色为管理员时显示
         if "管理员" in self.user_roles:
             simple_export_check.pack(anchor=tk.W, pady=(0, 10))
+
+        # 【新增】自动隐藏超期任务设置
+        auto_hide_frame = ttk.Frame(frame)
+        auto_hide_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        self.auto_hide_overdue_var = tk.BooleanVar(value=self.config.get("auto_hide_overdue_enabled", True))
+        
+        def on_toggle_auto_hide():
+            enabled = self.auto_hide_overdue_var.get()
+            self.config["auto_hide_overdue_enabled"] = enabled
+            self.save_config()
+            # 更新输入框状态
+            if enabled:
+                auto_hide_days_entry.config(state='normal')
+            else:
+                auto_hide_days_entry.config(state='disabled')
+            # 更新忽略延期项按钮状态
+            try:
+                self._update_ignore_overdue_button_state()
+            except Exception:
+                pass
+        
+        auto_hide_check = ttk.Checkbutton(
+            auto_hide_frame,
+            text="自动隐藏超期任务（超过",
+            variable=self.auto_hide_overdue_var,
+            command=on_toggle_auto_hide
+        )
+        auto_hide_check.pack(side=tk.LEFT)
+        
+        # 天数输入框
+        self.auto_hide_days_var = tk.StringVar(value=str(self.config.get("auto_hide_overdue_days", 30)))
+        auto_hide_days_entry = ttk.Entry(auto_hide_frame, textvariable=self.auto_hide_days_var, width=5)
+        auto_hide_days_entry.pack(side=tk.LEFT, padx=(2, 2))
+        
+        # 如果未启用，输入框禁用
+        if not self.auto_hide_overdue_var.get():
+            auto_hide_days_entry.config(state='disabled')
+        
+        def on_days_change(*_):
+            try:
+                days = int(self.auto_hide_days_var.get().strip())
+                if days < 0:
+                    days = 0
+                self.config["auto_hide_overdue_days"] = days
+                self.save_config()
+            except ValueError:
+                pass
+        self.auto_hide_days_var.trace_add('write', on_days_change)
+        
+        ttk.Label(auto_hide_frame, text="个工作日不显示）").pack(side=tk.LEFT)
 
         # 定时器设置
         timer_frame = ttk.LabelFrame(frame, text="定时自动运行", padding="10")
@@ -3467,13 +3643,6 @@ class ExcelProcessorApp:
                 import pandas as pd
                 import os
                 import sys
-                # 读取日期逻辑开关
-                hide_prev = False
-                try:
-                    hide_prev = bool(self.config.get("hide_previous_months", False))
-                except Exception:
-                    hide_prev = False
-                
                 # 安全导入main模块
                 try:
                     import main
@@ -3484,11 +3653,6 @@ class ExcelProcessorApp:
                     else:
                         sys.path.insert(0, os.path.dirname(__file__))
                     import main
-                # 将设置中的日期逻辑开关传递给 main 模块
-                try:
-                    main.USE_OLD_DATE_LOGIC = hide_prev
-                except Exception:
-                    pass
 
                 # （已移除缓存模块）
                 # 初始化处理结果变量
@@ -3846,9 +4010,11 @@ class ExcelProcessorApp:
                             # 【关键修复】统计前也应用过滤，确保弹窗数字与实际显示一致
                             display_count = len(results1)
                             if self.target_files1 and len(self.target_files1) > 0:
-                                source_file = self.target_files1[0][0]
-                                project_id = self.target_files1[0][1]
-                                display_count = len(self._exclude_pending_confirmation_rows(results1.copy(), source_file, 1, project_id))
+                                # 【修复】使用项目号到源文件的映射，支持多项目
+                                project_source_map = {str(pid): fp for fp, pid in self.target_files1}
+                                display_count = len(self._exclude_pending_confirmation_rows(
+                                    results1.copy(), self.target_files1[0][0], 1, None, project_source_map
+                                ))
                             
                             processed_count += 1
                             if project_count > 1:
@@ -3871,9 +4037,11 @@ class ExcelProcessorApp:
                             # 【关键修复】统计前也应用过滤
                             display_count = len(results2)
                             if self.target_files2 and len(self.target_files2) > 0:
-                                source_file = self.target_files2[0][0]
-                                project_id = self.target_files2[0][1]
-                                display_count = len(self._exclude_pending_confirmation_rows(results2.copy(), source_file, 2, project_id))
+                                # 【修复】使用项目号到源文件的映射，支持多项目
+                                project_source_map = {str(pid): fp for fp, pid in self.target_files2}
+                                display_count = len(self._exclude_pending_confirmation_rows(
+                                    results2.copy(), self.target_files2[0][0], 2, None, project_source_map
+                                ))
                             
                             processed_count += 1
                             if project_count > 1:
@@ -3896,9 +4064,11 @@ class ExcelProcessorApp:
                             # 【关键修复】统计前也应用过滤
                             display_count = len(results3)
                             if self.target_files3 and len(self.target_files3) > 0:
-                                source_file = self.target_files3[0][0]
-                                project_id = self.target_files3[0][1]
-                                display_count = len(self._exclude_pending_confirmation_rows(results3.copy(), source_file, 3, project_id))
+                                # 【修复】使用项目号到源文件的映射，支持多项目
+                                project_source_map = {str(pid): fp for fp, pid in self.target_files3}
+                                display_count = len(self._exclude_pending_confirmation_rows(
+                                    results3.copy(), self.target_files3[0][0], 3, None, project_source_map
+                                ))
                             
                             processed_count += 1
                             if project_count > 1:
@@ -5373,7 +5543,8 @@ class ExcelProcessorApp:
             user_roles = getattr(self, 'user_roles', [])
             project_id = self._get_my_project_id()
             
-            unassigned = distribution.check_unassigned(processed_results, user_roles, project_id)
+            # 【修改】传递config用于超期过滤
+            unassigned = distribution.check_unassigned(processed_results, user_roles, project_id, self.config)
             return unassigned
             
         except Exception as e:
@@ -5530,6 +5701,72 @@ class ExcelProcessorApp:
             import traceback
             traceback.print_exc()
     
+    def _update_ignore_overdue_button_state(self):
+        """更新忽略延期项按钮的状态（根据自动过滤设置）"""
+        try:
+            if not hasattr(self, 'window_manager') or not self.window_manager:
+                return
+            
+            btn = self.window_manager.buttons.get('ignore_overdue')
+            if not btn:
+                return
+            
+            auto_hide_enabled = self.config.get("auto_hide_overdue_enabled", True)
+            
+            if auto_hide_enabled:
+                # 禁用按钮
+                btn.config(state='disabled')
+                # 添加悬停提示
+                self._setup_button_tooltip(btn, "已开启自动忽略，无须手动忽略\n若有需求可打开设置窗口取消自动忽略")
+            else:
+                # 启用按钮
+                btn.config(state='normal')
+                # 移除悬停提示
+                self._remove_button_tooltip(btn)
+                
+        except Exception as e:
+            print(f"更新忽略按钮状态失败: {e}")
+    
+    def _setup_button_tooltip(self, widget, text):
+        """为按钮设置悬停提示"""
+        try:
+            def show_tooltip(event):
+                tooltip = tk.Toplevel(widget)
+                tooltip.wm_overrideredirect(True)
+                tooltip.wm_geometry(f"+{event.x_root+10}+{event.y_root+10}")
+                
+                label = ttk.Label(tooltip, text=text, background="#FFFFDD", 
+                                  relief='solid', borderwidth=1, padding=(5, 3))
+                label.pack()
+                
+                widget._tooltip = tooltip
+                
+            def hide_tooltip(event):
+                if hasattr(widget, '_tooltip') and widget._tooltip:
+                    widget._tooltip.destroy()
+                    widget._tooltip = None
+            
+            # 绑定事件
+            widget.bind('<Enter>', show_tooltip)
+            widget.bind('<Leave>', hide_tooltip)
+            widget._tooltip_bindings = True
+            
+        except Exception as e:
+            print(f"设置悬停提示失败: {e}")
+    
+    def _remove_button_tooltip(self, widget):
+        """移除按钮的悬停提示"""
+        try:
+            if hasattr(widget, '_tooltip_bindings') and widget._tooltip_bindings:
+                widget.unbind('<Enter>')
+                widget.unbind('<Leave>')
+                widget._tooltip_bindings = False
+            if hasattr(widget, '_tooltip') and widget._tooltip:
+                widget._tooltip.destroy()
+                widget._tooltip = None
+        except Exception:
+            pass
+    
     def _on_ignore_overdue_button_click(self):
         """忽略延期项按钮点击"""
         try:
@@ -5580,6 +5817,10 @@ class ExcelProcessorApp:
     def _show_ignore_overdue_reminder(self):
         """所领导角色：显示忽略延期任务提示"""
         try:
+            # 【新增】如果开启了自动过滤，不弹出手动忽略提示
+            if self.config.get("auto_hide_overdue_enabled", True):
+                return
+            
             from tkinter import messagebox
             
             user_role = getattr(self, 'user_role', '').strip()

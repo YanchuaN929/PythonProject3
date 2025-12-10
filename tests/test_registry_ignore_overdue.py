@@ -226,9 +226,9 @@ def test_ignored_task_not_displayed(temp_db_path):
     
     status_map = registry_hooks.get_display_status(query_task_keys, "设计人员")
     
-    # 3. 验证
+    # 3. 验证：被忽略的任务不应该出现在返回结果中
     tid = make_task_id(1, '1818', 'TEST-003', 'test.xlsx', 2)
-    assert status_map[tid] == ''  # 应返回空字符串
+    assert tid not in status_map, f"被忽略的任务不应该出现在status_map中，但找到了: {status_map.get(tid)}"
     
     print("[PASS] test_ignored_task_not_displayed")
 

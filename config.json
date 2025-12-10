@@ -7,6 +7,8 @@
   "dont_ask_again": false,
   "hide_previous_months": false,
   "simple_export_mode": false,
+  "auto_hide_overdue_enabled": true,
+  "auto_hide_overdue_days": 30,
 
   "defaults": {
     "folder_path": "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册",
@@ -20,5 +22,7 @@
     "所领导": 2,
     "管理员": null,
     "设计人员": null
-  }
+  },
+
+  "registry_force_network_mode": true
 }

@@ -230,3 +230,83 @@ class UpdateManager:
             self._version_candidates_from_remote(remote_root)
         )
 
+    # ------------------------------------------------------------------ #
+    # update.exe 自更新逻辑
+    # ------------------------------------------------------------------ #
+    def sync_update_executable(self, folder_path: Optional[str] = None) -> bool:
+        """
+        同步更新 update.exe（由主程序在启动时调用）
+        
+        因为 update.exe 在运行时无法更新自己，所以由主程序负责更新它。
+        
+        参数:
+            folder_path: 源文件夹路径（用于定位远程EXE目录）
+            
+        返回:
+            True: 更新成功或无需更新
+            False: 更新失败
+        """
+        import shutil
+        import filecmp
+        
+        remote_root = self._resolve_remote_dir(folder_path)
+        if not remote_root:
+            return True  # 无远程目录，跳过
+        
+        local_update_exe = os.path.join(self.app_root, self.update_executable)
+        
+        # 查找远程 update.exe（可能在根目录或 _internal 目录）
+        remote_candidates = [
+            os.path.join(remote_root, self.update_executable),
+            os.path.join(remote_root, "_internal", self.update_executable),
+        ]
+        
+        remote_update_exe = None
+        for candidate in remote_candidates:
+            if os.path.exists(candidate):
+                remote_update_exe = candidate
+                break
+        
+        if not remote_update_exe:
+            self._log(f"远程目录未找到 {self.update_executable}，跳过同步")
+            return True
+        
+        # 检查本地文件是否存在
+        if not os.path.exists(local_update_exe):
+            # 本地不存在，直接复制
+            try:
+                shutil.copy2(remote_update_exe, local_update_exe)
+                self._log(f"已复制 {self.update_executable}（本地不存在）")
+                return True
+            except Exception as e:
+                self._log(f"复制 {self.update_executable} 失败: {e}")
+                return False
+        
+        # 比较文件是否相同
+        try:
+            if filecmp.cmp(local_update_exe, remote_update_exe, shallow=False):
+                # 文件相同，无需更新
+                return True
+        except Exception as e:
+            self._log(f"比较文件失败: {e}")
+            # 比较失败，尝试更新
+        
+        # 文件不同，需要更新
+        try:
+            # 先检查文件是否被锁定
+            try:
+                with open(local_update_exe, 'rb+'):
+                    pass  # 能打开说明没被锁定
+            except (OSError, PermissionError):
+                self._log(f"{self.update_executable} 正在运行，跳过更新")
+                return True  # 文件被锁定（可能正在运行），跳过
+            
+            # 复制更新
+            shutil.copy2(remote_update_exe, local_update_exe)
+            self._log(f"已更新 {self.update_executable}")
+            return True
+            
+        except Exception as e:
+            self._log(f"更新 {self.update_executable} 失败: {e}")
+            return False
+

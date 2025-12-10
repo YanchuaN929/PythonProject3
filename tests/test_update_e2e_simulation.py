@@ -91,6 +91,9 @@ class TestEndToEndUpdate:
         mock_popen = MagicMock()
         monkeypatch.setattr('subprocess.Popen', mock_popen)
         
+        # Mock _is_process_running 以避免调用 tasklist
+        monkeypatch.setattr('update.updater_cli._is_process_running', lambda x: False)
+        
         # 创建参数
         args = Namespace(
             remote=remote_root,

@@ -57,26 +57,78 @@ def parse_args(argv: Optional[Iterable[str]] = None):
     return parser.parse_args(list(argv) if argv is not None else None)
 
 
+def _is_process_running(process_name: str) -> bool:
+    """
+    检测指定名称的进程是否正在运行
+    
+    使用 Windows tasklist 命令，不需要额外依赖
+    """
+    try:
+        # 使用 tasklist 命令查找进程
+        result = subprocess.run(
+            ['tasklist', '/FI', f'IMAGENAME eq {process_name}', '/NH'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
+        )
+        
+        # 如果输出中包含进程名，说明进程正在运行
+        output = result.stdout.lower()
+        return process_name.lower() in output
+        
+    except Exception as e:
+        log(f"进程检测失败: {e}", "WARNING")
+        return False  # 检测失败时假设进程已退出
+
+
+def _is_file_locked(filepath: str) -> bool:
+    """检测文件是否被锁定（正在被使用）"""
+    try:
+        # 尝试以独占写入模式打开文件
+        with open(filepath, "rb+"):
+            return False  # 能打开，说明未锁定
+    except (OSError, PermissionError):
+        return True  # 打不开，说明被锁定
+
+
 def wait_for_main_exit(main_executable: Optional[str], timeout: int = 120) -> bool:
-    """等待主程序退出"""
+    """
+    等待主程序退出
+    
+    优先使用进程检测（更可靠），备用文件锁检测
+    """
     if not main_executable or not os.path.exists(main_executable):
         log("主程序文件不存在或未指定，跳过等待")
         return True
 
-    log(f"等待主程序退出: {main_executable}")
+    exe_name = os.path.basename(main_executable)
+    log(f"等待主程序退出: {exe_name}")
+    
     deadline = time.time() + timeout
     wait_count = 0
     
+    # 先等待一小段时间，让主程序有机会开始退出流程
+    time.sleep(0.5)
+    
     while time.time() <= deadline:
-        try:
-            with open(main_executable, "rb+"):
-                log(f"主程序已退出，等待了 {wait_count} 秒")
-                return True
-        except OSError:
-            wait_count += 1
-            if wait_count % 5 == 0:
-                log(f"仍在等待主程序退出... ({wait_count}秒)")
-            time.sleep(1)
+        # 方法1：进程检测（最可靠）
+        if not _is_process_running(exe_name):
+            log(f"主程序已退出（进程检测），等待了 {wait_count} 秒")
+            # 额外等待一小段时间，确保文件句柄完全释放
+            time.sleep(0.5)
+            return True
+        
+        wait_count += 1
+        if wait_count % 5 == 0:
+            log(f"仍在等待主程序退出... ({wait_count}秒)")
+        time.sleep(1)
+
+    # 超时后，尝试用文件锁检测作为最后验证
+    log(f"进程检测超时，尝试文件锁检测...")
+    if not _is_file_locked(main_executable):
+        log("文件锁检测通过，继续更新")
+        return True
 
     log(f"等待主程序退出超时 ({timeout}秒)", "WARNING")
     return False

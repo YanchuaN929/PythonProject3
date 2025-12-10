@@ -299,10 +299,11 @@ class WindowManager:
         # 获取项目号变量（从回调参数传入）
         project_vars = getattr(self, 'project_vars', {})
         
-        # 创建6个项目号复选框，横向排列
+        # 创建7个项目号复选框，横向排列
         projects = [
             ('1818', project_vars.get('1818')),
             ('1907', project_vars.get('1907')),
+            ('1915', project_vars.get('1915')),
             ('1916', project_vars.get('1916')),
             ('2016', project_vars.get('2016')),
             ('2026', project_vars.get('2026')),

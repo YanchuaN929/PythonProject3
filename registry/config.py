@@ -14,8 +14,30 @@ DEFAULTS = {
     "registry_db_path": None,
     "registry_missing_keep_days": 7,
     "registry_wal": True,
+    # 【新增】强制网络模式：本地路径也使用网络兼容设置（用于开发测试）
+    "registry_force_network_mode": True,
+    
+    # ============================================================
+    # 本地缓存配置（第二阶段优化）
+    # ============================================================
+    "registry_local_cache_enabled": True,      # 是否启用本地只读缓存
+    "registry_local_cache_sync_interval": 600, # 同步间隔（秒），默认5分钟
+    
+    # ============================================================
+    # 写入队列配置（第三阶段优化）
+    # ============================================================
+    "registry_write_queue_enabled": True,      # 是否启用写入队列
+    "registry_write_batch_interval": 1.0,      # 批量写入间隔（秒）
+    "registry_write_batch_size": 50,           # 单批最大任务数
+    
+    # ============================================================
+    # 查询缓存配置
+    # ============================================================
+    "registry_query_cache_enabled": True,      # 是否启用查询结果缓存
+    "registry_query_cache_ttl": 60,            # 缓存有效期（秒）
+    
     # UI过滤相关（第二步UI使用）
-    "view_hide_overdue_for_designer_default": True,
+    "view_hide_overdue_for_designer_default": False,
     "view_overdue_days_threshold": 30,
 }
 
@@ -40,6 +62,12 @@ def load_config(config_path: str = "config.json", data_folder: str = None) -> di
                 for key in DEFAULTS.keys():
                     if key in user_config:
                         config[key] = user_config[key]
+        
+        # 【新增】应用强制网络模式设置
+        if config.get('registry_force_network_mode', False):
+            from .db import set_force_network_mode
+            set_force_network_mode(True)
+            
     except Exception as e:
         print(f"[Registry] 配置文件加载失败，使用默认值: {e}")
     
@@ -60,4 +88,48 @@ def load_config(config_path: str = "config.json", data_folder: str = None) -> di
         config['registry_db_path'] = os.path.join("result_cache", "registry.db")
     
     return config
+
+
+# 全局配置缓存
+_config_cache = None
+
+
+def get_config() -> dict:
+    """
+    获取当前配置（使用缓存）
+    
+    返回:
+        配置字典
+    """
+    global _config_cache
+    if _config_cache is None:
+        _config_cache = load_config()
+    return _config_cache
+
+
+def set_config(config: dict):
+    """
+    设置配置缓存
+    
+    参数:
+        config: 配置字典
+    """
+    global _config_cache
+    _config_cache = config
+
+
+def reload_config(config_path: str = "config.json", data_folder: str = None) -> dict:
+    """
+    重新加载配置
+    
+    参数:
+        config_path: 配置文件路径
+        data_folder: 数据文件夹路径
+        
+    返回:
+        配置字典
+    """
+    global _config_cache
+    _config_cache = load_config(config_path, data_folder)
+    return _config_cache
 
