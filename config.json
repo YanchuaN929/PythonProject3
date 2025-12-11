@@ -2,7 +2,7 @@
   "folder_path": "",
   "export_folder_path": "",
   "user_name": "",
-  "auto_startup": false,
+  "auto_startup": true,
   "minimize_to_tray": true,
   "dont_ask_again": false,
   "hide_previous_months": false,

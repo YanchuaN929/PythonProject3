@@ -6,7 +6,7 @@
 """
 
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 import tkinter.scrolledtext as scrolledtext
 import os
 import sys
@@ -179,6 +179,8 @@ class ExcelProcessorApp:
         self.resume_action = resume_action or ""
         self._manual_operation = False  # 标记当前操作是否为手动触发（用于弹窗控制）
         self._update_shutdown_scheduled = False
+        self._name_prompt_active = False  # 防止重复弹出姓名输入框
+        self._skip_auto_startup_bootstrap = bool(os.environ.get("EXCEL_PROCESSOR_SKIP_AUTO_STARTUP"))
         self.app_root = self._detect_app_root()
         self.current_version = self._load_current_version()
         self.root = tk.Tk()
@@ -234,7 +236,12 @@ class ExcelProcessorApp:
         self.process_file6_var = tk.BooleanVar(master=self.root, value=True)
         
         # 初始化设置相关变量（必须在WindowManager之前）
-        self.auto_startup_var = tk.BooleanVar(master=self.root, value=self.config.get("auto_startup", False))
+        self.auto_startup_var = tk.BooleanVar(master=self.root, value=self.config.get("auto_startup", True))
+        if not self._skip_auto_startup_bootstrap and self.config.get("auto_startup", True):
+            try:
+                self._initialize_auto_startup_setting()
+            except Exception as e:
+                print(f"[开机自启动] 自动初始化失败: {e}")
         self.show_close_dialog_var = tk.BooleanVar(master=self.root, value=not self.config.get("dont_ask_again", False))
         
         # 准备WindowManager需要的参数
@@ -685,7 +692,7 @@ class ExcelProcessorApp:
             "folder_path": "",
             "export_folder_path": "",
             "user_name": "",
-            "auto_startup": False,
+            "auto_startup": True,
             "minimize_to_tray": True,
             "dont_ask_again": False,
             "hide_previous_months": False,
@@ -731,6 +738,10 @@ class ExcelProcessorApp:
                 self.config = self.default_config.copy()
         except:
             self.config = self.default_config.copy()
+
+        # 【新增】确保auto_startup键存在（面向旧配置）
+        if "auto_startup" not in self.config:
+            self.config["auto_startup"] = True
 
         # 【默认路径填充】对于未设置路径的用户，使用默认路径
         # 规则：已有选过路径的用户优先使用其记忆的地址
@@ -1355,7 +1366,8 @@ class ExcelProcessorApp:
                     continue
             
             if not task_keys:
-                return df
+                # 【修复】即使没有Registry任务，也要应用超期过滤
+                return self._apply_overdue_filter(df, file_type)
             
             # 批量查询状态
             status_map = registry_hooks.get_display_status(task_keys)
@@ -1428,7 +1440,8 @@ class ExcelProcessorApp:
             
         except Exception as e:
             print(f"[Registry] 排除待确认行时出错（不影响主流程）: {e}")
-            return df
+            # 【修复】出错时也要尝试应用超期过滤
+            return self._apply_overdue_filter(df, file_type)
     
     def _apply_overdue_filter(self, df, file_type):
         """
@@ -2407,22 +2420,7 @@ class ExcelProcessorApp:
             pass
 
         def on_name_change(*_):
-            self.config["user_name"] = self.user_name_var.get().strip()
-            self.save_config()
-            try:
-                self.load_user_role()
-            except Exception:
-                pass
-            # 根据姓名更新按钮可用性
-            try:
-                self._enforce_user_name_gate(show_popup=False)
-            except Exception:
-                pass
-            # 【新增】角色改变后，重新筛选和显示所有已处理的数据
-            try:
-                self.refresh_all_processed_results()
-            except Exception as e:
-                print(f"刷新已处理结果失败: {e}")
+            self._handle_user_name_change(self.user_name_var.get(), trigger_refresh=False)
         self.user_name_var.trace_add('write', on_name_change)
         
         # 开机自启动选项
@@ -3576,14 +3574,9 @@ class ExcelProcessorApp:
         # 姓名必填校验
         try:
             if (not self.config.get("user_name", "").strip()) and self._should_show_popup():
-                message = "请先在设置中填写'姓名'，否则无法开始处理。"
-                try:
-                    from tkinter import messagebox as _mb
-                    _mb.showwarning("提示", message)
-                except Exception:
-                    pass
-                self._manual_operation = False
-                return
+                if not self._prompt_for_user_name(reason="start_processing"):
+                    self._manual_operation = False
+                    return
         except Exception:
             pass
         
@@ -4088,11 +4081,20 @@ class ExcelProcessorApp:
                         total_files_processed += file_count
                         
                         if not results4.empty:
+                            # 【关键修复】统计前也应用过滤
+                            display_count = len(results4)
+                            if self.target_files4 and len(self.target_files4) > 0:
+                                # 【修复】使用项目号到源文件的映射，支持多项目
+                                project_source_map = {str(pid): fp for fp, pid in self.target_files4}
+                                display_count = len(self._exclude_pending_confirmation_rows(
+                                    results4.copy(), self.target_files4[0][0], 4, None, project_source_map
+                                ))
+
                             processed_count += 1
                             if project_count > 1:
-                                completion_messages.append(f"外部需回复接口：{len(results4)} 行数据 ({project_count}个项目)")
+                                completion_messages.append(f"外部需回复接口：{display_count} 行数据 ({project_count}个项目)")
                             else:
-                                completion_messages.append(f"外部需回复接口：{len(results4)} 行数据")
+                                completion_messages.append(f"外部需回复接口：{display_count} 行数据")
                         else:
                             completion_messages.append("外部需回复接口：无符合条件的数据")
                     
@@ -4536,14 +4538,9 @@ class ExcelProcessorApp:
         # 姓名必填校验
         try:
             if (not self.config.get("user_name", "").strip()) and self._should_show_popup():
-                message = "请先在设置中填写'姓名'，否则无法导出结果。"
-                try:
-                    from tkinter import messagebox as _mb
-                    _mb.showwarning("提示", message)
-                except Exception:
-                    pass
-                self._manual_operation = False
-                return
+                if not self._prompt_for_user_name(reason="export_results"):
+                    self._manual_operation = False
+                    return
         except Exception:
             pass
         
@@ -4967,6 +4964,10 @@ class ExcelProcessorApp:
             except Exception:
                 print(f"打开目录时出现问题：{e}")
 
+    def _initialize_auto_startup_setting(self):
+        """默认开启开机自启动时静默写入注册表"""
+        self.add_to_startup(show_dialog=False)
+
     def toggle_auto_startup(self):
         """切换开机自启动状态"""
         self.config["auto_startup"] = self.auto_startup_var.get()
@@ -4983,6 +4984,66 @@ class ExcelProcessorApp:
         self.config["dont_ask_again"] = not self.show_close_dialog_var.get()
         self.save_config()
 
+    def _handle_user_name_change(self, new_name: str, trigger_refresh: bool = False):
+        """更新姓名后同步配置与角色，必要时刷新显示"""
+        sanitized = (new_name or "").strip()
+        self.config["user_name"] = sanitized
+        self.save_config()
+        try:
+            self.load_user_role()
+        except Exception as e:
+            print(f"[姓名录入] 加载角色失败: {e}")
+        try:
+            self._enforce_user_name_gate(show_popup=False)
+        except Exception:
+            pass
+        if trigger_refresh:
+            try:
+                self.refresh_all_processed_results()
+            except Exception as e:
+                print(f"刷新已处理结果失败: {e}")
+
+    def _prompt_for_user_name(self, reason: str = "") -> bool:
+        """弹出带输入框的提示，要求用户填写姓名"""
+        if getattr(self, '_name_prompt_active', False):
+            return False
+        
+        prompt_lines = [
+            "首次运行需要填写姓名，用于角色筛选、导出签名及任务指派。",
+        ]
+        if reason == "start_processing":
+            prompt_lines.append("当前操作需要根据姓名确定角色权限，才能开始处理数据。")
+        elif reason == "export_results":
+            prompt_lines.append("导出结果需要记录责任人姓名，请先完成登记。")
+        prompt_lines.append("请输入您的姓名：")
+        message = "\n".join(prompt_lines)
+        
+        self._name_prompt_active = True
+        try:
+            result = self._show_name_input_dialog(message)
+        finally:
+            self._name_prompt_active = False
+        
+        if result:
+            name = result.strip()
+            if name:
+                self._handle_user_name_change(name, trigger_refresh=False)
+                return True
+        return False
+
+    def _show_name_input_dialog(self, message: str) -> Optional[str]:
+        """实际的姓名输入对话框，独立成方法便于测试"""
+        try:
+            return simpledialog.askstring(
+                "完善姓名信息",
+                message,
+                parent=self.root,
+                initialvalue=self.config.get("user_name", "").strip()
+            )
+        except Exception as e:
+            print(f"[姓名录入] 弹出输入框失败: {e}")
+            return None
+
     def _enforce_user_name_gate(self, show_popup: bool = False):
         """当未填写姓名时，禁用"开始处理/导出结果"按钮并提示。"""
         has_name = bool(self.config.get("user_name", "").strip())
@@ -4997,13 +5058,22 @@ class ExcelProcessorApp:
         except Exception:
             pass
         if (show_popup and self._should_show_popup()) and not has_name:
-            try:
-                messagebox.showwarning("提示", "请先在设置中填写'姓名'，否则无法开始处理或导出结果。")
-            except Exception:
-                pass
+            while not self.config.get("user_name", "").strip():
+                if self._prompt_for_user_name(reason="first_run"):
+                    has_name = True
+                    break
+                try:
+                    messagebox.showwarning("提示", "请输入姓名后再继续使用程序。")
+                except Exception:
+                    pass
 
-    def add_to_startup(self):
-        """添加到开机自启动（增强版）"""
+    def add_to_startup(self, show_dialog: bool = True):
+        """添加到开机自启动（增强版）
+
+        参数:
+            show_dialog: 是否显示提示信息（默认True，用于用户手动操作）。
+                         在默认自动开启时设为False以静默运行。
+        """
         try:
             # 1. 获取可执行文件路径
             exe_path = os.path.abspath(sys.argv[0])
@@ -5044,7 +5114,7 @@ class ExcelProcessorApp:
                         raise ValueError("注册表值验证失败：写入的值与读取的值不一致")
                     
                     # 成功提示
-                    if self._should_show_popup():
+                    if show_dialog and self._should_show_popup():
                         messagebox.showinfo("成功", f"开机自启动设置成功\n\n路径：{exe_path}\n命令：{startup_cmd}")
                     
                 except Exception as verify_error:
@@ -5057,9 +5127,10 @@ class ExcelProcessorApp:
             
         except Exception as e:
             error_msg = f"设置开机自启动失败:\n\n{str(e)}\n\n可能原因:\n1. 权限不足（需要管理员权限）\n2. 注册表被安全软件保护\n3. 系统策略限制\n\n建议：请以管理员身份运行程序重试"
-            if self._should_show_popup():
+            if show_dialog and self._should_show_popup():
                 messagebox.showerror("错误", error_msg)
-            self.auto_startup_var.set(False)
+            if show_dialog:
+                self.auto_startup_var.set(False)
             # 记录到日志
             print(f"[开机自启动] 设置失败: {e}")
 

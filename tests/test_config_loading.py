@@ -200,6 +200,10 @@ class TestConfigValues:
             value = config.get(key)
             assert isinstance(value, bool), f"{key}应该是布尔类型，实际是{type(value)}"
 
+    def test_auto_startup_default_enabled(self, config):
+        """默认应开启开机自启动"""
+        assert config.get("auto_startup") is True
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

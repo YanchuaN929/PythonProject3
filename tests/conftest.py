@@ -13,8 +13,10 @@ import pandas as pd
 
 # 自动为所有ExcelProcessorApp实例设置默认姓名并禁止弹窗
 @pytest.fixture(autouse=True)
-def setup_default_user_name(monkeypatch):
+def setup_default_user_name(monkeypatch, request):
     """自动为ExcelProcessorApp设置默认姓名并禁止测试时弹窗"""
+    allow_empty = request.node.get_closest_marker("allow_empty_name") is not None
+    
     # 1. Mock所有messagebox调用，避免测试时弹窗
     try:
         from unittest.mock import Mock
@@ -26,23 +28,31 @@ def setup_default_user_name(monkeypatch):
     except ImportError:
         pass
     
-    # 2. Patch ExcelProcessorApp的初始化，提前设置姓名
-    original_init = None
+    # 跳过真实的开机自启动注册
+    monkeypatch.setenv("EXCEL_PROCESSOR_SKIP_AUTO_STARTUP", "1")
     
-    def patched_init(self, auto_mode=False):
-        # 在调用原始__init__之前，先设置一个临时config
-        self.config = {"user_name": "王丹丹"}
-        # 调用原始初始化
-        original_init(self, auto_mode)
-        # 确保姓名被设置（以防被覆盖）
-        self.config["user_name"] = "王丹丹"
+    # 2. Patch ExcelProcessorApp的初始化，提前设置姓名
+    if allow_empty:
+        yield
+        return
     
     try:
         from base import ExcelProcessorApp
-        original_init = ExcelProcessorApp.__init__
-        monkeypatch.setattr(ExcelProcessorApp, '__init__', patched_init)
     except ImportError:
-        pass  # base模块未导入时跳过
+        yield
+        return
+    
+    original_init = ExcelProcessorApp.__init__
+    
+    def patched_init(self, auto_mode=False, resume_action=""):
+        # 在调用原始__init__之前，先设置一个临时config
+        self.config = {"user_name": "王丹丹"}
+        # 调用原始初始化
+        original_init(self, auto_mode, resume_action)
+        # 确保姓名被设置（以防被覆盖）
+        self.config["user_name"] = "王丹丹"
+    
+    monkeypatch.setattr(ExcelProcessorApp, '__init__', patched_init)
     
     yield
 
