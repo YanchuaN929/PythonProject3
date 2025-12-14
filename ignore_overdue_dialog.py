@@ -481,7 +481,7 @@ class IgnoreOverdueDialog(tk.Toplevel):
             
             cfg = registry_hooks._cfg()
             db_path = cfg['registry_db_path']
-            wal = cfg.get('registry_wal', True)
+            wal = cfg.get('registry_wal', False)
             
             task_keys = []
             for task in selected_tasks:

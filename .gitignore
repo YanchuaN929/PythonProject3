@@ -9,6 +9,7 @@ __pycache__/
 venv/
 env/
 ENV/
+.venv/
 
 # IDE
 .vscode/
@@ -37,8 +38,13 @@ config.json
 file_cache.json
 
 # Result cache (optional - contains processing results)
-# Uncomment if you don't want to track pkl files
-# result_cache/*.pkl
+# 运行产物：缓存结果/数据库文件（建议不纳入版本控制）
+result_cache/
+*.pkl
+*.db
+*.sqlite
+*.sqlite3
+result_cache/write_tasks_state.json
 
 # Excel temporary files
 ~$*.xlsx

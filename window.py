@@ -13,6 +13,8 @@ import os
 import sys
 from date_utils import is_date_overdue
 
+from write_tasks.task_panel import TaskRecordPanel
+
 # 导入数据库状态显示器
 try:
     from db_status import DatabaseStatusIndicator, set_db_status_indicator
@@ -87,6 +89,25 @@ class WindowManager:
         
         # 存储按钮引用（供外部控制状态）
         self.buttons = {}
+        self.write_task_manager = None
+        self.task_panel = None
+        self._get_current_user_callback = lambda: ""
+
+    def set_write_task_manager(self, manager, get_current_user_callback=None):
+        """供外部注入写入任务管理器和当前用户获取函数。"""
+        self.write_task_manager = manager
+        if callable(get_current_user_callback):
+            self._get_current_user_callback = get_current_user_callback
+        if self.task_panel:
+            self.task_panel.bind_manager(self.write_task_manager)
+
+    def _get_current_user_name(self):
+        try:
+            if callable(self._get_current_user_callback):
+                return self._get_current_user_callback() or ""
+        except Exception:
+            pass
+        return ""
         
     def setup(self, config_data, process_vars, project_vars=None):
         """
@@ -272,9 +293,16 @@ class WindowManager:
     
     def create_info_section(self, parent):
         """创建文件信息显示区域"""
-        info_frame = ttk.LabelFrame(parent, text="Excel文件信息", padding="5")
-        info_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 0))
+        container = ttk.Frame(parent)
+        container.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 0))
+        container.columnconfigure(0, weight=3)
+        container.columnconfigure(1, weight=2)
+        container.rowconfigure(0, weight=1)
+        
+        info_frame = ttk.LabelFrame(container, text="Excel文件信息", padding="5")
+        info_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 6))
         info_frame.columnconfigure(0, weight=1)
+        info_frame.rowconfigure(0, weight=1)
         
         # 根据屏幕高度调整文本区域高度（调整为原来的2倍）
         screen_height = self.root.winfo_screenheight()
@@ -318,6 +346,19 @@ class WindowManager:
                     variable=var
                 )
                 cb.grid(row=0, column=idx, padx=5, pady=2, sticky=tk.W)
+        
+        # 写入任务记录面板
+        panel_frame = ttk.Frame(container)
+        panel_frame.grid(row=0, column=1, sticky=(tk.W, tk.E, tk.N, tk.S))
+        panel_frame.columnconfigure(0, weight=1)
+        panel_frame.rowconfigure(0, weight=1)
+        self.task_panel = TaskRecordPanel(
+            panel_frame,
+            get_current_user=self._get_current_user_name,
+        )
+        self.task_panel.pack(fill=tk.BOTH, expand=True)
+        if self.write_task_manager:
+            self.task_panel.bind_manager(self.write_task_manager)
     
     def create_tabs_section(self, parent):
         """创建选项卡区域"""
@@ -882,6 +923,7 @@ class WindowManager:
                 'project_id': project_id_val,
                 'interface_id': interface_id_val,
                 'source_column': metadata_row.get('_source_column', None) if '_source_column' in metadata_row.index else None,
+                'responsible': str(display_row.get('责任人', '')).strip() if '责任人' in display_row.index else '',
             }
             self._item_metadata[(viewer, item_id)] = metadata
             
@@ -1057,7 +1099,7 @@ class WindowManager:
                         try:
                             cfg = registry_hooks._cfg()
                             db_path = cfg.get('registry_db_path')
-                            wal = bool(cfg.get('registry_wal', True))
+                            wal = False
                         except:
                             print(f"[Registry] 无法获取数据库配置")
                             return
@@ -1317,6 +1359,9 @@ class WindowManager:
                 # 显示输入对话框
                 from input_handler import InterfaceInputDialog
                 
+                responsible = (metadata.get('responsible') or "").strip()
+                has_assignor = bool(responsible and responsible not in ("无", ""))
+
                 dialog = InterfaceInputDialog(
                     viewer,
                     interface_id,
@@ -1329,7 +1374,10 @@ class WindowManager:
                     file_manager=file_manager,  # 传递file_manager用于自动勾选
                     viewer=viewer,              # 传递viewer用于立即刷新
                     item_id=item_id,            # 传递当前行ID
-                    columns=columns             # 传递列名列表
+                    columns=columns,            # 传递列名列表
+                    on_success=getattr(self.app, '_handle_response_submitted', None),
+                    has_assignor=has_assignor,
+                    user_roles=getattr(self.app, "user_roles", None),
                 )
                 dialog.wait_window()
                 

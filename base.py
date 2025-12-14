@@ -24,6 +24,7 @@ from typing import List, Dict, Any, Optional
 
 # 导入窗口管理器
 from window import WindowManager
+from write_tasks import get_write_task_manager, get_pending_cache
 
 # 导入任务指派模块
 try:
@@ -181,28 +182,20 @@ class ExcelProcessorApp:
         self._update_shutdown_scheduled = False
         self._name_prompt_active = False  # 防止重复弹出姓名输入框
         self._skip_auto_startup_bootstrap = bool(os.environ.get("EXCEL_PROCESSOR_SKIP_AUTO_STARTUP"))
+        self._pending_write_waiting = False
         self.app_root = self._detect_app_root()
         self.current_version = self._load_current_version()
         self.root = tk.Tk()
         self.update_manager = self._create_update_manager()
         self.load_config()
+        # 启动阶段：严格不触网。任何涉及 folder_path(可能为UNC) 的访问，
+        # 统一延迟到用户点击“刷新文件列表”后再执行。
+        self._deferred_network_folder_path = self.config.get('folder_path', '').strip()
+        self._refresh_cancel_event = None
         
-        # 【多用户协作】如果配置中已有数据文件夹路径，立即设置
-        folder_path = self.config.get('folder_path', '').strip()
-        if folder_path:
-            try:
-                from registry import hooks as registry_hooks
-                registry_hooks.set_data_folder(folder_path)
-            except Exception as e:
-                print(f"[Registry] 设置数据文件夹失败: {e}")
-        
-        # 【启动时同步 update.exe】
-        # 因为 update.exe 在运行时无法更新自己，所以由主程序负责更新它
-        if self.update_manager and folder_path:
-            try:
-                self.update_manager.sync_update_executable(folder_path)
-            except Exception as e:
-                print(f"[Update] 同步 update.exe 失败: {e}")
+        # 【重要】不在启动阶段触发 registry / update 的任何网络访问：
+        # - 不 set_data_folder（避免后续钩子意外触发 load_config(data_folder=...)）
+        # - 不 sync_update_executable（UNC 不可用会卡死）
         
         # 【修复】加载用户角色（必须在load_config之后，确保能读取默认姓名）
         try:
@@ -217,6 +210,10 @@ class ExcelProcessorApp:
         # 初始化文件管理器（用于勾选状态管理）
         from file_manager import get_file_manager
         self.file_manager = get_file_manager()
+
+        # 写入任务管理器与临时缓存
+        self.write_task_manager = get_write_task_manager()
+        self.pending_cache = get_pending_cache()
         
         # 项目号筛选变量（7个项目号，默认全选）
         self.project_1818_var = tk.BooleanVar(master=self.root, value=True)
@@ -289,6 +286,7 @@ class ExcelProcessorApp:
         self.window_manager = WindowManager(self.root, callbacks)
         # 设置app引用，供WindowManager中需要访问用户信息的方法使用
         self.window_manager.app = self
+        self.window_manager.set_write_task_manager(self.write_task_manager, self._get_current_user_name)
         self.window_manager.setup(config_data, process_vars, project_vars)
         
         # 保存UI组件引用（向后兼容）
@@ -307,6 +305,41 @@ class ExcelProcessorApp:
         self.tab4_viewer = self.window_manager.viewers['tab4']
         self.tab5_viewer = self.window_manager.viewers['tab5']
         self.tab6_viewer = self.window_manager.viewers['tab6']
+
+        # 数据库状态指示器引用（确保属性存在，避免刷新收尾因 AttributeError 中断）
+        self.db_status = getattr(self.window_manager, 'db_status', None)
+        try:
+            folder_path = self.config.get('folder_path', '').strip()
+            if self.db_status:
+                if folder_path:
+                    from registry.config import load_config
+                    cfg = load_config(data_folder=folder_path, ensure_registry_dir=False)
+                    db_path = cfg.get('registry_db_path', '')
+                    if hasattr(self.db_status, 'set_deferred'):
+                        self.db_status.set_deferred(db_path=db_path)
+                    else:
+                        self.db_status.set_not_configured()
+                else:
+                    self.db_status.set_not_configured()
+        except Exception as e:
+            print(f"[数据库状态] 初始化失败: {e}")
+            self.db_status = None
+
+        # ============================================================
+        # UI任务队列：用于后台线程安全地请求主线程更新UI（Tk非线程安全）
+        # ============================================================
+        self._ui_task_queue = None
+        try:
+            self._init_ui_task_queue()
+        except Exception:
+            pass
+
+        # 启动后立即填充“Excel文件信息”区域的欢迎提示（不触网）
+        try:
+            self.show_initial_welcome_message()
+        except Exception:
+            pass
+
         self.tray_icon = None
         self.is_closing = False
         
@@ -986,10 +1019,15 @@ class ExcelProcessorApp:
             if self.db_status:
                 folder_path = self.config.get('folder_path', '').strip()
                 if folder_path:
+                    # 启动阶段不触网：只计算 db_path，不创建目录、不访问网络盘
                     from registry.config import load_config
-                    cfg = load_config(data_folder=folder_path)
+                    cfg = load_config(data_folder=folder_path, ensure_registry_dir=False)
                     db_path = cfg.get('registry_db_path', '')
-                    self.db_status.set_connected(db_path=db_path)
+                    # 显示“待刷新”，等用户点击刷新后再做真实网络初始化
+                    if hasattr(self.db_status, 'set_deferred'):
+                        self.db_status.set_deferred(db_path=db_path)
+                    else:
+                        self.db_status.set_not_configured()
                 else:
                     self.db_status.set_not_configured()
         except Exception as e:
@@ -1879,6 +1917,72 @@ class ExcelProcessorApp:
         self.show_empty_message(self.tab5_viewer, "等待加载三维提资接口数据")
         self.show_empty_message(self.tab6_viewer, "等待加载收发文函数据")
 
+    def _apply_pending_overrides(self, df, file_type):
+        try:
+            if hasattr(self, 'pending_cache') and self.pending_cache:
+                return self.pending_cache.apply_overrides_to_dataframe(
+                    df,
+                    file_type,
+                    user_roles=getattr(self, 'user_roles', []),
+                    current_user=getattr(self, 'user_name', "").strip(),
+                )
+        except Exception as e:
+            print(f"[PendingCache] 应用临时覆盖失败: {e}")
+        return df
+
+    def _refresh_views_with_pending_cache(self):
+        try:
+            if self.has_processed_results1 and self.processing_results is not None:
+                self.display_results(self.processing_results, show_popup=False)
+            if self.has_processed_results2 and self.processing_results2 is not None:
+                self.display_results2(self.processing_results2, show_popup=False)
+            if self.has_processed_results3 and self.processing_results3 is not None:
+                self.display_results3(self.processing_results3, show_popup=False)
+            if self.has_processed_results4 and self.processing_results4 is not None:
+                self.display_results4(self.processing_results4, show_popup=False)
+            if self.has_processed_results5 and self.processing_results5 is not None:
+                self.display_results5(self.processing_results5, show_popup=False)
+            if self.has_processed_results6 and self.processing_results6 is not None:
+                self.display_results6(self.processing_results6, show_popup=False)
+        except Exception as e:
+            print(f"[PendingCache] 刷新视图失败: {e}")
+
+    def _block_if_pending_write_tasks(self):
+        manager = getattr(self, "write_task_manager", None)
+        if manager is None:
+            return False
+
+        if not manager.has_pending_tasks():
+            self._pending_write_waiting = False
+            return False
+
+        if getattr(self, 'auto_mode', False) and not self._manual_operation:
+            if not self._pending_write_waiting:
+                print("[写入队列] 检测到待执行任务，自动模式将等待 20 秒后重试")
+            self._pending_write_waiting = True
+            try:
+                self.root.after(20000, self._retry_start_processing_after_pending)
+            except Exception:
+                pass
+        else:
+            try:
+                messagebox.showinfo("提示", "当前有写入任务待执行，请稍后再尝试处理。")
+            except Exception:
+                pass
+            self._manual_operation = False
+        return True
+
+    def _retry_start_processing_after_pending(self):
+        self._pending_write_waiting = False
+        self.start_processing()
+
+    def _handle_response_submitted(self, file_path: str, row_index: int, file_type: int):
+        """回文单号异步提交后的UI刷新。"""
+        try:
+            self._refresh_views_with_pending_cache()
+        except Exception as e:
+            print(f"[PendingCache] 回文提交后刷新失败: {e}")
+
     def _parse_interface_engineer_role(self, role: str):
         """
         解析接口工程师角色，提取项目号
@@ -1886,7 +1990,10 @@ class ExcelProcessorApp:
         返回：项目号字符串，如果不是接口工程师角色则返回None
         """
         import re
-        match = re.match(r'^(\d{4})接口工程师$', role.strip())
+        # 兼容更多真实写法：可能包含空格/括号说明/多角色拼接等
+        # 只要能找到“4位项目号 + 接口工程师”即可识别
+        s = (role or "").strip()
+        match = re.search(r'(\d{4})\s*接口工程师', s)
         if match:
             return match.group(1)
         return None
@@ -2694,122 +2801,233 @@ class ExcelProcessorApp:
     def refresh_file_list(self, show_popup=True):
         """刷新Excel文件列表"""
         import os
+        import threading
         
         # 标记为手动操作（用于弹窗控制）
         self._manual_operation = True
         
         folder_path = self.path_var.get().strip()
-        if not folder_path or not os.path.exists(folder_path):
+        # 重要：不要在主线程用 os.path.exists 检查 UNC 路径（网络不可用会卡死）
+        if not folder_path:
             self.update_file_info("请选择有效的文件夹路径")
             self._manual_operation = False
             return
+
+        # 防止重复刷新：如果已有刷新线程在跑，直接返回（不弹等待框，避免卡住）
+        try:
+            if getattr(self, "_refresh_thread", None) and getattr(self._refresh_thread, "is_alive", lambda: False)():
+                self.update_file_info("刷新正在进行中，请稍候…")
+                self._manual_operation = False
+                return
+        except Exception:
+            pass
         
         # 显示等待对话框（自动模式下不显示）
         waiting_dialog, _ = self.show_waiting_dialog("刷新文件列表", "正在刷新中，请稍后。。。 。。。")
-        
-        # 使用after方法延迟执行实际刷新操作，确保等待对话框能正确显示
-        def do_refresh():
+
+        # 刷新期间禁用按钮（避免并发触发）
+        try:
+            if hasattr(self, "refresh_button"):
+                self.refresh_button.config(state="disabled")
+        except Exception:
+            pass
+
+        # 捕获 Tk 变量（避免后台线程读 Tk 变量）
+        enabled_projects = []
+        try:
+            enabled_projects = self.get_enabled_projects()
+        except Exception:
+            enabled_projects = []
+
+        cancel_event = threading.Event()
+        self._refresh_cancel_event = cancel_event
+
+        def finalize_ui(file_info: str, popup_message: str, db_path: str = "", db_error: str = ""):
+            # 主线程：更新选项卡✓标记
             try:
-                # 查找Excel文件
+                # 先清理旧标记
+                for idx in range(6):
+                    self.update_tab_color(idx, "normal")
+                if getattr(self, "target_files1", None):
+                    self.update_tab_color(0, "green")
+                if getattr(self, "target_files2", None):
+                    self.update_tab_color(1, "green")
+                if getattr(self, "target_files3", None):
+                    self.update_tab_color(2, "green")
+                if getattr(self, "target_files4", None):
+                    self.update_tab_color(3, "green")
+                if getattr(self, "target_files5", None):
+                    self.update_tab_color(4, "green")
+                if getattr(self, "target_files6", None):
+                    self.update_tab_color(5, "green")
+            except Exception:
+                pass
+
+            # 先更新“Excel文件信息”（无论数据库状态如何，都必须更新）
+            try:
+                self.update_file_info(file_info)
+            except Exception:
+                pass
+
+            # 再更新数据库状态（必须使用 getattr 防止属性缺失中断 UI 更新）
+            try:
+                db_status = getattr(self, "db_status", None)
+                if db_path and db_status:
+                    if db_error:
+                        db_status.set_error(db_error, show_dialog=False)
+                    else:
+                        db_status.set_connected(db_path=db_path)
+            except Exception:
+                pass
+
+            # 刷新完成后，更新当前选项卡的显示（必须在主线程）
+            try:
+                self.refresh_current_tab_display()
+            except Exception:
+                pass
+
+            # 关闭等待对话框
+            try:
+                self.close_waiting_dialog(waiting_dialog)
+            except Exception:
+                pass
+
+            # 仅在手动刷新时显示弹窗（包含识别结果）
+            try:
+                if show_popup and self._should_show_popup():
+                    messagebox.showinfo("文件识别完成", popup_message)
+            except Exception:
+                pass
+
+            # 解除按钮禁用
+            try:
+                if hasattr(self, "refresh_button"):
+                    self.refresh_button.config(state="normal")
+            except Exception:
+                pass
+
+            # 重置手动操作标志
+            self._manual_operation = False
+
+        # 结果共享：后台线程只写这里；主线程轮询后调用 finalize_ui 更新界面
+        result_holder = {"done": False, "file_info": "", "popup": "", "db_path": "", "db_error": ""}
+        done_event = threading.Event()
+
+        def refresh_worker():
+            # 后台线程：允许触网/耗时IO，但不能调用任何 Tk API
+            popup_message = ""
+            file_info = ""
+            db_path = ""
+            db_error = ""
+            try:
+                # 1) 触网动作统一在刷新时执行：同步 update.exe
+                if self.update_manager and folder_path and not cancel_event.is_set():
+                    try:
+                        self.update_manager.sync_update_executable(folder_path)
+                    except Exception as e:
+                        print(f"[Update] 同步 update.exe 失败: {e}")
+
+                # 2) 触网动作统一在刷新时执行：Registry 数据目录/DB 路径初始化（会 mkdir）
+                if folder_path and not cancel_event.is_set():
+                    try:
+                        from registry import hooks as registry_hooks
+                        registry_hooks.set_data_folder(folder_path)
+                    except Exception as e:
+                        print(f"[Registry] 设置数据文件夹失败: {e}")
+                    try:
+                        from registry.config import load_config
+                        cfg = load_config(data_folder=folder_path, ensure_registry_dir=True)
+                        db_path = cfg.get("registry_db_path", "")
+                        # 若回退到了本地，给状态栏一个非阻塞错误提示
+                        if db_path and "result_cache" in os.path.normcase(db_path):
+                            db_error = "网络不可用，已回退到本地 registry.db"
+                    except Exception as e:
+                        db_error = f"Registry 初始化失败: {e}"
+
+                # 3) 查找Excel文件（可能是网络路径，放在后台线程）
                 excel_extensions = ['.xlsx', '.xls']
                 self.excel_files = []
-                
                 for file_path in Path(folder_path).iterdir():
+                    if cancel_event.is_set():
+                        return
                     if file_path.is_file() and file_path.suffix.lower() in excel_extensions:
                         self.excel_files.append(str(file_path))
-                
-                # 识别特定文件并更新选项卡状态
-                self.identify_target_files()
-                
-                # 检查文件标识并加载缓存
+
+                # 4) 识别特定文件（后台线程，避免触发 Tk：不更新 UI）
+                self.identify_target_files(update_ui=False, enabled_projects_override=enabled_projects)
+
+                # 5) 检查文件标识并加载缓存（后台线程）
                 self._check_and_load_cache()
-                
-                # 更新文件信息显示
+
+                # 6) 构建输出文本（后台线程）
                 if self.excel_files:
                     file_info = f"找到 {len(self.excel_files)} 个Excel文件:\n"
-                    
-                    # 统计所有识别到的文件
                     total_identified_files = 0
-                    project_summary = {}  # {项目号: 文件数量}
-                    
-                    # 显示待处理文件1信息（批量）
+                    project_summary = {}
+
                     if self.target_files1:
                         file_info += f"✓ 待处理文件1 (内部需打开接口): {len(self.target_files1)} 个文件\n"
-                        for file_path, project_id in self.target_files1:
-                            disp_pid = project_id if project_id else "未知项目"
-                            file_info += f"  - {disp_pid}: {os.path.basename(file_path)}\n"
+                        for fp, pid in self.target_files1:
+                            disp_pid = pid if pid else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
                             project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
                         total_identified_files += len(self.target_files1)
-                    
-                    # 显示待处理文件2信息（批量）
                     if self.target_files2:
                         file_info += f"✓ 待处理文件2 (内部需回复接口): {len(self.target_files2)} 个文件\n"
-                        for file_path, project_id in self.target_files2:
-                            disp_pid = project_id if project_id else "未知项目"
-                            file_info += f"  - {disp_pid}: {os.path.basename(file_path)}\n"
+                        for fp, pid in self.target_files2:
+                            disp_pid = pid if pid else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
                             project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
                         total_identified_files += len(self.target_files2)
-                    
-                    # 显示待处理文件3信息（批量）
                     if self.target_files3:
                         file_info += f"✓ 待处理文件3 (外部需打开接口): {len(self.target_files3)} 个文件\n"
-                        for file_path, project_id in self.target_files3:
-                            disp_pid = project_id if project_id else "未知项目"
-                            file_info += f"  - {disp_pid}: {os.path.basename(file_path)}\n"
+                        for fp, pid in self.target_files3:
+                            disp_pid = pid if pid else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
                             project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
                         total_identified_files += len(self.target_files3)
-                    
-                    # 显示待处理文件4信息（批量）
                     if self.target_files4:
                         file_info += f"✓ 待处理文件4 (外部需回复接口): {len(self.target_files4)} 个文件\n"
-                        for file_path, project_id in self.target_files4:
-                            disp_pid = project_id if project_id else "未知项目"
-                            file_info += f"  - {disp_pid}: {os.path.basename(file_path)}\n"
+                        for fp, pid in self.target_files4:
+                            disp_pid = pid if pid else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
                             project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
                         total_identified_files += len(self.target_files4)
-
-                    # 显示待处理文件5信息（批量）
                     if self.target_files5:
                         file_info += f"✓ 待处理文件5 (三维提资接口): {len(self.target_files5)} 个文件\n"
-                        for file_path, project_id in self.target_files5:
-                            disp_pid = project_id if project_id else "未知项目"
-                            file_info += f"  - {disp_pid}: {os.path.basename(file_path)}\n"
+                        for fp, pid in self.target_files5:
+                            disp_pid = pid if pid else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
                             project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
                         total_identified_files += len(self.target_files5)
-
-                    # 显示待处理文件6信息（批量）
                     if self.target_files6:
                         file_info += f"✓ 待处理文件6 (收发文函): {len(self.target_files6)} 个文件\n"
-                        for file_path, project_id in self.target_files6:
-                            disp_pid = project_id if project_id else "未知项目"
-                            file_info += f"  - {disp_pid}: {os.path.basename(file_path)}\n"
+                        for fp, pid in self.target_files6:
+                            disp_pid = pid if pid else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
                             project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
                         total_identified_files += len(self.target_files6)
-                    
-                    # 项目汇总信息
+
                     if project_summary:
                         file_info += f"\n📊 项目汇总:\n"
-                        for project_id, count in sorted(project_summary.items()):
-                            disp_pid = project_id if project_id else "未知项目"
+                        for pid, count in sorted(project_summary.items()):
+                            disp_pid = pid if pid else "未知项目"
                             file_info += f"  项目 {disp_pid}: {count} 个文件\n"
                         file_info += f"  总计: {len(project_summary)} 个项目, {total_identified_files} 个待处理文件\n"
-                    
-                    # 显示被忽略的文件（项目号筛选）
+
                     if hasattr(self, 'ignored_files') and self.ignored_files:
                         file_info += f"\n⚠️ 已忽略的文件（项目号未勾选）:\n"
                         ignored_by_project = {}
-                        for file_path, project_id, file_type in self.ignored_files:
-                            if project_id not in ignored_by_project:
-                                ignored_by_project[project_id] = []
-                            ignored_by_project[project_id].append((os.path.basename(file_path), file_type))
-                        
-                        for project_id in sorted(ignored_by_project.keys()):
-                            file_info += f"  项目 {project_id}:\n"
-                            for filename, file_type in ignored_by_project[project_id]:
-                                file_info += f"    - {file_type}: {filename}\n"
+                        for fp, pid, ftype in self.ignored_files:
+                            if pid not in ignored_by_project:
+                                ignored_by_project[pid] = []
+                            ignored_by_project[pid].append((os.path.basename(fp), ftype))
+                        for pid in sorted(ignored_by_project.keys()):
+                            file_info += f"  项目 {pid}:\n"
+                            for filename, ftype in ignored_by_project[pid]:
+                                file_info += f"    - {ftype}: {filename}\n"
                         file_info += f"  总计: {len(ignored_by_project)} 个项目, {len(self.ignored_files)} 个文件被忽略\n"
-                    
-                    # 显示示例文件（主界面显示第一个文件作为示例）
+
                     file_info += f"\n📋 主界面显示示例:\n"
                     if self.target_file1:
                         file_info += f"  内部需打开接口: {os.path.basename(self.target_file1)} (项目{self.target_file1_project_id})\n"
@@ -2819,41 +3037,68 @@ class ExcelProcessorApp:
                         file_info += f"  外部需打开接口: {os.path.basename(self.target_file3)} (项目{self.target_file3_project_id})\n"
                     if self.target_file4:
                         file_info += f"  外部需回复接口: {os.path.basename(self.target_file4)} (项目{self.target_file4_project_id})\n"
-                    
+
                     file_info += f"\n📁 全部Excel文件列表:\n"
-                    for i, file_path in enumerate(self.excel_files, 1):
-                        file_name = os.path.basename(file_path)
-                        file_size = os.path.getsize(file_path)
-                        file_info += f"{i}. {file_name} ({file_size} 字节)\n"
-                        
-                    # 准备弹窗信息
+                    for i, fp in enumerate(self.excel_files, 1):
+                        try:
+                            file_name = os.path.basename(fp)
+                            file_size = os.path.getsize(fp)
+                            file_info += f"{i}. {file_name} ({file_size} 字节)\n"
+                        except Exception:
+                            file_info += f"{i}. {os.path.basename(fp)}\n"
+
                     popup_message = self._generate_popup_message(project_summary, total_identified_files)
-                    
                 else:
                     file_info = "在指定路径下未找到Excel文件"
                     popup_message = "未找到任何Excel文件"
-                
-                self.update_file_info(file_info)
-                
+
             except Exception as e:
-                self.update_file_info(f"读取文件列表时发生错误: {str(e)}")
-                popup_message = f"读取文件列表时发生错误: {str(e)}"
-            
-            # 刷新完成后，更新当前选项卡的显示
-            self.refresh_current_tab_display()
-            
-            # 关闭等待对话框
-            self.close_waiting_dialog(waiting_dialog)
-            
-            # 仅在手动刷新时显示弹窗（包含识别结果）
-            if show_popup and self._should_show_popup():
-                messagebox.showinfo("文件识别完成", popup_message)
-            
-            # 重置手动操作标志
-            self._manual_operation = False
-        
-        # 延迟执行刷新操作，确保等待对话框能够显示
-        self.root.after(100, do_refresh)
+                file_info = f"读取文件列表时发生错误: {str(e)}"
+                popup_message = file_info
+
+            # 不触碰Tk：只写共享结果，交给主线程轮询执行 finalize_ui
+            try:
+                result_holder["file_info"] = file_info
+                result_holder["popup"] = popup_message
+                result_holder["db_path"] = db_path
+                result_holder["db_error"] = db_error
+                result_holder["done"] = True
+                done_event.set()
+            except Exception:
+                pass
+
+        # 先让等待框显示出来，再启动线程
+        def start_thread():
+            try:
+                self._refresh_thread = threading.Thread(target=refresh_worker, daemon=True)
+                self._refresh_thread.start()
+            except Exception as e:
+                finalize_ui(f"启动刷新线程失败: {e}", f"启动刷新线程失败: {e}")
+
+        self.root.after(100, start_thread)
+        # 注意：最终UI更新由主线程轮询 done_event 后执行 finalize_ui（Tk非线程安全）
+
+        def _poll_finalize():
+            # 主线程轮询：一旦后台线程写入结果就更新UI
+            try:
+                if done_event.is_set() and result_holder.get("done"):
+                    finalize_ui(
+                        result_holder.get("file_info", ""),
+                        result_holder.get("popup", ""),
+                        db_path=result_holder.get("db_path", ""),
+                        db_error=result_holder.get("db_error", ""),
+                    )
+                    # 仅打印一次，便于你从终端确认 finalize_ui 确实执行了
+                    return
+            except Exception:
+                pass
+
+            try:
+                self.root.after(100, _poll_finalize)
+            except Exception:
+                pass
+
+        self.root.after(150, _poll_finalize)
 
     def _generate_popup_message(self, project_summary, total_identified_files):
         """生成弹窗显示的识别结果信息"""
@@ -3121,8 +3366,14 @@ class ExcelProcessorApp:
         except Exception as e:
             print(f"刷新当前选项卡显示失败: {e}")
 
-    def identify_target_files(self):
-        """识别特定格式的目标文件"""
+    def identify_target_files(self, update_ui: bool = True, enabled_projects_override=None):
+        """
+        识别特定格式的目标文件
+        
+        参数:
+            update_ui: 是否更新Tk界面（选项卡✓标记）。后台线程调用时必须为False。
+            enabled_projects_override: 可选，直接传入已勾选的项目号列表，避免后台线程读取Tk变量。
+        """
         # 重置单文件状态（兼容性保留）
         self.target_file1 = None
         self.target_file1_project_id = None
@@ -3167,16 +3418,19 @@ class ExcelProcessorApp:
         self.has_processed_results4 = False
         self.has_processed_results5 = False
         self.has_processed_results6 = False
-        # 重置选项卡状态
-        self.update_tab_color(0, "normal")
-        self.update_tab_color(1, "normal")
-        self.update_tab_color(2, "normal")
-        self.update_tab_color(3, "normal")
+        # 重置选项卡状态（仅主线程可更新UI）
+        if update_ui:
+            self.update_tab_color(0, "normal")
+            self.update_tab_color(1, "normal")
+            self.update_tab_color(2, "normal")
+            self.update_tab_color(3, "normal")
         if not self.excel_files:
             return
         
-        # 获取用户勾选的项目号
-        enabled_projects = self.get_enabled_projects()
+        # 获取用户勾选的项目号（后台线程禁止读Tk变量）
+        enabled_projects = enabled_projects_override
+        if enabled_projects is None:
+            enabled_projects = self.get_enabled_projects()
         try:
             # 安全导入main模块（不依赖文件系统检查）
             try:
@@ -3201,7 +3455,8 @@ class ExcelProcessorApp:
                 if self.target_files1:
                     # 兼容性：设置第一个文件为单文件变量
                     self.target_file1, self.target_file1_project_id = self.target_files1[0]
-                    self.update_tab_color(0, "green")
+                    if update_ui:
+                        self.update_tab_color(0, "green")
                     # 【修复】不再在识别文件时立即显示原始数据，避免覆盖后续的处理结果
                     # self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
             elif hasattr(main, 'find_target_file'):
@@ -3212,7 +3467,8 @@ class ExcelProcessorApp:
                     self.target_files1, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件1")
                     self.ignored_files.extend(ignored)
                     if self.target_files1:
-                        self.update_tab_color(0, "green")
+                        if update_ui:
+                            self.update_tab_color(0, "green")
                         # 【修复】不再在识别文件时立即显示原始数据，避免覆盖后续的处理结果
                         # self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
                     else:
@@ -3226,7 +3482,8 @@ class ExcelProcessorApp:
                 self.ignored_files.extend(ignored)
                 if self.target_files2:
                     self.target_file2, self.target_file2_project_id = self.target_files2[0]
-                    self.update_tab_color(1, "green")
+                    if update_ui:
+                        self.update_tab_color(1, "green")
             elif hasattr(main, 'find_target_file2'):
                 self.target_file2, self.target_file2_project_id = main.find_target_file2(self.excel_files)
                 if self.target_file2:
@@ -3237,7 +3494,8 @@ class ExcelProcessorApp:
                         self.target_file2 = None
                         self.target_file2_project_id = None
                     else:
-                        self.update_tab_color(1, "green")
+                        if update_ui:
+                            self.update_tab_color(1, "green")
             
             if hasattr(main, 'find_all_target_files3'):
                 all_files = main.find_all_target_files3(self.excel_files)
@@ -3245,7 +3503,8 @@ class ExcelProcessorApp:
                 self.ignored_files.extend(ignored)
                 if self.target_files3:
                     self.target_file3, self.target_file3_project_id = self.target_files3[0]
-                    self.update_tab_color(2, "green")
+                    if update_ui:
+                        self.update_tab_color(2, "green")
             elif hasattr(main, 'find_target_file3'):
                 self.target_file3, self.target_file3_project_id = main.find_target_file3(self.excel_files)
                 if self.target_file3:
@@ -3256,7 +3515,8 @@ class ExcelProcessorApp:
                         self.target_file3 = None
                         self.target_file3_project_id = None
                     else:
-                        self.update_tab_color(2, "green")
+                        if update_ui:
+                            self.update_tab_color(2, "green")
             
             if hasattr(main, 'find_all_target_files4'):
                 all_files = main.find_all_target_files4(self.excel_files)
@@ -3264,7 +3524,8 @@ class ExcelProcessorApp:
                 self.ignored_files.extend(ignored)
                 if self.target_files4:
                     self.target_file4, self.target_file4_project_id = self.target_files4[0]
-                    self.update_tab_color(3, "green")
+                    if update_ui:
+                        self.update_tab_color(3, "green")
             elif hasattr(main, 'find_target_file4'):
                 self.target_file4, self.target_file4_project_id = main.find_target_file4(self.excel_files)
                 if self.target_file4:
@@ -3275,21 +3536,24 @@ class ExcelProcessorApp:
                         self.target_file4 = None
                         self.target_file4_project_id = None
                     else:
-                        self.update_tab_color(3, "green")
+                        if update_ui:
+                            self.update_tab_color(3, "green")
 
             if hasattr(main, 'find_all_target_files5'):
                 all_files = main.find_all_target_files5(self.excel_files)
                 self.target_files5, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件5")
                 self.ignored_files.extend(ignored)
                 if self.target_files5:
-                    self.update_tab_color(4, "green")
+                    if update_ui:
+                        self.update_tab_color(4, "green")
 
             if hasattr(main, 'find_all_target_files6'):
                 all_files = main.find_all_target_files6(self.excel_files)
                 self.target_files6, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件6")
                 self.ignored_files.extend(ignored)
                 if self.target_files6:
-                    self.update_tab_color(5, "green")
+                    if update_ui:
+                        self.update_tab_color(5, "green")
             
             # ========== 方案3：并发预加载所有文件（速度提升60%+）==========
             print("\n🚀 开始并发预加载Excel文件...")
@@ -3559,13 +3823,78 @@ class ExcelProcessorApp:
 
     def update_file_info(self, text):
         """更新文件信息显示"""
-        self.file_info_text.config(state='normal')
-        self.file_info_text.delete('1.0', tk.END)
-        self.file_info_text.insert('1.0', text)
-        self.file_info_text.config(state='disabled')
+        # 优先交给 WindowManager 更新（避免 base.py/WindowManager 双UI导致写入到错误控件）
+        try:
+            wm = getattr(self, "window_manager", None)
+            if wm and hasattr(wm, "update_file_info"):
+                wm.update_file_info(text)
+                return
+        except Exception:
+            pass
+
+        # 兜底：直接操作文本控件
+        try:
+            self.file_info_text.config(state='normal')
+            self.file_info_text.delete('1.0', tk.END)
+            self.file_info_text.insert('1.0', text)
+            self.file_info_text.config(state='disabled')
+        except Exception:
+            pass
+
+    # ============================================================
+    # UI任务队列（主线程轮询执行）
+    # ============================================================
+    def _init_ui_task_queue(self):
+        """
+        初始化UI任务队列并启动主线程轮询。
+        后台线程只能入队，不允许直接调用任何Tk API。
+        """
+        import queue
+        if getattr(self, "_ui_task_queue", None) is None:
+            self._ui_task_queue = queue.Queue()
+        # 启动轮询（只在主线程调用）
+        try:
+            self.root.after(100, self._drain_ui_tasks)
+        except Exception:
+            pass
+
+    def _post_ui_task(self, func):
+        """后台线程安全入队一个需要在主线程执行的UI任务"""
+        q = getattr(self, "_ui_task_queue", None)
+        if q is None:
+            # 极端情况：未初始化则尽力初始化（可能失败）
+            try:
+                self._init_ui_task_queue()
+                q = self._ui_task_queue
+            except Exception:
+                q = None
+        if q is not None:
+            q.put(func)
+
+    def _drain_ui_tasks(self):
+        """主线程：批量执行队列中的UI任务，并重新调度下一次轮询"""
+        q = getattr(self, "_ui_task_queue", None)
+        if q is None:
+            return
+        # 每次最多执行一批，避免长时间占用UI线程
+        for _ in range(50):
+            try:
+                func = q.get_nowait()
+            except Exception:
+                break
+            try:
+                func()
+            except Exception:
+                pass
+        try:
+            self.root.after(100, self._drain_ui_tasks)
+        except Exception:
+            pass
 
     def start_processing(self):
         """开始处理Excel文件"""
+        if self._block_if_pending_write_tasks():
+            return
         
         if not self._ensure_up_to_date(UpdateReason.START_PROCESSING, UpdateReason.START_PROCESSING):
             self._manual_operation = False
@@ -4368,10 +4697,12 @@ class ExcelProcessorApp:
         self.processing_results = results
         self.has_processed_results1 = True  # 标记已有处理结果
         
+        display_df = self._apply_pending_overrides(results, 1)
+
         print(f"处理完成：原始数据经过筛选后剩余 {len(results)} 行符合条件的数据")
         
         # 基于原始文件数据，过滤显示符合条件的行
-        self.filter_and_display_results(results)
+        self.filter_and_display_results(display_df)
         
         # 更新导出按钮状态
         self.update_export_button_state()
@@ -4451,9 +4782,10 @@ class ExcelProcessorApp:
             return
         self.processing_results2 = results
         self.has_processed_results2 = True  # 标记已有处理结果
+        display_df = self._apply_pending_overrides(results, 2)
         # 不要drop原始行号列，因为需要它来加载勾选状态
-        excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab2_viewer, results, "内部需回复接口", excel_row_numbers)
+        excel_row_numbers = list(display_df['原始行号'])
+        self.display_excel_data_with_original_rows(self.tab2_viewer, display_df, "内部需回复接口", excel_row_numbers)
         self.update_export_button_state()
         
         # 显示处理完成信息（仅在旧版调用时显示）
@@ -4469,9 +4801,10 @@ class ExcelProcessorApp:
             return
         self.processing_results3 = results
         self.has_processed_results3 = True  # 标记已有处理结果
+        display_df = self._apply_pending_overrides(results, 3)
         # 不要drop原始行号列，因为需要它来加载勾选状态
-        excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab3_viewer, results, "外部需打开接口", excel_row_numbers)
+        excel_row_numbers = list(display_df['原始行号'])
+        self.display_excel_data_with_original_rows(self.tab3_viewer, display_df, "外部需打开接口", excel_row_numbers)
         self.update_export_button_state()
         
         # 显示处理完成信息（仅在旧版调用时显示）
@@ -4487,9 +4820,10 @@ class ExcelProcessorApp:
             return
         self.processing_results4 = results
         self.has_processed_results4 = True  # 标记已有处理结果
+        display_df = self._apply_pending_overrides(results, 4)
         # 不要drop原始行号列，因为需要它来加载勾选状态
-        excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab4_viewer, results, "外部需回复接口", excel_row_numbers)
+        excel_row_numbers = list(display_df['原始行号'])
+        self.display_excel_data_with_original_rows(self.tab4_viewer, display_df, "外部需回复接口", excel_row_numbers)
         self.update_export_button_state()
         
         # 显示处理完成信息（仅在旧版调用时显示）
@@ -4505,9 +4839,10 @@ class ExcelProcessorApp:
             return
         self.processing_results5 = results
         self.has_processed_results5 = True
+        display_df = self._apply_pending_overrides(results, 5)
         # 不要drop原始行号列，因为需要它来加载勾选状态
-        excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab5_viewer, results, "三维提资接口", excel_row_numbers)
+        excel_row_numbers = list(display_df['原始行号'])
+        self.display_excel_data_with_original_rows(self.tab5_viewer, display_df, "三维提资接口", excel_row_numbers)
         self.update_export_button_state()
         if show_popup:
             messagebox.showinfo("处理完成", f"三维提资接口数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【三维提资接口】选项卡中更新显示。")
@@ -4521,9 +4856,10 @@ class ExcelProcessorApp:
             return
         self.processing_results6 = results
         self.has_processed_results6 = True
+        display_df = self._apply_pending_overrides(results, 6)
         # 不要drop原始行号列，因为需要它来加载勾选状态
-        excel_row_numbers = list(results['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab6_viewer, results, "收发文函", excel_row_numbers)
+        excel_row_numbers = list(display_df['原始行号'])
+        self.display_excel_data_with_original_rows(self.tab6_viewer, display_df, "收发文函", excel_row_numbers)
         self.update_export_button_state()
         if show_popup and self._should_show_popup():
             messagebox.showinfo("处理完成", f"收发文函数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【收发文函】选项卡中更新显示。")
@@ -5608,7 +5944,9 @@ class ExcelProcessorApp:
                 if hasattr(self, result_attr):
                     df = getattr(self, result_attr)
                     if df is not None and not df.empty:
-                        processed_results[i] = df
+                        # _apply_pending_overrides 内部会读取 self.user_roles / self.user_name
+                        # 这里只需要传 df 与 file_type，避免参数不匹配导致指派检测失败
+                        processed_results[i] = self._apply_pending_overrides(df, i)
             
             # 检测未指派任务
             user_roles = getattr(self, 'user_roles', [])
@@ -5636,6 +5974,12 @@ class ExcelProcessorApp:
         except Exception as e:
             print(f"获取项目号失败: {e}")
             return None
+
+    def _get_current_user_name(self) -> str:
+        try:
+            return self.config.get("user_name", "").strip()
+        except Exception:
+            return ""
     
     def _show_assignment_reminder(self):
         """显示指派提醒弹窗"""
@@ -5675,18 +6019,11 @@ class ExcelProcessorApp:
                 # 【修复】只有在成功指派后才刷新
                 # 检查对话框的结果（需要在AssignmentDialog中添加标记）
                 if hasattr(dialog, 'assignment_successful') and dialog.assignment_successful:
-                    # 指派完成后清除缓存并重新处理
                     try:
-                        print("[指派] 开始刷新显示...")
-                        # 清除文件缓存（但不清除Registry数据库）
                         self.file_manager.clear_file_caches_only()
-                        # 重新处理数据
-                        self.start_processing()
-                        print("[指派] 刷新完成")
-                    except Exception as e:
-                        print(f"[指派] 刷新显示失败: {e}")
-                        import traceback
-                        traceback.print_exc()
+                    except Exception:
+                        pass
+                    self._refresh_views_with_pending_cache()
                 else:
                     print("[指派] 用户取消或未完成指派，不刷新")
             else:
@@ -5726,19 +6063,11 @@ class ExcelProcessorApp:
             
             # 【修复】只有成功指派后才刷新
             if hasattr(dialog, 'assignment_successful') and dialog.assignment_successful:
-                # 指派完成后清除缓存并重新处理
                 try:
-                    print("[指派] 开始刷新显示...")
-                    # 清除文件缓存（但不清除Registry数据库）
                     self.file_manager.clear_file_caches_only()
-                    # 重新处理数据
-                    self.start_processing()
-                    print("[指派] 刷新完成")
-                    
-                except Exception as e:
-                    print(f"[指派] 刷新显示失败: {e}")
-                    import traceback
-                    traceback.print_exc()
+                except Exception:
+                    pass
+                self._refresh_views_with_pending_cache()
             else:
                 print("[指派] 用户取消或未完成指派，不刷新")
                 

@@ -11,6 +11,8 @@ from openpyxl import load_workbook
 from datetime import date
 import os
 
+from write_tasks import get_write_task_manager, get_pending_cache
+
 # 导入Registry模块
 try:
     from registry import hooks as registry_hooks
@@ -106,7 +108,8 @@ class InterfaceInputDialog(tk.Toplevel):
     
     def __init__(self, parent, interface_id, file_type, file_path, row_index, 
                  user_name, project_id, source_column=None, file_manager=None, 
-                 viewer=None, item_id=None, columns=None):
+                 viewer=None, item_id=None, columns=None, on_success=None, has_assignor=False,
+                 user_roles=None):
         """
         参数:
             parent: 父窗口
@@ -129,12 +132,15 @@ class InterfaceInputDialog(tk.Toplevel):
         self.file_path = file_path
         self.row_index = row_index
         self.user_name = user_name
+        self.user_roles = user_roles or []
         self.project_id = project_id
         self.source_column = source_column
         self.file_manager = file_manager
         self.viewer = viewer  # 保存Treeview引用
         self.item_id = item_id  # 保存行ID
         self.columns = columns  # 保存列名
+        self.on_success = on_success
+        self.has_assignor = has_assignor
         
         self.setup_ui()
     
@@ -181,131 +187,53 @@ class InterfaceInputDialog(tk.Toplevel):
             messagebox.showwarning("警告", "请输入回文单号", parent=self)
             return
         
-        # 写入Excel
         try:
-            success = write_response_to_excel(
-                self.file_path,
-                self.file_type,
-                self.row_index,
-                response_number,
-                self.user_name,
-                self.project_id,
-                self.source_column
+            manager = get_write_task_manager()
+            role = ""
+            try:
+                if isinstance(self.user_roles, (list, tuple)) and self.user_roles:
+                    role = " ".join(str(x) for x in self.user_roles if x)
+                elif self.user_roles:
+                    role = str(self.user_roles)
+            except Exception:
+                role = ""
+            task = manager.submit_response_task(
+                file_path=self.file_path,
+                file_type=self.file_type,
+                row_index=self.row_index,
+                interface_id=self.interface_id,
+                response_number=response_number,
+                user_name=self.user_name,
+                project_id=self.project_id,
+                source_column=self.source_column,
+                role=role,
+                description=f"{self.user_name} 填写回文单号 {self.interface_id}",
             )
-            
-            if success:
-                # 【关键】Excel写入成功后，才更新Registry
-                if registry_hooks:
-                    try:
-                        # 【修复】去除接口号中的角色后缀，并提取角色信息
-                        # 例如："S-SA---1JT-01-25C1-25E6(设计人员)" -> 接口号="S-SA---1JT-01-25C1-25E6", 角色="设计人员"
-                        import re
-                        clean_interface_id = re.sub(r'\([^)]*\)$', '', self.interface_id).strip()
-                        role_match = re.search(r'\(([^)]+)\)$', self.interface_id)
-                        role = role_match.group(1) if role_match else None
-                        
-                        registry_hooks.on_response_written(
-                            file_type=self.file_type,
-                            file_path=self.file_path,
-                            row_index=self.row_index,
-                            interface_id=clean_interface_id,  # 使用清理后的接口号
-                            response_number=response_number,
-                            user_name=self.user_name,
-                            project_id=self.project_id,
-                            source_column=self.source_column,
-                            role=role  # 传递角色信息
-                        )
-                        print(f"[Registry] ✓ 已记录回文单号写入事件")
-                    except Exception as e:
-                        print(f"[Registry] 回文单号写入钩子调用失败: {e}")
-                        # Registry更新失败不影响Excel写入，但要提示用户
-                        import traceback
-                        traceback.print_exc()
-                
-                # 【新增】清除该文件的缓存，强制下次重新处理以应用Registry逻辑
-                if self.file_manager:
-                    try:
-                        self.file_manager.clear_file_cache(self.file_path)
-                        print(f"[缓存] ✓ 已清除文件缓存，下次处理将应用Registry逻辑")
-                    except Exception as e:
-                        print(f"[缓存] 清除文件缓存失败: {e}")
-                
-                # 【自动勾选】设计人员回填后自动勾选"已完成"
-                if self.file_manager:
-                    try:
-                        self.file_manager.set_row_completed(
-                            self.file_path,
-                            self.row_index,
-                            True,
-                            self.user_name
-                        )
-                        print(f"[自动勾选] 已为设计人员{self.user_name}自动勾选行{self.row_index}")
-                    except Exception as e:
-                        print(f"[自动勾选] 失败: {e}")
-                
-                # 【立即刷新显示】更新Treeview中的勾选框和状态列
-                if self.viewer and self.item_id and self.columns:
-                    try:
-                        # 获取当前行的值
-                        current_values = list(self.viewer.item(self.item_id, "values"))
-                        
-                        # 1. 更新"是否已完成"列（勾选框）
-                        if "是否已完成" in self.columns:
-                            checkbox_idx = self.columns.index("是否已完成")
-                            if checkbox_idx < len(current_values):
-                                current_values[checkbox_idx] = "☑"
-                        
-                        # 2. 更新"状态"列（显示"待审查"）
-                        if "状态" in self.columns:
-                            status_idx = self.columns.index("状态")
-                            if status_idx < len(current_values):
-                                # 查询该任务的display_status
-                                try:
-                                    from registry.util import make_task_id
-                                    import re
-                                    
-                                    # 清理接口号
-                                    clean_interface_id = re.sub(r'\([^)]*\)$', '', self.interface_id).strip()
-                                    
-                                    task_key = {
-                                        'file_type': self.file_type,
-                                        'project_id': self.project_id,
-                                        'interface_id': clean_interface_id,
-                                        'source_file': os.path.basename(self.file_path),
-                                        'row_index': self.row_index,
-                                        'interface_time': ''  # 时间信息可选
-                                    }
-                                    
-                                    # 查询状态
-                                    status_map = registry_hooks.get_display_status([task_key], current_user_roles_str='')
-                                    tid = make_task_id(
-                                        self.file_type,
-                                        self.project_id,
-                                        clean_interface_id,
-                                        os.path.basename(self.file_path),
-                                        self.row_index
-                                    )
-                                    
-                                    # 更新状态列
-                                    if tid in status_map and status_map[tid]:
-                                        current_values[status_idx] = status_map[tid]
-                                        print(f"[立即刷新] 状态列已更新为: {status_map[tid]}")
-                                except Exception as e:
-                                    print(f"[立即刷新] 查询状态失败: {e}")
-                        
-                        # 应用更新
-                        self.viewer.item(self.item_id, values=current_values)
-                        print(f"[立即刷新] ✓ Treeview显示已更新（勾选框+状态列）")
-                        
-                    except Exception as e:
-                        print(f"[立即刷新] 失败: {e}")
-                
-                messagebox.showinfo("成功", "回文单号已保存", parent=self)
-                self.destroy()
-            else:
-                messagebox.showerror("失败", "保存失败，请重试", parent=self)
+            try:
+                cache = get_pending_cache()
+                cache.add_response_entry(
+                    task.task_id,
+                    {
+                        "file_path": self.file_path,
+                        "file_type": self.file_type,
+                        "row_index": self.row_index,
+                        "response_number": response_number,
+                        "user_name": self.user_name,
+                        "project_id": self.project_id,
+                        "has_assignor": self.has_assignor,
+                    },
+                )
+            except Exception as cache_error:
+                print(f"[PendingCache] 记录回文单号任务失败: {cache_error}")
+            messagebox.showinfo("已提交", "回文单号写入任务已提交，后台将自动执行。", parent=self)
+            if callable(self.on_success):
+                try:
+                    self.on_success(self.file_path, self.row_index, self.file_type)
+                except Exception as cb_error:
+                    print(f"[PendingCache] 回调失败: {cb_error}")
+            self.destroy()
         except Exception as e:
-            messagebox.showerror("错误", f"保存失败: {str(e)}", parent=self)
+            messagebox.showerror("错误", f"提交写入任务失败: {str(e)}", parent=self)
 
 
 def write_response_to_excel(file_path, file_type, row_index, response_number, 

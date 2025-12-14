@@ -12,6 +12,9 @@ from openpyxl import load_workbook
 import os
 import sys
 
+from write_tasks import get_write_task_manager, get_pending_cache
+from ui_copy import copy_text, format_tsv, normalize_interface_id
+
 # 导入文件锁定检测函数
 try:
     from input_handler import get_excel_lock_owner
@@ -220,6 +223,12 @@ def check_unassigned(processed_results, user_roles, project_id=None, config=None
         auto_hide_enabled = config.get("auto_hide_overdue_enabled", True)
         threshold_days = config.get("auto_hide_overdue_days", 30)
     
+    pending_cache = None
+    try:
+        pending_cache = get_pending_cache()
+    except Exception:
+        pending_cache = None
+
     for file_type, df in processed_results.items():
         if df is None or df.empty:
             continue
@@ -270,11 +279,12 @@ def check_unassigned(processed_results, user_roles, project_id=None, config=None
                     # 静默处理列索引越界（某些DataFrame列数较少）
                     pass
             
+            file_path = row.get('source_file', '') or row.get('源文件', '')
             task = {
                 'file_type': file_type,
                 'project_id': row.get('项目号', ''),
                 'interface_id': str(interface_id) if interface_id and not pd.isna(interface_id) else '',
-                'file_path': row.get('source_file', ''),
+                'file_path': file_path,
                 'row_index': row.get('原始行号', 0),
                 'interface_time': row.get('接口时间', ''),
                 'department': row.get('科室', '')
@@ -282,6 +292,8 @@ def check_unassigned(processed_results, user_roles, project_id=None, config=None
             
             # 确保有必要的字段
             if task['file_path'] and task['row_index']:
+                if pending_cache and pending_cache.is_assignment_pending(task['file_path'], task['row_index'], file_type):
+                    continue
                 # 【新增】超期过滤：如果开启自动隐藏，过滤超期太久的任务
                 if auto_hide_enabled and threshold_days > 0:
                     interface_time = task.get('interface_time', '')
@@ -528,6 +540,7 @@ class AssignmentDialog(tk.Toplevel):
         self.assignment_entries = []  # 存储每行的输入控件
         self.batch_name_var = tk.StringVar()  # 批量指派的姓名
         self.assignment_successful = False  # 【新增】标记是否成功指派
+        self.assignment_payload = []
         
         self.setup_ui()
     
@@ -581,6 +594,13 @@ class AssignmentDialog(tk.Toplevel):
         
         # 批量应用按钮
         ttk.Button(batch_frame, text="应用到勾选项", command=self.apply_batch_assignment, width=12).pack(side='left', padx=5)
+
+        # 复制勾选项（便于粘贴到Excel/聊天）
+        ttk.Button(batch_frame, text="复制勾选项", command=self.copy_checked_tasks, width=10).pack(side='left', padx=5)
+
+        # Ctrl+C 复制勾选项
+        self.bind("<Control-c>", lambda e: self._on_copy_shortcut())
+        self.bind("<Control-C>", lambda e: self._on_copy_shortcut())
         
         # 分隔线
         ttk.Separator(scrollable_frame, orient='horizontal').pack(fill='x', pady=5)
@@ -665,6 +685,32 @@ class AssignmentDialog(tk.Toplevel):
         
         ttk.Button(button_frame, text="确认指派", command=self.on_confirm).pack(side='left', padx=10)
         ttk.Button(button_frame, text="取消", command=self.destroy).pack(side='left', padx=10)
+
+    def _on_copy_shortcut(self):
+        self.copy_checked_tasks()
+        return "break"
+
+    def copy_checked_tasks(self):
+        """
+        只复制当前勾选的“接口号”（按用户要求）。
+        """
+        interface_ids = []
+        for entry in self.assignment_entries:
+            if not entry['checkbox_var'].get():
+                continue
+            task = entry['task']
+            interface_id = normalize_interface_id(task.get('interface_id', ''))
+            if interface_id and interface_id not in ("（无接口号）", "未知"):
+                interface_ids.append(interface_id)
+
+        if not interface_ids:
+            messagebox.showinfo("提示", "请先勾选要复制的任务", parent=self)
+            return
+
+        text = "\n".join(interface_ids).strip()
+        ok = copy_text(self, text)
+        if ok:
+            messagebox.showinfo("已复制", f"已复制 {len(interface_ids)} 个接口号到剪贴板", parent=self)
     
     def select_all(self):
         """全选所有任务"""
@@ -751,7 +797,8 @@ class AssignmentDialog(tk.Toplevel):
                 'assigned_name': assigned_name,
                 'assigned_by': assigned_by,  # 【新增】指派人信息
                 'interface_id': task.get('interface_id', '未知'),
-                'project_id': task.get('project_id', '')
+                'project_id': task.get('project_id', ''),
+                'status_text': '待完成',
             })
         
         if not assignments:
@@ -759,41 +806,46 @@ class AssignmentDialog(tk.Toplevel):
             return
         
         # 显示处理中提示
-        processing_label = ttk.Label(self, text="正在批量指派，请稍候...", font=('Arial', 12))
+        processing_label = ttk.Label(self, text="正在提交写入任务...", font=('Arial', 12))
         processing_label.pack(pady=10)
         self.update()
         
-        # 执行批量指派
         try:
-            results = save_assignments_batch(assignments)
-            success_count = results['success_count']
-            failed_tasks = results['failed_tasks']
-            registry_updates = results['registry_updates']
-            
-            # 隐藏处理中提示
+            manager = get_write_task_manager()
+            # 描述补全：按“指派给谁”聚合计数，便于在写入任务记录窗快速看懂
+            try:
+                from collections import Counter
+
+                cnt = Counter(a.get("assigned_name", "") for a in assignments if a.get("assigned_name"))
+                parts = [f"{name}({num})" for name, num in cnt.most_common()]
+                summary = "，".join(parts[:6])
+                if len(parts) > 6:
+                    summary += "…"
+                desc = f"{self.user_name} 指派 {len(assignments)} 条：{summary}" if summary else f"{self.user_name} 指派 {len(assignments)} 条"
+            except Exception:
+                desc = f"{self.user_name} 指派 {len(assignments)} 条"
+            task = manager.submit_assignment_task(
+                assignments=assignments,
+                submitted_by=self.user_name,
+                description=desc,
+            )
+            try:
+                pending_cache = get_pending_cache()
+                pending_cache.add_assignment_entries(task.task_id, assignments)
+            except Exception as cache_error:
+                print(f"[PendingCache] 记录指派任务失败: {cache_error}")
             processing_label.destroy()
-            
-            # 显示结果
-            if success_count > 0:
-                msg = f"成功指派 {success_count} 个任务"
-                if registry_updates > 0:
-                    msg += f"\nRegistry已更新 {registry_updates} 条记录"
-                if failed_tasks:
-                    msg += f"\n\n失败 {len(failed_tasks)} 个任务：\n"
-                    msg += "\n".join([f"- {t['interface_id']}: {t['reason']}" for t in failed_tasks[:5]])
-                    if len(failed_tasks) > 5:
-                        msg += f"\n... 等共{len(failed_tasks)}个失败"
-                
-                messagebox.showinfo("指派结果", msg, parent=self)
-                
-                if not failed_tasks:
-                    self.assignment_successful = True  # 【新增】标记成功
-                    self.destroy()
-            else:
-                messagebox.showerror("失败", "所有任务指派失败，请检查文件是否被占用", parent=self)
+            messagebox.showinfo(
+                "已提交",
+                f"已提交 {len(assignments)} 条指派任务。\n后台写入完成后可在写入任务记录窗查看状态。",
+                parent=self,
+            )
+            self.assignment_successful = True
+            self.assignment_payload = assignments
+            self.destroy()
         except Exception as e:
             processing_label.destroy()
-            messagebox.showerror("错误", f"指派过程中发生错误：\n{str(e)}", parent=self)
+            messagebox.showerror("错误", f"指派任务提交失败：\n{str(e)}", parent=self)
             import traceback
             traceback.print_exc()
 

@@ -388,7 +388,8 @@ def process_target_file(file_path, current_datetime):
         db_path = cfg.get('registry_db_path')
         
         if db_path and os.path.exists(db_path):
-            conn = get_connection(db_path, True)
+            wal = bool(cfg.get("registry_wal", False))
+            conn = get_connection(db_path, wal)
             
             # 【方案A】只查询"待审查"状态的任务（设计人员已填写回文单号，等待确认）
             # 不加回"待完成"或"请指派"状态，这些应该依赖Excel筛选条件
@@ -397,7 +398,7 @@ def process_target_file(file_path, current_datetime):
                 FROM tasks
                 WHERE file_type = 1
                   AND display_status IN ('待审查', '待指派人审查')
-                  AND ignored = 0
+                  AND (ignored = 0 OR ignored IS NULL)
                   AND status != 'archived'
             """)
             
@@ -1102,7 +1103,8 @@ def process_target_file2(file_path, current_datetime, project_id=None):
         pending_rows = set()
         
         if db_path and os.path.exists(db_path):
-            conn = get_connection(db_path, True)
+            wal = bool(cfg.get("registry_wal", False))
+            conn = get_connection(db_path, wal)
             
             # 【方案A】只查询"待审查"状态的任务（设计人员已填写回文单号，等待确认）
             cursor = conn.execute("""
@@ -1110,7 +1112,7 @@ def process_target_file2(file_path, current_datetime, project_id=None):
                 FROM tasks
                 WHERE file_type = 2
                   AND display_status IN ('待审查', '待指派人审查')
-                  AND ignored = 0
+                  AND (ignored = 0 OR ignored IS NULL)
                   AND status != 'archived'
             """)
             
@@ -1587,7 +1589,7 @@ def process_target_file3(file_path, current_datetime):
                 FROM tasks
                 WHERE file_type = 3
                   AND display_status IN ('待审查', '待指派人审查')
-                  AND ignored = 0
+                  AND (ignored = 0 OR ignored IS NULL)
                   AND status != 'archived'
             """)
             
@@ -1615,8 +1617,10 @@ def process_target_file3(file_path, current_datetime):
                 except:
                     continue
             
-            # 【方案A】按索引查找，必须通过科室筛选(process1_rows & process2_rows)
-            base_filter = process1_rows & process2_rows
+            # 【方案A】按索引查找：
+            # - 必须通过科室筛选(process1_rows & process2_rows)
+            # - 必须通过时间窗口筛选(process3_rows 或 process4_rows)，避免把远未来(如2028)的数据加回
+            base_filter = process1_rows & process2_rows & (process3_rows | process4_rows)
             for reg_interface_id, reg_project_id, reg_display_status in registry_tasks:
                 key = (reg_interface_id, reg_project_id)
                 if key in excel_index:
@@ -1696,22 +1700,45 @@ def process_target_file3(file_path, current_datetime):
     except Exception:
         result_df["科室"] = "请室主任确认"
 
-    # 新增"接口时间"列（优先M列索引12，其次L列索引11），格式 yyyy.mm.dd
+    # 新增"接口时间"列：
+    # - 必须与筛选路径一致：若该行来自 M 路径（group1）则取 M 列；来自 L 路径（group2）则取 L 列
+    # - 避免出现“筛选用的是L列日期，但展示却优先显示M列(可能是2027/2028)”的错觉
+    # 格式 yyyy.mm.dd
     try:
         time_values = []
         for idx in result_df.index:
+            # 根据来源列决定取值
+            source_col = None
+            try:
+                if '_source_column' in result_df.columns:
+                    source_col = str(result_df.loc[idx, '_source_column']).strip()
+            except Exception:
+                source_col = None
+
             m_val = df.iloc[idx, 12] if 12 < len(df.columns) else None
             l_val = df.iloc[idx, 11] if 11 < len(df.columns) else None
+
+            # 默认按来源列取值；若来源列异常则回退到“优先M、其次L”的旧策略
+            if source_col == 'L':
+                primary_val = l_val
+                fallback_val = None  # 展示层不再回退到另一列，保持与筛选一致
+            elif source_col == 'M':
+                primary_val = m_val
+                fallback_val = None
+            else:
+                primary_val = m_val
+                fallback_val = l_val
             parsed = None
             try:
-                parsed = pd.to_datetime(m_val, errors='coerce')
+                parsed = pd.to_datetime(primary_val, errors='coerce')
             except Exception:
                 parsed = None
             if parsed is None or pd.isna(parsed):
-                try:
-                    parsed = pd.to_datetime(l_val, errors='coerce')
-                except Exception:
-                    parsed = None
+                if fallback_val is not None:
+                    try:
+                        parsed = pd.to_datetime(fallback_val, errors='coerce')
+                    except Exception:
+                        parsed = None
             if parsed is None or pd.isna(parsed):
                 time_values.append("")
             else:
@@ -2415,38 +2442,58 @@ def process_target_file4(file_path, current_datetime):
                 FROM tasks
                 WHERE file_type = 4
                   AND display_status IN ('待审查', '待指派人审查')
-                  AND ignored = 0
+                  AND (ignored = 0 OR ignored IS NULL)
                   AND status != 'archived'
             """)
             registry_tasks = cursor.fetchall()
             
-            # Excel索引优化
+            # Excel索引优化：
+            # - 优先从行数据提取项目号（更稳，测试文件名可能不含4位项目号）
+            # - 文件名项目号仅作为兜底
+            # - 若仍取不到项目号，则退化为按 interface_id 匹配（避免“历史待审查但主界面加不回”）
             import re
             filename = os.path.basename(file_path)
             match = re.search(r'(\d{4})', filename)
             file_project_id = match.group(1) if match else ""
             
-            excel_index = {}
+            excel_index = {}          # {(interface_id, project_id): [idx...]}
+            excel_index_by_iface = {} # {interface_id: [idx...]} 当无法得到project_id时使用
             for idx in range(len(df)):
                 if idx == 0:
                     continue
                 try:
                     row_data = df.iloc[idx]
                     df_interface_id = extract_interface_id(row_data, 4)
-                    if df_interface_id and file_project_id:
-                        key = (df_interface_id, file_project_id)
+                    if not df_interface_id:
+                        continue
+                    row_project_id = extract_project_id(row_data, 4) or ""
+                    pid = row_project_id or file_project_id
+                    if pid:
+                        key = (df_interface_id, pid)
                         if key not in excel_index:
                             excel_index[key] = []
                         excel_index[key].append(idx)
+                    else:
+                        if df_interface_id not in excel_index_by_iface:
+                            excel_index_by_iface[df_interface_id] = []
+                        excel_index_by_iface[df_interface_id].append(idx)
                 except:
                     continue
             
-            # 【方案A】必须通过科室筛选(process1_rows & process2_rows)
+            # 【待审查加回】上级审查优先：不受时间窗口影响
+            # 只要求通过科室/类别筛选(process1_rows & process2_rows)，避免把无关科室混入。
+            # 注意：这里不再强制要求process3_rows（时间窗口），否则“已待审查”会被接口工程师看不到。
             base_filter = process1_rows & process2_rows
             for reg_interface_id, reg_project_id, _ in registry_tasks:
                 key = (reg_interface_id, reg_project_id)
+                matched = []
                 if key in excel_index:
-                    for idx in excel_index[key]:
+                    matched = excel_index.get(key) or []
+                elif not file_project_id:
+                    # 文件名未能提取项目号时，退化为按接口号匹配
+                    matched = excel_index_by_iface.get(reg_interface_id, []) or []
+                if matched:
+                    for idx in matched:
                         # 【关键】必须通过科室筛选
                         if idx not in base_filter:
                             continue
@@ -3084,7 +3131,7 @@ def process_target_file5(file_path, current_datetime):
                 FROM tasks
                 WHERE file_type = 5
                   AND display_status IN ('待审查', '待指派人审查')
-                  AND ignored = 0
+                  AND (ignored = 0 OR ignored IS NULL)
                   AND status != 'archived'
             """)
             registry_tasks = cursor.fetchall()
@@ -3577,7 +3624,7 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
                 FROM tasks
                 WHERE file_type = 6
                   AND display_status IN ('待审查', '待指派人审查')
-                  AND ignored = 0
+                  AND (ignored = 0 OR ignored IS NULL)
                   AND status != 'archived'
             """)
             registry_tasks = cursor.fetchall()

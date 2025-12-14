@@ -13,7 +13,8 @@ DEFAULTS = {
     # 默认为None，会自动使用 数据目录/.registry/registry.db
     "registry_db_path": None,
     "registry_missing_keep_days": 7,
-    "registry_wal": True,
+    # 固定使用DELETE模式（不再使用WAL，避免网络盘/多用户锁问题）
+    "registry_wal": False,
     # 【新增】强制网络模式：本地路径也使用网络兼容设置（用于开发测试）
     "registry_force_network_mode": True,
     
@@ -41,7 +42,12 @@ DEFAULTS = {
     "view_overdue_days_threshold": 30,
 }
 
-def load_config(config_path: str = "config.json", data_folder: str = None) -> dict:
+def load_config(
+    config_path: str = "config.json",
+    data_folder: str = None,
+    *,
+    ensure_registry_dir: bool = True
+) -> dict:
     """
     加载配置文件，若不存在或读取失败则返回默认值
     
@@ -72,17 +78,21 @@ def load_config(config_path: str = "config.json", data_folder: str = None) -> di
         print(f"[Registry] 配置文件加载失败，使用默认值: {e}")
     
     # 【多用户协作】如果未指定数据库路径，自动放在数据文件夹下
+    #
+    # 注意：ensure_registry_dir=False 时仅“计算出”应使用的 db_path，不做任何文件系统操作，
+    # 用于避免程序启动阶段触发网络盘访问（如 UNC 路径不可用导致卡死）。
     if config['registry_db_path'] is None and data_folder:
         registry_dir = os.path.join(data_folder, '.registry')
         config['registry_db_path'] = os.path.join(registry_dir, 'registry.db')
-        # 确保目录存在
-        try:
-            os.makedirs(registry_dir, exist_ok=True)
-            # 数据库路径信息已在db.py的get_connection中打印，这里不再重复输出
-        except Exception as e:
-            print(f"[Registry] 创建数据库目录失败: {e}")
-            # 回退到本地
-            config['registry_db_path'] = os.path.join("result_cache", "registry.db")
+        if ensure_registry_dir:
+            # 确保目录存在（可能触发网络盘访问）
+            try:
+                os.makedirs(registry_dir, exist_ok=True)
+                # 数据库路径信息已在db.py的get_connection中打印，这里不再重复输出
+            except Exception as e:
+                print(f"[Registry] 创建数据库目录失败: {e}")
+                # 回退到本地
+                config['registry_db_path'] = os.path.join("result_cache", "registry.db")
     elif config['registry_db_path'] is None:
         # 如果没有数据文件夹，使用本地路径（向后兼容）
         config['registry_db_path'] = os.path.join("result_cache", "registry.db")

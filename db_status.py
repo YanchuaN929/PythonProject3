@@ -17,6 +17,7 @@ import threading
 class DatabaseStatus:
     """数据库状态枚举"""
     NOT_CONFIGURED = "not_configured"  # 未配置
+    DEFERRED = "deferred"              # 已配置但延迟连接（待刷新）
     CONNECTED = "connected"            # 已连接
     SYNCING = "syncing"                # 同步中
     WAITING = "waiting"                # 等待锁定
@@ -36,6 +37,7 @@ class DatabaseStatusIndicator:
     # 状态配置：(图标, 文字, 颜色)
     STATUS_CONFIG = {
         DatabaseStatus.NOT_CONFIGURED: ("⚠️", "未配置", "#888888"),
+        DatabaseStatus.DEFERRED: ("🕘", "待刷新", "#4169E1"),
         DatabaseStatus.CONNECTED: ("✅", "已连接", "#228B22"),
         DatabaseStatus.SYNCING: ("🔄", "同步中...", "#4169E1"),
         DatabaseStatus.WAITING: ("⏳", "等待锁定...", "#FF8C00"),
@@ -217,6 +219,20 @@ class DatabaseStatusIndicator:
         if task_count is not None:
             self._detail_info['task_count'] = task_count
         
+        self._update_display()
+
+    def set_deferred(self, db_path: Optional[str] = None):
+        """
+        设置为“待刷新/延迟连接”状态（用于启动阶段不触网）
+
+        参数:
+            db_path: 计划使用的数据库路径（可选，仅用于提示展示）
+        """
+        self._current_status = DatabaseStatus.DEFERRED
+        self._error_message = None
+        self.progress_label.config(text="")
+        if db_path:
+            self._detail_info['db_path'] = db_path
         self._update_display()
     
     def set_syncing(self, current: Optional[int] = None, total: Optional[int] = None):

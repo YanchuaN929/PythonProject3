@@ -84,7 +84,7 @@ def get_display_status(task_keys: List[Dict[str, Any]], current_user_roles_str: 
             return {}
         
         db_path = cfg['registry_db_path']
-        wal = bool(cfg.get('registry_wal', True))
+        wal = bool(cfg.get('registry_wal', False))
         
         # 解析用户角色列表
         user_roles = []
@@ -138,7 +138,7 @@ def on_process_done(
         
         now = now or safe_now()
         db_path = cfg['registry_db_path']
-        wal = bool(cfg.get('registry_wal', True))
+        wal = bool(cfg.get('registry_wal', False))
         
         # 批量构造任务数据
         tasks_data = []
@@ -208,7 +208,7 @@ def on_export_done(
         
         now = now or safe_now()
         db_path = cfg['registry_db_path']
-        wal = bool(cfg.get('registry_wal', True))
+        wal = bool(cfg.get('registry_wal', False))
         
         write_event(db_path, wal, EventType.EXPORT_DONE, {
             'file_type': file_type,
@@ -254,7 +254,7 @@ def on_assigned(
         
         now = now or safe_now()
         db_path = cfg['registry_db_path']
-        wal = bool(cfg.get('registry_wal', True))
+        wal = bool(cfg.get('registry_wal', False))
         
         # 构造任务key
         key = {
@@ -334,7 +334,7 @@ def on_response_written(
         
         now = now or safe_now()
         db_path = cfg['registry_db_path']
-        wal = bool(cfg.get('registry_wal', True))
+        wal = bool(cfg.get('registry_wal', False))
         
         # 构造任务key
         key = {
@@ -480,7 +480,7 @@ def on_confirmed_by_superior(
         
         now = now or safe_now()
         db_path = cfg['registry_db_path']
-        wal = bool(cfg.get('registry_wal', True))
+        wal = bool(cfg.get('registry_wal', False))
         
         # 构造任务key
         key = {
@@ -531,7 +531,7 @@ def on_unconfirmed_by_superior(
         
         now = safe_now()
         db_path = cfg['registry_db_path']
-        wal = bool(cfg.get('registry_wal', True))
+        wal = bool(cfg.get('registry_wal', False))
         
         print(f"[Registry] 上级取消确认: 文件类型={key['file_type']}, 项目={key['project_id']}, 接口={key['interface_id']}, 用户={user_name}")
         
@@ -566,7 +566,7 @@ def on_scan_finalize(
         
         now = now or safe_now()
         db_path = cfg['registry_db_path']
-        wal = bool(cfg.get('registry_wal', True))
+        wal = bool(cfg.get('registry_wal', False))
         days = int(missing_keep_days if missing_keep_days is not None else int(cfg.get('registry_missing_keep_days', 7)))
         
         # 执行归档逻辑
@@ -595,7 +595,7 @@ def write_event_only(event: str, payload: dict) -> None:
         
         now = safe_now()
         db_path = cfg['registry_db_path']
-        wal = bool(cfg.get('registry_wal', True))
+        wal = bool(cfg.get('registry_wal', False))
         
         write_event(db_path, wal, event, payload, now)
         
