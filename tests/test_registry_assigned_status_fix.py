@@ -52,7 +52,7 @@ def test_assigned_task_keeps_responsible_person_after_rescan():
         
         cfg = load_config(data_folder=temp_dir)
         db_path = cfg['registry_db_path']
-        wal = bool(cfg.get('registry_wal', True))
+        wal = False
         
         task_data = [{
             'key': {
@@ -211,7 +211,7 @@ def test_overdue_assigned_task_shows_correct_status():
         
         cfg = load_config(data_folder=temp_dir)
         db_path = cfg['registry_db_path']
-        wal = bool(cfg.get('registry_wal', True))
+        wal = False
         
         task_data = [{
             'key': {

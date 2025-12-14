@@ -27,7 +27,7 @@ def main():
     from registry import config as registry_config
     cfg = registry_config.load_config()
     db_path = cfg.get('registry_db_path', os.path.join('result_cache', 'registry.db'))
-    wal = cfg.get('registry_wal', True)
+    wal = False
     
     print(f"\n[INFO] Database: {db_path}")
     

@@ -228,6 +228,9 @@ def test_ignore_dialog_config_access():
         # 验证配置包含必要的键
         assert 'registry_db_path' in cfg
         assert 'registry_wal' in cfg or 'wal' in cfg
+        # 固定使用DELETE模式（不再启用WAL）
+        if 'registry_wal' in cfg:
+            assert cfg.get('registry_wal') is False
         
         print("\n✓ registry_hooks._cfg()调用成功")
         print(f"  配置键: {list(cfg.keys())}")
