@@ -62,8 +62,7 @@ class FileIdentityManager:
         # 结构: {user_name: {file_path: {row_index: True}}}
         self.completed_rows = {}
         
-        print(f"缓存目录: {self.result_cache_dir}")
-        print(f"缓存文件: {self.cache_file}")
+        # 控制台输出优化：缓存路径信息默认不输出
         
         # 确保缓存目录存在
         self._ensure_cache_dir()
@@ -98,8 +97,8 @@ class FileIdentityManager:
             
             return identity_hash
             
-        except Exception as e:
-            print(f"生成文件标识失败 {file_path}: {e}")
+        except Exception:
+            # 控制台输出优化：已验证逻辑，默认不输出
             return None
     
     def check_files_changed(self, file_paths: List[str]) -> bool:
@@ -114,28 +113,42 @@ class FileIdentityManager:
         返回:
             True = 有文件变化，False = 无变化
         """
-        for file_path in file_paths:
+        return bool(self.get_changed_files(file_paths))
+
+    def get_changed_files(self, file_paths: List[str]) -> Set[str]:
+        """
+        返回发生变化的文件集合（增量处理用）
+
+        规则与 check_files_changed 保持一致：
+        - 新文件（缓存中不存在 identity） => 认为变化
+        - identity 不一致 => 认为变化
+        - generate_file_identity 失败/文件暂不可用 => 不判定为变化（避免网络抖动导致误清空）
+
+        参数:
+            file_paths: 文件路径列表
+
+        返回:
+            发生变化的文件路径集合（去重）
+        """
+        changed: Set[str] = set()
+        for file_path in file_paths or []:
             if not file_path:
                 continue
-                
+
             current_identity = self.generate_file_identity(file_path)
             if current_identity is None:
-                # 文件不存在，视为变化
+                # 文件不可用时不判定为变化（保持旧逻辑：check_files_changed 这里是 continue）
                 continue
-                
+
             cached_identity = self.file_identities.get(file_path)
-            
             if cached_identity is None:
-                # 新文件，视为变化
-                print(f"检测到新文件: {os.path.basename(file_path)}")
-                return True
-            
+                changed.add(file_path)
+                continue
+
             if current_identity != cached_identity:
-                # 标识不匹配，文件已变化
-                print(f"文件已变化: {os.path.basename(file_path)}")
-                return True
-        
-        return False
+                changed.add(file_path)
+
+        return changed
     
     def update_file_identities(self, file_paths: List[str]):
         """
@@ -238,7 +251,7 @@ class FileIdentityManager:
         
         用于文件发生变化时
         """
-        print("检测到文件变化，清空所有勾选状态")
+        # 控制台输出优化：已验证逻辑，默认不输出
         self.completed_rows = {}
         self._save_cache()
     
@@ -291,7 +304,6 @@ class FileIdentityManager:
                     
                     if is_old_format:
                         # 旧格式：将所有数据迁移到"默认用户"下
-                        print("  检测到旧格式缓存，自动迁移到新格式")
                         self.completed_rows["默认用户"] = {}
                         for file_path, rows in completed_rows_raw.items():
                             self.completed_rows["默认用户"][file_path] = {int(k): v for k, v in rows.items()}
@@ -302,9 +314,7 @@ class FileIdentityManager:
                             for file_path, rows in user_data.items():
                                 self.completed_rows[user_name][file_path] = {int(k): v for k, v in rows.items()}
                 
-                print(f"加载缓存成功: {len(self.file_identities)}个文件标识")
-        except Exception as e:
-            print(f"加载缓存失败: {e}")
+        except Exception:
             self.file_identities = {}
             self.completed_rows = {}
     
@@ -314,7 +324,7 @@ class FileIdentityManager:
             # 检查目录是否可写
             cache_dir = os.path.dirname(self.cache_file)
             if not os.access(cache_dir, os.W_OK):
-                print(f"⚠️ 缓存目录无写入权限，跳过保存: {cache_dir}")
+                # 控制台输出优化：已验证逻辑，默认不输出
                 return
             
             # 【修复】转换completed_rows的key为str（JSON要求），支持新的按用户分组结构
@@ -333,10 +343,12 @@ class FileIdentityManager:
             with open(self.cache_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             
-        except PermissionError as e:
-            print(f"⚠️ 缓存文件无写入权限，跳过保存: {self.cache_file}")
-        except Exception as e:
-            print(f"⚠️ 保存缓存失败: {e}")
+        except PermissionError:
+            # 控制台输出优化：已验证逻辑，默认不输出
+            pass
+        except Exception:
+            # 控制台输出优化：已验证逻辑，默认不输出
+            pass
     
     def _ensure_cache_dir(self):
         """确保缓存目录存在"""
@@ -347,19 +359,16 @@ class FileIdentityManager:
                 parent_dir = os.path.dirname(os.path.abspath(self.result_cache_dir))
             
             if not os.access(parent_dir, os.W_OK):
-                print(f"⚠️ 父目录无写入权限，无法创建缓存目录: {parent_dir}")
-                print(f"⚠️ 缓存功能将被禁用，但不影响程序主要功能")
                 return
             
             if not os.path.exists(self.result_cache_dir):
                 os.makedirs(self.result_cache_dir, exist_ok=True)
-                print(f"✅ 创建缓存目录: {self.result_cache_dir}")
-        except PermissionError as e:
-            print(f"⚠️ 权限不足，无法创建缓存目录: {self.result_cache_dir}")
-            print(f"⚠️ 缓存功能将被禁用，但不影响程序主要功能")
-        except Exception as e:
-            print(f"⚠️ 创建缓存目录失败: {e}")
-            print(f"⚠️ 缓存功能将被禁用，但不影响程序主要功能")
+        except PermissionError:
+            # 控制台输出优化：已验证逻辑，默认不输出
+            pass
+        except Exception:
+            # 控制台输出优化：已验证逻辑，默认不输出
+            pass
     
     def _get_cache_filename(self, file_path: str, project_id: str, file_type: str) -> str:
         """
@@ -397,11 +406,11 @@ class FileIdentityManager:
         try:
             # 检查缓存目录是否存在且可写
             if not os.path.exists(self.result_cache_dir):
-                print(f"⚠️ 缓存目录不存在，跳过保存: {self.result_cache_dir}")
+                # 控制台输出优化：已验证逻辑，默认不输出
                 return False
             
             if not os.access(self.result_cache_dir, os.W_OK):
-                print(f"⚠️ 缓存目录无写入权限，跳过保存: {self.result_cache_dir}")
+                # 控制台输出优化：已验证逻辑，默认不输出
                 return False
             
             cache_file = self._get_cache_filename(file_path, project_id, file_type)
@@ -410,14 +419,12 @@ class FileIdentityManager:
             with open(cache_file, 'wb') as f:
                 pickle.dump(dataframe, f, protocol=pickle.HIGHEST_PROTOCOL)
             
-            print(f"✅ 缓存已保存: {os.path.basename(cache_file)}")
+            # 控制台输出优化：已验证逻辑，默认不输出
             return True
             
-        except PermissionError as e:
-            print(f"⚠️ 权限不足，无法保存缓存 [{file_type}, {project_id}]")
+        except PermissionError:
             return False
-        except Exception as e:
-            print(f"⚠️ 保存缓存失败 [{file_type}, {project_id}]: {e}")
+        except Exception:
             return False
     
     def load_cached_result(self, file_path: str, project_id: str, file_type: str) -> Optional[pd.DataFrame]:
@@ -446,7 +453,7 @@ class FileIdentityManager:
             # 【修复】只有当cached_identity存在且不一致时，才使缓存失效
             # 如果cached_identity是None（新文件），允许使用缓存
             if cached_identity is not None and current_identity != cached_identity:
-                print(f"⚠️ 文件已变化，缓存失效: {os.path.basename(cache_file)}")
+                # 控制台输出优化：已验证逻辑，默认不输出
                 # 静默删除失效的缓存
                 try:
                     os.remove(cache_file)
@@ -463,25 +470,22 @@ class FileIdentityManager:
             with open(cache_file, 'rb') as f:
                 dataframe = pickle.load(f)
             
-            print(f"✅ 缓存已加载: {os.path.basename(cache_file)} ({len(dataframe)}行)")
+            # 控制台输出优化：已验证逻辑，默认不输出
             return dataframe
             
-        except (pickle.UnpicklingError, EOFError, ValueError) as e:
+        except (pickle.UnpicklingError, EOFError, ValueError):
             # 损坏的缓存文件，静默删除并重新处理
-            print(f"⚠️ 缓存文件损坏，将重新处理: {e}")
             try:
                 cache_file = self._get_cache_filename(file_path, project_id, file_type)
                 if os.path.exists(cache_file):
                     os.remove(cache_file)
-                    print(f"已删除损坏的缓存文件: {os.path.basename(cache_file)}")
-            except Exception as del_err:
-                print(f"删除损坏缓存失败: {del_err}")
+            except Exception:
+                # 控制台输出优化：已验证逻辑，默认不输出
+                pass
             return None
             
-        except Exception as e:
-            print(f"❌ 加载缓存失败 [{file_type}, {project_id}]: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            # 控制台输出优化：已验证逻辑，默认不输出
             return None
     
     def clear_file_cache(self, file_path: str):
@@ -503,46 +507,65 @@ class FileIdentityManager:
                         try:
                             os.remove(cache_file)
                             deleted_count += 1
-                        except Exception as e:
-                            print(f"删除缓存文件失败 {filename}: {e}")
+                        except Exception:
+                            # 控制台输出优化：已验证逻辑，默认不输出
+                            pass
             
-            if deleted_count > 0:
-                print(f"已清除 {deleted_count} 个缓存文件: {os.path.basename(file_path)}")
+            # 控制台输出优化：已验证逻辑，默认不输出
                 
-        except Exception as e:
-            print(f"清除文件缓存失败: {e}")
+        except Exception:
+            # 控制台输出优化：已验证逻辑，默认不输出
+            pass
     
-    def clear_file_caches_only(self):
+    def clear_file_caches_only(self, file_paths: Optional[List[str]] = None):
         """
         仅清除文件处理结果缓存(.pkl文件)，保留用户勾选状态和Registry数据库
         
         用于指派后刷新显示
         """
         try:
-            print("[缓存] 开始清除文件处理结果缓存...")
+            # 只删除 .pkl 缓存文件；默认删除全部，也可指定 file_paths 仅删除指定文件的缓存
+            if not os.path.exists(self.result_cache_dir):
+                return True
+
+            targets: Optional[set] = None
+            try:
+                if file_paths:
+                    targets = set()
+                    for fp in file_paths:
+                        if not fp:
+                            continue
+                        # 缓存文件名前缀：md5(abs_path)[:8]
+                        file_hash = hashlib.md5(os.path.abspath(fp).encode('utf-8')).hexdigest()[:8]
+                        targets.add(file_hash)
+            except Exception:
+                targets = None
+
+            for filename in os.listdir(self.result_cache_dir):
+                if not filename.endswith('.pkl'):
+                    continue
+                # 若给定 targets：只删命中的前缀
+                if targets is not None:
+                    matched = False
+                    for h in targets:
+                        if filename.startswith(h):
+                            matched = True
+                            break
+                    if not matched:
+                        continue
+                try:
+                    fp = os.path.join(self.result_cache_dir, filename)
+                    os.remove(fp)
+                except Exception:
+                    # 控制台输出优化：已验证逻辑，默认不输出
+                    pass
+
+            # 注意：这里不再清空 file_identities，否则会导致下一次把全部文件当成“新文件/已变化”
             
-            # 1. 只删除.pkl缓存文件，保留file_cache.json和registry.db
-            deleted_count = 0
-            if os.path.exists(self.result_cache_dir):
-                for filename in os.listdir(self.result_cache_dir):
-                    if filename.endswith('.pkl'):
-                        file_path = os.path.join(self.result_cache_dir, filename)
-                        try:
-                            os.remove(file_path)
-                            deleted_count += 1
-                        except Exception as e:
-                            print(f"[缓存] 删除失败: {filename}, 错误: {e}")
-            
-            # 2. 清空内存中的文件标识（但保留勾选状态）
-            self.file_identities = {}
-            
-            print(f"[缓存] 已删除 {deleted_count} 个.pkl缓存文件（保留勾选状态）")
             return True
             
-        except Exception as e:
-            print(f"[缓存] 清除文件缓存失败: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            # 控制台输出优化：已验证逻辑，默认不输出
             return False
     
     def clear_all_caches(self):
@@ -556,14 +579,13 @@ class FileIdentityManager:
             try:
                 from registry.db import close_connection
                 close_connection()
-                print("已关闭Registry数据库连接")
-            except:
+            except Exception:
                 pass
             
             # 1. 清除结果缓存目录
             if os.path.exists(self.result_cache_dir):
                 shutil.rmtree(self.result_cache_dir)
-                print(f"✅ 已删除缓存目录: {self.result_cache_dir}")
+                # 控制台输出优化：已验证逻辑，默认不输出
             
             # 2. 重新创建空目录
             self._ensure_cache_dir()
@@ -575,13 +597,11 @@ class FileIdentityManager:
             # 4. 保存空的file_cache.json
             self._save_cache()
             
-            print("✅ 所有缓存已清除")
+            # 控制台输出优化：已验证逻辑，默认不输出
             return True
             
-        except Exception as e:
-            print(f"❌ 清除缓存失败: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            # 控制台输出优化：已验证逻辑，默认不输出
             return False
 
 

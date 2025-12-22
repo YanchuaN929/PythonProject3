@@ -103,4 +103,25 @@ def test_task_panel_shows_status_text(tmp_path, monkeypatch):
     root.destroy()
 
 
+def test_task_panel_extracts_response_number_for_response_task():
+    task = WriteTask(
+        task_id="r1",
+        task_type="response",
+        payload={
+            "interface_id": "S-GT---TEST",
+            "response_number": "HW-001",
+            "file_path": "X.xlsx",
+            "file_type": 1,
+            "row_index": 2,
+            "project_id": "2016",
+        },
+        submitted_by="Alice",
+        description="回文测试",
+        submitted_at="2025-01-01T10:00:00",
+        status="completed",
+    )
+    nums = TaskRecordPanel._extract_response_numbers_from_task(task)
+    assert nums == ["HW-001"]
+
+
 

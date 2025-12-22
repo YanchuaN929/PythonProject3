@@ -182,12 +182,20 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
             need_reset = True
             print(f"[Registry] {key['interface_id']} 完成列被删除（completed_at存在但Excel中M列为空），强制重置")
         else:
-            need_reset = should_reset_task_status(
-                old_task['interface_time'],
-                fields.get('interface_time', ''),
-                old_completed_val,
-                new_completed_val
-            )
+            # 关键：仅当本次 upsert 来自“Excel全量/增量扫描”（携带 interface_time 或完成列值）时，才允许触发重置判断。
+            # 指派/回文等“局部写入”钩子通常只更新 assigned_by/response_number 等字段，
+            # 若用 fields.get('interface_time','') 会把新时间视为空字符串，从而误判“时间变化”，导致状态回退为“请指派”。
+            has_interface_time = 'interface_time' in fields
+            has_completed_col = '_completed_col_value' in fields
+            if not has_interface_time and not has_completed_col:
+                need_reset = False
+            else:
+                need_reset = should_reset_task_status(
+                    old_task['interface_time'],
+                    fields.get('interface_time', ''),
+                    old_completed_val,
+                    new_completed_val
+                )
         
         # 【历史记录版本化】检测是否需要创建新轮次记录
         # 条件：completed_at变空 且 interface_time变化 且 之前有完整数据链（completed_at和confirmed_at都存在）
@@ -252,7 +260,11 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
         if need_reset:
             # 重置状态，但保留指派信息
             fields['status'] = Status.OPEN
-            fields['display_status'] = '待完成' if old_task and old_task.get('responsible_person') else '请指派'
+            # 重置时优先看本次写入是否携带责任人（例如指派刚写入），否则再看旧任务
+            rp = fields.get('responsible_person') or (old_task.get('responsible_person') if old_task else None)
+            fields['display_status'] = '待完成' if rp else '请指派'
+            rp = fields.get('responsible_person') or (old_task.get('responsible_person') if old_task else None)
+            fields['display_status'] = '待完成' if rp else '请指派'
             fields['completed_at'] = None
             fields['completed_by'] = None
             fields['confirmed_at'] = None
@@ -277,7 +289,10 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
             # 但如果新状态是明确设置的其他值（如'待审查'），则使用新值
             current_display_status = fields.get('display_status')
             
-            if old_task and current_display_status == '待完成' and old_task['display_status'] and old_task['display_status'] != '待完成':
+            # 若调用方明确要求覆盖 display_status（例如 on_assigned），则跳过“默认值继承”逻辑
+            if fields.get('_force_display_status'):
+                pass
+            elif old_task and current_display_status == '待完成' and old_task['display_status'] and old_task['display_status'] != '待完成':
                 # 默认值'待完成'，继承旧状态
                 fields['display_status'] = old_task['display_status']
                 print(f"[Registry继承] {key['interface_id']} 未变化，继承状态: {old_task['display_status']}")

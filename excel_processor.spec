@@ -20,6 +20,7 @@ a = Analysis(
         ('distribution.py', '.'),
         ('db_status.py', '.'),
         ('help_viewer.py', '.'),
+        ('ui_copy.py', '.'),
         # 配置文件
         ('config.json', '.'),
         ('version.json', '.'),
@@ -43,6 +44,16 @@ a = Analysis(
         'distribution',
         'db_status',
         'help_viewer',
+        'ui_copy',
+        # write_tasks 模块（写入任务面板/回文提交等）
+        'write_tasks',
+        'write_tasks.manager',
+        'write_tasks.executors',
+        'write_tasks.cache',
+        'write_tasks.models',
+        'write_tasks.pending_cache',
+        'write_tasks.shared_log',
+        'write_tasks.task_panel',
         # 第三方库
         'pandas',
         'openpyxl',
@@ -135,7 +146,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,

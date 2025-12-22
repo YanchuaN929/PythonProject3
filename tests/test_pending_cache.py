@@ -49,7 +49,8 @@ def test_assignment_overrides():
     task = _make_task(task_id, status="completed")
     cache.on_task_status_changed(task)
     overridden2 = cache.apply_overrides_to_dataframe(df, 1)
-    assert overridden2.loc[0, "责任人"] == ""
+    # completed 仍保留覆盖，避免未重读Excel导致UI回弹
+    assert overridden2.loc[0, "责任人"] == "张三"
 
 
 def test_response_overrides():
@@ -102,7 +103,8 @@ def test_response_overrides():
     task = _make_task(task_id, status="completed")
     cache.on_task_status_changed(task)
     overridden2 = cache.apply_overrides_to_dataframe(df, 2, [], "")
-    assert overridden2.loc[0, "回文单号"] == ""
+    # completed 仍保留覆盖，避免未重读Excel导致UI回弹
+    assert overridden2.loc[0, "回文单号"] == "HW-001"
 
 
 def test_response_hides_row_for_submitter():

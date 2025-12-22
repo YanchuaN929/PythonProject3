@@ -133,6 +133,39 @@ class WriteTaskManager:
                 result = executor(task.payload)
                 if result is False:
                     raise RuntimeError("写入任务执行失败，返回 False")
+
+                # ----------------------------------------------------------
+                # 指派任务：distribution.save_assignments_batch 返回 dict
+                # 需要根据 success_count/failed_tasks 判断真实成败。
+                # 否则会出现“全部失败但任务仍显示完成”，导致 UI/用户误判。
+                # ----------------------------------------------------------
+                if task.task_type == "assignment" and isinstance(result, dict):
+                    try:
+                        expected_total = len((task.payload or {}).get("assignments") or [])
+                    except Exception:
+                        expected_total = 0
+                    try:
+                        success_count = int(result.get("success_count", 0) or 0)
+                    except Exception:
+                        success_count = 0
+                    failed_tasks = result.get("failed_tasks") or []
+                    failed_count = len(failed_tasks) if isinstance(failed_tasks, list) else 0
+
+                    # 严格策略：只要存在失败/成功数不匹配，就视为失败（避免“看起来完成但没写入”）
+                    if success_count <= 0 or failed_count > 0 or (expected_total and success_count < expected_total):
+                        first_reason = ""
+                        try:
+                            if isinstance(failed_tasks, list) and failed_tasks:
+                                ft = failed_tasks[0] or {}
+                                first_reason = str(ft.get("reason", "") or "")
+                        except Exception:
+                            first_reason = ""
+                        raise RuntimeError(
+                            f"指派写入失败: success_count={success_count}"
+                            f"{f'/{expected_total}' if expected_total else ''}, "
+                            f"failed={failed_count}"
+                            f"{f', reason={first_reason}' if first_reason else ''}"
+                        )
                 task.status = "completed"
                 task.error = None
             except Exception as e:

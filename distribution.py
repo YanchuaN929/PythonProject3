@@ -419,7 +419,7 @@ def save_assignments_batch(assignments):
             wb = load_workbook(file_path)
             ws = wb.active
             
-            # 4. 读取DataFrame用于Registry（只读一次）
+            # 4. 读取DataFrame用于Registry（只读一次，可失败；Registry 将优先使用 payload 兜底）
             df = None
             try:
                 df = pd.read_excel(file_path, sheet_name=0)
@@ -461,44 +461,51 @@ def save_assignments_batch(assignments):
             wb.close()
             print(f"[指派] 文件已保存: {file_path}")
             
-            # 7. 批量调用Registry钩子
-            if df is not None:
-                try:
-                    from registry import hooks as registry_hooks
-                    from registry.util import extract_interface_id, extract_project_id
-                    
-                    for assignment in file_assignments:
-                        try:
-                            row_index = assignment['row_index']
-                            # row_index是Excel行号（包含表头），DataFrame索引需要减2
-                            df_row_idx = row_index - 2
-                            
-                            if 0 <= df_row_idx < len(df):
-                                row_data = df.iloc[df_row_idx]
-                                
-                                interface_id = extract_interface_id(row_data, assignment['file_type'])
-                                project_id = extract_project_id(row_data, assignment['file_type'])
-                                
-                                if interface_id and project_id:
-                                    # 【修复】使用实际的指派人信息
-                                    assigned_by = assignment.get('assigned_by', '系统用户')
-                                    registry_hooks.on_assigned(
-                                        file_type=assignment['file_type'],
-                                        file_path=file_path,
-                                        row_index=row_index,
-                                        interface_id=interface_id,
-                                        project_id=project_id,
-                                        assigned_by=assigned_by,
-                                        assigned_to=assignment['assigned_name']
-                                    )
-                                    registry_updates += 1
-                        except Exception as e:
-                            print(f"[Registry] 单个任务钩子失败: {e}")
-                    
-                    print(f"[Registry] 共更新 {registry_updates} 个任务")
-                    
-                except Exception as e:
-                    print(f"[Registry] 批量钩子失败: {e}")
+            # 7. 批量调用Registry钩子（不依赖 DataFrame 一定成功；优先使用 assignment payload 的接口号/项目号兜底）
+            try:
+                from registry import hooks as registry_hooks
+                from registry.util import extract_interface_id, extract_project_id
+
+                for assignment in file_assignments:
+                    try:
+                        row_index = assignment['row_index']
+
+                        # 兜底：先用 payload（更稳定，也避免行号映射不准导致“更新 0”）
+                        interface_id = str(assignment.get("interface_id", "") or "").strip()
+                        project_id = str(assignment.get("project_id", "") or "").strip()
+
+                        # 若 df 可用，且能正确映射到行，则以 df 提取结果为准（更贴近真实Excel内容）
+                        if df is not None:
+                            try:
+                                df_row_idx = row_index - 2  # Excel行号（含表头） -> df 行索引
+                                if 0 <= df_row_idx < len(df):
+                                    row_data = df.iloc[df_row_idx]
+                                    df_interface_id = extract_interface_id(row_data, assignment['file_type'])
+                                    df_project_id = extract_project_id(row_data, assignment['file_type'])
+                                    if df_interface_id and df_project_id:
+                                        interface_id = str(df_interface_id or "").strip()
+                                        project_id = str(df_project_id or "").strip()
+                            except Exception:
+                                pass
+
+                        if interface_id and project_id:
+                            assigned_by = assignment.get('assigned_by', '系统用户')
+                            registry_hooks.on_assigned(
+                                file_type=assignment['file_type'],
+                                file_path=file_path,
+                                row_index=row_index,
+                                interface_id=interface_id,
+                                project_id=project_id,
+                                assigned_by=assigned_by,
+                                assigned_to=assignment['assigned_name']
+                            )
+                            registry_updates += 1
+                    except Exception as e:
+                        print(f"[Registry] 单个任务钩子失败: {e}")
+
+                print(f"[Registry] 共更新 {registry_updates} 个任务")
+            except Exception as e:
+                print(f"[Registry] 批量钩子失败: {e}")
             
         except Exception as e:
             print(f"[指派] 文件处理失败: {file_path}, 错误: {e}")
@@ -535,8 +542,21 @@ class AssignmentDialog(tk.Toplevel):
         
         self.unassigned_tasks = unassigned_tasks
         self.name_list = name_list
-        self.user_name = user_name or "未知用户"
-        self.user_roles = user_roles or []
+        # 优先使用显式传入的 user_name/user_roles；
+        # 若调用方未传（历史调用点/外部脚本），尝试从 parent.app 回溯（base.py 会挂载 root.app = app）。
+        inferred_name = (user_name or "").strip()
+        inferred_roles = list(user_roles or [])
+        if not inferred_name:
+            try:
+                app = getattr(parent, "app", None)
+                if app and getattr(app, "config", None):
+                    inferred_name = str(app.config.get("user_name", "") or "").strip()
+                if not inferred_roles and app and hasattr(app, "user_roles"):
+                    inferred_roles = list(getattr(app, "user_roles") or [])
+            except Exception:
+                pass
+        self.user_name = inferred_name or "未知用户"
+        self.user_roles = inferred_roles
         self.assignment_entries = []  # 存储每行的输入控件
         self.batch_name_var = tk.StringVar()  # 批量指派的姓名
         self.assignment_successful = False  # 【新增】标记是否成功指派

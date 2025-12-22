@@ -93,11 +93,26 @@ class TaskRecordPanel(ttk.LabelFrame):
         self._menu = tk.Menu(self, tearoff=False)
         self._menu.add_command(label="复制接口号", command=self.copy_selected_interface_ids)
         self._menu.add_command(label="查看指派明细", command=self.open_selected_assignment_detail)
+        self._menu.add_command(label="查看回文单号明细", command=self.open_selected_response_detail)
 
         self.status_label = ttk.Label(self, textvariable=self.status_var, anchor="w", foreground="gray")
         self.status_label.pack(fill=tk.X, pady=(4, 0))
 
     def _on_context_menu(self, event):
+        # 右键时自动选中鼠标所在行（否则用户未先左键选中时，菜单动作会因 selection 为空而“无反应”）
+        try:
+            row_iid = self.tree.identify_row(getattr(event, "y", 0))
+            if row_iid:
+                # 聚焦并选中当前行
+                try:
+                    self.tree.focus(row_iid)
+                except Exception:
+                    pass
+                sel = set(self.tree.selection() or ())
+                if row_iid not in sel:
+                    self.tree.selection_set((row_iid,))
+        except Exception:
+            pass
         try:
             self._menu.tk_popup(event.x_root, event.y_root)
         finally:
@@ -119,7 +134,7 @@ class TaskRecordPanel(ttk.LabelFrame):
                     interface_id = normalize_interface_id((a or {}).get("interface_id", ""))
                     if interface_id:
                         ids.append(interface_id)
-            else:
+            elif getattr(task, "task_type", "") == "response":
                 interface_id = normalize_interface_id((task.payload or {}).get("interface_id", ""))
                 if interface_id:
                     ids.append(interface_id)
@@ -129,6 +144,26 @@ class TaskRecordPanel(ttk.LabelFrame):
         seen = set()
         out = []
         for x in ids:
+            if x in seen:
+                continue
+            seen.add(x)
+            out.append(x)
+        return out
+
+    @staticmethod
+    def _extract_response_numbers_from_task(task) -> list:
+        nums = []
+        try:
+            if getattr(task, "task_type", "") == "response":
+                rn = str((task.payload or {}).get("response_number", "") or "").strip()
+                if rn:
+                    nums.append(rn)
+        except Exception:
+            pass
+        # 去重保序
+        seen = set()
+        out = []
+        for x in nums:
             if x in seen:
                 continue
             seen.add(x)
@@ -167,6 +202,94 @@ class TaskRecordPanel(ttk.LabelFrame):
         if not task or getattr(task, "task_type", "") != "assignment":
             return
         self._open_assignment_detail_dialog(task)
+
+    def open_selected_response_detail(self):
+        sel = list(self.tree.selection())
+        if not sel:
+            return
+        task = self._task_by_iid.get(sel[0])
+        if not task or getattr(task, "task_type", "") != "response":
+            return
+        self._open_response_detail_dialog(task)
+
+    def _open_response_detail_dialog(self, task):
+        win = tk.Toplevel(self)
+        win.title("回文单号明细")
+        win.geometry("900x420")
+        win.transient(self.winfo_toplevel())
+        win.grab_set()
+
+        top = ttk.Frame(win, padding=8)
+        top.pack(fill=tk.X)
+        ttk.Label(top, text=task.description or "回文单号明细", anchor="w").pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        def _copy_response_number():
+            nums = self._extract_response_numbers_from_task(task)
+            if nums:
+                copy_text(win, "\n".join(nums).strip())
+
+        ttk.Button(top, text="复制回文单号", command=_copy_response_number).pack(side=tk.RIGHT)
+
+        columns = ("response_number", "interface_id", "project_id", "file_type", "row_index", "file_path")
+        tree = ttk.Treeview(win, columns=columns, show="headings", height=14, selectmode="extended")
+        tree.heading("response_number", text="回文单号")
+        tree.heading("interface_id", text="接口号")
+        tree.heading("project_id", text="项目号")
+        tree.heading("file_type", text="文件类型")
+        tree.heading("row_index", text="行号")
+        tree.heading("file_path", text="文件")
+
+        tree.column("response_number", width=140, anchor="w")
+        tree.column("interface_id", width=260, anchor="w")
+        tree.column("project_id", width=90, anchor="w")
+        tree.column("file_type", width=80, anchor="center")
+        tree.column("row_index", width=70, anchor="center")
+        tree.column("file_path", width=320, anchor="w")
+
+        y_scroll = ttk.Scrollbar(win, orient="vertical", command=tree.yview)
+        x_scroll = ttk.Scrollbar(win, orient="horizontal", command=tree.xview)
+        tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+
+        p = task.payload or {}
+        tree.insert(
+            "",
+            tk.END,
+            values=(
+                str(p.get("response_number", "") or ""),
+                normalize_interface_id(p.get("interface_id", "")),
+                str(p.get("project_id", "") or ""),
+                str(p.get("file_type", "") or ""),
+                str(p.get("row_index", "") or ""),
+                str(p.get("file_path", "") or ""),
+            ),
+        )
+
+        def on_copy(event=None):
+            nums = []
+            for iid in tree.selection():
+                vals = tree.item(iid, "values") or ()
+                if vals and vals[0]:
+                    nums.append(str(vals[0]).strip())
+            if not nums:
+                nums = self._extract_response_numbers_from_task(task)
+            # 去重保序
+            seen = set()
+            uniq = []
+            for x in nums:
+                if x in seen:
+                    continue
+                seen.add(x)
+                uniq.append(x)
+            if uniq:
+                copy_text(win, "\n".join(uniq).strip())
+            return "break"
+
+        tree.bind("<Control-c>", on_copy)
+        tree.bind("<Control-C>", on_copy)
 
     def _open_assignment_detail_dialog(self, task):
         win = tk.Toplevel(self)
@@ -245,6 +368,18 @@ class TaskRecordPanel(ttk.LabelFrame):
 
     def bind_manager(self, manager):
         self.manager = manager
+        try:
+            # 事件驱动刷新：写入任务状态变化时立刻刷新（比 5s 轮询更“实时”）
+            def _listener(task):
+                try:
+                    # manager 的回调在后台线程触发，Tk 更新必须回到主线程
+                    self.after(0, self.refresh_tasks)
+                except Exception:
+                    pass
+
+            manager.register_listener(_listener)
+        except Exception:
+            pass
         self.refresh_tasks()
         if self.auto_refresh:
             self._schedule_refresh()

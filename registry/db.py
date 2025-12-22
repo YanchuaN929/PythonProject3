@@ -43,10 +43,7 @@ def set_force_network_mode(enabled: bool = True) -> None:
     _FORCE_NETWORK_MODE = enabled
     _IS_NETWORK_PATH = None  # 重置缓存，下次连接时重新评估
     
-    if enabled:
-        print("[Registry] 已启用强制网络模式（本地测试用）")
-    else:
-        print("[Registry] 已禁用强制网络模式，使用自动检测")
+    # 控制台输出优化：已验证逻辑，默认不输出
 
 def _is_network_path(path: str) -> bool:
     """
@@ -192,18 +189,15 @@ def get_connection(db_path: str, wal: bool = True) -> sqlite3.Connection:
         if _DB_PATH != db_path:
             if _FORCE_NETWORK_MODE:
                 _IS_NETWORK_PATH = True
-                print(f"[Registry] 强制网络模式: {db_path}")
             else:
                 _IS_NETWORK_PATH = _is_network_path(db_path)
-                if _IS_NETWORK_PATH:
-                    print(f"[Registry] 检测到网络路径: {db_path}")
+                # 控制台输出优化：已验证逻辑，默认不输出
             _DB_PATH = db_path
         
         is_network = _IS_NETWORK_PATH or _FORCE_NETWORK_MODE
         
         # 【关键修复】网络路径自动禁用WAL模式
         if is_network and wal:
-            print("[Registry] 网络路径自动禁用WAL模式以避免锁定问题")
             wal = False
             # 尝试清理旧的WAL文件
             _cleanup_wal_files(db_path)
@@ -234,7 +228,8 @@ def get_connection(db_path: str, wal: bool = True) -> sqlite3.Connection:
                     result = conn.execute("PRAGMA journal_mode=DELETE").fetchone()
                     print(f"[Registry] 重试后日志模式: {result[0] if result else 'unknown'}")
             else:
-                print(f"[Registry] 日志模式: {actual_mode}")
+                # 控制台输出优化：已验证逻辑，默认不输出
+                pass
             
             # 设置繁忙超时（网络路径使用更长的超时）
             busy_timeout = 60000 if is_network else 30000  # 60秒 或 30秒

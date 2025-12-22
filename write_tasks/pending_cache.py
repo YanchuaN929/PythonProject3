@@ -37,32 +37,37 @@ class PendingCache:
         with self._lock:
             entries = []
             for assignment in assignments:
-                key = self._make_key(assignment)
-                self._assignments[key] = {
-                    "assigned_name": assignment.get("assigned_name", ""),
-                    "assigned_by": assignment.get("assigned_by", ""),
-                    "project_id": assignment.get("project_id", ""),
-                    "interface_id": assignment.get("interface_id", ""),
-                    "file_type": assignment.get("file_type"),
-                    "status_text": assignment.get("status_text", "待完成"),
-                    "status": "pending",
-                }
-                entries.append(("assignment", key))
+                # 兼容：UI 的 DataFrame 里 source_file 可能是“全路径”或“文件名(basename)”
+                # 指派 payload 的 file_path 往往是全路径，因此这里双写两份 key，确保能命中覆盖。
+                keys = self._make_keys(assignment)
+                for key in keys:
+                    self._assignments[key] = {
+                        "assigned_name": assignment.get("assigned_name", ""),
+                        "assigned_by": assignment.get("assigned_by", ""),
+                        "project_id": assignment.get("project_id", ""),
+                        "interface_id": assignment.get("interface_id", ""),
+                        "file_type": assignment.get("file_type"),
+                        "status_text": assignment.get("status_text", "待完成"),
+                        "status": "pending",
+                    }
+                    entries.append(("assignment", key))
             if entries:
                 self._task_index[task_id] = entries
 
     def add_response_entry(self, task_id: str, info: Dict):
         with self._lock:
-            key = self._make_key(info)
-            self._responses[key] = {
-                "response_number": info.get("response_number", ""),
-                "user_name": info.get("user_name", ""),
-                "project_id": info.get("project_id", ""),
-                "status_text": info.get("status_text", ""),
-                "has_assignor": bool(info.get("has_assignor")),
-                "status": "pending",
-            }
-            self._task_index[task_id] = [("response", key)]
+            keys = self._make_keys(info)
+            for key in keys:
+                self._responses[key] = {
+                    "response_number": info.get("response_number", ""),
+                    "user_name": info.get("user_name", ""),
+                    "project_id": info.get("project_id", ""),
+                    "status_text": info.get("status_text", ""),
+                    "has_assignor": bool(info.get("has_assignor")),
+                    "status": "pending",
+                }
+            # 记录索引：用于状态变更时清理/更新（同一任务可能对应多个 key）
+            self._task_index[task_id] = [("response", k) for k in keys]
 
     # ------------------------------------------------------------------ #
     # Query helpers
@@ -79,16 +84,25 @@ class PendingCache:
         for idx, row in rows.items():
             file_path = row.get('source_file') or row.get('源文件') or ''
             row_index = row.get('原始行号') or row.get('行号') or 0
-            key = self._normalize_key(file_path, row_index, file_type)
-            if key in self._assignments:
-                info = self._assignments[key]
+            key_full = self._normalize_key(file_path, row_index, file_type)
+            key_base = self._normalize_key(os.path.basename(str(file_path or "")), row_index, file_type)
+            info = None
+            if key_full in self._assignments:
+                info = self._assignments[key_full]
+            elif key_base in self._assignments:
+                info = self._assignments[key_base]
+            if info:
                 if '责任人' in df.columns:
                     df.at[idx, '责任人'] = info.get('assigned_name', '')
                 if '状态' in df.columns and info.get('assigned_name'):
                     status_text = self._resolve_assignment_status(info, user_roles)
                     df.at[idx, '状态'] = status_text
-            if key in self._responses:
-                info = self._responses[key]
+            info = None
+            if key_full in self._responses:
+                info = self._responses[key_full]
+            elif key_base in self._responses:
+                info = self._responses[key_base]
+            if info:
                 if '回文单号' in df.columns:
                     df.at[idx, '回文单号'] = info.get('response_number', '')
                 if '是否已完成' in df.columns:
@@ -143,23 +157,49 @@ class PendingCache:
             for entry_type, key in entries:
                 if entry_type == "assignment" and key in self._assignments:
                     self._assignments[key]["status"] = task.status
-                    if task.status in ("completed", "failed"):
+                    # 关键：completed 也保留覆盖，避免“写完但未重读Excel导致UI回弹”
+                    # failed 则移除覆盖，让任务重新显示为未指派。
+                    if task.status in ("failed",):
                         del self._assignments[key]
                 elif entry_type == "response" and key in self._responses:
                     self._responses[key]["status"] = task.status
-                    if task.status in ("completed", "failed"):
+                    if task.status in ("failed",):
                         del self._responses[key]
-            if task.status in ("completed", "failed"):
+            # 仅当失败时清理索引；completed 仍保留覆盖信息用于UI展示
+            if task.status in ("failed",):
                 self._task_index.pop(task.task_id, None)
 
     # ------------------------------------------------------------------ #
     # Internal helpers
     # ------------------------------------------------------------------ #
-    def _make_key(self, payload: Dict) -> Key:
-        file_path = payload.get("file_path", "")
+    def _make_keys(self, payload: Dict) -> List[Key]:
+        """
+        同一条记录生成多个 Key：
+        - full path key：用于 DataFrame 存 full path 的情况
+        - basename key：用于 DataFrame 存 source_file basename 的情况（常见于 registry 逻辑）
+        """
+        file_path = payload.get("file_path", "") or payload.get("source_file", "") or payload.get("源文件", "") or ""
         row_index = int(payload.get("row_index", 0) or 0)
         file_type = int(payload.get("file_type", 0) or 0)
-        return self._normalize_key(file_path, row_index, file_type)
+        keys = []
+        # full
+        keys.append(self._normalize_key(str(file_path or ""), row_index, file_type))
+        # basename
+        try:
+            base = os.path.basename(str(file_path or ""))
+            if base:
+                keys.append(self._normalize_key(base, row_index, file_type))
+        except Exception:
+            pass
+        # 去重保序
+        seen = set()
+        out = []
+        for k in keys:
+            if k in seen:
+                continue
+            seen.add(k)
+            out.append(k)
+        return out
 
     def _normalize_key(self, file_path: str, row_index: int, file_type: int) -> Key:
         normalized = os.path.normpath(str(file_path or "")).lower()

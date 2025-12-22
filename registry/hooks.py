@@ -65,7 +65,7 @@ def set_data_folder(folder_path: str):
     """
     global _DATA_FOLDER
     _DATA_FOLDER = folder_path
-    print(f"[Registry] 数据文件夹已设置: {folder_path}")
+    # 控制台输出优化：已验证逻辑，默认不输出
 
 def get_display_status(task_keys: List[Dict[str, Any]], current_user_roles_str: str = None) -> Dict[str, str]:
     """
@@ -217,7 +217,7 @@ def on_export_done(
             'extra': {'count': int(count), 'path': export_path}
         }, now)
         
-        print(f"[Registry] export_done: file_type={file_type}, count={count}")
+        # 控制台输出优化：已验证逻辑，默认不输出
         
     except Exception as e:
         print(f"[Registry] on_export_done 失败: {e}")
@@ -270,7 +270,9 @@ def on_assigned(
             'assigned_by': assigned_by,
             'assigned_at': now.isoformat(),
             'display_status': '待完成',
-            'responsible_person': assigned_to
+            'responsible_person': assigned_to,
+            # 明确：这是“指派动作”的显示状态更新，必须覆盖旧状态（不要被 upsert_task 的“默认值继承”逻辑回退）
+            '_force_display_status': True,
         }
         
         from .service import upsert_task
@@ -289,7 +291,7 @@ def on_assigned(
             }
         }, now)
         
-        print(f"[Registry] assigned: interface_id={interface_id}, by={assigned_by}, to={assigned_to}")
+        # 控制台输出优化：已验证逻辑，默认不输出
         
     except Exception as e:
         print(f"[Registry] on_assigned 失败: {e}")
@@ -441,7 +443,7 @@ def on_response_written(
             }
         }, now)
         
-        print(f"[Registry] response_written: interface_id={interface_id}, user={user_name}")
+        # 控制台输出优化：已验证逻辑，默认不输出
         
     except Exception as e:
         print(f"[Registry] on_response_written 失败: {e}")
@@ -504,7 +506,7 @@ def on_confirmed_by_superior(
             'extra': {'user_name': user_name}
         }, now)
         
-        print(f"[Registry] confirmed: file_type={file_type}, row={row_index}, user={user_name}")
+        # 控制台输出优化：已验证逻辑，默认不输出
         
     except Exception as e:
         print(f"[Registry] on_confirmed_by_superior 失败: {e}")
