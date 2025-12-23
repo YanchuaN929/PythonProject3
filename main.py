@@ -1884,10 +1884,10 @@ def execute3_process3(df, current_datetime):
     返回:
         set: 符合条件的行索引集合
     """
-    print("执行处理3：筛选M列时间数据")
+    print("执行处理3：筛选M列时间数据（4444年份视为无效，直接排除）")
     try:
         import Monitor
-        Monitor.log_process("处理3：筛选M列时间数据")
+        Monitor.log_process("处理3：筛选M列时间数据（4444年份视为无效，直接排除）")
     except:
         pass
     
@@ -1931,6 +1931,11 @@ def execute3_process3(df, current_datetime):
                     # 尝试解析日期，支持多种格式
                     date_value = None
                     value_str = str(value).strip()
+                    
+                    # 业务规则：4444 作为年份表示“无效占位”，不应进入处理结果
+                    # 因此直接排除该行（不参与时间窗口判断）
+                    if value_str.startswith('4444'):
+                        continue
                     
                     # 尝试不同的日期格式
                     date_formats = [
@@ -1976,7 +1981,7 @@ def execute3_process3(df, current_datetime):
 
 def execute3_process4(df, current_datetime):
     """
-    处理4：读取处理文件3中L列的数据，进行时间筛选（包括4444开头的特殊处理）
+    处理4：读取处理文件3中L列的数据，进行时间筛选（4444年份视为无效，直接排除）
     
     参数:
         df (pandas.DataFrame): 输入数据
@@ -1985,10 +1990,10 @@ def execute3_process4(df, current_datetime):
     返回:
         set: 符合条件的行索引集合
     """
-    print("执行处理4：筛选L列时间数据（包括4444开头特殊处理）")
+    print("执行处理4：筛选L列时间数据（4444年份视为无效，直接排除）")
     try:
         import Monitor
-        Monitor.log_process("处理4：筛选L列时间数据（包括4444开头特殊处理）")
+        Monitor.log_process("处理4：筛选L列时间数据（4444年份视为无效，直接排除）")
     except:
         pass
     
@@ -2032,11 +2037,10 @@ def execute3_process4(df, current_datetime):
                     value_str = str(value).strip()
                     date_value = None
                     
-                    # 特殊处理：4444开头的数据当做当年处理
+                    # 业务规则：4444 作为年份表示“无效占位”，不应进入处理结果
+                    # 因此直接排除该行（不参与时间窗口判断）
                     if value_str.startswith('4444'):
-                        # 将4444替换为当前年份
-                        modified_value_str = value_str.replace('4444', str(current_year), 1)
-                        value_str = modified_value_str
+                        continue
                     
                     # 尝试不同的日期格式
                     date_formats = [
