@@ -1413,6 +1413,16 @@ class ExcelProcessorApp:
             
             # 批量查询状态
             status_map = registry_hooks.get_display_status(task_keys)
+
+            # 【关键兜底】如果Registry是新库/路径变化/未初始化导致查不到任何任务，
+            # 不能把所有行当作“无状态(=已忽略/已归档)”直接过滤掉，否则会出现“结果全变0”的灾难性体验。
+            # 这种情况下，降级为：跳过 Registry 过滤，仅保留超期过滤。
+            if not status_map:
+                try:
+                    print(f"[Registry] 警告：文件{file_type} status_map为空，跳过Registry过滤（可能是新库/路径变化/未初始化/本轮未写入）")
+                except Exception:
+                    pass
+                return self._apply_overdue_filter(df, file_type)
             
             # 【修复】根据用户角色决定过滤逻辑
             user_roles = getattr(self, 'user_roles', [])
@@ -3631,15 +3641,61 @@ class ExcelProcessorApp:
             cached_result = self.file_manager.load_cached_result(file_path, project_id, file_type)
             
             if cached_result is not None:
+                # ------------------------------------------------------------
+                # 缓存兼容性兜底（修复：旧缓存缺少关键派生列会导致UI“责任人”全为“无”）
+                # - main.py 已明确为各文件类型生成“责任人”列；若命中缓存却缺列，说明缓存来自旧版本/损坏
+                # - 此时应视为缓存未命中，触发一次重算并覆盖缓存
+                # ------------------------------------------------------------
+                try:
+                    if isinstance(cached_result, pd.DataFrame):
+                        if "责任人" not in cached_result.columns:
+                            try:
+                                # 仅提示一次：避免刷屏
+                                warned = getattr(self, "_warned_incompatible_cache_missing_resp", False)
+                                if not warned:
+                                    print("[缓存] ⚠️ 命中缓存但缺少“责任人”列：将忽略旧缓存并重新处理（建议清理 result_cache/ 目录）")
+                                    self._warned_incompatible_cache_missing_resp = True
+                            except Exception:
+                                pass
+                            try:
+                                # 清理该文件对应的 .pkl，避免重复命中旧缓存
+                                self.file_manager.clear_file_cache(file_path)
+                            except Exception:
+                                pass
+                            cached_result = None
+                except Exception:
+                    # 兜底：任何校验失败不影响主流程
+                    pass
+
+            if cached_result is not None:
                 # 缓存命中
+                try:
+                    self._last_cache_hit_info = {
+                        "file_path": file_path,
+                        "project_id": str(project_id),
+                        "file_type": str(file_type),
+                        "hit": True,
+                    }
+                except Exception:
+                    pass
                 print(f"  ✅ 使用缓存: 项目{project_id}{file_type} ({len(cached_result)}行)")
                 return cached_result
             
             # 2. 缓存未命中，进行处理
+            try:
+                self._last_cache_hit_info = {
+                    "file_path": file_path,
+                    "project_id": str(project_id),
+                    "file_type": str(file_type),
+                    "hit": False,
+                }
+            except Exception:
+                pass
             result = process_func(file_path, *args)
             
             # 3. 保存缓存
-            if result is not None and not result.empty:
+            # Step3：允许缓存“空结果”（负缓存），避免每次都重复读取Excel/重复筛选。
+            if result is not None:
                 save_success = self.file_manager.save_cached_result(file_path, project_id, file_type, result)
                 if not save_success:
                     # 缓存保存失败，弹窗提醒（仅在手动操作时）
@@ -3655,6 +3711,16 @@ class ExcelProcessorApp:
             return result
             
         except Exception as e:
+            try:
+                self._last_cache_hit_info = {
+                    "file_path": file_path,
+                    "project_id": str(project_id),
+                    "file_type": str(file_type),
+                    "hit": False,
+                    "error": str(e),
+                }
+            except Exception:
+                pass
             print(f"处理{file_type}失败 [项目{project_id}]: {e}")
             return None
     
@@ -4133,6 +4199,49 @@ class ExcelProcessorApp:
                 except Exception:
                     can_reuse_refresh_cache = False
 
+                # Step3：统计本轮 Registry 实际写入次数，用于 finalize 决策
+                registry_write_flags = {"count": 0}
+                registry_bootstrap_needed = False
+                registry_bound_db_path = ""
+
+                # 【关键修复】确保本轮开始处理时，Registry 一定绑定到当前 folder_path（公共盘数据目录）
+                # 否则在“用户未点击刷新文件列表/未重新选择目录”的场景下，hooks._DATA_FOLDER 可能仍为 None，
+                # 导致 Registry 默认为本地 result_cache/registry.db（空库） -> 状态查询全空 -> UI 回退到旧状态标记。
+                try:
+                    folder_path = (getattr(self, "config", {}) or {}).get("folder_path", "")
+                    folder_path = (folder_path or "").strip()
+                    if folder_path:
+                        from registry import hooks as registry_hooks
+                        registry_hooks.set_data_folder(folder_path)
+                        # 主动初始化一次配置/目录（后台线程内允许触网）
+                        try:
+                            from registry.config import load_config
+                            cfg = load_config(data_folder=folder_path, ensure_registry_dir=True)
+                            db_path = cfg.get("registry_db_path", "")
+                            if db_path:
+                                registry_bound_db_path = db_path
+                                print(f"[Registry] 本轮处理绑定数据库: {db_path}")
+                                # 仅在“DB为空/新库”时做一次 bootstrap（写入当前结果以获得 display_status）
+                                # 这不会破坏 Step3 的性能目标：只会在少见的“空库”场景触发一次。
+                                try:
+                                    from registry.db import get_connection
+                                    conn = get_connection(db_path, bool(cfg.get("registry_wal", False)))
+                                    row = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'").fetchone()
+                                    if not row:
+                                        registry_bootstrap_needed = True
+                                    else:
+                                        c = conn.execute("SELECT COUNT(*) FROM tasks").fetchone()
+                                        registry_bootstrap_needed = bool((c[0] if c else 0) == 0)
+                                    if registry_bootstrap_needed:
+                                        print("[Registry] 检测到 tasks 为空：本轮将执行一次 bootstrap 写入以恢复状态显示")
+                                except Exception as _e2:
+                                    # 探测失败不影响主流程；后续 status_map 仍可能为空
+                                    print(f"[Registry] 检测 tasks 计数失败（可能导致status_map为空）: {_e2}")
+                        except Exception as _e:
+                            print(f"[Registry] 初始化失败（可能无法访问公共盘，将导致状态查询为空）: {_e}")
+                except Exception as e:
+                    print(f"[Registry] 设置数据目录失败（将导致状态查询为空）: {e}")
+
                 # 处理待处理文件1（批量）
                 if process_file1 and self.target_files1:
                     if hasattr(main, 'process_target_file'):
@@ -4148,8 +4257,9 @@ class ExcelProcessorApp:
                         
                         new_multi1 = {}
                         combined_results = []
-                        # 【修复】保存原始结果（角色筛选前），用于Registry写入
+                        # Step3：保存原始结果（角色筛选前），用于Registry写入（仅增量触发）
                         raw_results_for_registry = {}
+                        registry_should_update = {}
                         
                         for file_path, project_id in self.target_files1:
                             try:
@@ -4162,6 +4272,7 @@ class ExcelProcessorApp:
 
                                 # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
                                 result = None
+                                used_refresh_cache = False
                                 if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
                                     result = self._get_refresh_cached_raw_df(
                                         file_type=1,
@@ -4170,6 +4281,7 @@ class ExcelProcessorApp:
                                         all_file_paths=all_file_paths_for_run,
                                         changed_files=changed_files_for_run,
                                     )
+                                    used_refresh_cache = result is not None
                                 if result is None:
                                     # 使用缓存处理（.pkl）或缓存未命中则处理Excel
                                     result = self._process_with_cache(
@@ -4179,16 +4291,33 @@ class ExcelProcessorApp:
                                         main.process_target_file,
                                         self.current_datetime,
                                     )
+                                # Step3：判定本项目是否需要触发 Registry 写入
+                                cache_hit = bool(used_refresh_cache)
+                                if not cache_hit:
+                                    try:
+                                        info = getattr(self, "_last_cache_hit_info", {}) or {}
+                                        if (
+                                            str(info.get("project_id", "")) == str(project_id)
+                                            and str(info.get("file_type", "")) == "file1"
+                                            and info.get("file_path") == file_path
+                                        ):
+                                            cache_hit = bool(info.get("hit", False))
+                                    except Exception:
+                                        cache_hit = False
+                                # Step3：增量写入 + “空库bootstrap”兜底
+                                should_update_registry = bool(registry_bootstrap_needed or (file_path in changed_files_for_run) or (not cache_hit))
+                                registry_should_update[project_id] = bool(should_update_registry)
                                 
                                 # 【调试】打印处理结果
                                 print(f"[调试] 文件1处理返回: result={type(result)}, 行数={len(result) if result is not None else 'None'}")
                                 
                                 if result is not None and not result.empty:
-                                    # 【修复】先保存原始结果用于Registry（与角色无关）
-                                    raw_result = result.copy()
-                                    raw_result['项目号'] = project_id
-                                    raw_results_for_registry[project_id] = (file_path, raw_result)
-                                    print(f"[调试] 已保存原始结果到raw_results_for_registry: 项目{project_id}, {len(raw_result)}行")
+                                    # Step3：仅当需要增量更新时，才准备写入 Registry
+                                    if should_update_registry:
+                                        raw_result = result.copy()
+                                        raw_result['项目号'] = project_id
+                                        raw_results_for_registry[project_id] = (file_path, raw_result)
+                                        print(f"[调试] 已保存原始结果到raw_results_for_registry: 项目{project_id}, {len(raw_result)}行")
                                     
                                     # 【显示用】应用角色筛选（仅影响显示，不影响Registry）
                                     filtered_result = self.apply_role_based_filter(result, project_id=project_id)
@@ -4218,8 +4347,8 @@ class ExcelProcessorApp:
                                 except:
                                     pass
                         
-                        # 【修复】Registry写入：使用原始结果（角色筛选前），确保所有任务都被标记状态
-                        print(f"[调试] 准备写入Registry: registry_hooks={registry_hooks is not None}, raw_results_for_registry有{len(raw_results_for_registry)}个项目")
+                        # Step3：Registry写入改为“增量触发”
+                        print(f"[调试] 准备写入Registry(增量): registry_hooks={registry_hooks is not None}, raw_results_for_registry有{len(raw_results_for_registry)}个项目")
                         if registry_hooks and raw_results_for_registry:
                             try:
                                 for project_id, (source_file, raw_df) in raw_results_for_registry.items():
@@ -4235,6 +4364,10 @@ class ExcelProcessorApp:
                                         )
                                         # 控制台输出优化：已验证逻辑，默认不输出
                                         Monitor.log_info(f"Registry: 文件1项目{project_id}写入{len(raw_df)}个任务")
+                                        try:
+                                            registry_write_flags["count"] += 1
+                                        except Exception:
+                                            pass
                             except Exception as e:
                                 print(f"[Registry] 文件1钩子调用失败: {e}")
                                 import traceback
@@ -4276,7 +4409,7 @@ class ExcelProcessorApp:
                         
                         new_multi2 = {}
                         combined_results = []
-                        # 【修复】保存原始结果（角色筛选前），用于Registry写入
+                        # Step3：保存原始结果（角色筛选前），用于Registry写入（仅增量触发）
                         raw_results_for_registry = {}
                         
                         for file_path, project_id in self.target_files2:
@@ -4284,6 +4417,7 @@ class ExcelProcessorApp:
                                 print(f"处理项目{project_id}的文件2: {os.path.basename(file_path)}")
                                 # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
                                 result = None
+                                used_refresh_cache = False
                                 if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
                                     result = self._get_refresh_cached_raw_df(
                                         file_type=2,
@@ -4292,6 +4426,7 @@ class ExcelProcessorApp:
                                         all_file_paths=all_file_paths_for_run,
                                         changed_files=changed_files_for_run,
                                     )
+                                    used_refresh_cache = result is not None
                                 if result is None:
                                     # 使用缓存处理（.pkl）或缓存未命中则处理Excel
                                     result = self._process_with_cache(
@@ -4302,11 +4437,26 @@ class ExcelProcessorApp:
                                         self.current_datetime,
                                         project_id,
                                     )
+                                # Step3：判定本项目是否需要触发 Registry 写入
+                                cache_hit = bool(used_refresh_cache)
+                                if not cache_hit:
+                                    try:
+                                        info = getattr(self, "_last_cache_hit_info", {}) or {}
+                                        if (
+                                            str(info.get("project_id", "")) == str(project_id)
+                                            and str(info.get("file_type", "")) == "file2"
+                                            and info.get("file_path") == file_path
+                                        ):
+                                            cache_hit = bool(info.get("hit", False))
+                                    except Exception:
+                                        cache_hit = False
+                                should_update_registry = bool(registry_bootstrap_needed or (file_path in changed_files_for_run) or (not cache_hit))
                                 if result is not None and not result.empty:
                                     # 【修复】先保存原始结果用于Registry（与角色无关）
-                                    raw_result = result.copy()
-                                    raw_result['项目号'] = project_id
-                                    raw_results_for_registry[project_id] = (file_path, raw_result)
+                                    if should_update_registry:
+                                        raw_result = result.copy()
+                                        raw_result['项目号'] = project_id
+                                        raw_results_for_registry[project_id] = (file_path, raw_result)
                                     
                                     # 【显示用】应用角色筛选（仅影响显示，不影响Registry）
                                     filtered_result = self.apply_role_based_filter(result, project_id=project_id)
@@ -4323,7 +4473,7 @@ class ExcelProcessorApp:
                             except Exception as e:
                                 print(f"项目{project_id}文件2处理失败: {e}")
                         
-                        # 【修复】Registry写入：使用原始结果（角色筛选前）
+                        # Step3：Registry写入改为“增量触发”
                         if registry_hooks and raw_results_for_registry:
                             try:
                                 for project_id, (source_file, raw_df) in raw_results_for_registry.items():
@@ -4337,6 +4487,10 @@ class ExcelProcessorApp:
                                         )
                                         # 控制台输出优化：已验证逻辑，默认不输出
                                         Monitor.log_info(f"Registry: 文件2项目{project_id}写入{len(raw_df)}个任务")
+                                        try:
+                                            registry_write_flags["count"] += 1
+                                        except Exception:
+                                            pass
                             except Exception as e:
                                 print(f"[Registry] 文件2钩子调用失败: {e}")
                         
@@ -4361,7 +4515,7 @@ class ExcelProcessorApp:
                         print(f"开始批量处理文件3类型，共 {len(self.target_files3)} 个文件")
                         new_multi3 = {}
                         combined_results = []
-                        # 【修复】保存原始结果（角色筛选前），用于Registry写入
+                        # Step3：保存原始结果（角色筛选前），用于Registry写入（仅增量触发）
                         raw_results_for_registry = {}
                         
                         for file_path, project_id in self.target_files3:
@@ -4369,6 +4523,7 @@ class ExcelProcessorApp:
                                 print(f"处理项目{project_id}的文件3: {os.path.basename(file_path)}")
                                 # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
                                 result = None
+                                used_refresh_cache = False
                                 if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
                                     result = self._get_refresh_cached_raw_df(
                                         file_type=3,
@@ -4377,6 +4532,7 @@ class ExcelProcessorApp:
                                         all_file_paths=all_file_paths_for_run,
                                         changed_files=changed_files_for_run,
                                     )
+                                    used_refresh_cache = result is not None
                                 if result is None:
                                     # 使用缓存处理（.pkl）或缓存未命中则处理Excel
                                     result = self._process_with_cache(
@@ -4386,11 +4542,26 @@ class ExcelProcessorApp:
                                         main.process_target_file3,
                                         self.current_datetime,
                                     )
+                                # Step3：判定本项目是否需要触发 Registry 写入
+                                cache_hit = bool(used_refresh_cache)
+                                if not cache_hit:
+                                    try:
+                                        info = getattr(self, "_last_cache_hit_info", {}) or {}
+                                        if (
+                                            str(info.get("project_id", "")) == str(project_id)
+                                            and str(info.get("file_type", "")) == "file3"
+                                            and info.get("file_path") == file_path
+                                        ):
+                                            cache_hit = bool(info.get("hit", False))
+                                    except Exception:
+                                        cache_hit = False
+                                should_update_registry = bool(registry_bootstrap_needed or (file_path in changed_files_for_run) or (not cache_hit))
                                 if result is not None and not result.empty:
                                     # 【修复】先保存原始结果用于Registry（与角色无关）
-                                    raw_result = result.copy()
-                                    raw_result['项目号'] = project_id
-                                    raw_results_for_registry[project_id] = (file_path, raw_result)
+                                    if should_update_registry:
+                                        raw_result = result.copy()
+                                        raw_result['项目号'] = project_id
+                                        raw_results_for_registry[project_id] = (file_path, raw_result)
                                     
                                     # 【显示用】应用角色筛选
                                     filtered_result = self.apply_role_based_filter(result, project_id=project_id)
@@ -4404,7 +4575,7 @@ class ExcelProcessorApp:
                             except Exception as e:
                                 print(f"项目{project_id}文件3处理失败: {e}")
                         
-                        # 【修复】Registry写入：使用原始结果（角色筛选前）
+                        # Step3：Registry写入改为“增量触发”
                         if registry_hooks and raw_results_for_registry:
                             try:
                                 for project_id, (source_file, raw_df) in raw_results_for_registry.items():
@@ -4418,6 +4589,10 @@ class ExcelProcessorApp:
                                         )
                                         # 控制台输出优化：已验证逻辑，默认不输出
                                         Monitor.log_info(f"Registry: 文件3项目{project_id}写入{len(raw_df)}个任务")
+                                        try:
+                                            registry_write_flags["count"] += 1
+                                        except Exception:
+                                            pass
                             except Exception as e:
                                 print(f"[Registry] 文件3钩子调用失败: {e}")
                         
@@ -4442,7 +4617,7 @@ class ExcelProcessorApp:
                         print(f"开始批量处理文件4类型，共 {len(self.target_files4)} 个文件")
                         new_multi4 = {}
                         combined_results = []
-                        # 【修复】保存原始结果（角色筛选前），用于Registry写入
+                        # Step3：保存原始结果（角色筛选前），用于Registry写入（仅增量触发）
                         raw_results_for_registry = {}
                         
                         for file_path, project_id in self.target_files4:
@@ -4450,6 +4625,7 @@ class ExcelProcessorApp:
                                 print(f"处理项目{project_id}的文件4: {os.path.basename(file_path)}")
                                 # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
                                 result = None
+                                used_refresh_cache = False
                                 if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
                                     result = self._get_refresh_cached_raw_df(
                                         file_type=4,
@@ -4458,6 +4634,7 @@ class ExcelProcessorApp:
                                         all_file_paths=all_file_paths_for_run,
                                         changed_files=changed_files_for_run,
                                     )
+                                    used_refresh_cache = result is not None
                                 if result is None:
                                     # 使用缓存处理（.pkl）或缓存未命中则处理Excel
                                     result = self._process_with_cache(
@@ -4467,11 +4644,26 @@ class ExcelProcessorApp:
                                         main.process_target_file4,
                                         self.current_datetime,
                                     )
+                                # Step3：判定本项目是否需要触发 Registry 写入
+                                cache_hit = bool(used_refresh_cache)
+                                if not cache_hit:
+                                    try:
+                                        info = getattr(self, "_last_cache_hit_info", {}) or {}
+                                        if (
+                                            str(info.get("project_id", "")) == str(project_id)
+                                            and str(info.get("file_type", "")) == "file4"
+                                            and info.get("file_path") == file_path
+                                        ):
+                                            cache_hit = bool(info.get("hit", False))
+                                    except Exception:
+                                        cache_hit = False
+                                should_update_registry = bool(registry_bootstrap_needed or (file_path in changed_files_for_run) or (not cache_hit))
                                 if result is not None and not result.empty:
                                     # 【修复】先保存原始结果用于Registry（与角色无关）
-                                    raw_result = result.copy()
-                                    raw_result['项目号'] = project_id
-                                    raw_results_for_registry[project_id] = (file_path, raw_result)
+                                    if should_update_registry:
+                                        raw_result = result.copy()
+                                        raw_result['项目号'] = project_id
+                                        raw_results_for_registry[project_id] = (file_path, raw_result)
                                     
                                     # 【显示用】应用角色筛选
                                     filtered_result = self.apply_role_based_filter(result, project_id=project_id)
@@ -4485,7 +4677,7 @@ class ExcelProcessorApp:
                             except Exception as e:
                                 print(f"项目{project_id}文件4处理失败: {e}")
                         
-                        # 【修复】Registry写入：使用原始结果（角色筛选前）
+                        # Step3：Registry写入改为“增量触发”
                         if registry_hooks and raw_results_for_registry:
                             try:
                                 for project_id, (source_file, raw_df) in raw_results_for_registry.items():
@@ -4499,6 +4691,10 @@ class ExcelProcessorApp:
                                         )
                                         # 控制台输出优化：已验证逻辑，默认不输出
                                         Monitor.log_info(f"Registry: 文件4项目{project_id}写入{len(raw_df)}个任务")
+                                        try:
+                                            registry_write_flags["count"] += 1
+                                        except Exception:
+                                            pass
                             except Exception as e:
                                 print(f"[Registry] 文件4钩子调用失败: {e}")
                         
@@ -4518,11 +4714,21 @@ class ExcelProcessorApp:
                         self.processing_results_multi4 = new_multi4
                 
                 def update_display():
-                    # 【新增】执行归档逻辑（标记消失任务，归档超期任务）
+                    # Step3：执行归档逻辑（标记消失任务，归档超期任务）
                     try:
                         from registry import hooks as registry_hooks
                         batch_tag = self.current_datetime.strftime('%Y%m%d_%H%M%S')
-                        registry_hooks.on_scan_finalize(batch_tag=batch_tag)
+                        is_admin = False
+                        try:
+                            is_admin = "管理员" in (getattr(self, "user_roles", []) or [])
+                        except Exception:
+                            is_admin = False
+
+                        # 你已确认：missing 归档仅管理员开始处理时执行；
+                        # 同时为了性能：仅当本轮有文件变化或确实发生增量写入时才 finalize。
+                        should_finalize = bool(is_admin and (changed_files_for_run or registry_write_flags.get("count", 0) > 0))
+                        if should_finalize:
+                            registry_hooks.on_scan_finalize(batch_tag=batch_tag)
                         # 更新数据库状态为已连接
                         folder_path = self.config.get('folder_path', '').strip()
                         if folder_path:
@@ -4663,7 +4869,7 @@ class ExcelProcessorApp:
                                 pass
                             new_multi5 = {}
                             combined_results = []
-                            # 【修复】保存原始结果（角色筛选前），用于Registry写入
+                            # Step3：保存原始结果（角色筛选前），用于Registry写入（仅增量触发）
                             raw_results_for_registry = {}
                             
                             for file_path, project_id in self.target_files5:
@@ -4671,6 +4877,7 @@ class ExcelProcessorApp:
                                     print(f"处理项目{project_id}的文件5: {os.path.basename(file_path)}")
                                     # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
                                     result = None
+                                    used_refresh_cache = False
                                     if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
                                         result = self._get_refresh_cached_raw_df(
                                             file_type=5,
@@ -4679,6 +4886,7 @@ class ExcelProcessorApp:
                                             all_file_paths=all_file_paths_for_run,
                                             changed_files=changed_files_for_run,
                                         )
+                                        used_refresh_cache = result is not None
                                     if result is None:
                                         result = self._process_with_cache(
                                             file_path,
@@ -4687,11 +4895,26 @@ class ExcelProcessorApp:
                                             main.process_target_file5,
                                             self.current_datetime,
                                         )
+                                    # Step3：判定本项目是否需要触发 Registry 写入
+                                    cache_hit = bool(used_refresh_cache)
+                                    if not cache_hit:
+                                        try:
+                                            info = getattr(self, "_last_cache_hit_info", {}) or {}
+                                            if (
+                                                str(info.get("project_id", "")) == str(project_id)
+                                                and str(info.get("file_type", "")) == "file5"
+                                                and info.get("file_path") == file_path
+                                            ):
+                                                cache_hit = bool(info.get("hit", False))
+                                        except Exception:
+                                            cache_hit = False
+                                    should_update_registry = bool(registry_bootstrap_needed or (file_path in changed_files_for_run) or (not cache_hit))
                                     if result is not None and not result.empty:
                                         # 【修复】先保存原始结果用于Registry（与角色无关）
-                                        raw_result = result.copy()
-                                        raw_result['项目号'] = project_id
-                                        raw_results_for_registry[project_id] = (file_path, raw_result)
+                                        if should_update_registry:
+                                            raw_result = result.copy()
+                                            raw_result['项目号'] = project_id
+                                            raw_results_for_registry[project_id] = (file_path, raw_result)
                                         
                                         # 【显示用】应用角色筛选
                                         filtered_result = self.apply_role_based_filter(result, project_id=project_id)
@@ -4705,7 +4928,7 @@ class ExcelProcessorApp:
                             # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
                             self.processing_results_multi5 = new_multi5
                             
-                            # 【修复】Registry写入：使用原始结果（角色筛选前）
+                            # Step3：Registry写入改为“增量触发”
                             if registry_hooks and raw_results_for_registry:
                                 try:
                                     for project_id, (source_file, raw_df) in raw_results_for_registry.items():
@@ -4719,6 +4942,10 @@ class ExcelProcessorApp:
                                             )
                                             # 控制台输出优化：已验证逻辑，默认不输出
                                             Monitor.log_info(f"Registry: 文件5项目{project_id}写入{len(raw_df)}个任务")
+                                            try:
+                                                registry_write_flags["count"] += 1
+                                            except Exception:
+                                                pass
                                 except Exception as e:
                                     print(f"[Registry] 文件5钩子调用失败: {e}")
                             
@@ -4760,7 +4987,7 @@ class ExcelProcessorApp:
                             
                             new_multi6 = {}
                             combined_results = []
-                            # 【修复】保存原始结果（角色筛选前），用于Registry写入
+                            # Step3：保存原始结果（角色筛选前），用于Registry写入（仅增量触发）
                             raw_results_for_registry = {}
                             
                             for file_path, project_id in self.target_files6:
@@ -4771,6 +4998,7 @@ class ExcelProcessorApp:
                                     skip_date_filter = ("管理员" in self.user_roles) or ("所领导" in self.user_roles)
                                     # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
                                     result = None
+                                    used_refresh_cache = False
                                     if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
                                         result = self._get_refresh_cached_raw_df(
                                             file_type=6,
@@ -4779,6 +5007,7 @@ class ExcelProcessorApp:
                                             all_file_paths=all_file_paths_for_run,
                                             changed_files=changed_files_for_run,
                                         )
+                                        used_refresh_cache = result is not None
                                     if result is None:
                                         # 使用缓存处理，传入valid_names_set
                                         result = self._process_with_cache(
@@ -4790,11 +5019,26 @@ class ExcelProcessorApp:
                                             skip_date_filter,
                                             valid_names_set,
                                         )
+                                    # Step3：判定本项目是否需要触发 Registry 写入
+                                    cache_hit = bool(used_refresh_cache)
+                                    if not cache_hit:
+                                        try:
+                                            info = getattr(self, "_last_cache_hit_info", {}) or {}
+                                            if (
+                                                str(info.get("project_id", "")) == str(project_id)
+                                                and str(info.get("file_type", "")) == "file6"
+                                                and info.get("file_path") == file_path
+                                            ):
+                                                cache_hit = bool(info.get("hit", False))
+                                        except Exception:
+                                            cache_hit = False
+                                    should_update_registry = bool(registry_bootstrap_needed or (file_path in changed_files_for_run) or (not cache_hit))
                                     if result is not None and not result.empty:
                                         # 【修复】先保存原始结果用于Registry（与角色无关）
-                                        raw_result = result.copy()
-                                        raw_result['项目号'] = project_id
-                                        raw_results_for_registry[project_id] = (file_path, raw_result)
+                                        if should_update_registry:
+                                            raw_result = result.copy()
+                                            raw_result['项目号'] = project_id
+                                            raw_results_for_registry[project_id] = (file_path, raw_result)
                                         
                                         # 【显示用】应用角色筛选
                                         filtered_result = self.apply_role_based_filter(result, project_id=project_id)
@@ -4808,7 +5052,7 @@ class ExcelProcessorApp:
                             # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
                             self.processing_results_multi6 = new_multi6
                             
-                            # 【修复】Registry写入：使用原始结果（角色筛选前）
+                            # Step3：Registry写入改为“增量触发”
                             if registry_hooks and raw_results_for_registry:
                                 try:
                                     for project_id, (source_file, raw_df) in raw_results_for_registry.items():
@@ -4822,6 +5066,10 @@ class ExcelProcessorApp:
                                             )
                                             # 控制台输出优化：已验证逻辑，默认不输出
                                             Monitor.log_info(f"Registry: 文件6项目{project_id}写入{len(raw_df)}个任务")
+                                            try:
+                                                registry_write_flags["count"] += 1
+                                            except Exception:
+                                                pass
                                 except Exception as e:
                                     print(f"[Registry] 文件6钩子调用失败: {e}")
                             

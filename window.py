@@ -668,9 +668,16 @@ class WindowManager:
                     registry_status_map_raw = registry_hooks.get_display_status(task_keys_only, user_roles_str)
                     
                     # 【新增】查询确认状态（confirmed_at, confirmed_by）
-                    cfg = load_config()
+                    # 必须与 hooks.get_display_status 使用同一套 data_folder，否则会出现“状态查得到/confirmed 查不到”或反之。
+                    folder_path = ""
+                    try:
+                        folder_path = (getattr(self.app, "config", {}) or {}).get("folder_path", "") or ""
+                        folder_path = folder_path.strip()
+                    except Exception:
+                        folder_path = ""
+                    cfg = load_config(data_folder=folder_path or None)
                     db_path = cfg.get('registry_db_path', 'registry/task_registry.db')
-                    wal = cfg.get('registry_use_wal', True)
+                    wal = cfg.get('registry_wal', False)
                     conn = get_connection(db_path, wal)
                     current_user_name = getattr(self.app, 'user_name', '').strip()
                     
@@ -711,7 +718,7 @@ class WindowManager:
                     display_df.iloc[df_idx, checkbox_col_idx] = "☑"
             print(f"[Registry] 已从Registry读取{len(registry_confirmed_map)}个确认状态")
         
-        # 【新增】填充"状态"列：优先显示Registry状态，其次显示延期标记
+        # 【重要】填充"状态"列：统一使用 Registry display_status（弃用旧的“延期感叹号/空白”标记）
         # 【新增】处理"接口时间"列：空值显示为"-"
         if "接口时间" in display_df.columns:
             # 处理空值
@@ -727,24 +734,19 @@ class WindowManager:
                         time_str = str(time_value).strip()
                     time_values.append(time_str)
                     
-                    # 【修复】状态判断：Registry状态已包含延期信息，直接使用
+                    # 状态统一口径：只使用 Registry 返回的 display_status（其中已包含延期标记逻辑）
                     if "状态" in display_df.columns:
                         registry_status = registry_status_map.get(idx, '')
-                        is_overdue = time_str != '-' and is_date_overdue(time_str)
-                        
                         if registry_status:
                             # Registry状态（已包含延期前缀，如果适用）
                             status_values.append(registry_status)
-                        elif is_overdue:
-                            # 无Registry状态但延期：显示延期标记
-                            status_values.append("⚠️")
                         else:
-                            # 正常无标记
-                            status_values.append("")
+                            # 若 Registry 未返回状态（例如任务尚未写入/库不可用），默认显示“待完成”
+                            status_values.append("待完成")
                 except Exception:
                     time_values.append('-')
                     if "状态" in display_df.columns:
-                        status_values.append("")
+                        status_values.append("待完成")
             
             display_df["接口时间"] = time_values
             if "状态" in display_df.columns:
