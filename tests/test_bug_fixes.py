@@ -194,7 +194,7 @@ class TestFile6RefreshLogic:
             # (has_processed, results_empty, expected_action)
             (True, False, "display_data"),  # 有处理结果且非空
             (True, True, "show_empty"),     # 有处理结果但为空
-            (False, True, "display_raw"),   # 未处理，显示原始数据
+            (False, True, "show_prompt"),   # 未处理：不显示原始数据，提示点击开始处理
         ]
         
         for has_processed, results_empty, expected_action in test_cases:
@@ -206,10 +206,8 @@ class TestFile6RefreshLogic:
                 action = "display_data"
             elif has_processed_results6:
                 action = "show_empty"
-            elif file6_data is not None:
-                action = "display_raw"
             else:
-                action = "none"
+                action = "show_prompt"
             
             assert action == expected_action, f"状态({has_processed}, {results_empty})应该执行{expected_action}"
 
@@ -267,20 +265,18 @@ class TestFile6UnprocessedDisplay:
     """测试文件6未处理时的显示逻辑"""
     
     def test_file6_unprocessed_should_show_raw_data(self):
-        """测试文件6未处理时应该显示原始数据（和文件5一样）"""
+        """测试文件6未处理时不显示原始数据（已改为仅“开始处理后显示结果”）"""
         # 模拟未处理状态
         has_processed_results6 = False
         file6_data = pd.DataFrame({'原始列': [1, 2, 3]})  # 原始数据存在
         
-        # 显示逻辑（和文件5保持一致）
+        # 新显示逻辑：未处理时不展示原始数据，而是提示点击开始处理
         if has_processed_results6:
             action = "show_processed_or_empty"
-        elif file6_data is not None:
-            action = "show_raw_data"
         else:
-            action = "show_nothing"
+            action = "show_prompt"
         
-        assert action == "show_raw_data", "未处理时应该显示原始数据"
+        assert action == "show_prompt", "未处理时应该提示点击开始处理"
     
     def test_file6_raw_data_has_no_source_file_column(self):
         """测试原始数据没有source_file列（因此不支持回文单号输入）"""

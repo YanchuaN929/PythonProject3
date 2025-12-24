@@ -412,6 +412,17 @@ class ExcelProcessorApp:
         self.processing_results_multi4 = {}  # 待处理文件4的处理结果字典
         self.processing_results_multi5 = {}  # 待处理文件5的处理结果字典
         self.processing_results_multi6 = {}  # 待处理文件6的处理结果字典
+
+        # ============================================================
+        # 性能优化 Step2：刷新阶段已加载缓存 -> 开始处理阶段复用内存缓存（避免重复读 .pkl）
+        # ============================================================
+        self._cache_loaded_snapshot = None  # {"all_file_paths": tuple(...), "changed_files": tuple(...), "ts": float}
+        self._cache_loaded_raw_multi1 = {}  # {project_id: raw_df}
+        self._cache_loaded_raw_multi2 = {}
+        self._cache_loaded_raw_multi3 = {}
+        self._cache_loaded_raw_multi4 = {}
+        self._cache_loaded_raw_multi5 = {}
+        self._cache_loaded_raw_multi6 = {}
         
         # 处理结果状态标记 - 用于判断是否显示处理后的结果
         self.has_processed_results1 = False
@@ -1130,61 +1141,58 @@ class ExcelProcessorApp:
         """选项卡切换事件处理"""
         selected_tab = self.notebook.index(self.notebook.select())
         
-        # 根据选择的选项卡加载相应数据，优先显示处理结果
+        # 根据选择的选项卡加载相应数据
+        #
+        # 【性能优化Step1】已确认：移除“未处理状态原始预览/预加载”
+        # - 未开始处理时不读Excel、不展示原始数据
+        # - 仅在“开始处理”后展示处理结果（或空结果提示）
         if selected_tab == 0 and self.target_file1:  # 内部需打开接口
-            # 如果有处理结果，显示过滤后的数据；否则显示原始数据
+            # 如果有处理结果，显示过滤后的数据；否则提示点击开始处理
             if self.has_processed_results1 and self.processing_results is not None and not self.processing_results.empty:
                 print("显示处理后的过滤结果")
                 self.filter_and_display_results(self.processing_results)
             elif self.has_processed_results1:
                 print("显示无数据结果")
                 self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
-            elif self.file1_data is not None:
-                print("显示原始文件数据")
-                self.display_excel_data(self.tab1_viewer, self.file1_data, "内部需打开接口")
             else:
-                self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
+                self.show_empty_message(self.tab1_viewer, "请点击开始处理生成结果")
         elif selected_tab == 1 and self.target_file2:  # 内部需回复接口
             if self.has_processed_results2 and self.processing_results2 is not None and not self.processing_results2.empty:
                 # 统一走 display_results2：确保 PendingCache 覆盖（责任人/状态）生效
                 self.display_results2(self.processing_results2, show_popup=False)
             elif self.has_processed_results2:
                 self.show_empty_message(self.tab2_viewer, "无内部需回复接口")
-            elif self.file2_data is not None:
-                self.display_excel_data(self.tab2_viewer, self.file2_data, "内部需回复接口")
             else:
-                self.load_file_to_viewer(self.target_file2, self.tab2_viewer, "内部需回复接口")
+                self.show_empty_message(self.tab2_viewer, "请点击开始处理生成结果")
         elif selected_tab == 2 and self.target_file3:  # 外部需打开接口
             if self.has_processed_results3 and self.processing_results3 is not None and not self.processing_results3.empty:
                 self.display_results3(self.processing_results3, show_popup=False)
             elif self.has_processed_results3:
                 self.show_empty_message(self.tab3_viewer, "无外部需打开接口")
-            elif self.file3_data is not None:
-                self.display_excel_data(self.tab3_viewer, self.file3_data, "外部需打开接口")
             else:
-                self.load_file_to_viewer(self.target_file3, self.tab3_viewer, "外部需打开接口")
+                self.show_empty_message(self.tab3_viewer, "请点击开始处理生成结果")
         elif selected_tab == 3 and self.target_file4:  # 外部需回复接口
             if self.has_processed_results4 and self.processing_results4 is not None and not self.processing_results4.empty:
                 self.display_results4(self.processing_results4, show_popup=False)
             elif self.has_processed_results4:
                 self.show_empty_message(self.tab4_viewer, "无外部需回复接口")
-            elif self.file4_data is not None:
-                self.display_excel_data(self.tab4_viewer, self.file4_data, "外部需回复接口")
             else:
-                self.load_file_to_viewer(self.target_file4, self.tab4_viewer, "外部需回复接口")
+                self.show_empty_message(self.tab4_viewer, "请点击开始处理生成结果")
         elif selected_tab == 4 and getattr(self, 'target_files5', None):  # 三维提资接口
             if self.has_processed_results5 and self.processing_results5 is not None and not self.processing_results5.empty:
                 self.display_results5(self.processing_results5, show_popup=False)
             elif self.has_processed_results5:
                 # 【修复】处理后无数据，显示空提示，不显示原始数据
                 self.show_empty_message(self.tab5_viewer, "无三维提资接口")
+            else:
+                self.show_empty_message(self.tab5_viewer, "请点击开始处理生成结果")
         elif selected_tab == 5 and getattr(self, 'target_files6', None):  # 收发文函
             if self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
                 self.display_results6(self.processing_results6, show_popup=False)
             elif self.has_processed_results6:
                 self.show_empty_message(self.tab6_viewer, "无需要回复的文函")
-            elif self.file6_data is not None:
-                self.display_excel_data(self.tab6_viewer, self.file6_data, "收发文函")
+            else:
+                self.show_empty_message(self.tab6_viewer, "请点击开始处理生成结果")
 
     def load_file_to_viewer(self, file_path, viewer, tab_name):
         """加载Excel文件到预览器（优化版：使用只读模式）"""
@@ -3599,59 +3607,8 @@ class ExcelProcessorApp:
                     if update_ui:
                         self.update_tab_color(5, "green")
             
-            # ========== 方案3：并发预加载所有文件（速度提升60%+）==========
-            print("\n🚀 开始并发预加载Excel文件...")
-            files_to_load = []
-            
-            # 收集需要预加载的文件
-            if hasattr(self, 'target_file2') and self.target_file2:
-                files_to_load.append((self.target_file2, 'file2'))
-            if hasattr(self, 'target_file3') and self.target_file3:
-                files_to_load.append((self.target_file3, 'file3'))
-            if hasattr(self, 'target_file4') and self.target_file4:
-                files_to_load.append((self.target_file4, 'file4'))
-            if hasattr(self, 'target_files5') and self.target_files5:
-                file5, _pid5 = self.target_files5[0]
-                files_to_load.append((file5, 'file5'))
-            if hasattr(self, 'target_files6') and self.target_files6:
-                file6, _pid6 = self.target_files6[0]
-                files_to_load.append((file6, 'file6'))
-            
-            # 并发读取所有文件（方案3）
-            if files_to_load:
-                import time
-                start_time = time.time()
-                
-                try:
-                    results = concurrent_read_excel_files(files_to_load, max_workers=4)
-                    
-                    # 存储结果
-                    self.file2_data = results.get('file2')
-                    self.file3_data = results.get('file3')
-                    self.file4_data = results.get('file4')
-                    self.file5_data = results.get('file5')
-                    self.file6_data = results.get('file6')
-                    
-                    elapsed = time.time() - start_time
-                    # 控制台输出优化：已验证逻辑，默认不输出
-                except Exception as e:
-                    # 控制台输出优化：已验证逻辑，默认不输出
-                    # 回退到顺序加载
-                    for file_path, file_id in files_to_load:
-                        try:
-                            df = optimized_read_excel(file_path)
-                            if file_id == 'file2':
-                                self.file2_data = df
-                            elif file_id == 'file3':
-                                self.file3_data = df
-                            elif file_id == 'file4':
-                                self.file4_data = df
-                            elif file_id == 'file5':
-                                self.file5_data = df
-                            elif file_id == 'file6':
-                                self.file6_data = df
-                        except Exception as e2:
-                            print(f"加载{file_id}失败: {e2}")
+            # 【性能优化Step1】已确认：移除“并发预加载Excel”
+            # 说明：预加载仅用于“未处理状态原始预览”，该功能已删除。
         except Exception as e:
             print(f"识别目标文件时发生错误: {e}")
     
@@ -3781,6 +3738,24 @@ class ExcelProcessorApp:
             else:
                 print("  ✅ 文件未变化，尝试加载缓存...")
             cache_loaded_count = 0
+
+            # Step2：记录本轮“刷新加载缓存”的快照，用于 start_processing 复用内存缓存
+            try:
+                import time as _time
+                self._cache_loaded_snapshot = {
+                    "all_file_paths": tuple(sorted(all_file_paths or [])),
+                    "changed_files": tuple(sorted(changed_files or [])),
+                    "ts": float(_time.time()),
+                }
+            except Exception:
+                self._cache_loaded_snapshot = {"all_file_paths": tuple(sorted(all_file_paths or []))}
+            # 重置本轮原始缓存结果容器（只保存“raw（角色筛选前）”）
+            self._cache_loaded_raw_multi1 = {}
+            self._cache_loaded_raw_multi2 = {}
+            self._cache_loaded_raw_multi3 = {}
+            self._cache_loaded_raw_multi4 = {}
+            self._cache_loaded_raw_multi5 = {}
+            self._cache_loaded_raw_multi6 = {}
             
             # 加载file1缓存
             if hasattr(self, 'target_files1') and self.target_files1:
@@ -3789,6 +3764,14 @@ class ExcelProcessorApp:
                         continue
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file1')
                     if cached_df is not None:
+                        # Step2：保存 raw（角色筛选前），供 start_processing 复用，避免二次读 .pkl
+                        try:
+                            raw_df = cached_df.copy()
+                            if '项目号' not in raw_df.columns:
+                                raw_df['项目号'] = project_id
+                            self._cache_loaded_raw_multi1[project_id] = raw_df
+                        except Exception:
+                            pass
                         # 【修复】对缓存数据应用角色筛选，添加"角色来源"列
                         filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
                         if filtered_df is not None and not filtered_df.empty:
@@ -3796,7 +3779,7 @@ class ExcelProcessorApp:
                             if '项目号' not in filtered_df.columns:
                                 filtered_df['项目号'] = project_id
                             self.processing_results_multi1[project_id] = filtered_df
-                            cache_loaded_count += 1
+                        cache_loaded_count += 1
                 if self.processing_results_multi1:
                     self.has_processed_results1 = True
             
@@ -3807,6 +3790,13 @@ class ExcelProcessorApp:
                         continue
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file2')
                     if cached_df is not None:
+                        try:
+                            raw_df = cached_df.copy()
+                            if '项目号' not in raw_df.columns:
+                                raw_df['项目号'] = project_id
+                            self._cache_loaded_raw_multi2[project_id] = raw_df
+                        except Exception:
+                            pass
                         # 【修复】对缓存数据应用角色筛选，添加"角色来源"列
                         filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
                         if filtered_df is not None and not filtered_df.empty:
@@ -3814,7 +3804,7 @@ class ExcelProcessorApp:
                             if '项目号' not in filtered_df.columns:
                                 filtered_df['项目号'] = project_id
                             self.processing_results_multi2[project_id] = filtered_df
-                            cache_loaded_count += 1
+                        cache_loaded_count += 1
                 if self.processing_results_multi2:
                     self.has_processed_results2 = True
             
@@ -3825,6 +3815,13 @@ class ExcelProcessorApp:
                         continue
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file3')
                     if cached_df is not None:
+                        try:
+                            raw_df = cached_df.copy()
+                            if '项目号' not in raw_df.columns:
+                                raw_df['项目号'] = project_id
+                            self._cache_loaded_raw_multi3[project_id] = raw_df
+                        except Exception:
+                            pass
                         # 【修复】对缓存数据应用角色筛选，添加"角色来源"列
                         filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
                         if filtered_df is not None and not filtered_df.empty:
@@ -3832,7 +3829,7 @@ class ExcelProcessorApp:
                             if '项目号' not in filtered_df.columns:
                                 filtered_df['项目号'] = project_id
                             self.processing_results_multi3[project_id] = filtered_df
-                            cache_loaded_count += 1
+                        cache_loaded_count += 1
                 if self.processing_results_multi3:
                     self.has_processed_results3 = True
             
@@ -3843,6 +3840,13 @@ class ExcelProcessorApp:
                         continue
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file4')
                     if cached_df is not None:
+                        try:
+                            raw_df = cached_df.copy()
+                            if '项目号' not in raw_df.columns:
+                                raw_df['项目号'] = project_id
+                            self._cache_loaded_raw_multi4[project_id] = raw_df
+                        except Exception:
+                            pass
                         # 【修复】对缓存数据应用角色筛选，添加"角色来源"列
                         filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
                         if filtered_df is not None and not filtered_df.empty:
@@ -3850,7 +3854,7 @@ class ExcelProcessorApp:
                             if '项目号' not in filtered_df.columns:
                                 filtered_df['项目号'] = project_id
                             self.processing_results_multi4[project_id] = filtered_df
-                            cache_loaded_count += 1
+                        cache_loaded_count += 1
                 if self.processing_results_multi4:
                     self.has_processed_results4 = True
             
@@ -3861,6 +3865,13 @@ class ExcelProcessorApp:
                         continue
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file5')
                     if cached_df is not None:
+                        try:
+                            raw_df = cached_df.copy()
+                            if '项目号' not in raw_df.columns:
+                                raw_df['项目号'] = project_id
+                            self._cache_loaded_raw_multi5[project_id] = raw_df
+                        except Exception:
+                            pass
                         # 【修复】对缓存数据应用角色筛选，添加"角色来源"列
                         filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
                         if filtered_df is not None and not filtered_df.empty:
@@ -3868,7 +3879,7 @@ class ExcelProcessorApp:
                             if '项目号' not in filtered_df.columns:
                                 filtered_df['项目号'] = project_id
                             self.processing_results_multi5[project_id] = filtered_df
-                            cache_loaded_count += 1
+                        cache_loaded_count += 1
                 if self.processing_results_multi5:
                     self.has_processed_results5 = True
             
@@ -3879,6 +3890,13 @@ class ExcelProcessorApp:
                         continue
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file6')
                     if cached_df is not None:
+                        try:
+                            raw_df = cached_df.copy()
+                            if '项目号' not in raw_df.columns:
+                                raw_df['项目号'] = project_id
+                            self._cache_loaded_raw_multi6[project_id] = raw_df
+                        except Exception:
+                            pass
                         # 【修复】对缓存数据应用角色筛选，添加"角色来源"列
                         filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
                         if filtered_df is not None and not filtered_df.empty:
@@ -3886,7 +3904,7 @@ class ExcelProcessorApp:
                             if '项目号' not in filtered_df.columns:
                                 filtered_df['项目号'] = project_id
                             self.processing_results_multi6[project_id] = filtered_df
-                            cache_loaded_count += 1
+                        cache_loaded_count += 1
                 if self.processing_results_multi6:
                     self.has_processed_results6 = True
             
@@ -3902,6 +3920,34 @@ class ExcelProcessorApp:
             print(f"检查和加载缓存时发生错误: {e}")
             import traceback
             traceback.print_exc()
+
+    # ============================================================
+    # 性能优化 Step2：刷新缓存复用（供 start_processing 使用）
+    # ============================================================
+    def _can_reuse_refresh_cache(self, all_file_paths) -> bool:
+        """判断本轮 start_processing 是否可复用 refresh_file_list 加载到内存的 raw 缓存结果。"""
+        snap = getattr(self, "_cache_loaded_snapshot", None) or {}
+        try:
+            return tuple(sorted(all_file_paths or [])) == tuple(snap.get("all_file_paths") or ())
+        except Exception:
+            return False
+
+    def _get_refresh_cached_raw_df(self, *, file_type: int, file_path: str, project_id: str, all_file_paths, changed_files):
+        """
+        获取 refresh 阶段已加载到内存的 raw df（角色筛选前），用于 start_processing 复用。
+        - 仅当 file_path 未变化 且 快照匹配 时返回；否则返回 None。
+        """
+        try:
+            if file_path in (changed_files or set()):
+                return None
+            if not self._can_reuse_refresh_cache(all_file_paths):
+                return None
+            store = getattr(self, f"_cache_loaded_raw_multi{int(file_type)}", None)
+            if isinstance(store, dict):
+                return store.get(project_id)
+        except Exception:
+            return None
+        return None
 
     def update_file_info(self, text):
         """更新文件信息显示"""
@@ -3992,6 +4038,9 @@ class ExcelProcessorApp:
             pass
         
         # 检查文件变化并“按变动文件”清空缓存/勾选状态（增量）
+        # Step2：将 changed_files 保留下来，供后台线程做“按文件粒度增量/复用”。
+        changed_files_for_run = set()
+        all_file_paths_for_run = []
         try:
             all_file_paths = []
             # 收集所有待处理文件路径
@@ -4007,6 +4056,7 @@ class ExcelProcessorApp:
                 all_file_paths.extend([f[0] for f in self.target_files5])
             if hasattr(self, 'target_files6') and self.target_files6:
                 all_file_paths.extend([f[0] for f in self.target_files6])
+            all_file_paths_for_run = list(all_file_paths or [])
             
             # 仅对发生变化的文件清理缓存与完成状态；未变化文件保留缓存命中能力
             if all_file_paths:
@@ -4017,6 +4067,7 @@ class ExcelProcessorApp:
                     # 兼容旧版本 file_manager：退化为全量策略
                     if self.file_manager.check_files_changed(all_file_paths):
                         changed_files = set(all_file_paths)
+                changed_files_for_run = set(changed_files or set())
                 if changed_files:
                     for fp in changed_files:
                         try:
@@ -4074,6 +4125,14 @@ class ExcelProcessorApp:
                 results3 = None
                 results4 = None
                 
+                # Step2：可复用 refresh 阶段缓存？
+                all_paths_snapshot = tuple(sorted(all_file_paths_for_run or []))
+                can_reuse_refresh_cache = False
+                try:
+                    can_reuse_refresh_cache = self._can_reuse_refresh_cache(all_file_paths_for_run)
+                except Exception:
+                    can_reuse_refresh_cache = False
+
                 # 处理待处理文件1（批量）
                 if process_file1 and self.target_files1:
                     if hasattr(main, 'process_target_file'):
@@ -4087,7 +4146,7 @@ class ExcelProcessorApp:
                         except:
                             pass
                         
-                        self.processing_results_multi1 = {}
+                        new_multi1 = {}
                         combined_results = []
                         # 【修复】保存原始结果（角色筛选前），用于Registry写入
                         raw_results_for_registry = {}
@@ -4101,9 +4160,25 @@ class ExcelProcessorApp:
                                 except:
                                     pass
 
-                                # 使用缓存处理
-                                result = self._process_with_cache(file_path, project_id, 'file1', 
-                                                                 main.process_target_file, self.current_datetime)
+                                # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
+                                result = None
+                                if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
+                                    result = self._get_refresh_cached_raw_df(
+                                        file_type=1,
+                                        file_path=file_path,
+                                        project_id=project_id,
+                                        all_file_paths=all_file_paths_for_run,
+                                        changed_files=changed_files_for_run,
+                                    )
+                                if result is None:
+                                    # 使用缓存处理（.pkl）或缓存未命中则处理Excel
+                                    result = self._process_with_cache(
+                                        file_path,
+                                        project_id,
+                                        'file1',
+                                        main.process_target_file,
+                                        self.current_datetime,
+                                    )
                                 
                                 # 【调试】打印处理结果
                                 print(f"[调试] 文件1处理返回: result={type(result)}, 行数={len(result) if result is not None else 'None'}")
@@ -4120,7 +4195,7 @@ class ExcelProcessorApp:
                                     if filtered_result is not None and not filtered_result.empty:
                                         # 添加项目号列
                                         filtered_result['项目号'] = project_id
-                                        self.processing_results_multi1[project_id] = filtered_result
+                                        new_multi1[project_id] = filtered_result
                                         combined_results.append(filtered_result)
                                     print(f"项目{project_id}文件1处理完成: 原始{len(result)}行，角色筛选后{len(filtered_result) if filtered_result is not None else 0}行")
                                     try:
@@ -4185,6 +4260,8 @@ class ExcelProcessorApp:
                                 Monitor.log_warning(f"待处理文件1批量处理完成: 角色筛选后无显示数据")
                             except:
                                 pass
+                        # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
+                        self.processing_results_multi1 = new_multi1
                 
                 # 处理待处理文件2（批量）
                 if process_file2 and self.target_files2:
@@ -4197,7 +4274,7 @@ class ExcelProcessorApp:
                         except:
                             pass
                         
-                        self.processing_results_multi2 = {}
+                        new_multi2 = {}
                         combined_results = []
                         # 【修复】保存原始结果（角色筛选前），用于Registry写入
                         raw_results_for_registry = {}
@@ -4205,9 +4282,26 @@ class ExcelProcessorApp:
                         for file_path, project_id in self.target_files2:
                             try:
                                 print(f"处理项目{project_id}的文件2: {os.path.basename(file_path)}")
-                                # 使用缓存处理
-                                result = self._process_with_cache(file_path, project_id, 'file2', 
-                                                                 main.process_target_file2, self.current_datetime, project_id)
+                                # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
+                                result = None
+                                if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
+                                    result = self._get_refresh_cached_raw_df(
+                                        file_type=2,
+                                        file_path=file_path,
+                                        project_id=project_id,
+                                        all_file_paths=all_file_paths_for_run,
+                                        changed_files=changed_files_for_run,
+                                    )
+                                if result is None:
+                                    # 使用缓存处理（.pkl）或缓存未命中则处理Excel
+                                    result = self._process_with_cache(
+                                        file_path,
+                                        project_id,
+                                        'file2',
+                                        main.process_target_file2,
+                                        self.current_datetime,
+                                        project_id,
+                                    )
                                 if result is not None and not result.empty:
                                     # 【修复】先保存原始结果用于Registry（与角色无关）
                                     raw_result = result.copy()
@@ -4219,7 +4313,7 @@ class ExcelProcessorApp:
                                     if filtered_result is not None and not filtered_result.empty:
                                         # 添加项目号列
                                         filtered_result['项目号'] = project_id
-                                        self.processing_results_multi2[project_id] = filtered_result
+                                        new_multi2[project_id] = filtered_result
                                         combined_results.append(filtered_result)
                                         print(f"项目{project_id}文件2处理完成: 原始{len(result)}行，显示{len(filtered_result)}行")
                                     else:
@@ -4258,12 +4352,14 @@ class ExcelProcessorApp:
                                 Monitor.log_warning(f"待处理文件2批量处理完成: 角色筛选后无显示数据")
                             except:
                                 pass
+                        # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
+                        self.processing_results_multi2 = new_multi2
                 
                 # 处理待处理文件3（批量）
                 if process_file3 and self.target_files3:
                     if hasattr(main, 'process_target_file3'):
                         print(f"开始批量处理文件3类型，共 {len(self.target_files3)} 个文件")
-                        self.processing_results_multi3 = {}
+                        new_multi3 = {}
                         combined_results = []
                         # 【修复】保存原始结果（角色筛选前），用于Registry写入
                         raw_results_for_registry = {}
@@ -4271,9 +4367,25 @@ class ExcelProcessorApp:
                         for file_path, project_id in self.target_files3:
                             try:
                                 print(f"处理项目{project_id}的文件3: {os.path.basename(file_path)}")
-                                # 使用缓存处理
-                                result = self._process_with_cache(file_path, project_id, 'file3', 
-                                                                 main.process_target_file3, self.current_datetime)
+                                # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
+                                result = None
+                                if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
+                                    result = self._get_refresh_cached_raw_df(
+                                        file_type=3,
+                                        file_path=file_path,
+                                        project_id=project_id,
+                                        all_file_paths=all_file_paths_for_run,
+                                        changed_files=changed_files_for_run,
+                                    )
+                                if result is None:
+                                    # 使用缓存处理（.pkl）或缓存未命中则处理Excel
+                                    result = self._process_with_cache(
+                                        file_path,
+                                        project_id,
+                                        'file3',
+                                        main.process_target_file3,
+                                        self.current_datetime,
+                                    )
                                 if result is not None and not result.empty:
                                     # 【修复】先保存原始结果用于Registry（与角色无关）
                                     raw_result = result.copy()
@@ -4284,7 +4396,7 @@ class ExcelProcessorApp:
                                     filtered_result = self.apply_role_based_filter(result, project_id=project_id)
                                     if filtered_result is not None and not filtered_result.empty:
                                         filtered_result['项目号'] = project_id
-                                        self.processing_results_multi3[project_id] = filtered_result
+                                        new_multi3[project_id] = filtered_result
                                         combined_results.append(filtered_result)
                                     print(f"项目{project_id}文件3处理完成: 原始{len(result)}行，显示{len(filtered_result) if filtered_result is not None else 0}行")
                                 else:
@@ -4321,12 +4433,14 @@ class ExcelProcessorApp:
                                 Monitor.log_warning(f"待处理文件3批量处理完成: 角色筛选后无显示数据")
                             except:
                                 pass
+                        # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
+                        self.processing_results_multi3 = new_multi3
                 
                 # 处理待处理文件4（批量）
                 if process_file4 and self.target_files4:
                     if hasattr(main, 'process_target_file4'):
                         print(f"开始批量处理文件4类型，共 {len(self.target_files4)} 个文件")
-                        self.processing_results_multi4 = {}
+                        new_multi4 = {}
                         combined_results = []
                         # 【修复】保存原始结果（角色筛选前），用于Registry写入
                         raw_results_for_registry = {}
@@ -4334,9 +4448,25 @@ class ExcelProcessorApp:
                         for file_path, project_id in self.target_files4:
                             try:
                                 print(f"处理项目{project_id}的文件4: {os.path.basename(file_path)}")
-                                # 使用缓存处理
-                                result = self._process_with_cache(file_path, project_id, 'file4', 
-                                                                 main.process_target_file4, self.current_datetime)
+                                # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
+                                result = None
+                                if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
+                                    result = self._get_refresh_cached_raw_df(
+                                        file_type=4,
+                                        file_path=file_path,
+                                        project_id=project_id,
+                                        all_file_paths=all_file_paths_for_run,
+                                        changed_files=changed_files_for_run,
+                                    )
+                                if result is None:
+                                    # 使用缓存处理（.pkl）或缓存未命中则处理Excel
+                                    result = self._process_with_cache(
+                                        file_path,
+                                        project_id,
+                                        'file4',
+                                        main.process_target_file4,
+                                        self.current_datetime,
+                                    )
                                 if result is not None and not result.empty:
                                     # 【修复】先保存原始结果用于Registry（与角色无关）
                                     raw_result = result.copy()
@@ -4347,7 +4477,7 @@ class ExcelProcessorApp:
                                     filtered_result = self.apply_role_based_filter(result, project_id=project_id)
                                     if filtered_result is not None and not filtered_result.empty:
                                         filtered_result['项目号'] = project_id
-                                        self.processing_results_multi4[project_id] = filtered_result
+                                        new_multi4[project_id] = filtered_result
                                         combined_results.append(filtered_result)
                                     print(f"项目{project_id}文件4处理完成: 原始{len(result)}行，显示{len(filtered_result) if filtered_result is not None else 0}行")
                                 else:
@@ -4384,6 +4514,8 @@ class ExcelProcessorApp:
                                 Monitor.log_warning(f"待处理文件4批量处理完成: 角色筛选后无显示数据")
                             except:
                                 pass
+                        # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
+                        self.processing_results_multi4 = new_multi4
                 
                 def update_display():
                     # 【新增】执行归档逻辑（标记消失任务，归档超期任务）
@@ -4529,7 +4661,7 @@ class ExcelProcessorApp:
                                 Monitor.log_process(f"开始批量处理待处理文件5: {len(self.target_files5)}个文件，涉及{len(pids)}个项目({', '.join(sorted(pids))})")
                             except:
                                 pass
-                            self.processing_results_multi5 = {}
+                            new_multi5 = {}
                             combined_results = []
                             # 【修复】保存原始结果（角色筛选前），用于Registry写入
                             raw_results_for_registry = {}
@@ -4537,9 +4669,24 @@ class ExcelProcessorApp:
                             for file_path, project_id in self.target_files5:
                                 try:
                                     print(f"处理项目{project_id}的文件5: {os.path.basename(file_path)}")
-                                    # 使用缓存处理
-                                    result = self._process_with_cache(file_path, project_id, 'file5', 
-                                                                     main.process_target_file5, self.current_datetime)
+                                    # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
+                                    result = None
+                                    if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
+                                        result = self._get_refresh_cached_raw_df(
+                                            file_type=5,
+                                            file_path=file_path,
+                                            project_id=project_id,
+                                            all_file_paths=all_file_paths_for_run,
+                                            changed_files=changed_files_for_run,
+                                        )
+                                    if result is None:
+                                        result = self._process_with_cache(
+                                            file_path,
+                                            project_id,
+                                            'file5',
+                                            main.process_target_file5,
+                                            self.current_datetime,
+                                        )
                                     if result is not None and not result.empty:
                                         # 【修复】先保存原始结果用于Registry（与角色无关）
                                         raw_result = result.copy()
@@ -4550,10 +4697,13 @@ class ExcelProcessorApp:
                                         filtered_result = self.apply_role_based_filter(result, project_id=project_id)
                                         if filtered_result is not None and not filtered_result.empty:
                                             filtered_result['项目号'] = project_id
-                                            self.processing_results_multi5[project_id] = filtered_result
+                                            new_multi5[project_id] = filtered_result
                                             combined_results.append(filtered_result)
                                 except Exception as e:
                                     print(f"处理文件5失败: {file_path} - {e}")
+                            
+                            # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
+                            self.processing_results_multi5 = new_multi5
                             
                             # 【修复】Registry写入：使用原始结果（角色筛选前）
                             if registry_hooks and raw_results_for_registry:
@@ -4608,7 +4758,7 @@ class ExcelProcessorApp:
                             # 【新增】加载姓名角色表中的有效姓名列表（用于过滤责任人）
                             valid_names_set = self.get_valid_names_from_role_table()
                             
-                            self.processing_results_multi6 = {}
+                            new_multi6 = {}
                             combined_results = []
                             # 【修复】保存原始结果（角色筛选前），用于Registry写入
                             raw_results_for_registry = {}
@@ -4619,9 +4769,27 @@ class ExcelProcessorApp:
                                     # 判断是否为管理员或所领导，决定是否跳过日期筛选
                                     # 管理员和所领导都不受时间限制
                                     skip_date_filter = ("管理员" in self.user_roles) or ("所领导" in self.user_roles)
-                                    # 使用缓存处理，传入valid_names_set
-                                    result = self._process_with_cache(file_path, project_id, 'file6', 
-                                                                     main.process_target_file6, self.current_datetime, skip_date_filter, valid_names_set)
+                                    # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
+                                    result = None
+                                    if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
+                                        result = self._get_refresh_cached_raw_df(
+                                            file_type=6,
+                                            file_path=file_path,
+                                            project_id=project_id,
+                                            all_file_paths=all_file_paths_for_run,
+                                            changed_files=changed_files_for_run,
+                                        )
+                                    if result is None:
+                                        # 使用缓存处理，传入valid_names_set
+                                        result = self._process_with_cache(
+                                            file_path,
+                                            project_id,
+                                            'file6',
+                                            main.process_target_file6,
+                                            self.current_datetime,
+                                            skip_date_filter,
+                                            valid_names_set,
+                                        )
                                     if result is not None and not result.empty:
                                         # 【修复】先保存原始结果用于Registry（与角色无关）
                                         raw_result = result.copy()
@@ -4632,10 +4800,13 @@ class ExcelProcessorApp:
                                         filtered_result = self.apply_role_based_filter(result, project_id=project_id)
                                         if filtered_result is not None and not filtered_result.empty:
                                             filtered_result['项目号'] = project_id
-                                            self.processing_results_multi6[project_id] = filtered_result
+                                            new_multi6[project_id] = filtered_result
                                             combined_results.append(filtered_result)
                                 except Exception as e:
                                     print(f"处理文件6失败: {file_path} - {e}")
+                            
+                            # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
+                            self.processing_results_multi6 = new_multi6
                             
                             # 【修复】Registry写入：使用原始结果（角色筛选前）
                             if registry_hooks and raw_results_for_registry:
