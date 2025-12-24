@@ -1139,6 +1139,9 @@ class ExcelProcessorApp:
 
     def on_tab_changed(self, event):
         """选项卡切换事件处理"""
+        # Step4：UI 渲染去重 —— 在程序内部主动切换 tab 时，可临时抑制渲染，避免重复触发
+        if getattr(self, "_suppress_tab_change_render", False):
+            return
         selected_tab = self.notebook.index(self.notebook.select())
         
         # 根据选择的选项卡加载相应数据
@@ -1149,10 +1152,9 @@ class ExcelProcessorApp:
         if selected_tab == 0 and self.target_file1:  # 内部需打开接口
             # 如果有处理结果，显示过滤后的数据；否则提示点击开始处理
             if self.has_processed_results1 and self.processing_results is not None and not self.processing_results.empty:
-                print("显示处理后的过滤结果")
-                self.filter_and_display_results(self.processing_results)
+                # Step4：统一走 display_results，确保 PendingCache 覆盖（责任人/状态）与过滤逻辑一致
+                self.display_results(self.processing_results, show_popup=False)
             elif self.has_processed_results1:
-                print("显示无数据结果")
                 self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
             else:
                 self.show_empty_message(self.tab1_viewer, "请点击开始处理生成结果")
@@ -1193,6 +1195,29 @@ class ExcelProcessorApp:
                 self.show_empty_message(self.tab6_viewer, "无需要回复的文函")
             else:
                 self.show_empty_message(self.tab6_viewer, "请点击开始处理生成结果")
+
+    def _post_processing_select_and_render_active_tab(self, active_tab: int):
+        """
+        Step4：处理完成后的统一渲染入口
+        - 内部会选择 active_tab，但抑制 <<NotebookTabChanged>> 的二次渲染
+        - 最终只渲染一次当前选中 tab
+        """
+        try:
+            self._suppress_tab_change_render = True
+            try:
+                # ttk.Notebook.select 支持传 index
+                self.notebook.select(active_tab)
+            finally:
+                self._suppress_tab_change_render = False
+        except Exception:
+            # 无 Notebook/非 GUI 环境（测试）下直接忽略
+            self._suppress_tab_change_render = False
+
+        # 主动渲染一次当前 tab
+        try:
+            self.on_tab_changed(None)
+        except Exception:
+            pass
 
     def load_file_to_viewer(self, file_path, viewer, tab_name):
         """加载Excel文件到预览器（优化版：使用只读模式）"""
@@ -3343,88 +3368,15 @@ class ExcelProcessorApp:
     def refresh_current_tab_display(self):
         """刷新当前选项卡的显示内容"""
         try:
-            # 获取当前选中的选项卡索引
-            current_tab = self.notebook.index(self.notebook.select())
-            
-            # 根据当前选项卡刷新对应的显示内容
-            if current_tab == 0:  # 内部需打开接口
-                # 【修复】区分"已处理"和"未处理"状态
-                if self.has_processed_results1:
-                    # 已处理：显示处理结果或"无数据"
-                    if self.processing_results is not None and not self.processing_results.empty:
-                        # 不要drop原始行号列，因为需要它来加载勾选状态
-                        excel_row_numbers = list(self.processing_results['原始行号'])
-                        self.display_excel_data_with_original_rows(self.tab1_viewer, self.processing_results, "内部需打开接口", excel_row_numbers)
-                    else:
-                        # 处理后无数据
-                        self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
-                elif self.target_file1:
-                    # 未处理：加载原始文件
-                    self.load_file_to_viewer(self.target_file1, self.tab1_viewer, "内部需打开接口")
-            elif current_tab == 1:  # 内部需回复接口
-                # 【修复】区分"已处理"和"未处理"状态
-                if self.has_processed_results2:
-                    # 已处理：显示处理结果或"无数据"
-                    if self.processing_results2 is not None and not self.processing_results2.empty:
-                        self.display_results2(self.processing_results2, show_popup=False)
-                    else:
-                        # 处理后无数据
-                        self.show_empty_message(self.tab2_viewer, "无内部需回复接口")
-                elif self.target_file2:
-                    # 未处理：加载原始文件
-                    self.load_file_to_viewer(self.target_file2, self.tab2_viewer, "内部需回复接口")
-            elif current_tab == 2:  # 外部需打开接口
-                # 【修复】区分"已处理"和"未处理"状态
-                if self.has_processed_results3:
-                    # 已处理：显示处理结果或"无数据"
-                    if self.processing_results3 is not None and not self.processing_results3.empty:
-                        self.display_results3(self.processing_results3, show_popup=False)
-                    else:
-                        # 处理后无数据
-                        self.show_empty_message(self.tab3_viewer, "无外部需打开接口")
-                elif self.target_file3:
-                    # 未处理：加载原始文件
-                    self.load_file_to_viewer(self.target_file3, self.tab3_viewer, "外部需打开接口")
-            elif current_tab == 3:  # 外部需回复接口
-                # 【修复】区分"已处理"和"未处理"状态
-                if self.has_processed_results4:
-                    # 已处理：显示处理结果或"无数据"
-                    if self.processing_results4 is not None and not self.processing_results4.empty:
-                        self.display_results4(self.processing_results4, show_popup=False)
-                    else:
-                        # 处理后无数据
-                        self.show_empty_message(self.tab4_viewer, "无外部需回复接口")
-                elif self.target_file4:
-                    # 未处理：加载原始文件
-                    self.load_file_to_viewer(self.target_file4, self.tab4_viewer, "外部需回复接口")
-            elif current_tab == 4 and getattr(self, 'target_files5', None):  # 三维提资接口
-                # 【修复】区分"已处理"和"未处理"状态
-                if self.has_processed_results5:
-                    # 已处理：显示处理结果或"无数据"
-                    if self.processing_results5 is not None and not self.processing_results5.empty:
-                        self.display_results5(self.processing_results5, show_popup=False)
-                    else:
-                        # 处理后无数据
-                        self.show_empty_message(self.tab5_viewer, "无三维提资接口")
-                # 【修复】删除else分支，未处理时不显示任何内容，等待用户点击"开始处理"
-            elif current_tab == 5 and getattr(self, 'target_files6', None):  # 收发文函
-                # 【修复】区分"已处理"和"未处理"状态
-                if self.has_processed_results6:
-                    # 已处理：显示处理结果或"无数据"
-                    if self.processing_results6 is not None and not self.processing_results6.empty:
-                        self.display_results6(self.processing_results6, show_popup=False)
-                    else:
-                        # 处理后无数据
-                        self.show_empty_message(self.tab6_viewer, "无需要回复的文函")
-                elif self.file6_data is not None:
-                    # 未处理：显示原始数据
-                    self.display_excel_data(self.tab6_viewer, self.file6_data, "收发文函")
-            else:
-                # 如果当前选项卡没有对应的文件，显示空提示
-                tab_names = ["内部需打开接口", "内部需回复接口", "外部需打开接口", "外部需回复接口"]
-                viewers = [self.tab1_viewer, self.tab2_viewer, self.tab3_viewer, self.tab4_viewer]
-                if 0 <= current_tab < len(tab_names):
-                    self.show_empty_message(viewers[current_tab], f"等待加载{tab_names[current_tab]}数据")
+            # Step4.1：统一渲染入口 —— refresh_current_tab_display 不再走“另一套显示逻辑”
+            # 1) 避免绕过 PendingCache/Registry 过滤导致显示口径不一致（你日志里出现 35/126 之类跳变）
+            # 2) 避免在未处理状态触发原始Excel预览（与 Step1 目标一致：只在开始处理后显示结果）
+            # 3) 避免与 _post_processing_select_and_render_active_tab / on_tab_changed 形成二次渲染
+            if getattr(self, "_suppress_tab_change_render", False):
+                return
+
+            # 直接复用 on_tab_changed 的分支逻辑（它已按 Step1/Step4 收敛）
+            self.on_tab_changed(None)
         except Exception as e:
             print(f"刷新当前选项卡显示失败: {e}")
 
@@ -4750,7 +4702,9 @@ class ExcelProcessorApp:
                     total_files_processed = 0
                     
                     if process_file1 and results1 is not None:
-                        self.display_results(results1, show_popup=False)
+                        # Step4：不在这里渲染（避免与 on_tab_changed 双重渲染），仅更新状态/缓存
+                        self.processing_results = results1 if isinstance(results1, pd.DataFrame) else pd.DataFrame()
+                        self.has_processed_results1 = True
                         active_tab = 0  # 内部需打开接口
                         project_count = len(self.processing_results_multi1)
                         file_count = len(self.target_files1) if self.target_files1 else 1
@@ -4776,7 +4730,8 @@ class ExcelProcessorApp:
                             completion_messages.append("内部需打开接口：无符合条件的数据")
                     
                     if process_file2 and results2 is not None:
-                        self.display_results2(results2, show_popup=False)
+                        self.processing_results2 = results2 if isinstance(results2, pd.DataFrame) else pd.DataFrame()
+                        self.has_processed_results2 = True
                         if not process_file1:  # 如果file1没处理，显示file2
                             active_tab = 1
                         project_count = len(self.processing_results_multi2)
@@ -4803,7 +4758,8 @@ class ExcelProcessorApp:
                             completion_messages.append("内部需回复接口：无符合条件的数据")
                     
                     if process_file3 and results3 is not None:
-                        self.display_results3(results3, show_popup=False)
+                        self.processing_results3 = results3 if isinstance(results3, pd.DataFrame) else pd.DataFrame()
+                        self.has_processed_results3 = True
                         if not process_file1 and not process_file2:  # 显示优先级
                             active_tab = 2
                         project_count = len(self.processing_results_multi3)
@@ -4830,7 +4786,8 @@ class ExcelProcessorApp:
                             completion_messages.append("外部需打开接口：无符合条件的数据")
                     
                     if process_file4 and results4 is not None:
-                        self.display_results4(results4, show_popup=False)
+                        self.processing_results4 = results4 if isinstance(results4, pd.DataFrame) else pd.DataFrame()
+                        self.has_processed_results4 = True
                         if not process_file1 and not process_file2 and not process_file3:
                             active_tab = 3
                         project_count = len(self.processing_results_multi4)
@@ -4951,11 +4908,8 @@ class ExcelProcessorApp:
                             
                             if combined_results:
                                 results5 = pd.concat(combined_results, ignore_index=True)
-                                
-                                try:
-                                    self.display_results5(results5, show_popup=False)
-                                except Exception:
-                                    pass
+                                self.processing_results5 = results5
+                                self.has_processed_results5 = True
                                 if not process_file1 and not process_file2 and not process_file3 and not process_file4:
                                     active_tab = 4
                                 project_count = len(self.processing_results_multi5)
@@ -4970,6 +4924,12 @@ class ExcelProcessorApp:
                                         completion_messages.append(f"三维提资接口：{len(results5)} 行数据")
                                 else:
                                     completion_messages.append("三维提资接口：无符合条件的数据")
+                            else:
+                                # Step4：不在这里渲染，仅标记已处理，避免 tab 切换时误回到“未处理提示”
+                                results5 = pd.DataFrame()
+                                self.processing_results5 = results5
+                                self.has_processed_results5 = True
+                                completion_messages.append("三维提资接口：无符合条件的数据")
 
                     # 处理待处理文件6（批量）
                     process_file6 = getattr(self, 'process_file6_var', tk.BooleanVar(value=False)).get()
@@ -5075,11 +5035,8 @@ class ExcelProcessorApp:
                             
                             if combined_results:
                                 results6 = pd.concat(combined_results, ignore_index=True)
-                                
-                                try:
-                                    self.display_results6(results6, show_popup=False)
-                                except Exception:
-                                    pass
+                                self.processing_results6 = results6
+                                self.has_processed_results6 = True
                                 if not process_file1 and not process_file2 and not process_file3 and not process_file4 and not process_file5:
                                     active_tab = 5
                                 project_count = len(self.processing_results_multi6)
@@ -5101,17 +5058,21 @@ class ExcelProcessorApp:
                                     Monitor.log_warning(f"待处理文件6批量处理完成: 所有项目都无符合条件的数据")
                                 except:
                                     pass
-                                try:
-                                    self.display_results6(results6, show_popup=False)
-                                except Exception:
-                                    pass
+                                self.processing_results6 = results6
+                                self.has_processed_results6 = True
                                 completion_messages.append("收发文函：无符合条件的数据")
 
-                    # 选择显示的选项卡（优先级：file1 > file2 > file3 > file4 > file5 > file6）
-                    self.notebook.select(active_tab)
+                    # Step4：更新导出按钮状态（不依赖当前tab是否已渲染）
+                    try:
+                        self.update_export_button_state()
+                    except Exception:
+                        pass
                     
                     # 关闭等待对话框
                     self.close_waiting_dialog(processing_dialog)
+
+                    # Step4：仅渲染 active_tab（避免 update_display 与 on_tab_changed 双重渲染）
+                    self._post_processing_select_and_render_active_tab(active_tab)
                     
                     # 统一弹窗显示处理结果（批量处理版本）
                     # 只有手动操作时才显示"处理完成"弹窗
