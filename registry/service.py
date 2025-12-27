@@ -95,21 +95,45 @@ def should_reset_task_status(old_interface_time: str, new_interface_time: str,
     new_comp = str(new_completed_val).strip() if new_completed_val else ""
     
     # 【修复】标准化时间格式进行比较（避免格式差异导致误判）
-    # 统一将 "." 替换为 "-"，并去除多余空格
-    def normalize_time(time_str):
+    # - 支持 yyyy.mm.dd / yyyy-mm-dd / yyyy年m月d日
+    # - 支持 mm.dd / mm-dd / mm/dd：若另一侧含年份，则补齐年份后再比较
+    # - 避免把 "25C2" 等非日期字符串误识别为日期
+    def _extract_year_if_any(time_str: str):
+        import re
+        nums = re.findall(r'\d+', time_str or "")
+        if len(nums) >= 3:
+            try:
+                return int(nums[0])
+            except Exception:
+                return None
+        return None
+
+    ref_year_old = _extract_year_if_any(old_time)
+    ref_year_new = _extract_year_if_any(new_time)
+
+    def normalize_time(time_str: str, prefer_year=None) -> str:
         if not time_str:
             return ""
-        # 统一格式：2025.11.07 -> 2025-11-07，2025年11月7日 -> 2025-11-07
         import re
-        # 提取数字
-        numbers = re.findall(r'\d+', time_str)
-        if len(numbers) >= 3:
-            # 至少有年月日
-            return '-'.join(numbers[:3])
-        return time_str.replace('.', '-').replace('/', '-').strip()
-    
-    old_time_norm = normalize_time(old_time)
-    new_time_norm = normalize_time(new_time)
+        s = str(time_str).strip()
+
+        # 仅在“形如 mm.dd / mm-dd / mm/dd”时才把两段数字当作月日
+        has_mmdd_delim = bool(re.match(r'^\s*\d{1,2}\s*[./-]\s*\d{1,2}\s*$', s))
+
+        nums = re.findall(r'\d+', s)
+        if len(nums) >= 3:
+            y, m, d = nums[0], nums[1], nums[2]
+            return f"{int(y):04d}-{int(m):02d}-{int(d):02d}"
+        if len(nums) == 2 and has_mmdd_delim and prefer_year:
+            m, d = nums[0], nums[1]
+            return f"{int(prefer_year):04d}-{int(m):02d}-{int(d):02d}"
+
+        # 兜底：只做分隔符统一
+        return s.replace('.', '-').replace('/', '-').strip()
+
+    # 互相补齐年份：如果一侧只有 mm.dd，另一侧有 yyyy-mm-dd，则以对方年份为准
+    old_time_norm = normalize_time(old_time, prefer_year=ref_year_new)
+    new_time_norm = normalize_time(new_time, prefer_year=ref_year_old)
     
     # 条件1：时间列变化
     if old_time_norm != new_time_norm:
@@ -1019,6 +1043,11 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
     conn = get_connection(db_path, wal)
     now_str = now.isoformat()
     count = 0
+    # Step6：日志去噪 —— 默认仅汇总输出重置/归档等关键统计（需要逐条排查时设置 REGISTRY_VERBOSE=1）
+    import os as _os
+    verbose = (_os.getenv("REGISTRY_VERBOSE", "").strip() == "1")
+    reset_time_changed_count = 0
+    reset_time_changed_samples: list[str] = []
     
     try:
         # 开启事务
@@ -1046,7 +1075,7 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             # 注意：只有当接口时间等关键字段变化时才会重置状态，row_index变化本身不重置
             if old_task and old_task['row_index'] != key['row_index']:
                 row_diff = abs(old_task['row_index'] - key['row_index'])
-                if key['file_type'] == 2 and row_diff > 100:  # 文件2特别容易出现重复接口号
+                if verbose and key['file_type'] == 2 and row_diff > 100:  # 文件2特别容易出现重复接口号
                     print(f"[Registry调试] 接口{key['interface_id']}: 行号变化较大(旧行={old_task['row_index']}, 新行={key['row_index']}, 差距={row_diff})，但仍继承状态")
                 # 不将old_task设为None，继续使用它来继承状态
             
@@ -1083,10 +1112,11 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     snapshot_time_norm = normalize_time_for_ignore(snapshot_time)
                     current_time_norm = normalize_time_for_ignore(current_interface_time)
                 
-                    print(f"[忽略快照检查] 接口{key['interface_id']}")
-                    print(f"  快照时间: '{snapshot_time}' -> 标准化: '{snapshot_time_norm}'")
-                    print(f"  当前时间: '{current_interface_time}' -> 标准化: '{current_time_norm}'")
-                    print(f"  快照行号: {snapshot_row}, 当前行号: {key['row_index']}")
+                    if verbose:
+                        print(f"[忽略快照检查] 接口{key['interface_id']}")
+                        print(f"  快照时间: '{snapshot_time}' -> 标准化: '{snapshot_time_norm}'")
+                        print(f"  当前时间: '{current_interface_time}' -> 标准化: '{current_time_norm}'")
+                        print(f"  快照行号: {snapshot_row}, 当前行号: {key['row_index']}")
                 
                     if snapshot_time_norm and current_time_norm and snapshot_time_norm != current_time_norm:
                         print(f"[Registry自动取消忽略] {key['interface_id']}: 预期时间变化 ({snapshot_time_norm} -> {current_time_norm})")
@@ -1108,11 +1138,14 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                             key['project_id'],
                             key['interface_id']
                         ))
-                        print(f"[Registry] 已删除忽略快照记录")
+                        if verbose:
+                            print(f"[Registry] 已删除忽略快照记录")
                     else:
-                        print(f"  时间未变化，保持忽略状态")
+                        if verbose:
+                            print(f"  时间未变化，保持忽略状态")
                 else:
-                    print(f"[Registry调试] 接口{key['interface_id']}: 已忽略但没有找到快照记录")
+                    if verbose:
+                        print(f"[Registry调试] 接口{key['interface_id']}: 已忽略但没有找到快照记录")
         
             # 【关键】处理任务状态继承和重置逻辑
             if old_task:
@@ -1127,7 +1160,8 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                                            old_completed_val, new_completed_val):
                     # 【新增】如果有完整数据链（completed_at和confirmed_at都存在），归档旧记录
                     if old_task.get('completed_at') and old_task.get('confirmed_at'):
-                        print(f"[Registry版本化-批量] {key['interface_id']} 检测到预期时间变化，之前有完整数据链，归档旧记录")
+                        if verbose:
+                            print(f"[Registry版本化-批量] {key['interface_id']} 检测到预期时间变化，之前有完整数据链，归档旧记录")
                     
                         # 归档旧记录
                         import time as time_module
@@ -1156,10 +1190,16 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                             WHERE id = ?
                         """, (archived_tid, archived_row_index, Status.ARCHIVED, now_str, 'task_reset_time_changed', old_tid))
                     
-                        print(f"[Registry版本化-批量] 旧记录已归档: {old_tid} -> {archived_tid}")
+                        if verbose:
+                            print(f"[Registry版本化-批量] 旧记录已归档: {old_tid} -> {archived_tid}")
                 
                     # 预期时间变化，重置状态
-                    print(f"[Registry] 接口{key['interface_id']}: 预期时间变化，重置状态")
+                    reset_time_changed_count += 1
+                    if verbose:
+                        print(f"[Registry] 接口{key['interface_id']}: 预期时间变化，重置状态")
+                    else:
+                        if len(reset_time_changed_samples) < 3:
+                            reset_time_changed_samples.append(str(key['interface_id']))
                     fields['display_status'] = '待完成' if old_task['responsible_person'] else '请指派'
                     fields['status'] = Status.OPEN
                     # 清除完成和确认相关字段
@@ -1177,7 +1217,8 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                 elif not new_completed_val and old_task['completed_at']:
                     # 【修复】如果有完整数据链（completed_at和confirmed_at都存在），先归档旧记录
                     if old_task.get('completed_at') and old_task.get('confirmed_at'):
-                        print(f"[Registry版本化-批量] {key['interface_id']} 完成列被清空，之前有完整数据链，归档旧记录")
+                        if verbose:
+                            print(f"[Registry版本化-批量] {key['interface_id']} 完成列被清空，之前有完整数据链，归档旧记录")
                     
                         # 归档旧记录
                         import time as time_module
@@ -1206,10 +1247,12 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                             WHERE id = ?
                         """, (archived_tid, archived_row_index, Status.ARCHIVED, now_str, 'task_reset_completed_cleared', old_tid))
                     
-                        print(f"[Registry版本化-批量] 旧记录已归档: {old_tid} -> {archived_tid}")
+                        if verbose:
+                            print(f"[Registry版本化-批量] 旧记录已归档: {old_tid} -> {archived_tid}")
                 
                     # 完成列被删除，强制重置（即使是已确认的任务也要重置）
-                    print(f"[Registry] 接口{key['interface_id']}: 完成列被清空，重置状态（old_status={old_task['status']}）")
+                    if verbose:
+                        print(f"[Registry] 接口{key['interface_id']}: 完成列被清空，重置状态（old_status={old_task['status']}）")
                     fields['display_status'] = '待完成' if old_task['responsible_person'] else '请指派'
                     fields['status'] = Status.OPEN
                     # 清除完成相关字段
@@ -1226,7 +1269,8 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                 # 【新增】如果已确认且完成列仍有值，且未被取消忽略，保持确认状态
                 elif old_task['status'] == Status.CONFIRMED and old_task['confirmed_at'] and new_completed_val and not need_force_reset:
                     # 已确认且完成列未被清空，保持确认状态
-                    print(f"[Registry] 接口{key['interface_id']}: 已确认且完成列有值，保持确认状态")
+                    if verbose:
+                        print(f"[Registry] 接口{key['interface_id']}: 已确认且完成列有值，保持确认状态")
                     fields['status'] = Status.CONFIRMED
                     # 【修复】如果旧状态是"已审查"则保持，否则设置为"已审查"
                     # 因为已确认的任务，其display_status应该反映真实状态
@@ -1366,6 +1410,12 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             count += 1
         
         conn.commit()
+        # 汇总输出（避免大量逐条重置打印）
+        if reset_time_changed_count and not verbose:
+            suffix = ""
+            if reset_time_changed_samples:
+                suffix = f" (示例: {', '.join(reset_time_changed_samples)})"
+            print(f"[Registry] 本轮批量：预期时间变化→重置状态 {reset_time_changed_count} 条{suffix}")
         return count
         
     except Exception as e:
