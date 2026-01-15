@@ -15,16 +15,125 @@ import datetime
 import threading
 import time
 import winreg
+import re
 from pathlib import Path
 import pandas as pd
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from openpyxl import load_workbook
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 # 导入窗口管理器
 from window import WindowManager
 from write_tasks import get_write_task_manager, get_pending_cache
+
+
+# ============================================================================
+# 源文件“最新版本”选择工具：仅依赖文件名（不依赖文件mtime）
+# ============================================================================
+def _parse_datetime_from_source_filename(file_type: int, filename: str) -> Optional[datetime.datetime]:
+    """
+    从源文件文件名中解析“时间后缀”，用于同项目同类型只取最新文件。
+
+    约定（已在 main.py 的匹配规则中出现）：
+    - file1: 2016按项目导出IDI手册2025-08-01-17_55_52.xlsx（含时分秒）或 2016按项目导出IDI手册2025-08-01.xlsx（仅日期）
+    - file2: 内部接口信息单报表190720251203.xlsx（YYYYMMDD）
+    - file3: 外部接口ICM报表190720251203.xlsx（YYYYMMDD）
+    - file4: 外部接口单报表190720251203.xlsx（YYYYMMDD）
+
+    返回：
+    - datetime.datetime（可比较）
+    - 解析失败返回 None（为安全起见，调用方可选择“不去重”）
+    """
+    try:
+        if file_type == 1:
+            # 按项目导出IDI手册 + YYYY-MM-DD[-HH_MM_SS]
+            m = re.search(
+                r"按项目导出IDI手册(?P<date>\d{4}-\d{2}-\d{2})(?:-(?P<h>\d{2})_(?P<m>\d{2})_(?P<s>\d{2}))?",
+                filename
+            )
+            if not m:
+                return None
+            date_str = m.group("date")
+            h = m.group("h")
+            mi = m.group("m")
+            s = m.group("s")
+            if h and mi and s:
+                return datetime.datetime.strptime(f"{date_str}-{h}_{mi}_{s}", "%Y-%m-%d-%H_%M_%S")
+            return datetime.datetime.strptime(date_str, "%Y-%m-%d")
+
+        if file_type == 2:
+            m = re.search(r"内部接口信息单报表\d{4}(?P<date>\d{8})", filename)
+        elif file_type == 3:
+            m = re.search(r"外部接口ICM报表\d{4}(?P<date>\d{8})", filename)
+        elif file_type == 4:
+            m = re.search(r"外部接口单报表\d{4}(?P<date>\d{8})", filename)
+        else:
+            return None
+
+        if not m:
+            return None
+        return datetime.datetime.strptime(m.group("date"), "%Y%m%d")
+    except Exception:
+        return None
+
+
+def select_latest_source_files_per_project(
+    file_type: int,
+    file_list: List[Tuple[str, str]],
+    file_type_name: str = ""
+) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str, str]]]:
+    """
+    对同一 file_type 的候选文件按 project_id 去重：每个项目只保留文件名时间最新的那一份。
+
+    返回：
+    - filtered: [(file_path, project_id), ...]
+    - ignored:  [(file_path, project_id, reason), ...]
+
+    安全策略：
+    - 若任意文件无法解析时间（返回None），则 **不做去重**（直接返回原列表），避免误删。
+    """
+    if not file_list:
+        return [], []
+
+    parsed: List[Tuple[str, datetime.datetime, str, str]] = []
+    for file_path, project_id in file_list:
+        base = os.path.basename(file_path)
+        dt = _parse_datetime_from_source_filename(file_type, base)
+        if dt is None:
+            # 保守：不去重
+            tip = f"[最新文件筛选] {file_type_name or f'file{file_type}'}: 无法从文件名解析时间，跳过去重：{base}"
+            print(tip)
+            return file_list, []
+        parsed.append((project_id, dt, base, file_path))
+
+    # project_id -> (key, chosen_path)
+    chosen: Dict[str, Tuple[Tuple[datetime.datetime, str], str]] = {}
+    for project_id, dt, base, file_path in parsed:
+        key = (dt, base)  # dt优先；同日同秒则按文件名字符串做次级比较（更“新”）
+        cur = chosen.get(project_id)
+        if cur is None or key > cur[0]:
+            chosen[project_id] = (key, file_path)
+
+    filtered: List[Tuple[str, str]] = []
+    ignored: List[Tuple[str, str, str]] = []
+    for file_path, project_id in file_list:
+        keep_path = chosen.get(project_id, (None, None))[1]
+        if keep_path and file_path == keep_path:
+            filtered.append((file_path, project_id))
+        else:
+            ignored.append((file_path, project_id, f"{file_type_name or f'file{file_type}'}旧版本(仅保留最新)"))
+
+    if ignored:
+        try:
+            print(
+                f"[最新文件筛选] {file_type_name or f'file{file_type}'}: "
+                f"同项目多版本去重 {len(file_list)}→{len(filtered)}，忽略{len(ignored)}个旧文件"
+            )
+        except Exception:
+            pass
+
+    return filtered, ignored
 
 # 导入任务指派模块
 try:
@@ -3466,6 +3575,11 @@ class ExcelProcessorApp:
                 # 项目号筛选
                 self.target_files1, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件1")
                 self.ignored_files.extend(ignored)
+                # 每项目只保留最新文件（按文件名时间）
+                self.target_files1, ignored_latest = select_latest_source_files_per_project(
+                    1, self.target_files1, "待处理文件1"
+                )
+                self.ignored_files.extend(ignored_latest)
                 if self.target_files1:
                     # 兼容性：设置第一个文件为单文件变量
                     self.target_file1, self.target_file1_project_id = self.target_files1[0]
@@ -3494,6 +3608,11 @@ class ExcelProcessorApp:
                 all_files = main.find_all_target_files2(self.excel_files)
                 self.target_files2, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件2")
                 self.ignored_files.extend(ignored)
+                # 每项目只保留最新文件（按文件名时间）
+                self.target_files2, ignored_latest = select_latest_source_files_per_project(
+                    2, self.target_files2, "待处理文件2"
+                )
+                self.ignored_files.extend(ignored_latest)
                 if self.target_files2:
                     self.target_file2, self.target_file2_project_id = self.target_files2[0]
                     if update_ui:
@@ -3515,6 +3634,11 @@ class ExcelProcessorApp:
                 all_files = main.find_all_target_files3(self.excel_files)
                 self.target_files3, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件3")
                 self.ignored_files.extend(ignored)
+                # 每项目只保留最新文件（按文件名时间）
+                self.target_files3, ignored_latest = select_latest_source_files_per_project(
+                    3, self.target_files3, "待处理文件3"
+                )
+                self.ignored_files.extend(ignored_latest)
                 if self.target_files3:
                     self.target_file3, self.target_file3_project_id = self.target_files3[0]
                     if update_ui:
@@ -3536,6 +3660,11 @@ class ExcelProcessorApp:
                 all_files = main.find_all_target_files4(self.excel_files)
                 self.target_files4, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件4")
                 self.ignored_files.extend(ignored)
+                # 每项目只保留最新文件（按文件名时间）
+                self.target_files4, ignored_latest = select_latest_source_files_per_project(
+                    4, self.target_files4, "待处理文件4"
+                )
+                self.ignored_files.extend(ignored_latest)
                 if self.target_files4:
                     self.target_file4, self.target_file4_project_id = self.target_files4[0]
                     if update_ui:

@@ -3,6 +3,8 @@ from __future__ import annotations
 import queue
 import threading
 import uuid
+import os
+import sys
 from pathlib import Path
 from typing import Dict, Iterable, Optional
 
@@ -19,7 +21,62 @@ try:
 except Exception:
     _shared_log_upsert_task = None
 
-DEFAULT_STATE_PATH = Path("result_cache/write_tasks_state.json")
+def _get_app_directory() -> Path:
+    """
+    获取程序根目录（与 file_manager._get_app_directory() 口径一致）：
+    - 打包环境：exe 所在目录
+    - 开发环境：源码所在目录
+    """
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent.parent
+
+
+def _get_default_state_path() -> Path:
+    # 固定写入到“程序根目录/result_cache/”下（满足用户“固定路径”的诉求）
+    return _get_app_directory() / "result_cache" / "write_tasks_state.json"
+
+
+def _legacy_state_paths() -> list[Path]:
+    """
+    兼容旧版本：write_tasks_state.json 可能在
+    - 当前工作目录下的 result_cache/
+    - (打包环境) exe 目录下的 result_cache/
+    - (历史版本) 每用户目录（LOCALAPPDATA/APPDATA），仅用于迁移读取，不作为新写入位置
+    """
+    paths: list[Path] = []
+    try:
+        paths.append((Path.cwd() / "result_cache" / "write_tasks_state.json").resolve())
+    except Exception:
+        paths.append(Path("result_cache") / "write_tasks_state.json")
+    try:
+        exe_dir = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else None
+        if exe_dir:
+            paths.append(exe_dir / "result_cache" / "write_tasks_state.json")
+    except Exception:
+        pass
+    # 兼容迁移：把之前错误放到每用户目录的 state 文件迁回程序根目录
+    try:
+        local_appdata = os.environ.get("LOCALAPPDATA") or ""
+        appdata = os.environ.get("APPDATA") or ""
+        for base in (local_appdata, appdata):
+            if base:
+                paths.append((Path(base) / "接口筛选" / "result_cache" / "write_tasks_state.json").resolve())
+    except Exception:
+        pass
+    # 去重（保持顺序）
+    seen = set()
+    uniq: list[Path] = []
+    for p in paths:
+        key = str(p)
+        if key in seen:
+            continue
+        seen.add(key)
+        uniq.append(p)
+    return uniq
+
+
+DEFAULT_STATE_PATH = _get_default_state_path()
 
 _manager_singleton: Optional["WriteTaskManager"] = None
 _singleton_lock = threading.Lock()
@@ -30,6 +87,21 @@ class WriteTaskManager:
 
     def __init__(self, state_path: Path = DEFAULT_STATE_PATH):
         self.state_path = Path(state_path)
+        # 兼容迁移：如果新位置不存在，但旧位置存在，则拷贝过去（只做一次，尽量不影响启动）
+        try:
+            if not self.state_path.exists():
+                for legacy in _legacy_state_paths():
+                    try:
+                        if legacy.exists() and legacy.is_file():
+                            self.state_path.parent.mkdir(parents=True, exist_ok=True)
+                            # 如果旧文件和新文件是同一路径，跳过
+                            if legacy.resolve() != self.state_path.resolve():
+                                self.state_path.write_bytes(legacy.read_bytes())
+                            break
+                    except Exception:
+                        continue
+        except Exception:
+            pass
         self.cache = WriteTaskCache(self.state_path)
         self.tasks: Dict[str, WriteTask] = {}
         self._queue: "queue.Queue[str]" = queue.Queue()

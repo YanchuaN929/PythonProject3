@@ -52,6 +52,7 @@ def _retry_on_lock(operation_name: str, func, max_retries: int = 5):
 
 # 【多用户协作】全局数据文件夹路径，用于确定共享数据库位置
 _DATA_FOLDER = None
+_DISABLED_NOTIFIED = False
 
 def set_data_folder(folder_path: str):
     """
@@ -65,7 +66,24 @@ def set_data_folder(folder_path: str):
     """
     global _DATA_FOLDER
     _DATA_FOLDER = folder_path
-    # 控制台输出优化：已验证逻辑，默认不输出
+    # 在“允许触网”的时机（用户刷新/选择目录后）主动校验一次 registry 目录可用性。
+    # 若不可用：直接禁用并提示（不回退到本地 result_cache/registry.db）。
+    try:
+        cfg = load_config(data_folder=_DATA_FOLDER, ensure_registry_dir=True)
+        if not _enabled(cfg):
+            global _DISABLED_NOTIFIED
+            if not _DISABLED_NOTIFIED:
+                _DISABLED_NOTIFIED = True
+                reason = (cfg.get("registry_disabled_reason") or "").strip()
+                msg = reason or "公共盘数据库不可用，Registry已禁用（不会回退本地库）"
+                try:
+                    from db_status import notify_error
+                    notify_error(msg, show_dialog=True)
+                except Exception:
+                    print(f"[Registry] {msg}")
+    except Exception:
+        # set_data_folder 不应影响主流程
+        pass
 
 def get_display_status(task_keys: List[Dict[str, Any]], current_user_roles_str: str = None) -> Dict[str, str]:
     """

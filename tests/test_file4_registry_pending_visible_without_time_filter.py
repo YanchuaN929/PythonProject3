@@ -25,7 +25,7 @@ def test_file4_registry_pending_visible_even_if_time_filter_fails(monkeypatch, t
     # 2) 让筛选：科室/类别通过，但时间/完成列都不通过 → 原始final_rows为空
     monkeypatch.setattr(main_module, "execute4_process1", lambda _df: {1}, raising=True)
     monkeypatch.setattr(main_module, "execute4_process2", lambda _df: {1}, raising=True)
-    monkeypatch.setattr(main_module, "execute4_process3", lambda _df, _now: set(), raising=True)  # time fail
+    monkeypatch.setattr(main_module, "execute4_process3", lambda _df, _now, _pid=None: set(), raising=True)  # time fail
     monkeypatch.setattr(main_module, "execute4_process4", lambda _df: set(), raising=True)
 
     # 3) 准备registry.db最小表结构

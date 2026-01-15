@@ -22,7 +22,7 @@ def test_file4_registry_pending_matches_project_id_from_row_when_filename_missin
     # 2) 让筛选：科室/类别通过，原始final_rows为空
     monkeypatch.setattr(main_module, "execute4_process1", lambda _df: {1}, raising=True)
     monkeypatch.setattr(main_module, "execute4_process2", lambda _df: {1}, raising=True)
-    monkeypatch.setattr(main_module, "execute4_process3", lambda _df, _now: set(), raising=True)
+    monkeypatch.setattr(main_module, "execute4_process3", lambda _df, _now, _pid=None: set(), raising=True)
     monkeypatch.setattr(main_module, "execute4_process4", lambda _df: set(), raising=True)
 
     # 3) registry.db最小表结构

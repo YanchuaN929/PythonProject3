@@ -21,6 +21,7 @@ a = Analysis(
         ('db_status.py', '.'),
         ('help_viewer.py', '.'),
         ('ui_copy.py', '.'),
+        ('adjust.py', '.'),  # 项目特殊调整逻辑（1818日期减6天等）
         # 配置文件
         ('config.json', '.'),
         ('version.json', '.'),
@@ -45,6 +46,7 @@ a = Analysis(
         'db_status',
         'help_viewer',
         'ui_copy',
+        'adjust',  # 项目特殊调整逻辑（1818日期减6天等）
         # write_tasks 模块（写入任务面板/回文提交等）
         'write_tasks',
         'write_tasks.manager',

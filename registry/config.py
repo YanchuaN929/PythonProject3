@@ -40,6 +40,8 @@ DEFAULTS = {
     # UI过滤相关（第二步UI使用）
     "view_hide_overdue_for_designer_default": False,
     "view_overdue_days_threshold": 30,
+    # 禁用原因（仅用于提示，不参与业务逻辑）
+    "registry_disabled_reason": "",
 }
 
 def load_config(
@@ -109,12 +111,16 @@ def load_config(
                 os.makedirs(registry_dir, exist_ok=True)
                 # 数据库路径信息已在db.py的get_connection中打印，这里不再重复输出
             except Exception as e:
-                print(f"[Registry] 创建数据库目录失败: {e}")
-                # 回退到本地
-                config['registry_db_path'] = os.path.join("result_cache", "registry.db")
+                # 关键策略：不再回退到本地 result_cache/registry.db，避免产生“每人一份本地库”
+                # 直接禁用 Registry 并提示用户检查公共盘权限/路径
+                print(f"[Registry] 创建数据库目录失败，Registry已禁用（不会回退本地库）: {e}")
+                config["registry_enabled"] = False
+                config["registry_disabled_reason"] = f"无法创建公共盘数据库目录: {e}"
     elif config['registry_db_path'] is None:
-        # 如果没有数据文件夹，使用本地路径（向后兼容）
-        config['registry_db_path'] = os.path.join("result_cache", "registry.db")
+        # 如果没有数据文件夹：彻底禁用 Registry（不再生成/使用本地 result_cache/registry.db）
+        config["registry_enabled"] = False
+        config["registry_db_path"] = None
+        config["registry_disabled_reason"] = "未选择数据文件夹，Registry已禁用（不会回退本地库）"
     
     return config
 

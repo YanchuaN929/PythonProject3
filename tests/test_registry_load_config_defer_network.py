@@ -28,7 +28,7 @@ def test_load_config_no_makedirs_when_deferred(monkeypatch):
 def test_load_config_calls_makedirs_and_fallback_on_error(monkeypatch):
     """
     刷新阶段用于“允许触网/确保目录”的模式：
-    ensure_registry_dir=True 时会尝试 os.makedirs；失败则回退到本地 result_cache/registry.db。
+    ensure_registry_dir=True 时会尝试 os.makedirs；失败则禁用 Registry（不回退本地 result_cache/registry.db）。
     """
     from registry.config import load_config
 
@@ -44,6 +44,7 @@ def test_load_config_calls_makedirs_and_fallback_on_error(monkeypatch):
     cfg = load_config(data_folder=data_folder, ensure_registry_dir=True)
 
     assert called["makedirs"] is True
-    assert "result_cache" in os.path.normcase(cfg["registry_db_path"])
+    assert cfg.get("registry_enabled") is False
+    assert cfg.get("registry_db_path") is None or ".registry" in cfg.get("registry_db_path", "")
 
 

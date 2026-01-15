@@ -17,6 +17,14 @@ from copy import copy
 # 忽略pandas警告
 warnings.filterwarnings('ignore')
 
+# 导入项目特殊调整模块（1818项目日期减6天等）
+try:
+    from adjust import adjust_date_for_project
+except ImportError:
+    def adjust_date_for_project(cell_date, project_id):
+        """兜底函数：无调整"""
+        return cell_date
+
 
 def process_excel_files(excel_files, current_datetime):
     """
@@ -360,9 +368,14 @@ def process_target_file(file_path, current_datetime):
         else:
             print(f"第{i+1}行（数据）: {list(df.iloc[i])[:5]}...")  # 只显示前5列
     
+    # 【新增】提取项目号（用于1818项目特殊日期逻辑）
+    filename = os.path.basename(file_path)
+    match = re.search(r'(\d{4})', filename)
+    project_id = match.group(1) if match else None
+    
     # 执行四个处理步骤
     process1_rows = execute_process1(df)  # H列25C1/25C2/25C3筛选
-    process2_rows = execute_process2(df, current_datetime)  # K列日期筛选
+    process2_rows = execute_process2(df, current_datetime, project_id)  # K列日期筛选
     process3_rows = execute_process3(df)  # M列空值且A列非空筛选
     process4_rows = execute_process4(df)  # 作废数据筛选
     
@@ -416,7 +429,6 @@ def process_target_file(file_path, current_datetime):
             
             # 【优化】先建立Excel接口号索引，提升性能
             # 【修复】项目号从文件名提取，不从df_row中提取
-            import re
             filename = os.path.basename(file_path)
             match = re.search(r'(\d{4})', filename)
             file_project_id = match.group(1) if match else ""
@@ -615,16 +627,19 @@ def execute_process1(df):
     return result_rows
 
 
-def execute_process2(df, current_datetime):
+def execute_process2(df, current_datetime, project_id=None):
     """
     处理2：K列日期筛选逻辑
     根据当前日期决定筛选范围：
     - 如果今天是1-19号：筛选同年同月数据
     - 如果今天是20-31号：筛选同年同月及次月数据
     
+    【特殊逻辑】1818项目：日期减6天后再进行筛选
+    
     参数:
         df (pandas.DataFrame): 原始数据
         current_datetime (datetime): 当前日期时间
+        project_id (str): 项目号，用于特殊项目日期调整
     
     返回:
         set: 符合条件的行索引集合
@@ -706,6 +721,9 @@ def execute_process2(df, current_datetime):
             
             if pd.isna(cell_date):
                 continue
+            
+            # 【1818特殊逻辑】日期减6天后再进行筛选
+            cell_date = adjust_date_for_project(cell_date, project_id)
             
             # 检查日期是否在筛选范围内
             if start_date <= cell_date <= end_date:
@@ -1069,8 +1087,8 @@ def process_target_file2(file_path, current_datetime, project_id=None):
 
     # 处理1
     process1_rows = execute2_process1(df)
-    # 处理2
-    process2_rows = execute2_process2(df, current_datetime)
+    # 处理2（传入project_id用于1818特殊日期逻辑）
+    process2_rows = execute2_process2(df, current_datetime, project_id)
     # 处理3（用于排除）
     process3_rows = execute2_process3(df)
     # 处理4
@@ -1120,7 +1138,6 @@ def process_target_file2(file_path, current_datetime, project_id=None):
             print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个有状态的任务")
             
             # 【优化】从文件名提取项目号，建立Excel索引
-            import re
             filename = os.path.basename(file_path)
             match = re.search(r'(\d{4})', filename)
             file_project_id = match.group(1) if match else project_id
@@ -1251,8 +1268,8 @@ def execute2_process1(df):
             result_rows.add(idx)
     return result_rows
 
-def execute2_process2(df, current_datetime):
-    """M列日期筛选，逻辑同文件1的K列"""
+def execute2_process2(df, current_datetime, project_id=None):
+    """M列日期筛选，逻辑同文件1的K列。【特殊逻辑】1818项目：日期减6天后再进行筛选"""
     result_rows = set()
     if len(df.columns) <= 12:
         return result_rows
@@ -1291,6 +1308,8 @@ def execute2_process2(df, current_datetime):
                 cell_date = pd.to_datetime(val, errors='coerce')
             if pd.isna(cell_date):
                 continue
+            # 【1818特殊逻辑】日期减6天后再进行筛选
+            cell_date = adjust_date_for_project(cell_date, project_id)
             if start_date <= cell_date <= end_date:
                 result_rows.add(idx)
         except:
@@ -1549,11 +1568,16 @@ def process_target_file3(file_path, current_datetime):
     except:
         pass
     
+    # 【新增】提取项目号（用于1818项目特殊日期逻辑）
+    filename = os.path.basename(file_path)
+    match = re.search(r'(\d{4})', filename)
+    project_id = match.group(1) if match else None
+    
     # 执行六个处理步骤
     process1_rows = execute3_process1(df)  # I列为"B"的数据
     process2_rows = execute3_process2(df)  # AL列以"河北分公司-建筑结构所"开头的数据
-    process3_rows = execute3_process3(df, current_datetime)  # M列时间数据筛选
-    process4_rows = execute3_process4(df, current_datetime)  # L列时间数据筛选
+    process3_rows = execute3_process3(df, current_datetime, project_id)  # M列时间数据筛选
+    process4_rows = execute3_process4(df, current_datetime, project_id)  # L列时间数据筛选
     process5_rows = execute3_process5(df)  # Q列为空值的数据
     process6_rows = execute3_process6(df)  # T列为空值的数据
     
@@ -1597,7 +1621,6 @@ def process_target_file3(file_path, current_datetime):
             print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个有状态的任务")
             
             # 【优化】从文件名提取项目号，建立Excel索引
-            import re
             filename = os.path.basename(file_path)
             match = re.search(r'(\d{4})', filename)
             file_project_id = match.group(1) if match else ""
@@ -1873,13 +1896,16 @@ def execute3_process2(df):
     return qualified_rows
 
 
-def execute3_process3(df, current_datetime):
+def execute3_process3(df, current_datetime, project_id=None):
     """
     处理3：读取处理文件3中M列的数据，根据当前日期进行时间筛选
+    
+    【特殊逻辑】1818项目：日期减6天后再进行筛选
     
     参数:
         df (pandas.DataFrame): 输入数据
         current_datetime (datetime): 当前日期时间
+        project_id (str): 项目号，用于特殊项目日期调整
     
     返回:
         set: 符合条件的行索引集合
@@ -1932,7 +1958,7 @@ def execute3_process3(df, current_datetime):
                     date_value = None
                     value_str = str(value).strip()
                     
-                    # 业务规则：4444 作为年份表示“无效占位”，不应进入处理结果
+                    # 业务规则：4444 作为年份表示"无效占位"，不应进入处理结果
                     # 因此直接排除该行（不参与时间窗口判断）
                     if value_str.startswith('4444'):
                         continue
@@ -1954,8 +1980,11 @@ def execute3_process3(df, current_datetime):
                     if date_value is None and hasattr(value, 'year'):
                         date_value = datetime.datetime(value.year, value.month, value.day)
                     
-                    if date_value and start_date <= date_value <= end_date:
-                        qualified_rows.add(index)
+                    if date_value:
+                        # 【1818特殊逻辑】日期减6天后再进行筛选
+                        date_value = adjust_date_for_project(date_value, project_id)
+                        if start_date <= date_value <= end_date:
+                            qualified_rows.add(index)
                         
                 except Exception as parse_error:
                     print(f"日期解析失败（第{index+1}行）: {value} - {parse_error}")
@@ -1979,13 +2008,16 @@ def execute3_process3(df, current_datetime):
     return qualified_rows
 
 
-def execute3_process4(df, current_datetime):
+def execute3_process4(df, current_datetime, project_id=None):
     """
     处理4：读取处理文件3中L列的数据，进行时间筛选（4444年份视为无效，直接排除）
+    
+    【特殊逻辑】1818项目：日期减6天后再进行筛选
     
     参数:
         df (pandas.DataFrame): 输入数据
         current_datetime (datetime): 当前日期时间
+        project_id (str): 项目号，用于特殊项目日期调整
     
     返回:
         set: 符合条件的行索引集合
@@ -2059,8 +2091,11 @@ def execute3_process4(df, current_datetime):
                     if date_value is None and hasattr(value, 'year'):
                         date_value = datetime.datetime(value.year, value.month, value.day)
                     
-                    if date_value and start_date <= date_value <= end_date:
-                        qualified_rows.add(index)
+                    if date_value:
+                        # 【1818特殊逻辑】日期减6天后再进行筛选
+                        date_value = adjust_date_for_project(date_value, project_id)
+                        if start_date <= date_value <= end_date:
+                            qualified_rows.add(index)
                         
                 except Exception as parse_error:
                     print(f"日期解析失败（第{index+1}行）: {value} - {parse_error}")
@@ -2416,10 +2451,15 @@ def process_target_file4(file_path, current_datetime):
     except:
         pass
     
+    # 【新增】提取项目号（用于1818项目特殊日期逻辑）
+    filename = os.path.basename(file_path)
+    match = re.search(r'(\d{4})', filename)
+    project_id = match.group(1) if match else None
+    
     # 执行四个处理步骤
     process1_rows = execute4_process1(df)  # AF列以"河北分公司-建筑结构所"开头的数据
     process2_rows = execute4_process2(df)  # P列为"B"的数据
-    process3_rows = execute4_process3(df, current_datetime)  # S列时间数据筛选
+    process3_rows = execute4_process3(df, current_datetime, project_id)  # S列时间数据筛选
     process4_rows = execute4_process4(df)  # V列为空值的数据
     
     # 最终汇总逻辑：满足处理1、2、3，4
@@ -2454,8 +2494,7 @@ def process_target_file4(file_path, current_datetime):
             # Excel索引优化：
             # - 优先从行数据提取项目号（更稳，测试文件名可能不含4位项目号）
             # - 文件名项目号仅作为兜底
-            # - 若仍取不到项目号，则退化为按 interface_id 匹配（避免“历史待审查但主界面加不回”）
-            import re
+            # - 若仍取不到项目号，则退化为按 interface_id 匹配（避免"历史待审查但主界面加不回"）
             filename = os.path.basename(file_path)
             match = re.search(r'(\d{4})', filename)
             file_project_id = match.group(1) if match else ""
@@ -2699,13 +2738,16 @@ def execute4_process2(df):
     return qualified_rows
 
 
-def execute4_process3(df, current_datetime):
+def execute4_process3(df, current_datetime, project_id=None):
     """
     处理3：读取待处理文件4中S列的数据，根据当前日期进行时间筛选
+    
+    【特殊逻辑】1818项目：日期减6天后再进行筛选
     
     参数:
         df (pandas.DataFrame): 输入数据
         current_datetime (datetime): 当前日期时间
+        project_id (str): 项目号，用于特殊项目日期调整
     
     返回:
         set: 符合条件的行索引集合
@@ -2776,8 +2818,11 @@ def execute4_process3(df, current_datetime):
                     if date_value is None and hasattr(value, 'year'):
                         date_value = datetime.datetime(value.year, value.month, value.day)
                     
-                    if date_value and start_date <= date_value <= end_date:
-                        qualified_rows.add(index)
+                    if date_value:
+                        # 【1818特殊逻辑】日期减6天后再进行筛选
+                        date_value = adjust_date_for_project(date_value, project_id)
+                        if start_date <= date_value <= end_date:
+                            qualified_rows.add(index)
                         
                 except Exception as parse_error:
                     print(f"日期解析失败（第{index+1}行）: {value} - {parse_error}")
@@ -3108,8 +3153,13 @@ def process_target_file5(file_path, current_datetime):
             pass
         return pd.DataFrame()
 
+    # 【新增】提取项目号（用于1818项目特殊日期逻辑）
+    filename = os.path.basename(file_path)
+    match = re.search(r'(\d{4})', filename)
+    project_id = match.group(1) if match else None
+
     p1 = execute5_process1(df)
-    p2 = execute5_process2(df, current_datetime)
+    p2 = execute5_process2(df, current_datetime, project_id)
     p3 = execute5_process3(df)
 
     final_rows = p1 & p2 & p3
@@ -3141,7 +3191,6 @@ def process_target_file5(file_path, current_datetime):
             registry_tasks = cursor.fetchall()
             
             # Excel索引优化+从文件名提取项目号
-            import re
             filename = os.path.basename(file_path)
             match = re.search(r'(\d{4})', filename)
             file_project_id = match.group(1) if match else ""
@@ -3268,8 +3317,8 @@ def execute5_process1(df):
     return result_rows
 
 
-def execute5_process2(df, current_datetime):
-    """L列日期筛选，逻辑同文件1的K列"""
+def execute5_process2(df, current_datetime, project_id=None):
+    """L列日期筛选，逻辑同文件1的K列。【特殊逻辑】1818项目：日期减6天后再进行筛选"""
     result_rows = set()
     if len(df.columns) <= 11:
         return result_rows
@@ -3308,6 +3357,8 @@ def execute5_process2(df, current_datetime):
                 cell_date = pd.to_datetime(val, errors='coerce')
             if pd.isna(cell_date):
                 continue
+            # 【1818特殊逻辑】日期减6天后再进行筛选
+            cell_date = adjust_date_for_project(cell_date, project_id)
             if start_date <= cell_date <= end_date:
                 result_rows.add(idx)
         except:
@@ -3537,7 +3588,6 @@ def filter_valid_names(names_str, valid_names_set):
             filtered_names.append(name)
         else:
             # 尝试去除尾部字母后匹配（如"刘峰a" → "刘峰"）
-            import re
             # 移除尾部的英文字母（一个或多个）
             cleaned_name = re.sub(r'[a-zA-Z]+$', '', name)
             if cleaned_name and cleaned_name in valid_names_set:
@@ -3594,6 +3644,11 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
             pass
         return pd.DataFrame()
 
+    # 【新增】提取项目号（用于1818项目特殊日期逻辑）
+    filename = os.path.basename(file_path)
+    match = re.search(r'(\d{4})', filename)
+    project_id = match.group(1) if match else None
+
     p1 = execute6_process1(df)
     p_i_not_empty = execute6_process_i_not_empty(df)  # 【新增】I列非空检查
     p4 = execute6_process4(df)
@@ -3605,7 +3660,7 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
         print(f"最终完成处理数据（原始筛选，管理员模式）: {len(final_rows)} 行")
     else:
         # 普通模式：使用所有筛选条件（包括I列非空和日期范围）
-        p3 = execute6_process3(df, current_datetime)
+        p3 = execute6_process3(df, current_datetime, project_id)
         final_rows = p1 & p_i_not_empty & p3 & p4
         print(f"最终完成处理数据（原始筛选，普通模式）: {len(final_rows)} 行")
     
@@ -3634,7 +3689,6 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
             registry_tasks = cursor.fetchall()
             
             # Excel索引优化+从文件名提取项目号
-            import re
             filename = os.path.basename(file_path)
             match = re.search(r'(\d{4})', filename)
             file_project_id = match.group(1) if match else ""
@@ -3815,8 +3869,8 @@ def execute6_process_i_not_empty(df):
     return result_rows
 
 
-def execute6_process3(df, current_datetime):
-    """I列为日期，筛选当日及之前 + 未来14天内（即 delta <= 14）"""
+def execute6_process3(df, current_datetime, project_id=None):
+    """I列为日期，筛选当日及之前 + 未来14天内（即 delta <= 14）。【特殊逻辑】1818项目：日期减6天后再进行筛选"""
     result_rows = set()
     if len(df.columns) <= 8:
         return result_rows
@@ -3831,6 +3885,8 @@ def execute6_process3(df, current_datetime):
             parsed = pd.to_datetime(val, errors='coerce')
             if pd.isna(parsed):
                 continue
+            # 【1818特殊逻辑】日期减6天后再进行筛选
+            parsed = adjust_date_for_project(parsed, project_id)
             d = parsed.date()
             delta = (d - today).days
             # 包含过去的日期（delta < 0）+ 今天和未来14天（0 <= delta <= 14）

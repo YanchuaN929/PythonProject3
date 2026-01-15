@@ -20,7 +20,7 @@ def test_file1_registry_pending_includes_null_ignored(monkeypatch, tmp_path):
 
     # 2) 让四步筛选：只有科室筛选通过，其他为空，保证原始final_rows为空
     monkeypatch.setattr(main_module, "execute_process1", lambda _df: {1}, raising=True)
-    monkeypatch.setattr(main_module, "execute_process2", lambda _df, _now: set(), raising=True)
+    monkeypatch.setattr(main_module, "execute_process2", lambda _df, _now, _pid=None: set(), raising=True)
     monkeypatch.setattr(main_module, "execute_process3", lambda _df: set(), raising=True)
     monkeypatch.setattr(main_module, "execute_process4", lambda _df: set(), raising=True)
 

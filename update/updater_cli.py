@@ -22,6 +22,10 @@ from typing import Iterable, Optional
 # 日志文件路径（与 update.exe 同目录）
 LOG_FILE: Optional[str] = None
 
+# 等待主程序退出的默认超时（秒）
+# 说明：主程序若未能及时退出，更新器仍会继续尝试更新（会打印 WARNING）。
+DEFAULT_MAIN_EXIT_TIMEOUT_SECONDS = 30
+
 
 def init_log_file(local_dir: str) -> None:
     """初始化日志文件"""
@@ -92,7 +96,10 @@ def _is_file_locked(filepath: str) -> bool:
         return True  # 打不开，说明被锁定
 
 
-def wait_for_main_exit(main_executable: Optional[str], timeout: int = 120) -> bool:
+def wait_for_main_exit(
+    main_executable: Optional[str],
+    timeout: int = DEFAULT_MAIN_EXIT_TIMEOUT_SECONDS
+) -> bool:
     """
     等待主程序退出
     
