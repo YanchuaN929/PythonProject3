@@ -6,7 +6,7 @@ def test_assignment_registry_updates_uses_payload_when_df_missing(tmp_path, monk
     回归：指派写入成功后，Registry 更新不应因为 df 读取失败而变成 0。
     应至少使用 assignment payload 的 interface_id/project_id 作为兜底调用 on_assigned。
     """
-    import distribution
+    import services.distribution as distribution
 
     # 准备一个“存在且可 r+b 打开”的伪 Excel 文件
     xlsx = tmp_path / "a.xlsx"

@@ -13,11 +13,11 @@ import os
 import sys
 
 from write_tasks import get_write_task_manager, get_pending_cache
-from ui_copy import copy_text, format_tsv, normalize_interface_id
+from ui.ui_copy import copy_text, format_tsv, normalize_interface_id
 
 # 导入文件锁定检测函数
 try:
-    from input_handler import get_excel_lock_owner
+    from ui.input_handler import get_excel_lock_owner
 except ImportError:
     get_excel_lock_owner = None
 
@@ -299,7 +299,7 @@ def check_unassigned(processed_results, user_roles, project_id=None, config=None
                     interface_time = task.get('interface_time', '')
                     if interface_time and str(interface_time).strip() not in ['', '-', 'nan', 'None', '未知']:
                         try:
-                            from date_utils import parse_mmdd_to_date, get_workday_difference
+                            from utils.date_utils import parse_mmdd_to_date, get_workday_difference
                             from datetime import date
                             today = date.today()
                             due_date = parse_mmdd_to_date(str(interface_time).strip(), today)

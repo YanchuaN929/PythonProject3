@@ -11,7 +11,7 @@ import os
 # 添加项目根目录到sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import main
+import core.main as main
 
 
 class TestFile6ProcessLogic:

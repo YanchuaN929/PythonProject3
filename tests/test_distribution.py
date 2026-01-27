@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch, MagicMock
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-import distribution
+import services.distribution as distribution
 
 
 class TestGetResponsibleColumn:

@@ -10,7 +10,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 import pandas as pd
 
 from registry.util import extract_interface_id, extract_project_id, normalize_project_id
-from ui_copy import normalize_interface_id
+from ui.ui_copy import normalize_interface_id
 
 
 @dataclass
@@ -203,7 +203,7 @@ def scan_interface_rows(df: pd.DataFrame, file_type: int, interface_id: str) -> 
 
 
 def simulate_process(file_type: int, file_path: str, now: datetime) -> pd.DataFrame:
-    import main as main_module
+    from core import main as main_module
 
     if file_type == 1:
         return main_module.process_target_file(file_path, now)

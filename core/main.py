@@ -19,7 +19,7 @@ warnings.filterwarnings('ignore')
 
 # 导入项目特殊调整模块（1818项目日期减6天等）
 try:
-    from adjust import adjust_date_for_project
+    from utils.adjust import adjust_date_for_project
 except ImportError:
     def adjust_date_for_project(cell_date, project_id):
         """兜底函数：无调整"""
@@ -42,7 +42,7 @@ def process_excel_files(excel_files, current_datetime):
     
     # 记录到监控器
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_info(f"开始处理 {len(excel_files)} 个Excel文件")
         Monitor.log_info(f"处理时间: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
     except:
@@ -55,7 +55,7 @@ def process_excel_files(excel_files, current_datetime):
         error_msg = "未找到符合格式要求的待处理文件（四位数字+按项目导出IDI手册+日期格式）"
         print(error_msg)
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(error_msg)
         except:
             pass
@@ -63,7 +63,7 @@ def process_excel_files(excel_files, current_datetime):
     
     print(f"找到待处理文件1: {os.path.basename(target_file)}")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_success(f"找到待处理文件1: {os.path.basename(target_file)}")
     except:
         pass
@@ -107,7 +107,7 @@ def find_all_target_files1(excel_files):
     matched_files = []
     
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("开始批量识别待处理文件1...")
     except:
         pass
@@ -120,7 +120,7 @@ def find_all_target_files1(excel_files):
             matched_files.append((file_path, project_id))
             print(f"匹配到待处理文件1格式: {file_name}, 项目号: {project_id}")
             try:
-                import Monitor
+                from core import Monitor
                 Monitor.log_success(f"找到待处理文件1: 项目{project_id} - {file_name}")
             except:
                 pass
@@ -128,14 +128,14 @@ def find_all_target_files1(excel_files):
     if matched_files:
         print(f"总共找到 {len(matched_files)} 个待处理文件1")
         try:
-            import Monitor
+            from core import Monitor
             project_ids = list(set([pid for _, pid in matched_files]))
             Monitor.log_success(f"批量识别完成: 找到{len(matched_files)}个待处理文件1，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
         except:
             pass
     else:
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("未找到任何符合格式的待处理文件1")
         except:
             pass
@@ -166,7 +166,7 @@ def find_all_target_files2(excel_files):
     matched_files = []
     
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("开始批量识别待处理文件2...")
     except:
         pass
@@ -179,7 +179,7 @@ def find_all_target_files2(excel_files):
             matched_files.append((file_path, project_id))
             print(f"匹配到待处理文件2格式: {file_name}, 项目号: {project_id}")
             try:
-                import Monitor
+                from core import Monitor
                 Monitor.log_success(f"找到待处理文件2: 项目{project_id} - {file_name}")
             except:
                 pass
@@ -187,14 +187,14 @@ def find_all_target_files2(excel_files):
     if matched_files:
         print(f"总共找到 {len(matched_files)} 个待处理文件2")
         try:
-            import Monitor
+            from core import Monitor
             project_ids = list(set([pid for _, pid in matched_files]))
             Monitor.log_success(f"批量识别完成: 找到{len(matched_files)}个待处理文件2，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
         except:
             pass
     else:
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("未找到任何符合格式的待处理文件2")
         except:
             pass
@@ -225,7 +225,7 @@ def find_all_target_files3(excel_files):
     matched_files = []
     
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("开始批量识别待处理文件3...")
     except:
         pass
@@ -238,7 +238,7 @@ def find_all_target_files3(excel_files):
             matched_files.append((file_path, project_id))
             print(f"匹配到待处理文件3格式: {file_name}, 项目号: {project_id}")
             try:
-                import Monitor
+                from core import Monitor
                 Monitor.log_success(f"找到待处理文件3: 项目{project_id} - {file_name}")
             except:
                 pass
@@ -246,14 +246,14 @@ def find_all_target_files3(excel_files):
     if matched_files:
         print(f"总共找到 {len(matched_files)} 个待处理文件3")
         try:
-            import Monitor
+            from core import Monitor
             project_ids = list(set([pid for _, pid in matched_files]))
             Monitor.log_success(f"批量识别完成: 找到{len(matched_files)}个待处理文件3，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
         except:
             pass
     else:
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("未找到任何符合格式的待处理文件3")
         except:
             pass
@@ -284,7 +284,7 @@ def find_all_target_files4(excel_files):
     matched_files = []
     
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("开始批量识别待处理文件4...")
     except:
         pass
@@ -297,7 +297,7 @@ def find_all_target_files4(excel_files):
             matched_files.append((file_path, project_id))
             print(f"匹配到待处理文件4格式: {file_name}, 项目号: {project_id}")
             try:
-                import Monitor
+                from core import Monitor
                 Monitor.log_success(f"找到待处理文件4: 项目{project_id} - {file_name}")
             except:
                 pass
@@ -305,14 +305,14 @@ def find_all_target_files4(excel_files):
     if matched_files:
         print(f"总共找到 {len(matched_files)} 个待处理文件4")
         try:
-            import Monitor
+            from core import Monitor
             project_ids = list(set([pid for _, pid in matched_files]))
             Monitor.log_success(f"批量识别完成: 找到{len(matched_files)}个待处理文件4，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
         except:
             pass
     else:
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("未找到任何符合格式的待处理文件4")
         except:
             pass
@@ -333,7 +333,7 @@ def process_target_file(file_path, current_datetime):
     """
     print(f"开始处理待处理文件1: {os.path.basename(file_path)}")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process(f"开始处理待处理文件1: {os.path.basename(file_path)}")
     except:
         pass
@@ -347,7 +347,7 @@ def process_target_file(file_path, current_datetime):
     if df.empty:
         print("文件为空")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error("文件为空，无法处理")
         except:
             pass
@@ -355,7 +355,7 @@ def process_target_file(file_path, current_datetime):
         
     print(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_info(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
     except:
         pass
@@ -490,7 +490,7 @@ def process_target_file(file_path, current_datetime):
     
     # 记录到监控器
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_info(f"处理1符合条件: {len(process1_rows)} 行")
         Monitor.log_info(f"处理2符合条件: {len(process2_rows)} 行")
         Monitor.log_info(f"处理3符合条件: {len(process3_rows)} 行")
@@ -586,7 +586,7 @@ def execute_process1(df):
     
     # 记录处理开始
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("开始执行处理1：筛选H列数据（25C1、25C2、25C3）")
     except:
         pass
@@ -596,7 +596,7 @@ def execute_process1(df):
         warning_msg = "警告：数据列数不足，无H列"
         print(warning_msg)
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning(warning_msg)
         except:
             pass
@@ -620,7 +620,7 @@ def execute_process1(df):
     
     print(f"处理1完成：共找到 {len(result_rows)} 行符合H列筛选条件")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_success(f"处理1完成：共找到 {len(result_rows)} 行符合H列筛选条件")
     except:
         pass
@@ -648,7 +648,7 @@ def execute_process2(df, current_datetime, project_id=None):
     
     # 记录处理开始
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("开始执行处理2：筛选K列日期数据")
     except:
         pass
@@ -658,7 +658,7 @@ def execute_process2(df, current_datetime, project_id=None):
         warning_msg = "警告：数据列数不足，无K列"
         print(warning_msg)
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning(warning_msg)
         except:
             pass
@@ -735,7 +735,7 @@ def execute_process2(df, current_datetime, project_id=None):
     
     print(f"处理2完成：共找到 {len(result_rows)} 行符合K列日期筛选条件")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_success(f"处理2完成：共找到 {len(result_rows)} 行符合K列日期筛选条件")
     except:
         pass
@@ -761,7 +761,7 @@ def execute_process3(df):
     
     # 记录处理开始
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("开始执行处理3：筛选M列空值且A列非空数据")
     except:
         pass
@@ -771,7 +771,7 @@ def execute_process3(df):
         warning_msg = "警告：数据列数不足，无A列"
         print(warning_msg)
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning(warning_msg)
         except:
             pass
@@ -781,7 +781,7 @@ def execute_process3(df):
         warning_msg = "警告：数据列数不足，无M列"
         print(warning_msg)
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning(warning_msg)
         except:
             pass
@@ -813,7 +813,7 @@ def execute_process3(df):
     # 实际的Registry合并逻辑应该在process_target_file中实现
     
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_success(f"处理3完成：共找到 {len(result_rows)} 行符合M列空值且A列非空条件")
     except:
         pass
@@ -835,7 +835,7 @@ def execute_process4(df):
     
     # 记录处理开始
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("开始执行处理4：筛选B列作废数据")
     except:
         pass
@@ -845,7 +845,7 @@ def execute_process4(df):
         warning_msg = "警告：数据列数不足，无B列"
         print(warning_msg)
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning(warning_msg)
         except:
             pass
@@ -865,7 +865,7 @@ def execute_process4(df):
     
     print(f"处理4完成：共找到 {len(result_rows)} 行B列包含作废标记（需要排除）")
     try:
-        import Monitor
+        from core import Monitor
         if len(result_rows) > 0:
             Monitor.log_warning(f"处理4完成：共找到 {len(result_rows)} 行B列包含作废标记（需要排除）")
         else:
@@ -1042,7 +1042,7 @@ def export_result_to_excel(df, original_file_path, current_datetime, output_dir,
         
         print(f"内部需打开接口导出完成！文件保存到: {output_path}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_success(f"内部需打开接口导出完成！文件保存到: {output_path}")
         except:
             pass
@@ -1065,7 +1065,7 @@ def process_target_file2(file_path, current_datetime, project_id=None):
     """
     print(f"开始处理待处理文件2: {os.path.basename(file_path)}")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process(f"开始处理待处理文件2: {os.path.basename(file_path)}")
     except:
         pass
@@ -1079,7 +1079,7 @@ def process_target_file2(file_path, current_datetime, project_id=None):
     if df.empty:
         print("文件为空")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error("文件为空，无法处理")
         except:
             pass
@@ -1182,7 +1182,7 @@ def process_target_file2(file_path, current_datetime, project_id=None):
 
     # 日志
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_info(f"处理1符合条件: {len(process1_rows)} 行")
         Monitor.log_info(f"处理2符合条件: {len(process2_rows)} 行")
         Monitor.log_info(f"处理3(排除项)符合条件: {len(process3_rows)} 行")
@@ -1517,7 +1517,7 @@ def export_result_to_excel2(df, original_file_path, current_datetime, output_dir
         
         print(f"内部需回复接口导出完成！文件保存到: {output_path}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_success(f"内部需回复接口导出完成！文件保存到: {output_path}")
         except:
             pass
@@ -1542,7 +1542,7 @@ def process_target_file3(file_path, current_datetime):
     """
     print(f"开始处理待处理文件3: {os.path.basename(file_path)}")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process(f"开始处理待处理文件3: {os.path.basename(file_path)}")
     except:
         pass
@@ -1556,7 +1556,7 @@ def process_target_file3(file_path, current_datetime):
     if df.empty:
         print("文件为空")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error("文件为空，无法处理")
         except:
             pass
@@ -1564,7 +1564,7 @@ def process_target_file3(file_path, current_datetime):
         
     print(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_info(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
     except:
         pass
@@ -1670,7 +1670,7 @@ def process_target_file3(file_path, current_datetime):
     
     # 日志记录
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_info(f"处理1(I列为B): {len(process1_rows)} 行")
         Monitor.log_info(f"处理2(AL列河北分公司-建筑结构所开头): {len(process2_rows)} 行")
         Monitor.log_info(f"处理3(M列时间筛选): {len(process3_rows)} 行")
@@ -1801,7 +1801,7 @@ def execute3_process1(df):
     """
     print("执行处理1：筛选I列为'B'的数据")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("处理1：筛选I列为'B'的数据")
     except:
         pass
@@ -1811,7 +1811,7 @@ def execute3_process1(df):
     if len(df.columns) <= 8:  # I列索引为8
         print("警告：文件列数不足，无法访问I列")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问I列")
         except:
             pass
@@ -1827,7 +1827,7 @@ def execute3_process1(df):
         
         print(f"处理1完成：找到 {len(qualified_rows)} 行符合条件")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_info(f"处理1完成：找到 {len(qualified_rows)} 行符合条件")
         except:
             pass
@@ -1835,7 +1835,7 @@ def execute3_process1(df):
     except Exception as e:
         print(f"处理1执行出错: {e}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"处理1执行出错: {e}")
         except:
             pass
@@ -1855,7 +1855,7 @@ def execute3_process2(df):
     """
     print("执行处理2：筛选AL列以'河北分公司-建筑结构所'开头的数据")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("处理2：筛选AL列以'河北分公司-建筑结构所'开头的数据")
     except:
         pass
@@ -1865,7 +1865,7 @@ def execute3_process2(df):
     if len(df.columns) <= 37:  # AL列索引为37
         print("警告：文件列数不足，无法访问AL列")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问AL列")
         except:
             pass
@@ -1882,7 +1882,7 @@ def execute3_process2(df):
         
         print(f"处理2完成：找到 {len(qualified_rows)} 行符合条件")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_info(f"处理2完成：找到 {len(qualified_rows)} 行符合条件")
         except:
             pass
@@ -1890,7 +1890,7 @@ def execute3_process2(df):
     except Exception as e:
         print(f"处理2执行出错: {e}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"处理2执行出错: {e}")
         except:
             pass
@@ -1914,7 +1914,7 @@ def execute3_process3(df, current_datetime, project_id=None):
     """
     print("执行处理3：筛选M列时间数据（4444年份视为无效，直接排除）")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("处理3：筛选M列时间数据（4444年份视为无效，直接排除）")
     except:
         pass
@@ -1924,7 +1924,7 @@ def execute3_process3(df, current_datetime, project_id=None):
     if len(df.columns) <= 12:  # M列索引为12
         print("警告：文件列数不足，无法访问M列")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问M列")
         except:
             pass
@@ -1994,7 +1994,7 @@ def execute3_process3(df, current_datetime, project_id=None):
         
         print(f"处理3完成：找到 {len(qualified_rows)} 行符合条件")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_info(f"处理3完成：找到 {len(qualified_rows)} 行符合条件")
         except:
             pass
@@ -2002,7 +2002,7 @@ def execute3_process3(df, current_datetime, project_id=None):
     except Exception as e:
         print(f"处理3执行出错: {e}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"处理3执行出错: {e}")
         except:
             pass
@@ -2026,7 +2026,7 @@ def execute3_process4(df, current_datetime, project_id=None):
     """
     print("执行处理4：筛选L列时间数据（4444年份视为无效，直接排除）")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("处理4：筛选L列时间数据（4444年份视为无效，直接排除）")
     except:
         pass
@@ -2036,7 +2036,7 @@ def execute3_process4(df, current_datetime, project_id=None):
     if len(df.columns) <= 11:  # L列索引为11
         print("警告：文件列数不足，无法访问L列")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问L列")
         except:
             pass
@@ -2105,7 +2105,7 @@ def execute3_process4(df, current_datetime, project_id=None):
         
         print(f"处理4完成：找到 {len(qualified_rows)} 行符合条件")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_info(f"处理4完成：找到 {len(qualified_rows)} 行符合条件")
         except:
             pass
@@ -2113,7 +2113,7 @@ def execute3_process4(df, current_datetime, project_id=None):
     except Exception as e:
         print(f"处理4执行出错: {e}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"处理4执行出错: {e}")
         except:
             pass
@@ -2133,7 +2133,7 @@ def execute3_process5(df):
     """
     print("执行处理5：筛选Q列为空值的数据")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("处理5：筛选Q列为空值的数据")
     except:
         pass
@@ -2143,7 +2143,7 @@ def execute3_process5(df):
     if len(df.columns) <= 16:  # Q列索引为16
         print("警告：文件列数不足，无法访问Q列")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问Q列")
         except:
             pass
@@ -2159,7 +2159,7 @@ def execute3_process5(df):
         
         print(f"处理5完成：找到 {len(qualified_rows)} 行符合条件")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_info(f"处理5完成：找到 {len(qualified_rows)} 行符合条件")
         except:
             pass
@@ -2167,7 +2167,7 @@ def execute3_process5(df):
     except Exception as e:
         print(f"处理5执行出错: {e}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"处理5执行出错: {e}")
         except:
             pass
@@ -2187,7 +2187,7 @@ def execute3_process6(df):
     """
     print("执行处理6：筛选T列为空值的数据")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("处理6：筛选T列为空值的数据")
     except:
         pass
@@ -2197,7 +2197,7 @@ def execute3_process6(df):
     if len(df.columns) <= 19:  # T列索引为19
         print("警告：文件列数不足，无法访问T列")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问T列")
         except:
             pass
@@ -2213,7 +2213,7 @@ def execute3_process6(df):
         
         print(f"处理6完成：找到 {len(qualified_rows)} 行符合条件")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_info(f"处理6完成：找到 {len(qualified_rows)} 行符合条件")
         except:
             pass
@@ -2221,7 +2221,7 @@ def execute3_process6(df):
     except Exception as e:
         print(f"处理6执行出错: {e}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"处理6执行出错: {e}")
         except:
             pass
@@ -2395,7 +2395,7 @@ def export_result_to_excel3(df, original_file_path, current_datetime, output_dir
         
         print(f"外部需打开接口导出完成！文件保存到: {output_path}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_success(f"外部需打开接口导出完成！文件保存到: {output_path}")
         except:
             pass
@@ -2405,7 +2405,7 @@ def export_result_to_excel3(df, original_file_path, current_datetime, output_dir
     except Exception as e:
         print(f"导出外部需打开接口数据时发生错误: {str(e)}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"导出外部需打开接口数据时发生错误: {str(e)}")
         except:
             pass
@@ -2426,7 +2426,7 @@ def process_target_file4(file_path, current_datetime):
     """
     print(f"开始处理待处理文件4: {os.path.basename(file_path)}")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process(f"开始处理待处理文件4: {os.path.basename(file_path)}")
     except:
         pass
@@ -2440,7 +2440,7 @@ def process_target_file4(file_path, current_datetime):
     if df.empty:
         print("文件为空")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error("文件为空，无法处理")
         except:
             pass
@@ -2448,7 +2448,7 @@ def process_target_file4(file_path, current_datetime):
         
     print(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_info(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
     except:
         pass
@@ -2558,7 +2558,7 @@ def process_target_file4(file_path, current_datetime):
     
     # 日志记录
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_info(f"处理1(AF列河北分公司-建筑结构所开头): {len(process1_rows)} 行")
         Monitor.log_info(f"处理2(P列为B): {len(process2_rows)} 行")
         Monitor.log_info(f"处理3(S列时间筛选): {len(process3_rows)} 行")
@@ -2644,7 +2644,7 @@ def execute4_process1(df):
     """
     print("执行处理1：筛选AF列以'河北分公司-建筑结构所'开头的数据")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("处理1：筛选AF列以'河北分公司-建筑结构所'开头的数据")
     except:
         pass
@@ -2654,7 +2654,7 @@ def execute4_process1(df):
     if len(df.columns) <= 31:  # AF列索引为31
         print("警告：文件列数不足，无法访问AF列")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问AF列")
         except:
             pass
@@ -2671,7 +2671,7 @@ def execute4_process1(df):
         
         print(f"处理1完成：找到 {len(qualified_rows)} 行符合条件")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_info(f"处理1完成：找到 {len(qualified_rows)} 行符合条件")
         except:
             pass
@@ -2679,7 +2679,7 @@ def execute4_process1(df):
     except Exception as e:
         print(f"处理1执行出错: {e}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"处理1执行出错: {e}")
         except:
             pass
@@ -2699,7 +2699,7 @@ def execute4_process2(df):
     """
     print("执行处理2：筛选P列为'B'的数据")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("处理2：筛选P列为'B'的数据")
     except:
         pass
@@ -2709,7 +2709,7 @@ def execute4_process2(df):
     if len(df.columns) <= 15:  # P列索引为15
         print("警告：文件列数不足，无法访问P列")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问P列")
         except:
             pass
@@ -2725,7 +2725,7 @@ def execute4_process2(df):
         
         print(f"处理2完成：找到 {len(qualified_rows)} 行符合条件")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_info(f"处理2完成：找到 {len(qualified_rows)} 行符合条件")
         except:
             pass
@@ -2733,7 +2733,7 @@ def execute4_process2(df):
     except Exception as e:
         print(f"处理2执行出错: {e}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"处理2执行出错: {e}")
         except:
             pass
@@ -2757,7 +2757,7 @@ def execute4_process3(df, current_datetime, project_id=None):
     """
     print("执行处理3：筛选S列时间数据")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("处理3：筛选S列时间数据")
     except:
         pass
@@ -2767,7 +2767,7 @@ def execute4_process3(df, current_datetime, project_id=None):
     if len(df.columns) <= 18:  # S列索引为18
         print("警告：文件列数不足，无法访问S列")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问S列")
         except:
             pass
@@ -2833,7 +2833,7 @@ def execute4_process3(df, current_datetime, project_id=None):
         
         print(f"处理3完成：找到 {len(qualified_rows)} 行符合条件")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_info(f"处理3完成：找到 {len(qualified_rows)} 行符合条件")
         except:
             pass
@@ -2841,7 +2841,7 @@ def execute4_process3(df, current_datetime, project_id=None):
     except Exception as e:
         print(f"处理3执行出错: {e}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"处理3执行出错: {e}")
         except:
             pass
@@ -2861,7 +2861,7 @@ def execute4_process4(df):
     """
     print("执行处理4：筛选V列为空值的数据")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("处理4：筛选V列为空值的数据")
     except:
         pass
@@ -2871,7 +2871,7 @@ def execute4_process4(df):
     if len(df.columns) <= 21:  # V列索引为21
         print("警告：文件列数不足，无法访问V列")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问V列")
         except:
             pass
@@ -2887,7 +2887,7 @@ def execute4_process4(df):
         
         print(f"处理4完成：找到 {len(qualified_rows)} 行符合条件")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_info(f"处理4完成：找到 {len(qualified_rows)} 行符合条件")
         except:
             pass
@@ -2895,7 +2895,7 @@ def execute4_process4(df):
     except Exception as e:
         print(f"处理4执行出错: {e}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"处理4执行出错: {e}")
         except:
             pass
@@ -3068,7 +3068,7 @@ def export_result_to_excel4(df, original_file_path, current_datetime, output_dir
         
         print(f"外部需回复接口导出完成！文件保存到: {output_path}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_success(f"外部需回复接口导出完成！文件保存到: {output_path}")
         except:
             pass
@@ -3078,7 +3078,7 @@ def export_result_to_excel4(df, original_file_path, current_datetime, output_dir
     except Exception as e:
         print(f"导出外部需回复接口数据时发生错误: {str(e)}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"导出外部需回复接口数据时发生错误: {str(e)}")
         except:
             pass
@@ -3109,7 +3109,7 @@ def find_all_target_files5(excel_files):
     pattern = r'^(\d{4})接口提资清单.*\.(xlsx|xls)$'
     matched_files = []
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("开始批量识别待处理文件5(三维提资接口)...")
     except:
         pass
@@ -3120,7 +3120,7 @@ def find_all_target_files5(excel_files):
             project_id = m.group(1)
             matched_files.append((file_path, project_id))
             try:
-                import Monitor
+                from core import Monitor
                 Monitor.log_success(f"找到待处理文件5: 项目{project_id} - {file_name}")
             except:
                 pass
@@ -3137,7 +3137,7 @@ def process_target_file5(file_path, current_datetime):
     """
     print(f"开始处理待处理文件5: {os.path.basename(file_path)}")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process(f"开始处理待处理文件5: {os.path.basename(file_path)}")
     except:
         pass
@@ -3150,7 +3150,7 @@ def process_target_file5(file_path, current_datetime):
 
     if df.empty:
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("文件5为空，无法处理")
         except:
             pass
@@ -3236,7 +3236,7 @@ def process_target_file5(file_path, current_datetime):
     print(f"最终完成处理数据（含待确认）: {len(final_rows)} 行")
     
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_info(f"文件5处理1(G列25C1/25C2/25C3): {len(p1)} 行")
         Monitor.log_info(f"文件5处理2(L列日期): {len(p2)} 行")
         Monitor.log_info(f"文件5处理3(N列为空): {len(p3)} 行")
@@ -3504,7 +3504,7 @@ def export_result_to_excel5(df, original_file_path, current_datetime, output_dir
         wb.close()
 
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_success(f"三维提资接口导出完成！文件保存到: {output_path}")
         except Exception:
             pass
@@ -3512,7 +3512,7 @@ def export_result_to_excel5(df, original_file_path, current_datetime, output_dir
     except Exception as e:
         print(f"导出三维提资接口数据时发生错误: {str(e)}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"导出三维提资接口数据时发生错误: {str(e)}")
         except Exception:
             pass
@@ -3539,7 +3539,7 @@ def find_all_target_files6(excel_files):
     """
     matched_files = []
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process("开始批量识别待处理文件6(收发文函)...")
     except Exception:
         pass
@@ -3555,7 +3555,7 @@ def find_all_target_files6(excel_files):
                 project_id = ""
             matched_files.append((file_path, project_id))
             try:
-                import Monitor
+                from core import Monitor
                 if project_id:
                     Monitor.log_success(f"找到待处理文件6: 项目{project_id} - {file_name}")
                 else:
@@ -3629,7 +3629,7 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
     """
     print(f"开始处理待处理文件6: {os.path.basename(file_path)}")
     try:
-        import Monitor
+        from core import Monitor
         Monitor.log_process(f"开始处理待处理文件6: {os.path.basename(file_path)}")
     except Exception:
         pass
@@ -3642,7 +3642,7 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
 
     if df.empty:
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_warning("文件6为空，无法处理")
         except Exception:
             pass
@@ -3735,7 +3735,7 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
     
     # 日志记录
     try:
-        import Monitor
+        from core import Monitor
         if skip_date_filter:
             Monitor.log_info(f"文件6处理1(V列机构匹配): {len(p1)} 行")
             Monitor.log_info(f"文件6 I列非空检查: {len(p_i_not_empty)} 行")
@@ -4017,7 +4017,7 @@ def export_result_to_excel6(df, original_file_path, current_datetime, output_dir
         wb.save(output_path)
         wb.close()
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_success(f"收发文函导出完成！文件保存到: {output_path}")
         except Exception:
             pass
@@ -4025,7 +4025,7 @@ def export_result_to_excel6(df, original_file_path, current_datetime, output_dir
     except Exception as e:
         print(f"导出收发文函数据时发生错误: {str(e)}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_error(f"导出收发文函数据时发生错误: {str(e)}")
         except Exception:
             pass

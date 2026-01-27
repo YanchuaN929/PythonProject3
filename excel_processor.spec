@@ -7,21 +7,27 @@ a = Analysis(
     pathex=['.'],
     binaries=[],
     datas=[
-        # 核心模块
-        ('main.py', '.'),
-        ('main2.py', '.'),
-        ('Monitor.py', '.'),
-        ('window.py', '.'),
-        ('file_manager.py', '.'),
-        # 功能模块（之前缺失）
-        ('ignore_overdue_dialog.py', '.'),
-        ('date_utils.py', '.'),
-        ('input_handler.py', '.'),
-        ('distribution.py', '.'),
-        ('db_status.py', '.'),
-        ('help_viewer.py', '.'),
-        ('ui_copy.py', '.'),
-        ('adjust.py', '.'),  # 项目特殊调整逻辑（1818日期减6天等）
+        # 核心模块 (core/)
+        ('core/main.py', 'core'),
+        ('core/main2.py', 'core'),
+        ('core/Monitor.py', 'core'),
+        ('core/__init__.py', 'core'),
+        # UI模块 (ui/)
+        ('ui/window.py', 'ui'),
+        ('ui/input_handler.py', 'ui'),
+        ('ui/ignore_overdue_dialog.py', 'ui'),
+        ('ui/help_viewer.py', 'ui'),
+        ('ui/ui_copy.py', 'ui'),
+        ('ui/__init__.py', 'ui'),
+        # 服务模块 (services/)
+        ('services/file_manager.py', 'services'),
+        ('services/distribution.py', 'services'),
+        ('services/db_status.py', 'services'),
+        ('services/__init__.py', 'services'),
+        # 工具模块 (utils/)
+        ('utils/date_utils.py', 'utils'),
+        ('utils/adjust.py', 'utils'),
+        ('utils/__init__.py', 'utils'),
         # 配置文件
         ('config.json', '.'),
         ('version.json', '.'),
@@ -32,21 +38,27 @@ a = Analysis(
         ('excel_bin/姓名角色表.xlsx', 'excel_bin'),
     ],
     hiddenimports=[
-        # 核心模块
-        'main',
-        'main2',
-        'Monitor',
-        'window',
-        'file_manager',
-        # 功能模块（之前缺失）
-        'ignore_overdue_dialog',
-        'date_utils',
-        'input_handler',
-        'distribution',
-        'db_status',
-        'help_viewer',
-        'ui_copy',
-        'adjust',  # 项目特殊调整逻辑（1818日期减6天等）
+        # 核心模块 (core/)
+        'core',
+        'core.main',
+        'core.main2',
+        'core.Monitor',
+        # UI模块 (ui/)
+        'ui',
+        'ui.window',
+        'ui.input_handler',
+        'ui.ignore_overdue_dialog',
+        'ui.help_viewer',
+        'ui.ui_copy',
+        # 服务模块 (services/)
+        'services',
+        'services.file_manager',
+        'services.distribution',
+        'services.db_status',
+        # 工具模块 (utils/)
+        'utils',
+        'utils.date_utils',
+        'utils.adjust',
         # write_tasks 模块（写入任务面板/回文提交等）
         'write_tasks',
         'write_tasks.manager',

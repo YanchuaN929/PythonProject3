@@ -9,7 +9,7 @@ def test_process_with_cache_invalidates_stale_cache_missing_responsible(tmp_path
     期望：_process_with_cache 视为缓存不兼容，清理该文件缓存并触发一次重算，返回结果必须包含“责任人”列。
     """
     from base import ExcelProcessorApp
-    from file_manager import FileIdentityManager
+    from services.file_manager import FileIdentityManager
 
     app = ExcelProcessorApp.__new__(ExcelProcessorApp)
     app._should_show_popup = lambda: False

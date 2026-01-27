@@ -11,13 +11,13 @@ import tkinter.scrolledtext as scrolledtext
 import pandas as pd
 import os
 import sys
-from date_utils import is_date_overdue
+from utils.date_utils import is_date_overdue
 
 from write_tasks.task_panel import TaskRecordPanel
 
 # 导入数据库状态显示器
 try:
-    from db_status import DatabaseStatusIndicator, set_db_status_indicator
+    from services.db_status import DatabaseStatusIndicator, set_db_status_indicator
 except ImportError:
     DatabaseStatusIndicator = None
     set_db_status_indicator = None
@@ -1371,7 +1371,7 @@ class WindowManager:
                         pass
                 
                 # 显示输入对话框
-                from input_handler import InterfaceInputDialog
+                from ui.input_handler import InterfaceInputDialog
                 
                 responsible = (metadata.get('responsible') or "").strip()
                 has_assignor = bool(responsible and responsible not in ("无", ""))

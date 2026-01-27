@@ -18,7 +18,7 @@ class TestWorkdayCalculation:
     
     def test_get_workday_difference_overdue(self):
         """测试超期工作日计算"""
-        from date_utils import get_workday_difference
+        from utils.date_utils import get_workday_difference
         
         # 假设今天是2025-12-09（周二）
         today = date(2025, 12, 9)
@@ -35,7 +35,7 @@ class TestWorkdayCalculation:
         
     def test_get_workday_difference_future(self):
         """测试未来日期的工作日计算"""
-        from date_utils import get_workday_difference
+        from utils.date_utils import get_workday_difference
         
         today = date(2025, 12, 9)  # 周二
         
@@ -46,7 +46,7 @@ class TestWorkdayCalculation:
         
     def test_count_workdays_excludes_weekends(self):
         """测试工作日计算排除周末"""
-        from date_utils import count_workdays
+        from utils.date_utils import count_workdays
         
         # 周一到周五 = 5个工作日
         start = date(2025, 12, 8)  # 周一
@@ -64,7 +64,7 @@ class TestOverdueFilter:
     
     def test_should_hide_overdue_task(self):
         """测试超过阈值的任务应该被隐藏"""
-        from date_utils import parse_mmdd_to_date, get_workday_difference
+        from utils.date_utils import parse_mmdd_to_date, get_workday_difference
         
         today = date(2025, 12, 9)
         threshold_days = 30
@@ -80,7 +80,7 @@ class TestOverdueFilter:
             
     def test_should_not_hide_recent_overdue(self):
         """测试最近超期的任务不应该被隐藏"""
-        from date_utils import parse_mmdd_to_date, get_workday_difference
+        from utils.date_utils import parse_mmdd_to_date, get_workday_difference
         
         today = date(2025, 12, 9)
         threshold_days = 30
@@ -96,7 +96,7 @@ class TestOverdueFilter:
             
     def test_should_not_hide_future_task(self):
         """测试未来的任务不应该被隐藏"""
-        from date_utils import parse_mmdd_to_date, get_workday_difference
+        from utils.date_utils import parse_mmdd_to_date, get_workday_difference
         
         today = date(2025, 12, 9)
         threshold_days = 30
@@ -117,7 +117,7 @@ class TestDistributionOverdueFilter:
     def test_check_unassigned_filters_overdue(self):
         """测试指派检查过滤超期任务"""
         import pandas as pd
-        from distribution import check_unassigned
+        from services.distribution import check_unassigned
         
         # 创建测试数据
         today = date.today()
@@ -152,7 +152,7 @@ class TestDistributionOverdueFilter:
     def test_check_unassigned_no_filter_when_disabled(self):
         """测试禁用过滤时不过滤超期任务"""
         import pandas as pd
-        from distribution import check_unassigned
+        from services.distribution import check_unassigned
         
         today = date.today()
         old_date = today - timedelta(days=60)

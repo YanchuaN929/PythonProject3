@@ -43,7 +43,7 @@ def diagnose():
     print(f"\n找到 {len(excel_files)} 个Excel文件")
     
     # 使用main.py的逻辑查找文件6
-    import main
+    from core import main
     target_files6 = main.find_all_target_files6(excel_files)
     
     print(f"\n文件6列表: {len(target_files6)} 个文件")

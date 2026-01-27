@@ -49,7 +49,7 @@ def test_file6_processing():
             excel_files.append(os.path.join(folder_path, file))
     
     # 查找文件6
-    import main
+    from core import main
     target_files6 = main.find_all_target_files6(excel_files)
     
     if not target_files6:

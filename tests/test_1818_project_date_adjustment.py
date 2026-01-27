@@ -17,7 +17,7 @@ class TestAdjustDateForProject:
 
     def test_1818_project_date_minus_6_days(self):
         """1818项目日期应减6天"""
-        from adjust import adjust_date_for_project
+        from utils.adjust import adjust_date_for_project
         
         original = datetime.datetime(2026, 1, 15)
         adjusted = adjust_date_for_project(original, '1818')
@@ -27,7 +27,7 @@ class TestAdjustDateForProject:
 
     def test_non_1818_project_date_unchanged(self):
         """非1818项目日期不变"""
-        from adjust import adjust_date_for_project
+        from utils.adjust import adjust_date_for_project
         
         original = datetime.datetime(2026, 1, 15)
         
@@ -38,7 +38,7 @@ class TestAdjustDateForProject:
 
     def test_1818_with_pandas_timestamp(self):
         """1818项目配合pandas.Timestamp也能正常工作"""
-        from adjust import adjust_date_for_project
+        from utils.adjust import adjust_date_for_project
         
         original = pd.Timestamp('2026-01-15')
         adjusted = adjust_date_for_project(original, '1818')
@@ -49,14 +49,14 @@ class TestAdjustDateForProject:
 
     def test_1818_with_none_date(self):
         """传入None日期时应返回None"""
-        from adjust import adjust_date_for_project
+        from utils.adjust import adjust_date_for_project
         
         adjusted = adjust_date_for_project(None, '1818')
         assert adjusted is None
 
     def test_get_project_date_offset(self):
         """测试get_project_date_offset函数"""
-        from adjust import get_project_date_offset
+        from utils.adjust import get_project_date_offset
         
         assert get_project_date_offset('1818') == 6
         assert get_project_date_offset('2016') == 0
@@ -74,7 +74,7 @@ class TestExecuteProcess2With1818:
         - Excel日期：2026-02-06（原本超出范围）
         - 减6天后：2026-01-31（刚好在范围内）
         """
-        import main
+        import core.main as main
         
         # 构造测试数据：K列(索引10)是日期列
         data = {i: ['header'] + [''] * 5 for i in range(11)}
@@ -94,7 +94,7 @@ class TestExecuteProcess2With1818:
 
     def test_1818_date_filter_all_dates_shift(self):
         """验证1818项目所有日期都正确偏移"""
-        import main
+        import core.main as main
         
         # K列日期
         data = {i: ['header'] + [''] * 3 for i in range(11)}
@@ -123,7 +123,7 @@ class TestFile6DateFilterWith1818:
         文件6使用delta计算：delta = (cell_date - today).days <= 14
         1818项目减6天后再计算delta
         """
-        import main
+        import core.main as main
         
         # I列(索引8)是日期列
         data = {i: ['header'] + [''] * 3 for i in range(9)}

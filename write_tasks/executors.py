@@ -8,7 +8,7 @@ from typing import Any, Dict
 
 def execute_assignment_task(payload: Dict[str, Any]) -> Dict[str, Any]:
     """执行指派写入任务。"""
-    from distribution import save_assignments_batch
+    from services.distribution import save_assignments_batch
 
     assignments = payload.get("assignments", [])
     return save_assignments_batch(assignments)
@@ -16,7 +16,7 @@ def execute_assignment_task(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 def execute_response_task(payload: Dict[str, Any]) -> bool:
     """执行回文单号写入任务。"""
-    from input_handler import write_response_to_excel
+    from ui.input_handler import write_response_to_excel
 
     ok = write_response_to_excel(
         file_path=payload["file_path"],

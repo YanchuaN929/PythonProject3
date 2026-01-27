@@ -24,7 +24,7 @@ from openpyxl import load_workbook
 from typing import List, Dict, Any, Optional, Tuple
 
 # 导入窗口管理器
-from window import WindowManager
+from ui.window import WindowManager
 from write_tasks import get_write_task_manager, get_pending_cache
 
 
@@ -137,7 +137,7 @@ def select_latest_source_files_per_project(
 
 # 导入任务指派模块
 try:
-    import distribution
+    from services import distribution
 except ImportError:
     print("警告: 未找到distribution模块")
     distribution = None
@@ -151,7 +151,7 @@ except ImportError:
 
 # 导入数据库状态显示器
 try:
-    from db_status import (
+    from services.db_status import (
         DatabaseStatusIndicator, 
         set_db_status_indicator,
         notify_syncing, 
@@ -322,7 +322,7 @@ class ExcelProcessorApp:
             self.user_roles = []
         
         # 初始化文件管理器（用于勾选状态管理）
-        from file_manager import get_file_manager
+        from services.file_manager import get_file_manager
         self.file_manager = get_file_manager()
 
         # 写入任务管理器与临时缓存
@@ -600,7 +600,7 @@ class ExcelProcessorApp:
     def _log_update_message(self, message: str):
         print(f"[Update] {message}")
         try:
-            import Monitor
+            from core import Monitor
             Monitor.log_info(message)
         except Exception:
             pass
@@ -1657,7 +1657,7 @@ class ExcelProcessorApp:
             if threshold_days <= 0:
                 return df
             
-            from date_utils import parse_mmdd_to_date, get_workday_difference
+            from utils.date_utils import parse_mmdd_to_date, get_workday_difference
             from datetime import date
             
             today = date.today()
@@ -2264,7 +2264,7 @@ class ExcelProcessorApp:
                     return safe_df
                 
                 from datetime import date
-                from date_utils import get_workday_difference, parse_mmdd_to_date
+                from utils.date_utils import get_workday_difference, parse_mmdd_to_date
                 
                 today = date.today()
                 kept_idx = []
@@ -2307,7 +2307,7 @@ class ExcelProcessorApp:
                     return safe_df
                 
                 from datetime import date
-                from date_utils import get_workday_difference, parse_mmdd_to_date
+                from utils.date_utils import get_workday_difference, parse_mmdd_to_date
                 
                 today = date.today()
                 kept_idx = []
@@ -2477,7 +2477,7 @@ class ExcelProcessorApp:
             if "接口时间" not in df.columns:
                 return df.iloc[0:0]
             from datetime import date
-            from date_utils import get_workday_difference, parse_mmdd_to_date
+            from utils.date_utils import get_workday_difference, parse_mmdd_to_date
             
             today = date.today()
             # 判断是否使用工作日计算（所领导、室主任使用工作日）
@@ -2677,7 +2677,7 @@ class ExcelProcessorApp:
     def show_help_window(self):
         """显示帮助文档窗口"""
         try:
-            from help_viewer import HelpViewer
+            from ui.help_viewer import HelpViewer
             user_role = getattr(self, 'role', None)
             viewer = HelpViewer(self.root, user_role=user_role)
             viewer.show()
@@ -3557,7 +3557,7 @@ class ExcelProcessorApp:
         try:
             # 安全导入main模块（不依赖文件系统检查）
             try:
-                import main
+                from core import main
             except ImportError:
                 import sys
                 import os
@@ -3566,7 +3566,7 @@ class ExcelProcessorApp:
                     sys.path.insert(0, sys._MEIPASS)
                 else:
                     sys.path.insert(0, os.path.dirname(__file__))
-                import main
+                from core import main
             
             # 识别待处理文件1（批量 + 兼容性）
             if hasattr(main, 'find_all_target_files1'):
@@ -4256,14 +4256,14 @@ class ExcelProcessorApp:
                 import sys
                 # 安全导入main模块
                 try:
-                    import main
+                    from core import main
                 except ImportError:
                     # 如果是打包环境，添加当前目录到路径
                     if hasattr(sys, '_MEIPASS'):
                         sys.path.insert(0, sys._MEIPASS)
                     else:
                         sys.path.insert(0, os.path.dirname(__file__))
-                    import main
+                    from core import main
 
                 # （已移除缓存模块）
                 # 初始化处理结果变量
@@ -4330,7 +4330,7 @@ class ExcelProcessorApp:
                         # 更新数据库状态为同步中
                         notify_syncing()
                         try:
-                            import Monitor
+                            from core import Monitor
                             project_ids = list(set([pid for _, pid in self.target_files1]))
                             Monitor.log_process(f"开始批量处理待处理文件1: {len(self.target_files1)}个文件，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
                         except:
@@ -4346,7 +4346,7 @@ class ExcelProcessorApp:
                             try:
                                 print(f"处理项目{project_id}的文件1: {os.path.basename(file_path)}")
                                 try:
-                                    import Monitor
+                                    from core import Monitor
                                     Monitor.log_process(f"处理项目{project_id}的待处理文件1: {os.path.basename(file_path)}")
                                 except:
                                     pass
@@ -4409,21 +4409,21 @@ class ExcelProcessorApp:
                                         combined_results.append(filtered_result)
                                     print(f"项目{project_id}文件1处理完成: 原始{len(result)}行，角色筛选后{len(filtered_result) if filtered_result is not None else 0}行")
                                     try:
-                                        import Monitor
+                                        from core import Monitor
                                         Monitor.log_success(f"项目{project_id}文件1处理完成: 原始{len(result)}行，显示{len(filtered_result) if filtered_result is not None else 0}行")
                                     except:
                                         pass
                                 else:
                                     print(f"项目{project_id}文件1处理结果为空")
                                     try:
-                                        import Monitor
+                                        from core import Monitor
                                         Monitor.log_warning(f"项目{project_id}文件1处理结果为空")
                                     except:
                                         pass
                             except Exception as e:
                                 print(f"项目{project_id}文件1处理失败: {e}")
                                 try:
-                                    import Monitor
+                                    from core import Monitor
                                     Monitor.log_error(f"项目{project_id}文件1处理失败: {e}")
                                 except:
                                     pass
@@ -4461,7 +4461,7 @@ class ExcelProcessorApp:
                             results1 = pd.concat(combined_results, ignore_index=True)
                             print(f"文件1批量处理完成，显示: {len(results1)} 行")
                             try:
-                                import Monitor
+                                from core import Monitor
                                 Monitor.log_success(f"待处理文件1批量处理完成: 显示{len(results1)}行数据")
                             except:
                                 pass
@@ -4470,7 +4470,7 @@ class ExcelProcessorApp:
                             results1 = pd.DataFrame()
                             print(f"文件1批量处理完成，角色筛选后无符合条件的数据")
                             try:
-                                import Monitor
+                                from core import Monitor
                                 Monitor.log_warning(f"待处理文件1批量处理完成: 角色筛选后无显示数据")
                             except:
                                 pass
@@ -4482,7 +4482,7 @@ class ExcelProcessorApp:
                     if hasattr(main, 'process_target_file2'):
                         print(f"开始批量处理文件2类型，共 {len(self.target_files2)} 个文件")
                         try:
-                            import Monitor
+                            from core import Monitor
                             project_ids = list(set([pid for _, pid in self.target_files2]))
                             Monitor.log_process(f"开始批量处理待处理文件2: {len(self.target_files2)}个文件，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
                         except:
@@ -4583,7 +4583,7 @@ class ExcelProcessorApp:
                             results2 = pd.DataFrame()
                             print(f"文件2批量处理完成，角色筛选后无显示数据")
                             try:
-                                import Monitor
+                                from core import Monitor
                                 Monitor.log_warning(f"待处理文件2批量处理完成: 角色筛选后无显示数据")
                             except:
                                 pass
@@ -4685,7 +4685,7 @@ class ExcelProcessorApp:
                             results3 = pd.DataFrame()
                             print(f"文件3批量处理完成，角色筛选后无显示数据")
                             try:
-                                import Monitor
+                                from core import Monitor
                                 Monitor.log_warning(f"待处理文件3批量处理完成: 角色筛选后无显示数据")
                             except:
                                 pass
@@ -4787,7 +4787,7 @@ class ExcelProcessorApp:
                             results4 = pd.DataFrame()
                             print(f"文件4批量处理完成，角色筛选后无显示数据")
                             try:
-                                import Monitor
+                                from core import Monitor
                                 Monitor.log_warning(f"待处理文件4批量处理完成: 角色筛选后无显示数据")
                             except:
                                 pass
@@ -4948,7 +4948,7 @@ class ExcelProcessorApp:
                     if process_file5 and getattr(self, 'target_files5', None):
                         if hasattr(main, 'process_target_file5'):
                             try:
-                                import Monitor
+                                from core import Monitor
                                 pids = list(set([pid for _, pid in self.target_files5]))
                                 Monitor.log_process(f"开始批量处理待处理文件5: {len(self.target_files5)}个文件，涉及{len(pids)}个项目({', '.join(sorted(pids))})")
                             except:
@@ -5066,7 +5066,7 @@ class ExcelProcessorApp:
                     if process_file6 and getattr(self, 'target_files6', None):
                         if hasattr(main, 'process_target_file6'):
                             try:
-                                import Monitor
+                                from core import Monitor
                                 pids = list(set([pid for _, pid in self.target_files6]))
                                 Monitor.log_process(f"开始批量处理待处理文件6: {len(self.target_files6)}个文件，涉及{len(pids)}个项目")
                             except:
@@ -5183,7 +5183,7 @@ class ExcelProcessorApp:
                                 results6 = pd.DataFrame()
                                 print(f"文件6批量处理完成，所有项目都无符合条件的数据")
                                 try:
-                                    import Monitor
+                                    from core import Monitor
                                     Monitor.log_warning(f"待处理文件6批量处理完成: 所有项目都无符合条件的数据")
                                 except:
                                     pass
@@ -5492,14 +5492,14 @@ class ExcelProcessorApp:
         
         # 安全导入main模块
         try:
-            import main
+            from core import main
         except ImportError:
             # 如果是打包环境，添加当前目录到路径
             if hasattr(sys, '_MEIPASS'):
                 sys.path.insert(0, sys._MEIPASS)
             else:
                 sys.path.insert(0, os.path.dirname(__file__))
-            import main
+            from core import main
         export_tasks = []
         # 预备过滤后结果字典
         self.filtered_results_multi1 = {}
@@ -5804,13 +5804,13 @@ class ExcelProcessorApp:
                 import sys, os
                 # 安全导入 main2 模块
                 try:
-                    import main2
+                    from core import main2
                 except ImportError:
                     if hasattr(sys, '_MEIPASS'):
                         sys.path.insert(0, sys._MEIPASS)
                     else:
                         sys.path.insert(0, os.path.dirname(__file__))
-                    import main2
+                    from core import main2
 
                 # TXT 汇总写入位置：优先使用导出结果位置，其次使用文件夹路径
                 export_root = (self.export_path_var.get().strip() if hasattr(self, 'export_path_var') else '')
@@ -6250,7 +6250,7 @@ class ExcelProcessorApp:
         try:
             # 安全导入Monitor模块
             try:
-                import Monitor
+                from core import Monitor
             except ImportError:
                 import sys
                 import os
@@ -6259,7 +6259,7 @@ class ExcelProcessorApp:
                     sys.path.insert(0, sys._MEIPASS)
                 else:
                     sys.path.insert(0, os.path.dirname(__file__))
-                import Monitor
+                from core import Monitor
             
             # 使用全局监控器实例，确保与main.py中的日志记录一致
             self.monitor = Monitor.get_monitor()
@@ -6805,7 +6805,7 @@ class ExcelProcessorApp:
                 return
             
             # 3. 显示批量忽略对话框
-            from ignore_overdue_dialog import IgnoreOverdueDialog
+            from ui.ignore_overdue_dialog import IgnoreOverdueDialog
             
             user_name = getattr(self, 'user_name', '').strip()
             dialog = IgnoreOverdueDialog(
@@ -6859,7 +6859,7 @@ class ExcelProcessorApp:
                 
                 if response:
                     # 用户选择是，打开忽略对话框
-                    from ignore_overdue_dialog import IgnoreOverdueDialog
+                    from ui.ignore_overdue_dialog import IgnoreOverdueDialog
                     user_name = getattr(self, 'user_name', '').strip()
                     dialog = IgnoreOverdueDialog(
                         self.root,
@@ -6887,7 +6887,7 @@ class ExcelProcessorApp:
         返回:
             List[Dict]: 延期任务列表
         """
-        from date_utils import is_date_overdue
+        from utils.date_utils import is_date_overdue
         import registry.hooks as registry_hooks
         
         overdue_tasks = []

@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Callable, Iterable, Optional
 
-from ui_copy import copy_text, normalize_interface_id
+from ui.ui_copy import copy_text, normalize_interface_id
 
 try:
     from registry import hooks as registry_hooks
