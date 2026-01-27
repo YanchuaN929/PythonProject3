@@ -453,7 +453,7 @@ def process_target_file(file_path, current_datetime):
             
             # 【修复】按索引查找，避免双重循环
             # 【方案A】加回时必须通过科室筛选（process1_rows）
-            for reg_interface_id, reg_project_id, reg_display_status, _, _ in registry_tasks:
+            for reg_interface_id, reg_project_id, reg_display_status, reg_row_index, _ in registry_tasks:
                 key = (reg_interface_id, reg_project_id)
                 
                 if key in excel_index:
@@ -463,7 +463,7 @@ def process_target_file(file_path, current_datetime):
                         # 【关键】必须通过科室筛选
                         if idx not in process1_rows:
                             continue
-                        # 如果不在final_rows中，添加
+                        
                         if idx not in final_rows:
                             pending_rows.add(idx)
                             print(f"[Registry] ✓ 发现待审查任务：第{idx+2}行 接口{reg_interface_id[:30]} 状态:{reg_display_status}")
@@ -1166,6 +1166,7 @@ def process_target_file2(file_path, current_datetime, project_id=None):
                         # 【关键】必须通过科室筛选
                         if idx not in process1_rows:
                             continue
+                        
                         if idx not in final_rows:
                             pending_rows.add(idx)
                             print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
@@ -1651,6 +1652,7 @@ def process_target_file3(file_path, current_datetime):
                         # 【关键】必须通过科室筛选
                         if idx not in base_filter:
                             continue
+                        
                         if idx not in final_rows:
                             pending_rows.add(idx)
                             print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
@@ -2525,7 +2527,7 @@ def process_target_file4(file_path, current_datetime):
             
             # 【待审查加回】上级审查优先：不受时间窗口影响
             # 只要求通过科室/类别筛选(process1_rows & process2_rows)，避免把无关科室混入。
-            # 注意：这里不再强制要求process3_rows（时间窗口），否则“已待审查”会被接口工程师看不到。
+            # 注意：这里不再强制要求process3_rows（时间窗口），否则"已待审查"会被接口工程师看不到。
             base_filter = process1_rows & process2_rows
             for reg_interface_id, reg_project_id, _ in registry_tasks:
                 key = (reg_interface_id, reg_project_id)
@@ -2540,6 +2542,7 @@ def process_target_file4(file_path, current_datetime):
                         # 【关键】必须通过科室筛选
                         if idx not in base_filter:
                             continue
+                        
                         if idx not in final_rows:
                             pending_rows.add(idx)
                             print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
@@ -3218,6 +3221,7 @@ def process_target_file5(file_path, current_datetime):
                         # 【关键】必须通过科室筛选
                         if idx not in p1:
                             continue
+                        
                         if idx not in final_rows:
                             pending_rows.add(idx)
                             print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")

@@ -142,42 +142,132 @@ class InterfaceInputDialog(tk.Toplevel):
         self.on_success = on_success
         self.has_assignor = has_assignor
         
+        # 【新增】存储已填写的回文单号信息
+        self.existing_response = None  # 存储已填写的回文单号
+        self.completed_info = None     # 存储完成信息
+        
+        # 查询Registry中是否已填写回文单号
+        self._load_existing_response()
+        
         self.setup_ui()
+    
+    def _load_existing_response(self):
+        """从Registry查询已填写的回文单号"""
+        try:
+            from registry.hooks import _cfg
+            from registry.db import get_connection
+            from registry.util import make_task_id
+            
+            cfg = _cfg()
+            if not cfg.get('registry_enabled'):
+                return
+            
+            db_path = cfg.get('registry_db_path')
+            if not db_path or not os.path.exists(db_path):
+                return
+            
+            # 【修复】去除接口号的角色后缀，与extract_interface_id保持一致
+            # 例如 "S-YA---1ZJ-02-25C3-25C3(建筑总图室主任)" -> "S-YA---1ZJ-02-25C3-25C3"
+            import re
+            clean_interface_id = re.sub(r'\([^)]*\)$', '', self.interface_id).strip() if self.interface_id else self.interface_id
+            
+            task_id = make_task_id(
+                self.file_type,
+                self.project_id,
+                clean_interface_id,  # 使用清理后的接口号
+                os.path.basename(self.file_path),
+                self.row_index
+            )
+            
+            conn = get_connection(db_path, bool(cfg.get('registry_wal', False)))
+            cursor = conn.execute("""
+                SELECT response_number, completed_at, completed_by
+                FROM tasks
+                WHERE id = ? AND status IN ('completed', 'confirmed')
+            """, (task_id,))
+            
+            row = cursor.fetchone()
+            if row and row[0]:  # 确保response_number不为空
+                self.existing_response = row[0]
+                self.completed_info = {
+                    'completed_at': row[1],
+                    'completed_by': row[2]
+                }
+        except Exception as e:
+            print(f"[Registry] 查询已填写回文单号失败: {e}")
     
     def setup_ui(self):
         """设置界面"""
-        self.title("回文单号输入")
-        self.geometry("400x200")
-        self.resizable(False, False)
-        
         # 居中显示
         self.transient(self.master)
         self.grab_set()
         
-        # 标题
-        title_label = ttk.Label(self, text=f"接口号: {self.interface_id}", 
-                                font=('Arial', 12, 'bold'))
-        title_label.pack(pady=10)
-        
-        # 输入框
-        input_frame = ttk.Frame(self)
-        input_frame.pack(pady=10, padx=20, fill='x')
-        
-        ttk.Label(input_frame, text="回文单号:").pack(side='left', padx=5)
-        
-        self.entry = ttk.Entry(input_frame, width=30)
-        self.entry.pack(side='left', padx=5, fill='x', expand=True)
-        self.entry.focus_set()
-        
-        # 按钮
-        button_frame = ttk.Frame(self)
-        button_frame.pack(pady=20)
-        
-        ttk.Button(button_frame, text="确认", command=self.on_confirm).pack(side='left', padx=10)
-        ttk.Button(button_frame, text="取消", command=self.destroy).pack(side='left', padx=10)
-        
-        # 绑定Enter键
-        self.entry.bind('<Return>', lambda e: self.on_confirm())
+        if self.existing_response:
+            # 【已填写回文单号】显示只读信息
+            self.title("回文单号（已填写）")
+            self.geometry("450x280")
+            self.resizable(False, False)
+            
+            # 标题
+            title_label = ttk.Label(self, text=f"接口号: {self.interface_id}",
+                                    font=('Arial', 12, 'bold'))
+            title_label.pack(pady=10)
+            
+            # 显示已填写的回文单号（只读）
+            info_frame = ttk.LabelFrame(self, text="已填写信息", padding=15)
+            info_frame.pack(pady=10, padx=20, fill='both', expand=True)
+            
+            ttk.Label(info_frame, text="回文单号:").grid(row=0, column=0, sticky='w', padx=5, pady=8)
+            response_label = ttk.Label(info_frame, text=self.existing_response,
+                                       font=('Arial', 11, 'bold'), foreground='blue')
+            response_label.grid(row=0, column=1, sticky='w', padx=5, pady=8)
+            
+            if self.completed_info:
+                if self.completed_info.get('completed_by'):
+                    ttk.Label(info_frame, text="填写人:").grid(row=1, column=0, sticky='w', padx=5, pady=8)
+                    ttk.Label(info_frame, text=self.completed_info['completed_by']).grid(row=1, column=1, sticky='w', padx=5, pady=8)
+                
+                if self.completed_info.get('completed_at'):
+                    ttk.Label(info_frame, text="填写时间:").grid(row=2, column=0, sticky='w', padx=5, pady=8)
+                    completed_time = str(self.completed_info['completed_at'])[:19]  # 截断到秒
+                    ttk.Label(info_frame, text=completed_time).grid(row=2, column=1, sticky='w', padx=5, pady=8)
+            
+            # 关闭按钮（优化样式）
+            button_frame = ttk.Frame(self)
+            button_frame.pack(pady=15)
+            close_btn = ttk.Button(button_frame, text="关闭", command=self.destroy, width=12)
+            close_btn.pack()
+            
+        else:
+            # 【未填写回文单号】显示输入界面（原有逻辑）
+            self.title("回文单号输入")
+            self.geometry("400x200")
+            self.resizable(False, False)
+            
+            # 标题
+            title_label = ttk.Label(self, text=f"接口号: {self.interface_id}", 
+                                    font=('Arial', 12, 'bold'))
+            title_label.pack(pady=10)
+            
+            # 输入框
+            input_frame = ttk.Frame(self)
+            input_frame.pack(pady=10, padx=20, fill='x')
+            
+            ttk.Label(input_frame, text="回文单号:").pack(side='left', padx=5)
+            
+            self.entry = ttk.Entry(input_frame, width=30)
+            self.entry.pack(side='left', padx=5, fill='x', expand=True)
+            self.entry.focus_set()
+            
+            # 按钮
+            button_frame = ttk.Frame(self)
+            button_frame.pack(pady=20)
+            
+            ttk.Button(button_frame, text="确认", command=self.on_confirm).pack(side='left', padx=10)
+            ttk.Button(button_frame, text="取消", command=self.destroy).pack(side='left', padx=10)
+            
+            # 绑定Enter键
+            self.entry.bind('<Return>', lambda e: self.on_confirm())
     
     def on_confirm(self):
         """确认按钮回调"""

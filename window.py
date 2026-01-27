@@ -968,6 +968,18 @@ class WindowManager:
                                             original_row_numbers, tab_name, file_manager)
         
         print(f"{tab_name}数据加载完成：{len(df)} 行，{len(df.columns)} 列 -> 显示：{max_rows} 行，{len(display_df.columns)} 列")
+        
+        # 【新增】默认按"接口时间"升序排序
+        if '接口时间' in columns:
+            try:
+                # 确保排序状态字典存在
+                if not hasattr(self, '_sort_states'):
+                    self._sort_states = {}
+                # 预设状态为True，这样_sort_by_column调用时会toggle为False（升序）
+                self._sort_states[(viewer, '接口时间')] = True
+                self._sort_by_column(viewer, '接口时间', tab_name)
+            except Exception as sort_e:
+                print(f"[默认排序] 排序失败: {sort_e}")
     
     def _bind_checkbox_click_event(self, viewer, original_df, display_df, columns, 
                                     original_row_numbers, source_files, file_manager, tab_name):
