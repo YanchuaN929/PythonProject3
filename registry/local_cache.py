@@ -95,7 +95,7 @@ class LocalCacheManager:
     def _full_sync(self) -> bool:
         """完整同步：复制整个数据库"""
         try:
-            print(f"[LocalCache] 首次同步，复制数据库...")
+            print("[LocalCache] 首次同步，复制数据库...")
             
             # 关闭现有连接
             self._close_local_conn_internal()
@@ -133,7 +133,7 @@ class LocalCacheManager:
                 os.utime(self.local_db_path, None)
                 return True
             
-            print(f"[LocalCache] 检测到网络盘更新，重新同步...")
+            print("[LocalCache] 检测到网络盘更新，重新同步...")
             return self._full_sync()
             
         except Exception as e:
@@ -164,7 +164,7 @@ class LocalCacheManager:
                     )
                     # 设置为只读模式
                     self._local_conn.execute("PRAGMA query_only = ON")
-                    print(f"[LocalCache] 本地缓存连接已建立")
+                    print("[LocalCache] 本地缓存连接已建立")
                 except Exception as e:
                     print(f"[LocalCache] 创建本地连接失败: {e}")
                     return None
@@ -176,7 +176,7 @@ class LocalCacheManager:
         if self._local_conn:
             try:
                 self._local_conn.close()
-            except:
+            except Exception:
                 pass
             self._local_conn = None
     
@@ -193,7 +193,7 @@ class LocalCacheManager:
                 try:
                     # 修改文件时间为很久以前，触发下次同步
                     os.utime(self.local_db_path, (0, 0))
-                    print(f"[LocalCache] 缓存已标记为失效")
+                    print("[LocalCache] 缓存已标记为失效")
                 except OSError as e:
                     print(f"[LocalCache] 标记缓存失效失败: {e}")
     
@@ -234,7 +234,7 @@ class LocalCacheManager:
         """析构时清理"""
         try:
             self.cleanup()
-        except:
+        except Exception:
             pass
 
 

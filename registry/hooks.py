@@ -10,9 +10,9 @@ import random
 import sqlite3
 import pandas as pd
 from .config import load_config
-from .service import upsert_task, write_event, mark_completed, mark_confirmed, finalize_scan, batch_upsert_tasks
-from .db import close_connection, is_network_database
-from .models import EventType, Status
+from .service import write_event, mark_completed, mark_confirmed, batch_upsert_tasks
+from .db import close_connection
+from .models import EventType
 from .util import (
     build_task_key_from_row, 
     build_task_fields_from_row,
@@ -77,7 +77,7 @@ def set_data_folder(folder_path: str):
                 reason = (cfg.get("registry_disabled_reason") or "").strip()
                 msg = reason or "公共盘数据库不可用，Registry已禁用（不会回退本地库）"
                 try:
-                    from db_status import notify_error
+                    from services.db_status import notify_error
                     notify_error(msg, show_dialog=True)
                 except Exception:
                     print(f"[Registry] {msg}")
@@ -192,7 +192,7 @@ def on_process_done(
         
         # 通知数据库状态显示器
         try:
-            from db_status import notify_error
+            from services.db_status import notify_error
             if "database is locked" in str(e).lower() or "busy" in str(e).lower():
                 notify_error("数据库被其他用户锁定，请稍后重试", show_dialog=True)
             else:

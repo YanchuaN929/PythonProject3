@@ -15,7 +15,7 @@ import queue
 import threading
 import time
 import uuid
-from typing import Callable, Dict, Any, Optional, List
+from typing import Callable, Optional, List
 from datetime import datetime
 from enum import Enum
 
@@ -268,7 +268,7 @@ class WriteQueue:
                     if request.callback:
                         try:
                             request.callback(False, str(e))
-                        except:
+                        except Exception:
                             pass
                 
         except Exception as e:
@@ -279,7 +279,7 @@ class WriteQueue:
                 if request.callback:
                     try:
                         request.callback(False, str(e))
-                    except:
+                    except Exception:
                         pass
     
     def _execute_single(self, request: WriteRequest):

@@ -46,7 +46,7 @@ def format_time(time_str):
         # 尝试解析ISO格式
         dt = datetime.fromisoformat(str_val)
         return dt.strftime('%Y-%m-%d %H:%M')
-    except:
+    except Exception:
         # 如果失败，返回原始字符串
         return str_val if time_str else '-'
 

@@ -6,10 +6,7 @@
 """
 
 import tkinter as tk
-from tkinter import ttk
-import tkinter.scrolledtext as scrolledtext
-import sys
-import os
+from tkinter import filedialog
 
 
 def set_Tk_var():
@@ -36,21 +33,22 @@ def destroy_window():
 
 def browse_folder():
     """浏览文件夹回调函数"""
-    folder_path = tk.filedialog.askdirectory()
+    folder_path = filedialog.askdirectory()
     if folder_path:
         path_var.set(folder_path)
 
 
 def browse_export_folder():
     """浏览导出文件夹回调函数"""
-    folder_path = tk.filedialog.askdirectory()
+    folder_path = filedialog.askdirectory()
     if folder_path:
         export_path_var.set(folder_path)
 
 
 if __name__ == '__main__':
     """测试运行GUI"""
-    import interface_gui
+    import importlib
+    interface_gui = importlib.import_module("interface_gui")
     
     # 创建根窗口
     root = tk.Tk()

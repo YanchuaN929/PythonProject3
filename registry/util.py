@@ -7,7 +7,7 @@ import hashlib
 import os
 import pandas as pd
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 def make_task_id(file_type: int, project_id: str, interface_id: str, source_file: str, row_index: int) -> str:
     """

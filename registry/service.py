@@ -4,7 +4,6 @@
 提供任务创建更新、状态流转、事件记录等核心功能。
 """
 import json
-import sqlite3
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from .db import get_connection
@@ -676,7 +675,7 @@ def mark_ignored_batch(
             
             row = cursor.fetchone()
             if not row:
-                print(f"[标记忽略]   ✗ 任务不存在")
+                print("[标记忽略]   ✗ 任务不存在")
                 failed_tasks.append({
                     'interface_id': interface_id,
                     'reason': '任务不存在'
@@ -693,7 +692,7 @@ def mark_ignored_batch(
             
             # 2. 检查是否已经被忽略
             if already_ignored == 1:
-                print(f"[标记忽略]   ✗ 已经被忽略")
+                print("[标记忽略]   ✗ 已经被忽略")
                 failed_tasks.append({
                     'interface_id': interface_id,
                     'reason': '已经被忽略'
@@ -701,7 +700,7 @@ def mark_ignored_batch(
                 continue
             
             # 3. 标记为忽略（使用从数据库查询到的interface_time）
-            print(f"[标记忽略]   执行UPDATE...")
+            print("[标记忽略]   执行UPDATE...")
             
             conn.execute("""
                 UPDATE tasks
@@ -720,7 +719,7 @@ def mark_ignored_batch(
             ))
             
             # 4. 创建忽略快照（用于后续变化检测）
-            print(f"[标记忽略]   创建快照记录...")
+            print("[标记忽略]   创建快照记录...")
             conn.execute("""
                 INSERT OR REPLACE INTO ignored_snapshots (
                     file_type, project_id, interface_id, source_file, row_index,
@@ -742,7 +741,7 @@ def mark_ignored_batch(
             ))
             
             success_count += 1
-            print(f"[标记忽略]   ✓ 成功（已创建快照）")
+            print("[标记忽略]   ✓ 成功（已创建快照）")
             
         except Exception as e:
             print(f"[标记忽略]   ✗ 失败: {e}")
@@ -796,8 +795,8 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
         import sys
         import os
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        from date_utils import is_date_overdue
-    except:
+        from utils.date_utils import is_date_overdue
+    except Exception:
         # 如果导入失败，使用简单判断
         def is_date_overdue(date_str):
             return False
@@ -925,7 +924,6 @@ def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int
     try:
         conn = get_connection(db_path, wal)
         now_str = now.isoformat()
-        now_date_only = now.strftime('%Y-%m-%d')  # 只比较日期，忽略时间
         
         # 阶段1：标记消失的任务
         cursor = conn.execute("""
@@ -1102,7 +1100,8 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     current_interface_time = fields.get('interface_time', '')
                 
                     def normalize_time_for_ignore(time_str):
-                        if not time_str: return ""
+                        if not time_str:
+                            return ""
                         import re
                         numbers = re.findall(r'\d+', str(time_str))
                         if len(numbers) >= 3:
@@ -1139,10 +1138,10 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                             key['interface_id']
                         ))
                         if verbose:
-                            print(f"[Registry] 已删除忽略快照记录")
+                            print("[Registry] 已删除忽略快照记录")
                     else:
                         if verbose:
-                            print(f"  时间未变化，保持忽略状态")
+                            print("  时间未变化，保持忽略状态")
                 else:
                     if verbose:
                         print(f"[Registry调试] 接口{key['interface_id']}: 已忽略但没有找到快照记录")
@@ -1424,7 +1423,7 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
         
         # 通知数据库状态显示器
         try:
-            from db_status import notify_error
+            from services.db_status import notify_error
             if "database is locked" in str(e).lower():
                 notify_error("数据库被锁定，请稍后重试", show_dialog=True)
             else:

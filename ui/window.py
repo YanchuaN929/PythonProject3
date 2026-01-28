@@ -657,7 +657,7 @@ class WindowManager:
                                     'interface_time': interface_time  # 新增：传递接口时间
                                 }
                                 task_keys.append((idx, task_key))
-                    except Exception as e:
+                    except Exception:
                         continue
                 
                 # 批量查询
@@ -704,7 +704,7 @@ class WindowManager:
                                 ).fetchone()
                                 if row and row[0]:
                                     registry_confirmed_map[df_idx] = (row[0], current_user_name)
-                            except:
+                            except Exception:
                                 pass
         except Exception as e:
             print(f"[Registry] 状态查询失败（不影响主流程）: {e}")
@@ -1030,7 +1030,7 @@ class WindowManager:
                 metadata = self._item_metadata.get((viewer, item_id))
                 if not metadata:
                     # 兜底：使用旧逻辑（位置索引）
-                    print(f"[警告] 未找到item元数据（勾选框），使用位置索引（可能不准确）")
+                    print("[警告] 未找到item元数据（勾选框），使用位置索引（可能不准确）")
                     item_index = viewer.index(item_id)
                     original_row = original_row_numbers[item_index] if original_row_numbers and item_index < len(original_row_numbers) else item_index + 2
                     source_file = source_files[0] if len(source_files) == 1 else self._find_source_file(original_df, item_index, source_files)
@@ -1044,7 +1044,7 @@ class WindowManager:
                     return
                 
                 if not source_file:
-                    print(f"[错误] 无法确定源文件")
+                    print("[错误] 无法确定源文件")
                     return
                 
                 # 【重大修复】勾选框逻辑从Registry读取和写入，不再使用缓存
@@ -1087,7 +1087,7 @@ class WindowManager:
                         interface_id = metadata.get('interface_id', '')
                         
                         if not project_id or not interface_id:
-                            print(f"[错误] 无法获取项目号或接口号")
+                            print("[错误] 无法获取项目号或接口号")
                             return
                         
                         # 【关键修复】去除接口号中的角色后缀（如"(一室主任)"）
@@ -1114,8 +1114,8 @@ class WindowManager:
                             cfg = registry_hooks._cfg()
                             db_path = cfg.get('registry_db_path')
                             wal = False
-                        except:
-                            print(f"[Registry] 无法获取数据库配置")
+                        except Exception:
+                            print("[Registry] 无法获取数据库配置")
                             return
                         
                         # 查询任务状态
@@ -1194,7 +1194,7 @@ class WindowManager:
                         if hasattr(self, 'app') and self.app:
                             # 使用after延迟100ms执行，确保Registry操作完成
                             viewer.after(100, self.app.refresh_current_tab_display)
-                            print(f"[Registry] 已触发刷新显示")
+                            print("[Registry] 已触发刷新显示")
                         else:
                             # 兜底：至少刷新UI
                             viewer.update_idletasks()
@@ -1205,7 +1205,7 @@ class WindowManager:
                         traceback.print_exc()
                 else:
                     # 设计人员角色：不应该通过勾选框操作，应该通过填写回文单号来完成
-                    print(f"[提示] 设计人员角色请通过填写回文单号来标记完成，勾选框仅供上级角色使用")
+                    print("[提示] 设计人员角色请通过填写回文单号来标记完成，勾选框仅供上级角色使用")
                 
             except Exception as e:
                 print(f"点击事件处理失败: {e}")
@@ -1219,7 +1219,7 @@ class WindowManager:
         # 如果已经绑定过，先解绑
         try:
             viewer.unbind_class(bind_tag, "<Button-1>")
-        except:
+        except Exception:
             pass
         
         # 给viewer添加这个标签
@@ -1305,7 +1305,7 @@ class WindowManager:
                 metadata = self._item_metadata.get((viewer, item_id))
                 if not metadata:
                     # 兜底：使用旧逻辑（位置索引）
-                    print(f"[警告] 未找到item元数据，使用位置索引（可能不准确）")
+                    print("[警告] 未找到item元数据，使用位置索引（可能不准确）")
                     item_index = viewer.index(item_id)
                     metadata = {
                         'original_index': item_index,
@@ -1341,7 +1341,7 @@ class WindowManager:
                 print(f"[回文输入] Excel行号: {original_row}")
                 
                 if not source_file:
-                    print(f"[错误] 无法确定源文件")
+                    print("[错误] 无法确定源文件")
                     from tkinter import messagebox
                     messagebox.showerror("错误", "无法获取源文件信息，请联系管理员", parent=viewer)
                     return
@@ -1367,7 +1367,7 @@ class WindowManager:
                     try:
                         if item_index < len(original_df):
                             source_column = original_df.iloc[item_index]['_source_column']
-                    except:
+                    except Exception:
                         pass
                 
                 # 显示输入对话框
@@ -1407,7 +1407,7 @@ class WindowManager:
         # 如果已经绑定过，先解绑
         try:
             viewer.unbind_class(bind_tag, "<Double-1>")
-        except:
+        except Exception:
             pass
         
         # 给viewer添加这个标签
@@ -1514,13 +1514,8 @@ class WindowManager:
                     continue
                 
                 # 其他列动态计算
-                header_length = len(str(col))
-                
                 if i < len(calc_row):
                     data_value = calc_row.iloc[i] if hasattr(calc_row, 'iloc') else calc_row[i]
-                    data_length = len(str(data_value)) if not pd.isna(data_value) else 0
-                else:
-                    data_length = 0
                 
                 content_str = str(data_value) if i < len(calc_row) and not pd.isna(
                     calc_row.iloc[i] if hasattr(calc_row, 'iloc') else calc_row[i]
@@ -1978,7 +1973,7 @@ class WindowManager:
             if column_name == '项目号':
                 try:
                     return int(str(sort_value)) if sort_value and str(sort_value).strip() else 0
-                except:
+                except (TypeError, ValueError):
                     return 0
             
             # 特殊列：是否已完成（☐在前，☑在后）
@@ -2001,4 +1996,3 @@ class WindowManager:
         except Exception as e:
             print(f"生成排序键失败 [{column_name}={sort_value}]: {e}")
             return str(sort_value) if sort_value is not None else ''
-

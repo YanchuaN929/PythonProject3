@@ -18,7 +18,6 @@ import winreg
 import re
 from pathlib import Path
 import pandas as pd
-import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from openpyxl import load_workbook
 from typing import List, Dict, Any, Optional, Tuple
@@ -894,7 +893,7 @@ class ExcelProcessorApp:
                     self.config = json.load(f)
             else:
                 self.config = self.default_config.copy()
-        except:
+        except Exception:
             self.config = self.default_config.copy()
 
         # 【新增】确保auto_startup键存在（面向旧配置）
@@ -960,7 +959,7 @@ class ExcelProcessorApp:
                     line = raw.strip()
                     if not line or line.startswith('#'):
                         continue
-                    if line.endswith(':') and not ':' in line[:-1]:
+                    if line.endswith(':') and ':' not in line[:-1]:
                         current_section = line[:-1].strip()
                         continue
                     if ':' in line and current_section in ('timer','cache','general'):
@@ -1448,7 +1447,7 @@ class ExcelProcessorApp:
             
             # 检查是否有"原始行号"列
             if "原始行号" not in df.columns:
-                print(f"警告：DataFrame中没有'原始行号'列，无法排除已完成行")
+                print("警告：DataFrame中没有'原始行号'列，无法排除已完成行")
                 return df
             
             # 【修复】获取已完成的行号集合，传入用户姓名
@@ -1495,7 +1494,7 @@ class ExcelProcessorApp:
             
             # 检查必要列
             if "原始行号" not in df.columns:
-                print(f"[Registry] 警告：DataFrame中没有'原始行号'列，无法过滤待确认行")
+                print("[Registry] 警告：DataFrame中没有'原始行号'列，无法过滤待确认行")
                 return df
             
             # 【Registry】查询所有待确认的任务
@@ -1538,7 +1537,7 @@ class ExcelProcessorApp:
                             row_source_file, row_index  # 使用对应项目的源文件
                         )
                         df_index_map[tid] = idx
-                except Exception as e:
+                except Exception:
                     continue
             
             if not task_keys:
@@ -1800,18 +1799,12 @@ class ExcelProcessorApp:
             
             for i, col in enumerate(columns):
                 try:
-                    # 获取列标题和数据内容的长度
-                    header_length = len(str(col))
-                    
                     if i < len(calc_row):
                         data_value = calc_row.iloc[i] if hasattr(calc_row, 'iloc') else calc_row[i]
-                        data_length = len(str(data_value)) if not pd.isna(data_value) else 0
                     else:
-                        data_length = 0
+                        data_value = None
                     
                     # 取标题和数据中较长者，并转换为像素宽度
-                    max_content_length = max(header_length, data_length)
-                    
                     # 基础计算：每个字符约8像素，中文字符约16像素
                     content_str = str(data_value) if i < len(calc_row) and not pd.isna(calc_row.iloc[i] if hasattr(calc_row, 'iloc') else calc_row[i]) else str(col)
                     
@@ -2895,7 +2888,7 @@ class ExcelProcessorApp:
                 try:
                     from tkinter import messagebox as _mb
                     _mb.showerror("错误", f"清除缓存失败：{e}", parent=settings_menu)
-                except:
+                except Exception:
                     pass
         
         cache_button = ttk.Button(frame, text="清除缓存", command=on_clear_cache, width=14)
@@ -3215,14 +3208,14 @@ class ExcelProcessorApp:
                         total_identified_files += len(self.target_files6)
 
                     if project_summary:
-                        file_info += f"\n📊 项目汇总:\n"
+                        file_info += "\n📊 项目汇总:\n"
                         for pid, count in sorted(project_summary.items()):
                             disp_pid = pid if pid else "未知项目"
                             file_info += f"  项目 {disp_pid}: {count} 个文件\n"
                         file_info += f"  总计: {len(project_summary)} 个项目, {total_identified_files} 个待处理文件\n"
 
                     if hasattr(self, 'ignored_files') and self.ignored_files:
-                        file_info += f"\n⚠️ 已忽略的文件（项目号未勾选）:\n"
+                        file_info += "\n⚠️ 已忽略的文件（项目号未勾选）:\n"
                         ignored_by_project = {}
                         for fp, pid, ftype in self.ignored_files:
                             if pid not in ignored_by_project:
@@ -3234,7 +3227,7 @@ class ExcelProcessorApp:
                                 file_info += f"    - {ftype}: {filename}\n"
                         file_info += f"  总计: {len(ignored_by_project)} 个项目, {len(self.ignored_files)} 个文件被忽略\n"
 
-                    file_info += f"\n📋 主界面显示示例:\n"
+                    file_info += "\n📋 主界面显示示例:\n"
                     if self.target_file1:
                         file_info += f"  内部需打开接口: {os.path.basename(self.target_file1)} (项目{self.target_file1_project_id})\n"
                     if self.target_file2:
@@ -3244,7 +3237,7 @@ class ExcelProcessorApp:
                     if self.target_file4:
                         file_info += f"  外部需回复接口: {os.path.basename(self.target_file4)} (项目{self.target_file4_project_id})\n"
 
-                    file_info += f"\n📁 全部Excel文件列表:\n"
+                    file_info += "\n📁 全部Excel文件列表:\n"
                     for i, fp in enumerate(self.excel_files, 1):
                         try:
                             file_name = os.path.basename(fp)
@@ -3311,20 +3304,20 @@ class ExcelProcessorApp:
         if not project_summary:
             return "未识别到任何待处理文件"
         
-        message = f"🎉 文件识别成功！\n\n"
-        message += f"📊 识别结果汇总:\n"
+        message = "🎉 文件识别成功！\n\n"
+        message += "📊 识别结果汇总:\n"
         message += f"• 发现 {len(project_summary)} 个项目\n"
         message += f"• 共计 {total_identified_files} 个待处理文件\n\n"
         
-        message += f"📋 各项目详情:\n"
+        message += "📋 各项目详情:\n"
         for project_id in sorted(project_summary.keys()):
             count = project_summary[project_id]
             message += f"• 项目 {project_id}: {count} 个文件\n"
         
-        message += f"\n💡 提示:\n"
-        message += f"• 主界面显示第一个项目的文件作为示例\n"
-        message += f"• 勾选文件类型将处理所有相应的项目文件\n"
-        message += f"• 导出结果将按项目号自动分文件夹存放"
+        message += "\n💡 提示:\n"
+        message += "• 主界面显示第一个项目的文件作为示例\n"
+        message += "• 勾选文件类型将处理所有相应的项目文件\n"
+        message += "• 导出结果将按项目号自动分文件夹存放"
         
         return message
 
@@ -3786,7 +3779,7 @@ class ExcelProcessorApp:
                             _mb.showwarning("缓存保存失败", 
                                 f"项目{project_id}{file_type}的缓存保存失败。\n"
                                 f"数据已正常处理，但下次可能需要重新处理。")
-                        except:
+                        except Exception:
                             pass
             
             return result
@@ -4273,7 +4266,6 @@ class ExcelProcessorApp:
                 results4 = None
                 
                 # Step2：可复用 refresh 阶段缓存？
-                all_paths_snapshot = tuple(sorted(all_file_paths_for_run or []))
                 can_reuse_refresh_cache = False
                 try:
                     can_reuse_refresh_cache = self._can_reuse_refresh_cache(all_file_paths_for_run)
@@ -4283,7 +4275,6 @@ class ExcelProcessorApp:
                 # Step3：统计本轮 Registry 实际写入次数，用于 finalize 决策
                 registry_write_flags = {"count": 0}
                 registry_bootstrap_needed = False
-                registry_bound_db_path = ""
 
                 # 【关键修复】确保本轮开始处理时，Registry 一定绑定到当前 folder_path（公共盘数据目录）
                 # 否则在“用户未点击刷新文件列表/未重新选择目录”的场景下，hooks._DATA_FOLDER 可能仍为 None，
@@ -4300,7 +4291,6 @@ class ExcelProcessorApp:
                             cfg = load_config(data_folder=folder_path, ensure_registry_dir=True)
                             db_path = cfg.get("registry_db_path", "")
                             if db_path:
-                                registry_bound_db_path = db_path
                                 print(f"[Registry] 本轮处理绑定数据库: {db_path}")
                                 # 仅在“DB为空/新库”时做一次 bootstrap（写入当前结果以获得 display_status）
                                 # 这不会破坏 Step3 的性能目标：只会在少见的“空库”场景触发一次。
@@ -4333,7 +4323,7 @@ class ExcelProcessorApp:
                             from core import Monitor
                             project_ids = list(set([pid for _, pid in self.target_files1]))
                             Monitor.log_process(f"开始批量处理待处理文件1: {len(self.target_files1)}个文件，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
-                        except:
+                        except Exception:
                             pass
                         
                         new_multi1 = {}
@@ -4348,7 +4338,7 @@ class ExcelProcessorApp:
                                 try:
                                     from core import Monitor
                                     Monitor.log_process(f"处理项目{project_id}的待处理文件1: {os.path.basename(file_path)}")
-                                except:
+                                except Exception:
                                     pass
 
                                 # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
@@ -4411,21 +4401,21 @@ class ExcelProcessorApp:
                                     try:
                                         from core import Monitor
                                         Monitor.log_success(f"项目{project_id}文件1处理完成: 原始{len(result)}行，显示{len(filtered_result) if filtered_result is not None else 0}行")
-                                    except:
+                                    except Exception:
                                         pass
                                 else:
                                     print(f"项目{project_id}文件1处理结果为空")
                                     try:
                                         from core import Monitor
                                         Monitor.log_warning(f"项目{project_id}文件1处理结果为空")
-                                    except:
+                                    except Exception:
                                         pass
                             except Exception as e:
                                 print(f"项目{project_id}文件1处理失败: {e}")
                                 try:
                                     from core import Monitor
                                     Monitor.log_error(f"项目{project_id}文件1处理失败: {e}")
-                                except:
+                                except Exception:
                                     pass
                         
                         # Step3：Registry写入改为“增量触发”
@@ -4463,16 +4453,16 @@ class ExcelProcessorApp:
                             try:
                                 from core import Monitor
                                 Monitor.log_success(f"待处理文件1批量处理完成: 显示{len(results1)}行数据")
-                            except:
+                            except Exception:
                                 pass
                         else:
                             # 所有项目都没有结果（角色筛选后），创建空DataFrame
                             results1 = pd.DataFrame()
-                            print(f"文件1批量处理完成，角色筛选后无符合条件的数据")
+                            print("文件1批量处理完成，角色筛选后无符合条件的数据")
                             try:
                                 from core import Monitor
-                                Monitor.log_warning(f"待处理文件1批量处理完成: 角色筛选后无显示数据")
-                            except:
+                                Monitor.log_warning("待处理文件1批量处理完成: 角色筛选后无显示数据")
+                            except Exception:
                                 pass
                         # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
                         self.processing_results_multi1 = new_multi1
@@ -4485,7 +4475,7 @@ class ExcelProcessorApp:
                             from core import Monitor
                             project_ids = list(set([pid for _, pid in self.target_files2]))
                             Monitor.log_process(f"开始批量处理待处理文件2: {len(self.target_files2)}个文件，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
-                        except:
+                        except Exception:
                             pass
                         
                         new_multi2 = {}
@@ -4581,11 +4571,11 @@ class ExcelProcessorApp:
                             print(f"文件2批量处理完成，显示: {len(results2)} 行")
                         else:
                             results2 = pd.DataFrame()
-                            print(f"文件2批量处理完成，角色筛选后无显示数据")
+                            print("文件2批量处理完成，角色筛选后无显示数据")
                             try:
                                 from core import Monitor
-                                Monitor.log_warning(f"待处理文件2批量处理完成: 角色筛选后无显示数据")
-                            except:
+                                Monitor.log_warning("待处理文件2批量处理完成: 角色筛选后无显示数据")
+                            except Exception:
                                 pass
                         # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
                         self.processing_results_multi2 = new_multi2
@@ -4683,11 +4673,11 @@ class ExcelProcessorApp:
                             print(f"文件3批量处理完成，显示: {len(results3)} 行")
                         else:
                             results3 = pd.DataFrame()
-                            print(f"文件3批量处理完成，角色筛选后无显示数据")
+                            print("文件3批量处理完成，角色筛选后无显示数据")
                             try:
                                 from core import Monitor
-                                Monitor.log_warning(f"待处理文件3批量处理完成: 角色筛选后无显示数据")
-                            except:
+                                Monitor.log_warning("待处理文件3批量处理完成: 角色筛选后无显示数据")
+                            except Exception:
                                 pass
                         # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
                         self.processing_results_multi3 = new_multi3
@@ -4785,11 +4775,11 @@ class ExcelProcessorApp:
                             print(f"文件4批量处理完成，显示: {len(results4)} 行")
                         else:
                             results4 = pd.DataFrame()
-                            print(f"文件4批量处理完成，角色筛选后无显示数据")
+                            print("文件4批量处理完成，角色筛选后无显示数据")
                             try:
                                 from core import Monitor
-                                Monitor.log_warning(f"待处理文件4批量处理完成: 角色筛选后无显示数据")
-                            except:
+                                Monitor.log_warning("待处理文件4批量处理完成: 角色筛选后无显示数据")
+                            except Exception:
                                 pass
                         # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
                         self.processing_results_multi4 = new_multi4
@@ -4951,7 +4941,7 @@ class ExcelProcessorApp:
                                 from core import Monitor
                                 pids = list(set([pid for _, pid in self.target_files5]))
                                 Monitor.log_process(f"开始批量处理待处理文件5: {len(self.target_files5)}个文件，涉及{len(pids)}个项目({', '.join(sorted(pids))})")
-                            except:
+                            except Exception:
                                 pass
                             new_multi5 = {}
                             combined_results = []
@@ -5069,7 +5059,7 @@ class ExcelProcessorApp:
                                 from core import Monitor
                                 pids = list(set([pid for _, pid in self.target_files6]))
                                 Monitor.log_process(f"开始批量处理待处理文件6: {len(self.target_files6)}个文件，涉及{len(pids)}个项目")
-                            except:
+                            except Exception:
                                 pass
                             # 【新增】加载姓名角色表中的有效姓名列表（用于过滤责任人）
                             valid_names_set = self.get_valid_names_from_role_table()
@@ -5181,11 +5171,11 @@ class ExcelProcessorApp:
                                 # 【修复】所有文件处理结果都为空时，也需要调用display_results6
                                 # 确保设置has_processed_results6标志，防止显示原始文件数据
                                 results6 = pd.DataFrame()
-                                print(f"文件6批量处理完成，所有项目都无符合条件的数据")
+                                print("文件6批量处理完成，所有项目都无符合条件的数据")
                                 try:
                                     from core import Monitor
-                                    Monitor.log_warning(f"待处理文件6批量处理完成: 所有项目都无符合条件的数据")
-                                except:
+                                    Monitor.log_warning("待处理文件6批量处理完成: 所有项目都无符合条件的数据")
+                                except Exception:
                                     pass
                                 self.processing_results6 = results6
                                 self.has_processed_results6 = True
@@ -5208,7 +5198,7 @@ class ExcelProcessorApp:
                     if completion_messages and self._should_show_popup():
                         combined_message = "🎉 批量数据处理完成！\n\n"
                         if len(total_projects) > 1:
-                            combined_message += f"📊 处理统计:\n"
+                            combined_message += "📊 处理统计:\n"
                             combined_message += f"• 共处理 {len(total_projects)} 个项目\n"
                             combined_message += f"• 共处理 {total_files_processed} 个文件\n"
                             combined_message += f"• 项目号: {', '.join(sorted(total_projects))}\n\n"
@@ -5266,11 +5256,12 @@ class ExcelProcessorApp:
                 
                 self.root.after(0, update_display)
                 
-            except Exception as e:
+            except Exception as exc:
                 self.root.after(0, lambda: self.close_waiting_dialog(processing_dialog))
-                if self._should_show_popup() or not getattr(self, '_auto_context', True):
-                   self.root.after(0, lambda: messagebox.showerror("错误", f"处理过程中发生错误: {str(e)}"))
-                   self.root.after(0, lambda: self.process_button.config(state='normal', text="开始处理"))
+                error_message = f"处理过程中发生错误: {exc}"
+                if self._should_show_popup() or not getattr(self, "_auto_context", True):
+                    self.root.after(0, lambda msg=error_message: messagebox.showerror("错误", msg))
+                    self.root.after(0, lambda: self.process_button.config(state="normal", text="开始处理"))
                 # 重置手动操作标志
                 self._manual_operation = False
         
@@ -5471,8 +5462,6 @@ class ExcelProcessorApp:
             messagebox.showinfo("处理完成", f"收发文函数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【收发文函】选项卡中更新显示。")
 
     def export_results(self):
-        current_tab = self.notebook.index(self.notebook.select())
-        
         if not self._ensure_up_to_date(UpdateReason.EXPORT_RESULTS, UpdateReason.EXPORT_RESULTS):
             self._manual_operation = False
             return
@@ -5726,7 +5715,7 @@ class ExcelProcessorApp:
             
             # 显示批量导出成功信息（包含各类型有无导出情况）
             if success_count > 0:
-                combined_message = f"🎉 批量导出完成！\n\n"
+                combined_message = "🎉 批量导出完成！\n\n"
 
                 # 统计各类型导出条目数
                 from collections import defaultdict
@@ -5751,11 +5740,11 @@ class ExcelProcessorApp:
 
                 # 添加统计信息
                 if len(project_stats) > 1:
-                    combined_message += f"📊 导出统计:\n"
+                    combined_message += "📊 导出统计:\n"
                     combined_message += f"• 共导出 {len(project_stats)} 个项目\n"
                     combined_message += f"• 共导出 {success_count} 个文件\n\n"
                 else:
-                    combined_message += f"📊 导出统计:\n"
+                    combined_message += "📊 导出统计:\n"
                     combined_message += f"• 共导出 {success_count} 个文件\n\n"
 
                 # 各类型导出结果（无则显示“无”）
@@ -5769,13 +5758,13 @@ class ExcelProcessorApp:
                         combined_message += f"• {dn}：无\n"
 
                 # 详细文件清单
-                combined_message += f"\n📋 导出详情:\n"
+                combined_message += "\n📋 导出详情:\n"
                 combined_message += "\n".join([f"• {msg}" for msg in success_messages])
 
                 if len(project_stats) > 1:
-                    combined_message += f"\n\n💡 提示:\n"
-                    combined_message += f"• 文件已按项目号自动分文件夹存放\n"
-                    combined_message += f"• 各项目的结果文件在对应的\"项目号结果文件\"文件夹中"
+                    combined_message += "\n\n💡 提示:\n"
+                    combined_message += "• 文件已按项目号自动分文件夹存放\n"
+                    combined_message += "• 各项目的结果文件在对应的\"项目号结果文件\"文件夹中"
 
                 # 手动导出时也使用汇总弹窗显示结果
                 if self._should_show_popup():
@@ -5801,7 +5790,8 @@ class ExcelProcessorApp:
         # 导出完成后生成结果汇总（放在异步导出流程中完成后执行）
         def write_summary_after_export():
             try:
-                import sys, os
+                import sys
+                import os
                 # 安全导入 main2 模块
                 try:
                     from core import main2
@@ -6294,7 +6284,6 @@ class ExcelProcessorApp:
         try:
             if getattr(self, 'timer_enabled', True):
                 # 延迟导入，避免未用时报错
-                from time import time as _t
                 import threading as _th
                 # 内部轻量定时器线程（简化版，不依赖外部文件）
                 def _timer_loop(app_ref):
@@ -6360,9 +6349,7 @@ class ExcelProcessorApp:
             if not self._ensure_up_to_date(UpdateReason.AUTO_FLOW, UpdateReason.AUTO_FLOW):
                 return
             # 路径判定：导出结果位置优先，其次文件夹路径
-            export_root = (self.export_path_var.get().strip() if hasattr(self, 'export_path_var') else '')
             folder_path = self.path_var.get().strip() if hasattr(self, 'path_var') else ''
-            export_dir = export_root or folder_path
             if not folder_path:
                 # 自动模式下仍提示一次路径缺失
                 try:
@@ -6900,8 +6887,6 @@ class ExcelProcessorApp:
                 return []
             
             db_path = cfg.get('registry_db_path')
-            wal = cfg.get('wal', True)
-            
             if not db_path:
                 print("[收集延期任务] 数据库路径未设置")
                 return []

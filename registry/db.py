@@ -69,7 +69,7 @@ def _is_network_path(path: str) -> bool:
             drive_type = ctypes.windll.kernel32.GetDriveTypeW(drive + '\\')
             if drive_type == 4:
                 return True
-    except:
+    except Exception:
         pass
     
     return False
@@ -367,14 +367,14 @@ def close_connection():
         if _CONN is not None:
             try:
                 _CONN.close()
-            except:
+            except Exception:
                 pass
             _CONN = None
 
 
 def is_network_database() -> bool:
     """检查当前数据库是否在网络路径上（或强制网络模式）"""
-    return _IS_NETWORK_PATH == True or _FORCE_NETWORK_MODE
+    return _IS_NETWORK_PATH or _FORCE_NETWORK_MODE
 
 
 # ============================================================

@@ -79,7 +79,7 @@ def migrate_database(db_path: str) -> None:
                     conn.execute(f"ALTER TABLE tasks ADD COLUMN {col_name} {col_def}")
                     conn.commit()
                     added_count += 1
-                except Exception as e:
+                except Exception:
                     # 静默处理失败（可能是表不存在，由init_db创建）
                     pass
             else:
@@ -142,7 +142,7 @@ def migrate_if_needed(db_path: str) -> None:
     finally:
         try:
             conn.close()
-        except:
+        except Exception:
             pass
 
 
