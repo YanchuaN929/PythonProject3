@@ -71,7 +71,7 @@ def is_date_overdue(date_str: str, reference_date: Optional[date] = None) -> boo
         
         return False
         
-    except (ValueError, AttributeError, IndexError) as e:
+    except (ValueError, AttributeError, IndexError):
         # 解析失败，默认不标红
         return False
 
@@ -291,7 +291,7 @@ def get_date_warn_tag(date_str: str, reference_date: Optional[date] = None, use_
         else:
             return ""
         
-    except (ValueError, AttributeError, IndexError) as e:
+    except (ValueError, AttributeError, IndexError):
         # 解析失败，返回空字符串
         return ""
 

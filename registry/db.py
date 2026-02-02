@@ -26,6 +26,65 @@ _FORCE_NETWORK_MODE: bool = False  # 强制使用网络模式（用于本地测�
 T = TypeVar('T')
 
 
+class MaintenanceModeError(RuntimeError):
+    """Registry 维护模式异常（用于协作式释放连接）。"""
+
+
+def _get_data_folder_from_db_path(db_path: str) -> str:
+    """从数据库路径推导数据目录（data_folder）。"""
+    registry_dir = os.path.dirname(db_path)
+    return os.path.dirname(registry_dir)
+
+
+def get_maintenance_flag_path(db_path: Optional[str] = None, data_folder: Optional[str] = None) -> str:
+    """获取维护标志路径：<data_folder>/.registry/maintenance.lock"""
+    base_folder = data_folder or (_get_data_folder_from_db_path(db_path) if db_path else None)
+    if not base_folder:
+        raise ValueError("data_folder 和 db_path 不能同时为空")
+    return os.path.join(base_folder, ".registry", "maintenance.lock")
+
+
+def is_maintenance_mode(db_path: Optional[str] = None, data_folder: Optional[str] = None) -> bool:
+    """检查是否处于维护模式（存在维护标志文件）。"""
+    try:
+        flag_path = get_maintenance_flag_path(db_path=db_path, data_folder=data_folder)
+    except Exception:
+        return False
+    return os.path.exists(flag_path)
+
+
+def ensure_not_in_maintenance(db_path: Optional[str] = None, data_folder: Optional[str] = None) -> None:
+    """检测维护模式，若开启则抛出异常。"""
+    if is_maintenance_mode(db_path=db_path, data_folder=data_folder):
+        raise MaintenanceModeError("Registry 正在维护中，请稍后重试")
+
+
+def enable_maintenance_mode(data_folder: str) -> str:
+    """开启维护模式（创建维护标志文件）。"""
+    flag_path = get_maintenance_flag_path(data_folder=data_folder)
+    os.makedirs(os.path.dirname(flag_path), exist_ok=True)
+    with open(flag_path, "w", encoding="utf-8") as f:
+        f.write(time.strftime("enabled_at=%Y-%m-%d %H:%M:%S", time.localtime()))
+    return flag_path
+
+
+def disable_maintenance_mode(data_folder: str) -> bool:
+    """关闭维护模式（删除维护标志文件）。"""
+    flag_path = get_maintenance_flag_path(data_folder=data_folder)
+    if os.path.exists(flag_path):
+        os.remove(flag_path)
+        return True
+    return False
+
+
+def close_connection_after_use() -> None:
+    """便捷关闭连接（用于读写结束后立即释放）。"""
+    try:
+        close_connection()
+    except Exception:
+        pass
+
+
 def set_force_network_mode(enabled: bool = True) -> None:
     """
     强制使用网络模式（用于本地开发测试）
@@ -167,6 +226,9 @@ def get_connection(db_path: str, wal: bool = True) -> sqlite3.Connection:
         sqlite3.Connection 实例
     """
     global _CONN, _IS_NETWORK_PATH, _DB_PATH
+    
+    # 维护模式检测：若开启则禁止连接
+    ensure_not_in_maintenance(db_path=db_path)
     
     with _LOCK:
         # 【修复Bug】检查连接是否已关闭
@@ -420,6 +482,9 @@ def get_read_connection(db_path: str) -> sqlite3.Connection:
     """
     global _local_cache_manager
     
+    # 维护模式检测：若开启则禁止读取
+    ensure_not_in_maintenance(db_path=db_path)
+    
     # 检查是否为网络路径且启用了本地缓存
     if _local_cache_enabled and _is_network_path(db_path):
         try:
@@ -459,6 +524,8 @@ def get_write_connection(db_path: str) -> sqlite3.Connection:
     返回:
         sqlite3.Connection
     """
+    # 维护模式检测：若开启则禁止写入
+    ensure_not_in_maintenance(db_path=db_path)
     # 写入时使用网络盘数据库的直连
     return get_connection(db_path, wal=not _is_network_path(db_path))
 

@@ -16,7 +16,7 @@ import hashlib
 import pickle
 import shutil
 from datetime import datetime
-from typing import Dict, Set, Optional, Tuple, List
+from typing import Set, Optional, List
 import pandas as pd
 
 
@@ -457,7 +457,7 @@ class FileIdentityManager:
                 # 静默删除失效的缓存
                 try:
                     os.remove(cache_file)
-                except:
+                except Exception:
                     pass
                 return None
             

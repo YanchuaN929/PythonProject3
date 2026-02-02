@@ -269,7 +269,7 @@ class ProcessMonitor:
             tag_name = f"{msg_type}_{len(self.messages)}"
             self.text_display.tag_add(tag_name, line_start, line_end)
             self.text_display.tag_config(tag_name, foreground=color)
-        except:
+        except Exception:
             pass
         
         self.text_display.config(state='disabled')

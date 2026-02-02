@@ -1,5 +1,5 @@
 {
-  "folder_path": "",
+  "folder_path": "E:\\program\\接口筛选",
   "export_folder_path": "",
   "user_name": "",
   "auto_startup": true,
@@ -11,7 +11,7 @@
   "auto_hide_overdue_days": 30,
 
   "defaults": {
-    "folder_path": "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册",
+    "folder_path": "\\\\DESKTOP-816SBHM\\software-self\\接口文件",
     "export_path": "D:/jilu"
   },
 

@@ -132,7 +132,7 @@ def wait_for_main_exit(
         time.sleep(1)
 
     # 超时后，尝试用文件锁检测作为最后验证
-    log(f"进程检测超时，尝试文件锁检测...")
+    log("进程检测超时，尝试文件锁检测...")
     if not _is_file_locked(main_executable):
         log("文件锁检测通过，继续更新")
         return True
@@ -269,7 +269,7 @@ def sync_directory(source: str, target: str, skip_files: Optional[set] = None) -
                 os.makedirs(os.path.dirname(dst_file), exist_ok=True)
                 shutil.copy2(src_file, dst_file)
                 file_count += 1
-            except PermissionError as e:
+            except PermissionError:
                 # 文件被占用，记录下来
                 log(f"  文件被占用，跳过: {file_name}", "WARNING")
                 locked_files.append(rel_path)
@@ -306,7 +306,7 @@ def restart_main_program(
             cmd = [sys.executable, base_script]
             log(f"使用Python脚本启动: {base_script}")
         else:
-            log(f"找不到可启动的程序", "ERROR")
+            log("找不到可启动的程序", "ERROR")
             return
 
     if auto_mode and "--auto" not in cmd:

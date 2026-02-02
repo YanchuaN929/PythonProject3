@@ -6,11 +6,18 @@
 import json
 from datetime import datetime
 from typing import Dict, Any, Optional, List
-from .db import get_connection
+from .db import get_connection, close_connection_after_use
 from .models import Status, EventType
 from .util import make_task_id, make_business_id
 
-def find_task_by_business_id(db_path: str, wal: bool, file_type: int, project_id: str, interface_id: str) -> Optional[Dict[str, Any]]:
+def find_task_by_business_id(
+    db_path: str,
+    wal: bool,
+    file_type: int,
+    project_id: str,
+    interface_id: str,
+    conn=None
+) -> Optional[Dict[str, Any]]:
     """
     根据业务ID查找任务（用于状态继承）
     
@@ -26,44 +33,49 @@ def find_task_by_business_id(db_path: str, wal: bool, file_type: int, project_id
     返回:
         任务字典或None
     """
-    conn = get_connection(db_path, wal)
+    owns_conn = conn is None
+    conn = conn or get_connection(db_path, wal)
     business_id = make_business_id(file_type, project_id, interface_id)
     
-    cursor = conn.execute("""
-        SELECT id, source_file, row_index, interface_time, 
-               status, display_status, responsible_person,
-               assigned_by, assigned_at, confirmed_by, completed_at, completed_by, confirmed_at,
-               ignored, ignored_at, ignored_by, interface_time_when_ignored, ignored_reason
-        FROM tasks
-        WHERE business_id = ?
-          AND status != 'archived'
-        ORDER BY last_seen_at DESC
-        LIMIT 1
-    """, (business_id,))
-    
-    row = cursor.fetchone()
-    if row:
-        return {
-            'id': row[0],
-            'source_file': row[1],
-            'row_index': row[2],
-            'interface_time': row[3],
-            'status': row[4],
-            'display_status': row[5],
-            'responsible_person': row[6],
-            'assigned_by': row[7],
-            'assigned_at': row[8],
-            'confirmed_by': row[9],
-            'completed_at': row[10],
-            'completed_by': row[11],
-            'confirmed_at': row[12],
-            'ignored': row[13],
-            'ignored_at': row[14],
-            'ignored_by': row[15],
-            'interface_time_when_ignored': row[16],
-            'ignored_reason': row[17]
-        }
-    return None
+    try:
+        cursor = conn.execute("""
+            SELECT id, source_file, row_index, interface_time, 
+                   status, display_status, responsible_person,
+                   assigned_by, assigned_at, confirmed_by, completed_at, completed_by, confirmed_at,
+                   ignored, ignored_at, ignored_by, interface_time_when_ignored, ignored_reason
+            FROM tasks
+            WHERE business_id = ?
+              AND status != 'archived'
+            ORDER BY last_seen_at DESC
+            LIMIT 1
+        """, (business_id,))
+        
+        row = cursor.fetchone()
+        if row:
+            return {
+                'id': row[0],
+                'source_file': row[1],
+                'row_index': row[2],
+                'interface_time': row[3],
+                'status': row[4],
+                'display_status': row[5],
+                'responsible_person': row[6],
+                'assigned_by': row[7],
+                'assigned_at': row[8],
+                'confirmed_by': row[9],
+                'completed_at': row[10],
+                'completed_by': row[11],
+                'confirmed_at': row[12],
+                'ignored': row[13],
+                'ignored_at': row[14],
+                'ignored_by': row[15],
+                'interface_time_when_ignored': row[16],
+                'ignored_reason': row[17]
+            }
+        return None
+    finally:
+        if owns_conn:
+            close_connection_after_use()
 
 def should_reset_task_status(old_interface_time: str, new_interface_time: str, 
                              old_completed_val: str, new_completed_val: str) -> bool:
@@ -145,7 +157,14 @@ def should_reset_task_status(old_interface_time: str, new_interface_time: str,
     # 其他情况：不重置
     return False
 
-def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, Any], now: datetime) -> None:
+def upsert_task(
+    db_path: Optional[str] = None,
+    wal: bool = False,
+    key: Optional[Dict[str, Any]] = None,
+    fields: Optional[Dict[str, Any]] = None,
+    now: Optional[datetime] = None,
+    conn=None
+) -> None:
     """
     创建或更新任务
     
@@ -160,7 +179,15 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
         fields: 任务附加字段 {'department', 'interface_time', 'status'(可选)}
         now: 当前时间
     """
-    conn = get_connection(db_path, wal)
+    if key is None or fields is None:
+        raise ValueError("upsert_task 需要提供 key 和 fields")
+    if now is None:
+        now = datetime.now()
+    owns_conn = conn is None
+    if conn is None:
+        if not db_path:
+            raise ValueError("upsert_task 需要 db_path 或 conn")
+        conn = get_connection(db_path, wal)
     tid = make_task_id(
         key['file_type'], 
         key['project_id'], 
@@ -171,7 +198,14 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
     
     # 【新增】生成business_id并查询旧任务（状态继承逻辑）
     business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
-    old_task = find_task_by_business_id(db_path, wal, key['file_type'], key['project_id'], key['interface_id'])
+    old_task = find_task_by_business_id(
+        db_path or "",
+        wal,
+        key['file_type'],
+        key['project_id'],
+        key['interface_id'],
+        conn=conn
+    )
     
     # 【新增】在更新任务前，检查是否需要自动取消忽略
     if old_task and old_task.get('ignored') == 1:
@@ -452,8 +486,17 @@ def upsert_task(db_path: str, wal: bool, key: Dict[str, Any], fields: Dict[str, 
         if row:
             # 【修复】不截断接口号，避免误导（之前[:20]会截断长接口号）
             print(f"[Registry调试] 任务{key.get('interface_id', '?')}写入后的display_status={row[0]}")
+    if owns_conn:
+        close_connection_after_use()
 
-def write_event(db_path: str, wal: bool, event_type: str, payload: Dict[str, Any], now: datetime) -> None:
+def write_event(
+    db_path: Optional[str],
+    wal: bool,
+    event_type: str,
+    payload: Dict[str, Any],
+    now: datetime,
+    conn=None
+) -> None:
     """
     写入事件记录
     
@@ -464,7 +507,11 @@ def write_event(db_path: str, wal: bool, event_type: str, payload: Dict[str, Any
         payload: 事件数据 {'file_type', 'project_id', 'interface_id'(可选), 'source_file'(可选), 'row_index'(可选), 'extra'(可选)}
         now: 当前时间
     """
-    conn = get_connection(db_path, wal)
+    owns_conn = conn is None
+    if conn is None:
+        if not db_path:
+            raise ValueError("write_event 需要 db_path 或 conn")
+        conn = get_connection(db_path, wal)
     
     # 提取字段
     file_type = payload.get('file_type')
@@ -494,8 +541,10 @@ def write_event(db_path: str, wal: bool, event_type: str, payload: Dict[str, Any
         )
     )
     conn.commit()
+    if owns_conn:
+        close_connection_after_use()
 
-def mark_completed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime) -> None:
+def mark_completed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, conn=None) -> None:
     """
     标记任务为已完成
     
@@ -507,7 +556,8 @@ def mark_completed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime) 
         key: 任务关键字段
         now: 当前时间
     """
-    conn = get_connection(db_path, wal)
+    owns_conn = conn is None
+    conn = conn or get_connection(db_path, wal)
     
     # 【版本化修复】使用business_id查找最新的非归档任务
     business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
@@ -523,6 +573,8 @@ def mark_completed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime) 
     row = cursor.fetchone()
     if not row:
         print(f"[Registry] mark_completed警告: 找不到非归档任务 {key['interface_id']}")
+        if owns_conn:
+            close_connection_after_use()
         return
     
     tid = row[0]
@@ -532,8 +584,10 @@ def mark_completed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime) 
         (Status.COMPLETED, now.isoformat(), tid)
     )
     conn.commit()
+    if owns_conn:
+        close_connection_after_use()
 
-def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, confirmed_by: str = None) -> None:
+def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, confirmed_by: str = None, conn=None) -> None:
     """
     标记任务为已确认
     
@@ -546,7 +600,8 @@ def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, 
         now: 当前时间
         confirmed_by: 确认人姓名（可选）
     """
-    conn = get_connection(db_path, wal)
+    owns_conn = conn is None
+    conn = conn or get_connection(db_path, wal)
     
     # 【版本化修复】使用business_id查找最新的非归档任务，而不是使用计算的tid
     # 因为归档后旧记录的id已被修改，直接用tid可能找不到记录
@@ -564,6 +619,8 @@ def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, 
     row = cursor.fetchone()
     if not row:
         print(f"[Registry] mark_confirmed警告: 找不到非归档任务 {key['interface_id']}")
+        if owns_conn:
+            close_connection_after_use()
         return
     
     tid = row[0]
@@ -575,8 +632,10 @@ def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, 
         (Status.CONFIRMED, now.isoformat(), confirmed_by, '已审查', tid)
     )
     conn.commit()
+    if owns_conn:
+        close_connection_after_use()
 
-def mark_unconfirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime) -> None:
+def mark_unconfirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, conn=None) -> None:
     """
     取消确认任务（上级角色取消勾选）
     
@@ -586,7 +645,8 @@ def mark_unconfirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime
         key: 任务key (file_type, project_id, interface_id, source_file, row_index)
         now: 当前时间
     """
-    conn = get_connection(db_path, wal)
+    owns_conn = conn is None
+    conn = conn or get_connection(db_path, wal)
     
     # 【版本化修复】使用business_id查找最新的非归档任务
     business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
@@ -602,6 +662,8 @@ def mark_unconfirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime
     row = cursor.fetchone()
     if not row:
         print(f"[Registry] mark_unconfirmed警告: 找不到非归档任务 {key['interface_id']}")
+        if owns_conn:
+            close_connection_after_use()
         return
     
     tid = row[0]
@@ -613,6 +675,8 @@ def mark_unconfirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime
     )
     conn.commit()
     print(f"[Registry] 已取消确认任务: {key['interface_id']}")
+    if owns_conn:
+        close_connection_after_use()
 
 def mark_ignored_batch(
     db_path: str, 
@@ -620,7 +684,8 @@ def mark_ignored_batch(
     task_keys: List[Dict[str, Any]], 
     ignored_by: str,
     ignored_reason: str = "",
-    now: datetime = None
+    now: datetime = None,
+    conn=None
 ) -> Dict[str, Any]:
     """
     批量标记任务为"忽略"状态
@@ -647,7 +712,8 @@ def mark_ignored_batch(
     print(f"[标记忽略] 操作人: {ignored_by}")
     print(f"[标记忽略] 原因: {ignored_reason if ignored_reason else '(无)'}")
     
-    conn = get_connection(db_path, wal)
+    owns_conn = conn is None
+    conn = conn or get_connection(db_path, wal)
     success_count = 0
     failed_tasks = []
     
@@ -754,6 +820,8 @@ def mark_ignored_batch(
     
     conn.commit()
     print(f"\n[标记忽略] 完成! 成功{success_count}个，失败{len(failed_tasks)}个\n")
+    if owns_conn:
+        close_connection_after_use()
     
     return {
         'success_count': success_count,
@@ -890,10 +958,12 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
                 else:
                     result[tid] = display_text
         
+        close_connection_after_use()
         return result
         
     except Exception as e:
         print(f"[Registry] get_display_status内部错误: {e}")
+        close_connection_after_use()
         return {}
 
 def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int) -> None:
@@ -977,7 +1047,7 @@ def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int
                         'reason': 'missing_from_source',
                         'missing_since': missing_since
                     }
-                }, now)
+                }, now, conn=conn)
             
             conn.commit()
             print(f"[Registry归档] 归档{len(archive_tasks)}个超过{missing_keep_days}天未见的任务")
@@ -1012,15 +1082,17 @@ def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int
                         'reason': 'confirmed_expired',
                         'confirmed_at': confirmed_at
                     }
-                }, now)
+                }, now, conn=conn)
             
             conn.commit()
             print(f"[Registry归档] 归档{len(confirmed_archive_tasks)}个确认超过7天的任务")
         
+        close_connection_after_use()
     except Exception as e:
         print(f"[Registry] finalize_scan失败: {e}")
         import traceback
         traceback.print_exc()
+        close_connection_after_use()
 
 def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime) -> int:
     """
@@ -1065,7 +1137,14 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             
             # 【新增】生成business_id并查询旧任务（接口号继承逻辑）
             business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
-            old_task = find_task_by_business_id(db_path, wal, key['file_type'], key['project_id'], key['interface_id'])
+            old_task = find_task_by_business_id(
+                db_path,
+                wal,
+                key['file_type'],
+                key['project_id'],
+                key['interface_id'],
+                conn=conn
+            )
             
             # 【修正】row_index不匹配时的智能判断
             # 如果row_index差距较小（±100行以内），可能是Excel文件编辑导致的行号偏移，应该继承状态
@@ -1415,6 +1494,7 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             if reset_time_changed_samples:
                 suffix = f" (示例: {', '.join(reset_time_changed_samples)})"
             print(f"[Registry] 本轮批量：预期时间变化→重置状态 {reset_time_changed_count} 条{suffix}")
+        close_connection_after_use()
         return count
         
     except Exception as e:
@@ -1431,6 +1511,7 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
         except ImportError:
             pass
         
+        close_connection_after_use()
         raise
 
 
@@ -1489,4 +1570,68 @@ def query_task_history(db_path: str, wal: bool, project_id: str, interface_id: s
         import traceback
         traceback.print_exc()
         return []
+    finally:
+        close_connection_after_use()
+
+
+def find_tasks_for_force_assign(
+    db_path: str, wal: bool, file_type: int, project_id: str, interface_id: str
+) -> List[Dict[str, Any]]:
+    """
+    根据业务标识查找任务（用于强制指派）
+    
+    返回所有匹配的非归档任务记录（同一接口可能出现在多个源文件中）
+    
+    参数:
+        db_path: 数据库路径
+        wal: 是否使用WAL模式
+        file_type: 文件类型（1-6）
+        project_id: 项目号
+        interface_id: 接口号
+        
+    返回:
+        匹配的任务列表，每项包含:
+        - source_file: 源文件名
+        - row_index: 行号
+        - file_type: 文件类型
+        - project_id: 项目号
+        - interface_id: 接口号
+        - responsible_person: 当前责任人
+        - display_status: 当前显示状态
+    """
+    conn = get_connection(db_path, wal)
+    business_id = make_business_id(file_type, project_id, interface_id)
+    
+    try:
+        cursor = conn.execute("""
+            SELECT source_file, row_index, file_type, project_id, interface_id,
+                   responsible_person, display_status, status
+            FROM tasks
+            WHERE business_id = ?
+              AND status != 'archived'
+            ORDER BY last_seen_at DESC
+        """, (business_id,))
+        
+        rows = cursor.fetchall()
+        results = []
+        for row in rows:
+            results.append({
+                'source_file': row[0],
+                'row_index': row[1],
+                'file_type': row[2],
+                'project_id': row[3],
+                'interface_id': row[4],
+                'responsible_person': row[5],
+                'display_status': row[6],
+                'status': row[7],
+            })
+        return results
+        
+    except Exception as e:
+        print(f"[Registry] find_tasks_for_force_assign失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+    finally:
+        close_connection_after_use()
 

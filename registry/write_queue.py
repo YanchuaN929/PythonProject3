@@ -18,6 +18,7 @@ import uuid
 from typing import Callable, Optional, List
 from datetime import datetime
 from enum import Enum
+from .db import MaintenanceModeError
 
 
 class WriteOperation(Enum):
@@ -217,7 +218,15 @@ class WriteQueue:
         print(f"[WriteQueue] 处理批次: {len(batch)}个请求")
         
         try:
-            from registry.db import get_write_connection, invalidate_read_cache
+            from registry.db import (
+                get_write_connection,
+                invalidate_read_cache,
+                ensure_not_in_maintenance,
+                close_connection_after_use
+            )
+            
+            # 维护模式检测：直接中断批次
+            ensure_not_in_maintenance(db_path=self._db_path)
             
             conn = get_write_connection(self._db_path)
             
@@ -254,6 +263,7 @@ class WriteQueue:
                             print(f"[WriteQueue] 回调执行失败: {e}")
                 
                 print(f"[WriteQueue] 批次完成: {success_count}/{len(batch)}成功")
+                close_connection_after_use()
                 
             except Exception as e:
                 conn.rollback()
@@ -270,7 +280,19 @@ class WriteQueue:
                             request.callback(False, str(e))
                         except Exception:
                             pass
+                close_connection_after_use()
                 
+        except MaintenanceModeError as e:
+            error_msg = str(e)
+            print(f"[WriteQueue] 维护模式中断批次: {error_msg}")
+            for request in batch:
+                request.result = False
+                request.error = error_msg
+                if request.callback:
+                    try:
+                        request.callback(False, error_msg)
+                    except Exception:
+                        pass
         except Exception as e:
             print(f"[WriteQueue] 获取连接失败: {e}")
             for request in batch:
@@ -292,7 +314,14 @@ class WriteQueue:
             return
         
         try:
-            from registry.db import get_write_connection, invalidate_read_cache
+            from registry.db import (
+                get_write_connection,
+                invalidate_read_cache,
+                ensure_not_in_maintenance,
+                close_connection_after_use
+            )
+            
+            ensure_not_in_maintenance(db_path=self._db_path)
             
             conn = get_write_connection(self._db_path)
             self._execute_in_transaction(conn, request)
@@ -305,7 +334,14 @@ class WriteQueue:
             
             if request.callback:
                 request.callback(True, None)
+            close_connection_after_use()
                 
+        except MaintenanceModeError as e:
+            request.result = False
+            request.error = str(e)
+            self._stats['total_failed'] += 1
+            if request.callback:
+                request.callback(False, str(e))
         except Exception as e:
             request.result = False
             request.error = str(e)
@@ -313,6 +349,10 @@ class WriteQueue:
             
             if request.callback:
                 request.callback(False, str(e))
+            try:
+                close_connection_after_use()
+            except Exception:
+                pass
     
     def _execute_in_transaction(self, conn, request: WriteRequest):
         """在事务中执行单个写入操作"""

@@ -6,10 +6,8 @@ Excel数据处理模块
 """
 
 import pandas as pd
-import numpy as np
 import datetime
 import os
-from pathlib import Path
 import warnings
 import re
 from copy import copy
@@ -24,6 +22,140 @@ except ImportError:
     def adjust_date_for_project(cell_date, project_id):
         """兜底函数：无调整"""
         return cell_date
+
+
+def apply_assignment_memory(result_df, file_type):
+    """
+    应用指派记忆：为责任人为空的行填充历史指派记忆
+
+    参数:
+        result_df: 处理结果DataFrame，必须包含'责任人'、'项目号'列
+        file_type: 文件类型（1-6）
+
+    返回:
+        DataFrame: 应用记忆后的结果（原地修改）
+    """
+    if result_df is None or result_df.empty:
+        return result_df
+
+    if '责任人' not in result_df.columns or '项目号' not in result_df.columns:
+        return result_df
+
+    try:
+        from services.assignment_memory import get_memory
+
+        # 获取接口号列名（根据文件类型）
+        interface_col = '接口号' if '接口号' in result_df.columns else None
+
+        memory_applied_count = 0
+        for idx in result_df.index:
+            # 检查责任人是否为空
+            responsible = str(result_df.at[idx, '责任人']).strip()
+            if responsible and responsible.lower() not in ['', 'nan', 'none', '无']:
+                continue  # 已有责任人，跳过
+
+            # 获取项目号
+            project_id = str(result_df.at[idx, '项目号']).strip()
+            if not project_id or project_id.lower() in ['nan', 'none']:
+                continue
+
+            # 获取接口号
+            interface_id = ''
+            if interface_col and interface_col in result_df.columns:
+                interface_id = str(result_df.at[idx, interface_col]).strip()
+                # 去除角色后缀
+                interface_id = re.sub(r'\([^)]*\)$', '', interface_id).strip()
+
+            if not interface_id or interface_id.lower() in ['nan', 'none']:
+                continue
+
+            # 查询指派记忆
+            memory_name = get_memory(file_type, project_id, interface_id)
+            if memory_name:
+                result_df.at[idx, '责任人'] = memory_name
+                memory_applied_count += 1
+
+        if memory_applied_count > 0:
+            print(f"[AssignmentMemory] 文件{file_type}: 应用了 {memory_applied_count} 条指派记忆")
+
+    except Exception as e:
+        # 记忆功能失败不影响主流程
+        print(f"[AssignmentMemory] 应用指派记忆失败: {e}")
+
+    return result_df
+
+
+def _get_version_rank(version_value):
+    if version_value is None:
+        return 0
+    version_str = str(version_value).strip()
+    if not version_str or version_str.lower() in ("nan", "none"):
+        return 0
+    match = re.search(r"[A-Za-z]", version_str)
+    if not match:
+        return 0
+    letter = match.group(0).upper()
+    return ord(letter) - ord("A") + 1
+
+
+def _filter_rows_by_highest_version(df, file_type, rows, version_col_index):
+    if not rows:
+        return rows
+    if version_col_index is None:
+        return rows
+    if len(df.columns) <= version_col_index:
+        print(f"警告：文件列数不足，无法访问版次列(索引{version_col_index})，跳过版次筛选")
+        return rows
+
+    try:
+        from registry.util import extract_interface_id
+    except Exception:
+        extract_interface_id = None
+
+    best_rank = {}
+    best_rows = {}
+    keep_rows = set()
+
+    for idx in rows:
+        if idx < 0 or idx >= len(df):
+            continue
+        row_data = df.iloc[idx]
+        interface_id = ""
+        if extract_interface_id:
+            try:
+                interface_id = extract_interface_id(row_data, file_type) or ""
+            except Exception:
+                interface_id = ""
+        elif hasattr(row_data, "get"):
+            interface_id = str(row_data.get("接口号", "") or "").strip()
+
+        interface_id = str(interface_id).strip()
+        if not interface_id:
+            keep_rows.add(idx)
+            continue
+
+        version_value = df.iloc[idx, version_col_index]
+        rank = _get_version_rank(version_value)
+        current_rank = best_rank.get(interface_id)
+        if current_rank is None or rank > current_rank:
+            best_rank[interface_id] = rank
+            best_rows[interface_id] = [idx]
+        elif rank == current_rank:
+            best_rows[interface_id].append(idx)
+
+    for row_list in best_rows.values():
+        keep_rows.update(row_list)
+
+    removed = len(rows) - len(keep_rows)
+    if removed > 0:
+        print(f"[版本筛选] 文件{file_type}：剔除 {removed} 行低版本接口，仅保留最高版次")
+        try:
+            from core import Monitor
+            Monitor.log_info(f"[版本筛选] 文件{file_type}：剔除 {removed} 行低版本接口，仅保留最高版次")
+        except Exception:
+            pass
+
+    return keep_rows
 
 
 def process_excel_files(excel_files, current_datetime):
@@ -45,7 +177,7 @@ def process_excel_files(excel_files, current_datetime):
         from core import Monitor
         Monitor.log_info(f"开始处理 {len(excel_files)} 个Excel文件")
         Monitor.log_info(f"处理时间: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-    except:
+    except Exception:
         pass
     
     # 查找待处理文件1（特定格式的文件）
@@ -57,7 +189,7 @@ def process_excel_files(excel_files, current_datetime):
         try:
             from core import Monitor
             Monitor.log_error(error_msg)
-        except:
+        except Exception:
             pass
         return pd.DataFrame({'错误信息': ['未找到符合格式的文件']})
     
@@ -65,7 +197,7 @@ def process_excel_files(excel_files, current_datetime):
     try:
         from core import Monitor
         Monitor.log_success(f"找到待处理文件1: {os.path.basename(target_file)}")
-    except:
+    except Exception:
         pass
     
     try:
@@ -109,7 +241,7 @@ def find_all_target_files1(excel_files):
     try:
         from core import Monitor
         Monitor.log_process("开始批量识别待处理文件1...")
-    except:
+    except Exception:
         pass
     
     for file_path in excel_files:
@@ -122,7 +254,7 @@ def find_all_target_files1(excel_files):
             try:
                 from core import Monitor
                 Monitor.log_success(f"找到待处理文件1: 项目{project_id} - {file_name}")
-            except:
+            except Exception:
                 pass
     
     if matched_files:
@@ -131,13 +263,13 @@ def find_all_target_files1(excel_files):
             from core import Monitor
             project_ids = list(set([pid for _, pid in matched_files]))
             Monitor.log_success(f"批量识别完成: 找到{len(matched_files)}个待处理文件1，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
-        except:
+        except Exception:
             pass
     else:
         try:
             from core import Monitor
             Monitor.log_warning("未找到任何符合格式的待处理文件1")
-        except:
+        except Exception:
             pass
     
     return matched_files
@@ -168,7 +300,7 @@ def find_all_target_files2(excel_files):
     try:
         from core import Monitor
         Monitor.log_process("开始批量识别待处理文件2...")
-    except:
+    except Exception:
         pass
     
     for file_path in excel_files:
@@ -181,7 +313,7 @@ def find_all_target_files2(excel_files):
             try:
                 from core import Monitor
                 Monitor.log_success(f"找到待处理文件2: 项目{project_id} - {file_name}")
-            except:
+            except Exception:
                 pass
     
     if matched_files:
@@ -190,13 +322,13 @@ def find_all_target_files2(excel_files):
             from core import Monitor
             project_ids = list(set([pid for _, pid in matched_files]))
             Monitor.log_success(f"批量识别完成: 找到{len(matched_files)}个待处理文件2，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
-        except:
+        except Exception:
             pass
     else:
         try:
             from core import Monitor
             Monitor.log_warning("未找到任何符合格式的待处理文件2")
-        except:
+        except Exception:
             pass
     
     return matched_files
@@ -227,7 +359,7 @@ def find_all_target_files3(excel_files):
     try:
         from core import Monitor
         Monitor.log_process("开始批量识别待处理文件3...")
-    except:
+    except Exception:
         pass
     
     for file_path in excel_files:
@@ -240,7 +372,7 @@ def find_all_target_files3(excel_files):
             try:
                 from core import Monitor
                 Monitor.log_success(f"找到待处理文件3: 项目{project_id} - {file_name}")
-            except:
+            except Exception:
                 pass
     
     if matched_files:
@@ -249,13 +381,13 @@ def find_all_target_files3(excel_files):
             from core import Monitor
             project_ids = list(set([pid for _, pid in matched_files]))
             Monitor.log_success(f"批量识别完成: 找到{len(matched_files)}个待处理文件3，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
-        except:
+        except Exception:
             pass
     else:
         try:
             from core import Monitor
             Monitor.log_warning("未找到任何符合格式的待处理文件3")
-        except:
+        except Exception:
             pass
     
     return matched_files
@@ -286,7 +418,7 @@ def find_all_target_files4(excel_files):
     try:
         from core import Monitor
         Monitor.log_process("开始批量识别待处理文件4...")
-    except:
+    except Exception:
         pass
     
     for file_path in excel_files:
@@ -299,7 +431,7 @@ def find_all_target_files4(excel_files):
             try:
                 from core import Monitor
                 Monitor.log_success(f"找到待处理文件4: 项目{project_id} - {file_name}")
-            except:
+            except Exception:
                 pass
     
     if matched_files:
@@ -308,13 +440,13 @@ def find_all_target_files4(excel_files):
             from core import Monitor
             project_ids = list(set([pid for _, pid in matched_files]))
             Monitor.log_success(f"批量识别完成: 找到{len(matched_files)}个待处理文件4，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
-        except:
+        except Exception:
             pass
     else:
         try:
             from core import Monitor
             Monitor.log_warning("未找到任何符合格式的待处理文件4")
-        except:
+        except Exception:
             pass
     
     return matched_files
@@ -335,7 +467,7 @@ def process_target_file(file_path, current_datetime):
     try:
         from core import Monitor
         Monitor.log_process(f"开始处理待处理文件1: {os.path.basename(file_path)}")
-    except:
+    except Exception:
         pass
     
     # 读取Excel文件的第一个工作表（不强制Sheet1）
@@ -349,7 +481,7 @@ def process_target_file(file_path, current_datetime):
         try:
             from core import Monitor
             Monitor.log_error("文件为空，无法处理")
-        except:
+        except Exception:
             pass
             return pd.DataFrame()
         
@@ -357,7 +489,7 @@ def process_target_file(file_path, current_datetime):
     try:
         from core import Monitor
         Monitor.log_info(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
-    except:
+    except Exception:
         pass
     
     # 显示前几行的数据概览，确保数据正确加载
@@ -372,7 +504,7 @@ def process_target_file(file_path, current_datetime):
     filename = os.path.basename(file_path)
     match = re.search(r'(\d{4})', filename)
     project_id = match.group(1) if match else None
-    
+
     # 执行四个处理步骤
     process1_rows = execute_process1(df)  # H列25C1/25C2/25C3筛选
     process2_rows = execute_process2(df, current_datetime, project_id)  # K列日期筛选
@@ -385,14 +517,12 @@ def process_target_file(file_path, current_datetime):
     print(f"筛选统计 - P1:{len(process1_rows)}行 P2:{len(process2_rows)}行 P3:{len(process3_rows)}行 P4(排除):{len(process4_rows)}行 → 结果:{len(final_rows)}行")
     
     # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
-    print(f"\n========== [Registry] 开始查询待审查任务 ==========")
+    print("\n========== [Registry] 开始查询待审查任务 ==========")
     print(f"[Registry] 总行数: {len(df)}, 原始筛选结果: {len(final_rows)}行")
     
     try:
-        from registry import hooks as registry_hooks
-        from registry.util import extract_interface_id, extract_project_id, make_task_id, make_business_id
+        from registry.util import extract_interface_id
         from registry.db import get_connection
-        from registry.config import load_config
         
         # 【修复】直接查询数据库中有display_status的任务，按business_id匹配
         # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
@@ -423,7 +553,7 @@ def process_target_file(file_path, current_datetime):
             
             # 【调试】输出前3个数据库任务的详细信息
             if len(registry_tasks) > 0:
-                print(f"[Registry调试] 数据库任务示例（前3个）:")
+                print("[Registry调试] 数据库任务示例（前3个）:")
                 for i, task in enumerate(registry_tasks[:3]):
                     print(f"  {i+1}. 接口={task[0][:40]}, 项目={task[1]}, display_status={task[2]}")
             
@@ -446,7 +576,7 @@ def process_target_file(file_path, current_datetime):
                         if key not in excel_index:
                             excel_index[key] = []
                         excel_index[key].append(idx)
-                except:
+                except Exception:
                     continue
             
             print(f"[Registry] Excel索引建立完成（项目{file_project_id}），共{len(excel_index)}个唯一接口")
@@ -477,16 +607,16 @@ def process_target_file(file_path, current_datetime):
                 final_rows = final_rows | pending_rows
                 print(f"[Registry] ✓ 合并{len(pending_rows)}条待审查任务到结果")
             else:
-                print(f"[Registry] 未找到待审查任务")
+                print("[Registry] 未找到待审查任务")
         else:
-            print(f"[Registry] 数据库不存在或未配置，跳过待审查任务查询")
+            print("[Registry] 数据库不存在或未配置，跳过待审查任务查询")
         
     except Exception as e:
         print(f"[Registry] ❌ 查询待审查任务失败（不影响主流程）: {e}")
         import traceback
         traceback.print_exc()
     
-    print(f"========== [Registry] 查询完成 ==========\n")
+    print("========== [Registry] 查询完成 ==========\n")
     
     # 记录到监控器
     try:
@@ -499,7 +629,7 @@ def process_target_file(file_path, current_datetime):
             Monitor.log_success(f"最终完成处理数据: {len(final_rows)} 行")
         else:
             Monitor.log_warning("经过四步筛选后，无符合条件的数据")
-    except:
+    except Exception:
         pass
     
     if not final_rows:
@@ -569,6 +699,9 @@ def process_target_file(file_path, current_datetime):
     # 【新增】添加source_file列（用于回文单号输入时定位源文件）
     result_df['source_file'] = os.path.abspath(file_path)
 
+    # 【新增】应用指派记忆
+    result_df = apply_assignment_memory(result_df, file_type=1)
+
     return result_df
 
 
@@ -588,7 +721,7 @@ def execute_process1(df):
     try:
         from core import Monitor
         Monitor.log_process("开始执行处理1：筛选H列数据（25C1、25C2、25C3）")
-    except:
+    except Exception:
         pass
     
     # 检查H列是否存在（列索引7，因为从0开始）
@@ -598,7 +731,7 @@ def execute_process1(df):
         try:
             from core import Monitor
             Monitor.log_warning(warning_msg)
-        except:
+        except Exception:
             pass
         return result_rows
     
@@ -622,7 +755,7 @@ def execute_process1(df):
     try:
         from core import Monitor
         Monitor.log_success(f"处理1完成：共找到 {len(result_rows)} 行符合H列筛选条件")
-    except:
+    except Exception:
         pass
     return result_rows
 
@@ -650,7 +783,7 @@ def execute_process2(df, current_datetime, project_id=None):
     try:
         from core import Monitor
         Monitor.log_process("开始执行处理2：筛选K列日期数据")
-    except:
+    except Exception:
         pass
     
     # 检查K列是否存在（列索引10，因为从0开始）
@@ -660,7 +793,7 @@ def execute_process2(df, current_datetime, project_id=None):
         try:
             from core import Monitor
             Monitor.log_warning(warning_msg)
-        except:
+        except Exception:
             pass
         return result_rows
     
@@ -710,7 +843,7 @@ def execute_process2(df, current_datetime, project_id=None):
                     try:
                         cell_date = pd.to_datetime(cell_value, format=fmt, errors='raise')
                         break
-                    except:
+                    except Exception:
                         continue
                 
                 # 如果固定格式都失败，使用智能解析
@@ -737,7 +870,7 @@ def execute_process2(df, current_datetime, project_id=None):
     try:
         from core import Monitor
         Monitor.log_success(f"处理2完成：共找到 {len(result_rows)} 行符合K列日期筛选条件")
-    except:
+    except Exception:
         pass
     return result_rows
 
@@ -763,7 +896,7 @@ def execute_process3(df):
     try:
         from core import Monitor
         Monitor.log_process("开始执行处理3：筛选M列空值且A列非空数据")
-    except:
+    except Exception:
         pass
     
     # 检查A列和M列是否存在
@@ -773,7 +906,7 @@ def execute_process3(df):
         try:
             from core import Monitor
             Monitor.log_warning(warning_msg)
-        except:
+        except Exception:
             pass
         return result_rows
     
@@ -783,7 +916,7 @@ def execute_process3(df):
         try:
             from core import Monitor
             Monitor.log_warning(warning_msg)
-        except:
+        except Exception:
             pass
         return result_rows
     
@@ -815,7 +948,7 @@ def execute_process3(df):
     try:
         from core import Monitor
         Monitor.log_success(f"处理3完成：共找到 {len(result_rows)} 行符合M列空值且A列非空条件")
-    except:
+    except Exception:
         pass
     return result_rows
 
@@ -837,7 +970,7 @@ def execute_process4(df):
     try:
         from core import Monitor
         Monitor.log_process("开始执行处理4：筛选B列作废数据")
-    except:
+    except Exception:
         pass
     
     # 检查B列是否存在（列索引1，因为从0开始）
@@ -847,7 +980,7 @@ def execute_process4(df):
         try:
             from core import Monitor
             Monitor.log_warning(warning_msg)
-        except:
+        except Exception:
             pass
         return result_rows
     
@@ -870,7 +1003,7 @@ def execute_process4(df):
             Monitor.log_warning(f"处理4完成：共找到 {len(result_rows)} 行B列包含作废标记（需要排除）")
         else:
             Monitor.log_success("处理4完成：未发现作废数据")
-    except:
+    except Exception:
         pass
     return result_rows
 
@@ -891,7 +1024,6 @@ def export_result_to_excel(df, original_file_path, current_datetime, output_dir,
         str: 导出文件路径
     """
     from openpyxl import Workbook, load_workbook
-    from copy import copy
     
     try:
         # 根据项目号创建结果文件夹
@@ -1044,7 +1176,7 @@ def export_result_to_excel(df, original_file_path, current_datetime, output_dir,
         try:
             from core import Monitor
             Monitor.log_success(f"内部需打开接口导出完成！文件保存到: {output_path}")
-        except:
+        except Exception:
             pass
         
         return output_path
@@ -1067,7 +1199,7 @@ def process_target_file2(file_path, current_datetime, project_id=None):
     try:
         from core import Monitor
         Monitor.log_process(f"开始处理待处理文件2: {os.path.basename(file_path)}")
-    except:
+    except Exception:
         pass
 
     # 读取Excel文件的第一个工作表（不强制Sheet1）
@@ -1081,9 +1213,12 @@ def process_target_file2(file_path, current_datetime, project_id=None):
         try:
             from core import Monitor
             Monitor.log_error("文件为空，无法处理")
-        except:
+        except Exception:
             pass
         return pd.DataFrame()
+
+    # 版次筛选：先确定同接口号最高版本（文件2：E列）
+    version_allowed_rows = _filter_rows_by_highest_version(df, 2, set(range(1, len(df))), 4)
 
     # 处理1
     process1_rows = execute2_process1(df)
@@ -1106,11 +1241,10 @@ def process_target_file2(file_path, current_datetime, project_id=None):
     print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
     
     # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
-    print(f"\n========== [Registry] 开始查询待审查任务（文件类型2） ==========")
+    print("\n========== [Registry] 开始查询待审查任务（文件类型2） ==========")
     try:
-        from registry.util import extract_interface_id, extract_project_id
+        from registry.util import extract_interface_id
         from registry.db import get_connection
-        from registry.config import load_config
         
         # 【修复】直接查询数据库中有display_status的任务，按business_id匹配
         # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
@@ -1154,7 +1288,7 @@ def process_target_file2(file_path, current_datetime, project_id=None):
                         if key not in excel_index:
                             excel_index[key] = []
                         excel_index[key].append(idx)
-                except:
+                except Exception:
                     continue
             
             # 【方案A】按索引查找，必须通过科室筛选
@@ -1178,6 +1312,9 @@ def process_target_file2(file_path, current_datetime, project_id=None):
     except Exception as e:
         print(f"[Registry] 查询待确认任务失败（不影响主流程）: {e}")
     
+    # 版次筛选：同接口号只保留最高版本（文件2：E列）
+    final_rows = final_rows & version_allowed_rows
+
     print(f"最终完成处理数据（含待确认）: {len(final_rows)} 行")
 
     # 日志
@@ -1191,7 +1328,7 @@ def process_target_file2(file_path, current_datetime, project_id=None):
             Monitor.log_success(f"最终完成处理数据: {len(final_rows)} 行")
         else:
             Monitor.log_warning("经过筛选后，无符合条件的数据")
-    except:
+    except Exception:
         pass
 
     if not final_rows:
@@ -1253,6 +1390,10 @@ def process_target_file2(file_path, current_datetime, project_id=None):
         result_df["接口时间"] = time_values
     except Exception:
         result_df["接口时间"] = ""
+
+    # 【新增】应用指派记忆
+    result_df = apply_assignment_memory(result_df, file_type=2)
+
     return result_df
 
 def execute2_process1(df):
@@ -1301,7 +1442,7 @@ def execute2_process2(df, current_datetime, project_id=None):
                     try:
                         cell_date = pd.to_datetime(val, format=fmt, errors='raise')
                         break
-                    except:
+                    except Exception:
                         continue
                 if cell_date is None or pd.isna(cell_date):
                     cell_date = pd.to_datetime(val, errors='coerce')
@@ -1313,7 +1454,7 @@ def execute2_process2(df, current_datetime, project_id=None):
             cell_date = adjust_date_for_project(cell_date, project_id)
             if start_date <= cell_date <= end_date:
                 result_rows.add(idx)
-        except:
+        except Exception:
             continue
     return result_rows
 
@@ -1367,7 +1508,6 @@ def export_result_to_excel2(df, original_file_path, current_datetime, output_dir
         str: 导出文件路径
     """
     from openpyxl import Workbook, load_workbook
-    from copy import copy
     
     try:
         # 根据项目号创建结果文件夹
@@ -1519,7 +1659,7 @@ def export_result_to_excel2(df, original_file_path, current_datetime, output_dir
         try:
             from core import Monitor
             Monitor.log_success(f"内部需回复接口导出完成！文件保存到: {output_path}")
-        except:
+        except Exception:
             pass
         
         return output_path
@@ -1544,7 +1684,7 @@ def process_target_file3(file_path, current_datetime):
     try:
         from core import Monitor
         Monitor.log_process(f"开始处理待处理文件3: {os.path.basename(file_path)}")
-    except:
+    except Exception:
         pass
     
     # 读取Excel文件的第一个工作表（不强制Sheet1）
@@ -1558,7 +1698,7 @@ def process_target_file3(file_path, current_datetime):
         try:
             from core import Monitor
             Monitor.log_error("文件为空，无法处理")
-        except:
+        except Exception:
             pass
         return pd.DataFrame()
         
@@ -1566,13 +1706,16 @@ def process_target_file3(file_path, current_datetime):
     try:
         from core import Monitor
         Monitor.log_info(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
-    except:
+    except Exception:
         pass
     
     # 【新增】提取项目号（用于1818项目特殊日期逻辑）
     filename = os.path.basename(file_path)
     match = re.search(r'(\d{4})', filename)
     project_id = match.group(1) if match else None
+
+    # 版次筛选：先确定同接口号最高版本（文件3：AC列）
+    version_allowed_rows = _filter_rows_by_highest_version(df, 3, set(range(1, len(df))), 28)
     
     # 执行六个处理步骤
     process1_rows = execute3_process1(df)  # I列为"B"的数据
@@ -1591,11 +1734,10 @@ def process_target_file3(file_path, current_datetime):
     print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
     
     # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
-    print(f"\n========== [Registry] 开始查询待审查任务（文件类型3） ==========")
+    print("\n========== [Registry] 开始查询待审查任务（文件类型3） ==========")
     try:
-        from registry.util import extract_interface_id, extract_project_id
+        from registry.util import extract_interface_id
         from registry.db import get_connection
-        from registry.config import load_config
         
         # 【修复】直接查询数据库中有display_status的任务，按business_id匹配
         # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
@@ -1638,7 +1780,7 @@ def process_target_file3(file_path, current_datetime):
                         if key not in excel_index:
                             excel_index[key] = []
                         excel_index[key].append(idx)
-                except:
+                except Exception:
                     continue
             
             # 【方案A】按索引查找：
@@ -1666,6 +1808,9 @@ def process_target_file3(file_path, current_datetime):
         import traceback
         traceback.print_exc()
     
+    # 版次筛选：同接口号只保留最高版本（文件3：AC列）
+    final_rows = final_rows & version_allowed_rows
+
     print(f"最终完成处理数据（含待审查）: {len(final_rows)} 行")
     
     # 日志记录
@@ -1683,7 +1828,7 @@ def process_target_file3(file_path, current_datetime):
             Monitor.log_success(f"最终完成处理数据: {len(final_rows)} 行")
         else:
             Monitor.log_warning("经过筛选后，无符合条件的数据")
-    except:
+    except Exception:
         pass
     
     if not final_rows:
@@ -1786,6 +1931,10 @@ def process_target_file3(file_path, current_datetime):
         result_df['责任人'] = ""
     # 【新增】添加source_file列
     result_df['source_file'] = os.path.abspath(file_path)
+
+    # 【新增】应用指派记忆
+    result_df = apply_assignment_memory(result_df, file_type=3)
+
     return result_df
 
 
@@ -1803,7 +1952,7 @@ def execute3_process1(df):
     try:
         from core import Monitor
         Monitor.log_process("处理1：筛选I列为'B'的数据")
-    except:
+    except Exception:
         pass
     
     qualified_rows = set()
@@ -1813,7 +1962,7 @@ def execute3_process1(df):
         try:
             from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问I列")
-        except:
+        except Exception:
             pass
         return qualified_rows
     
@@ -1829,7 +1978,7 @@ def execute3_process1(df):
         try:
             from core import Monitor
             Monitor.log_info(f"处理1完成：找到 {len(qualified_rows)} 行符合条件")
-        except:
+        except Exception:
             pass
             
     except Exception as e:
@@ -1837,7 +1986,7 @@ def execute3_process1(df):
         try:
             from core import Monitor
             Monitor.log_error(f"处理1执行出错: {e}")
-        except:
+        except Exception:
             pass
     
     return qualified_rows
@@ -1857,7 +2006,7 @@ def execute3_process2(df):
     try:
         from core import Monitor
         Monitor.log_process("处理2：筛选AL列以'河北分公司-建筑结构所'开头的数据")
-    except:
+    except Exception:
         pass
     
     qualified_rows = set()
@@ -1867,7 +2016,7 @@ def execute3_process2(df):
         try:
             from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问AL列")
-        except:
+        except Exception:
             pass
         return qualified_rows
     
@@ -1884,7 +2033,7 @@ def execute3_process2(df):
         try:
             from core import Monitor
             Monitor.log_info(f"处理2完成：找到 {len(qualified_rows)} 行符合条件")
-        except:
+        except Exception:
             pass
             
     except Exception as e:
@@ -1892,7 +2041,7 @@ def execute3_process2(df):
         try:
             from core import Monitor
             Monitor.log_error(f"处理2执行出错: {e}")
-        except:
+        except Exception:
             pass
     
     return qualified_rows
@@ -1916,7 +2065,7 @@ def execute3_process3(df, current_datetime, project_id=None):
     try:
         from core import Monitor
         Monitor.log_process("处理3：筛选M列时间数据（4444年份视为无效，直接排除）")
-    except:
+    except Exception:
         pass
     
     qualified_rows = set()
@@ -1926,7 +2075,7 @@ def execute3_process3(df, current_datetime, project_id=None):
         try:
             from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问M列")
-        except:
+        except Exception:
             pass
         return qualified_rows
     
@@ -1996,7 +2145,7 @@ def execute3_process3(df, current_datetime, project_id=None):
         try:
             from core import Monitor
             Monitor.log_info(f"处理3完成：找到 {len(qualified_rows)} 行符合条件")
-        except:
+        except Exception:
             pass
             
     except Exception as e:
@@ -2004,7 +2153,7 @@ def execute3_process3(df, current_datetime, project_id=None):
         try:
             from core import Monitor
             Monitor.log_error(f"处理3执行出错: {e}")
-        except:
+        except Exception:
             pass
     
     return qualified_rows
@@ -2028,7 +2177,7 @@ def execute3_process4(df, current_datetime, project_id=None):
     try:
         from core import Monitor
         Monitor.log_process("处理4：筛选L列时间数据（4444年份视为无效，直接排除）")
-    except:
+    except Exception:
         pass
     
     qualified_rows = set()
@@ -2038,7 +2187,7 @@ def execute3_process4(df, current_datetime, project_id=None):
         try:
             from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问L列")
-        except:
+        except Exception:
             pass
         return qualified_rows
     
@@ -2107,7 +2256,7 @@ def execute3_process4(df, current_datetime, project_id=None):
         try:
             from core import Monitor
             Monitor.log_info(f"处理4完成：找到 {len(qualified_rows)} 行符合条件")
-        except:
+        except Exception:
             pass
             
     except Exception as e:
@@ -2115,7 +2264,7 @@ def execute3_process4(df, current_datetime, project_id=None):
         try:
             from core import Monitor
             Monitor.log_error(f"处理4执行出错: {e}")
-        except:
+        except Exception:
             pass
     
     return qualified_rows
@@ -2135,7 +2284,7 @@ def execute3_process5(df):
     try:
         from core import Monitor
         Monitor.log_process("处理5：筛选Q列为空值的数据")
-    except:
+    except Exception:
         pass
     
     qualified_rows = set()
@@ -2145,7 +2294,7 @@ def execute3_process5(df):
         try:
             from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问Q列")
-        except:
+        except Exception:
             pass
         return qualified_rows
     
@@ -2161,7 +2310,7 @@ def execute3_process5(df):
         try:
             from core import Monitor
             Monitor.log_info(f"处理5完成：找到 {len(qualified_rows)} 行符合条件")
-        except:
+        except Exception:
             pass
             
     except Exception as e:
@@ -2169,7 +2318,7 @@ def execute3_process5(df):
         try:
             from core import Monitor
             Monitor.log_error(f"处理5执行出错: {e}")
-        except:
+        except Exception:
             pass
     
     return qualified_rows
@@ -2189,7 +2338,7 @@ def execute3_process6(df):
     try:
         from core import Monitor
         Monitor.log_process("处理6：筛选T列为空值的数据")
-    except:
+    except Exception:
         pass
     
     qualified_rows = set()
@@ -2199,7 +2348,7 @@ def execute3_process6(df):
         try:
             from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问T列")
-        except:
+        except Exception:
             pass
         return qualified_rows
     
@@ -2215,7 +2364,7 @@ def execute3_process6(df):
         try:
             from core import Monitor
             Monitor.log_info(f"处理6完成：找到 {len(qualified_rows)} 行符合条件")
-        except:
+        except Exception:
             pass
             
     except Exception as e:
@@ -2223,7 +2372,7 @@ def execute3_process6(df):
         try:
             from core import Monitor
             Monitor.log_error(f"处理6执行出错: {e}")
-        except:
+        except Exception:
             pass
     
     return qualified_rows
@@ -2245,7 +2394,6 @@ def export_result_to_excel3(df, original_file_path, current_datetime, output_dir
         str: 导出文件路径
     """
     from openpyxl import Workbook, load_workbook
-    from copy import copy
     
     try:
         # 根据项目号创建结果文件夹
@@ -2397,7 +2545,7 @@ def export_result_to_excel3(df, original_file_path, current_datetime, output_dir
         try:
             from core import Monitor
             Monitor.log_success(f"外部需打开接口导出完成！文件保存到: {output_path}")
-        except:
+        except Exception:
             pass
         
         return output_path
@@ -2407,7 +2555,7 @@ def export_result_to_excel3(df, original_file_path, current_datetime, output_dir
         try:
             from core import Monitor
             Monitor.log_error(f"导出外部需打开接口数据时发生错误: {str(e)}")
-        except:
+        except Exception:
             pass
         raise
 
@@ -2428,7 +2576,7 @@ def process_target_file4(file_path, current_datetime):
     try:
         from core import Monitor
         Monitor.log_process(f"开始处理待处理文件4: {os.path.basename(file_path)}")
-    except:
+    except Exception:
         pass
     
     # 读取Excel文件的Sheet1
@@ -2442,7 +2590,7 @@ def process_target_file4(file_path, current_datetime):
         try:
             from core import Monitor
             Monitor.log_error("文件为空，无法处理")
-        except:
+        except Exception:
             pass
         return pd.DataFrame()
         
@@ -2450,17 +2598,20 @@ def process_target_file4(file_path, current_datetime):
     try:
         from core import Monitor
         Monitor.log_info(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
-    except:
+    except Exception:
         pass
     
     # 【新增】提取项目号（用于1818项目特殊日期逻辑）
     filename = os.path.basename(file_path)
     match = re.search(r'(\d{4})', filename)
     project_id = match.group(1) if match else None
+
+    # 版次筛选：先确定同接口号最高版本（文件4：I列）
+    version_allowed_rows = _filter_rows_by_highest_version(df, 4, set(range(1, len(df))), 8)
     
     # 执行四个处理步骤
     process1_rows = execute4_process1(df)  # AF列以"河北分公司-建筑结构所"开头的数据
-    process2_rows = execute4_process2(df)  # P列为"B"的数据
+    process2_rows = execute4_process2(df)  # P列为"B"或P列为空且AC列为"B"的数据
     process3_rows = execute4_process3(df, current_datetime, project_id)  # S列时间数据筛选
     process4_rows = execute4_process4(df)  # V列为空值的数据
     
@@ -2522,7 +2673,7 @@ def process_target_file4(file_path, current_datetime):
                         if df_interface_id not in excel_index_by_iface:
                             excel_index_by_iface[df_interface_id] = []
                         excel_index_by_iface[df_interface_id].append(idx)
-                except:
+                except Exception:
                     continue
             
             # 【待审查加回】上级审查优先：不受时间窗口影响
@@ -2554,20 +2705,23 @@ def process_target_file4(file_path, current_datetime):
     except Exception as e:
         print(f"[Registry] 查询待审查任务失败: {e}")
     
+    # 版次筛选：同接口号只保留最高版本（文件4：I列）
+    final_rows = final_rows & version_allowed_rows
+
     print(f"最终完成处理数据（含待确认）: {len(final_rows)} 行")
     
     # 日志记录
     try:
         from core import Monitor
         Monitor.log_info(f"处理1(AF列河北分公司-建筑结构所开头): {len(process1_rows)} 行")
-        Monitor.log_info(f"处理2(P列为B): {len(process2_rows)} 行")
+        Monitor.log_info(f"处理2(P列为B或P列为空且AC列为B): {len(process2_rows)} 行")
         Monitor.log_info(f"处理3(S列时间筛选): {len(process3_rows)} 行")
         Monitor.log_info(f"处理4(V列为空): {len(process4_rows)} 行")
         if len(final_rows) > 0:
             Monitor.log_success(f"最终完成处理数据: {len(final_rows)} 行")
         else:
             Monitor.log_warning("经过筛选后，无符合条件的数据")
-    except:
+    except Exception:
         pass
     
     if not final_rows:
@@ -2629,6 +2783,10 @@ def process_target_file4(file_path, current_datetime):
         result_df['责任人'] = ""
     # 【新增】添加source_file列
     result_df['source_file'] = os.path.abspath(file_path)
+
+    # 【新增】应用指派记忆
+    result_df = apply_assignment_memory(result_df, file_type=4)
+
     return result_df
 
 
@@ -2646,7 +2804,7 @@ def execute4_process1(df):
     try:
         from core import Monitor
         Monitor.log_process("处理1：筛选AF列以'河北分公司-建筑结构所'开头的数据")
-    except:
+    except Exception:
         pass
     
     qualified_rows = set()
@@ -2656,7 +2814,7 @@ def execute4_process1(df):
         try:
             from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问AF列")
-        except:
+        except Exception:
             pass
         return qualified_rows
     
@@ -2673,7 +2831,7 @@ def execute4_process1(df):
         try:
             from core import Monitor
             Monitor.log_info(f"处理1完成：找到 {len(qualified_rows)} 行符合条件")
-        except:
+        except Exception:
             pass
             
     except Exception as e:
@@ -2681,7 +2839,7 @@ def execute4_process1(df):
         try:
             from core import Monitor
             Monitor.log_error(f"处理1执行出错: {e}")
-        except:
+        except Exception:
             pass
     
     return qualified_rows
@@ -2689,7 +2847,7 @@ def execute4_process1(df):
 
 def execute4_process2(df):
     """
-    处理2：读取待处理文件4中的P列的数据，筛选这一列中为"B"的数据
+    处理2：读取待处理文件4中的P列或AC列的数据，筛选其中为"B"的数据
     
     参数:
         df (pandas.DataFrame): 输入数据
@@ -2697,37 +2855,46 @@ def execute4_process2(df):
     返回:
         set: 符合条件的行索引集合
     """
-    print("执行处理2：筛选P列为'B'的数据")
+    print("执行处理2：筛选P列为'B'或P列为空且AC列为'B'的数据")
     try:
         from core import Monitor
-        Monitor.log_process("处理2：筛选P列为'B'的数据")
-    except:
+        Monitor.log_process("处理2：筛选P列为'B'或P列为空且AC列为'B'的数据")
+    except Exception:
         pass
     
     qualified_rows = set()
     
-    if len(df.columns) <= 15:  # P列索引为15
-        print("警告：文件列数不足，无法访问P列")
+    has_p = len(df.columns) > 15   # P列索引为15
+    has_ac = len(df.columns) > 28  # AC列索引为28
+    if not has_p and not has_ac:
+        print("警告：文件列数不足，无法访问P列/AC列")
         try:
             from core import Monitor
-            Monitor.log_warning("文件列数不足，无法访问P列")
-        except:
+            Monitor.log_warning("文件列数不足，无法访问P列/AC列")
+        except Exception:
             pass
         return qualified_rows
     
     try:
-        # P列索引为15（从0开始）
-        p_column = df.iloc[:, 15]
+        p_column = df.iloc[:, 15] if has_p else None
+        ac_column = df.iloc[:, 28] if has_ac else None
         
-        for index, value in enumerate(p_column):
-            if pd.notna(value) and str(value).strip() == "B":
+        for index in range(len(df)):
+            p_value = p_column.iloc[index] if p_column is not None else None
+            p_is_b = pd.notna(p_value) and str(p_value).strip() == "B"
+            p_is_empty = p_column is None or pd.isna(p_value) or str(p_value).strip() == ""
+
+            ac_value = ac_column.iloc[index] if ac_column is not None else None
+            ac_is_b = pd.notna(ac_value) and str(ac_value).strip() == "B"
+
+            if p_is_b or (p_is_empty and ac_is_b):
                 qualified_rows.add(index)
         
         print(f"处理2完成：找到 {len(qualified_rows)} 行符合条件")
         try:
             from core import Monitor
             Monitor.log_info(f"处理2完成：找到 {len(qualified_rows)} 行符合条件")
-        except:
+        except Exception:
             pass
             
     except Exception as e:
@@ -2735,7 +2902,7 @@ def execute4_process2(df):
         try:
             from core import Monitor
             Monitor.log_error(f"处理2执行出错: {e}")
-        except:
+        except Exception:
             pass
     
     return qualified_rows
@@ -2759,7 +2926,7 @@ def execute4_process3(df, current_datetime, project_id=None):
     try:
         from core import Monitor
         Monitor.log_process("处理3：筛选S列时间数据")
-    except:
+    except Exception:
         pass
     
     qualified_rows = set()
@@ -2769,7 +2936,7 @@ def execute4_process3(df, current_datetime, project_id=None):
         try:
             from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问S列")
-        except:
+        except Exception:
             pass
         return qualified_rows
     
@@ -2835,7 +3002,7 @@ def execute4_process3(df, current_datetime, project_id=None):
         try:
             from core import Monitor
             Monitor.log_info(f"处理3完成：找到 {len(qualified_rows)} 行符合条件")
-        except:
+        except Exception:
             pass
             
     except Exception as e:
@@ -2843,7 +3010,7 @@ def execute4_process3(df, current_datetime, project_id=None):
         try:
             from core import Monitor
             Monitor.log_error(f"处理3执行出错: {e}")
-        except:
+        except Exception:
             pass
     
     return qualified_rows
@@ -2863,7 +3030,7 @@ def execute4_process4(df):
     try:
         from core import Monitor
         Monitor.log_process("处理4：筛选V列为空值的数据")
-    except:
+    except Exception:
         pass
     
     qualified_rows = set()
@@ -2873,7 +3040,7 @@ def execute4_process4(df):
         try:
             from core import Monitor
             Monitor.log_warning("文件列数不足，无法访问V列")
-        except:
+        except Exception:
             pass
         return qualified_rows
     
@@ -2889,7 +3056,7 @@ def execute4_process4(df):
         try:
             from core import Monitor
             Monitor.log_info(f"处理4完成：找到 {len(qualified_rows)} 行符合条件")
-        except:
+        except Exception:
             pass
             
     except Exception as e:
@@ -2897,7 +3064,7 @@ def execute4_process4(df):
         try:
             from core import Monitor
             Monitor.log_error(f"处理4执行出错: {e}")
-        except:
+        except Exception:
             pass
     
     return qualified_rows
@@ -2919,7 +3086,6 @@ def export_result_to_excel4(df, original_file_path, current_datetime, output_dir
         str: 导出文件路径
     """
     from openpyxl import Workbook, load_workbook
-    from copy import copy
     
     try:
         # 根据项目号创建结果文件夹
@@ -3070,7 +3236,7 @@ def export_result_to_excel4(df, original_file_path, current_datetime, output_dir
         try:
             from core import Monitor
             Monitor.log_success(f"外部需回复接口导出完成！文件保存到: {output_path}")
-        except:
+        except Exception:
             pass
         
         return output_path
@@ -3080,7 +3246,7 @@ def export_result_to_excel4(df, original_file_path, current_datetime, output_dir
         try:
             from core import Monitor
             Monitor.log_error(f"导出外部需回复接口数据时发生错误: {str(e)}")
-        except:
+        except Exception:
             pass
         raise
 
@@ -3111,7 +3277,7 @@ def find_all_target_files5(excel_files):
     try:
         from core import Monitor
         Monitor.log_process("开始批量识别待处理文件5(三维提资接口)...")
-    except:
+    except Exception:
         pass
     for file_path in excel_files:
         file_name = os.path.basename(file_path)
@@ -3122,7 +3288,7 @@ def find_all_target_files5(excel_files):
             try:
                 from core import Monitor
                 Monitor.log_success(f"找到待处理文件5: 项目{project_id} - {file_name}")
-            except:
+            except Exception:
                 pass
     return matched_files
 
@@ -3139,7 +3305,7 @@ def process_target_file5(file_path, current_datetime):
     try:
         from core import Monitor
         Monitor.log_process(f"开始处理待处理文件5: {os.path.basename(file_path)}")
-    except:
+    except Exception:
         pass
 
     # 读取Excel文件的Sheet1
@@ -3152,7 +3318,7 @@ def process_target_file5(file_path, current_datetime):
         try:
             from core import Monitor
             Monitor.log_warning("文件5为空，无法处理")
-        except:
+        except Exception:
             pass
         return pd.DataFrame()
 
@@ -3171,7 +3337,7 @@ def process_target_file5(file_path, current_datetime):
     
     # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
     try:
-        from registry.util import extract_interface_id, extract_project_id
+        from registry.util import extract_interface_id
         from registry.db import get_connection
         from registry.hooks import _cfg
         
@@ -3210,7 +3376,7 @@ def process_target_file5(file_path, current_datetime):
                         if key not in excel_index:
                             excel_index[key] = []
                         excel_index[key].append(idx)
-                except:
+                except Exception:
                     continue
             
             # 【方案A】必须通过科室筛选(p1)
@@ -3241,7 +3407,7 @@ def process_target_file5(file_path, current_datetime):
         Monitor.log_info(f"文件5处理2(L列日期): {len(p2)} 行")
         Monitor.log_info(f"文件5处理3(N列为空): {len(p3)} 行")
         Monitor.log_success(f"文件5最终完成处理数据: {len(final_rows)} 行")
-    except:
+    except Exception:
         pass
 
     if not final_rows:
@@ -3303,6 +3469,9 @@ def process_target_file5(file_path, current_datetime):
     # 【新增】添加source_file列
     result_df['source_file'] = os.path.abspath(file_path)
 
+    # 【新增】应用指派记忆
+    result_df = apply_assignment_memory(result_df, file_type=5)
+
     return result_df
 
 
@@ -3353,7 +3522,7 @@ def execute5_process2(df, current_datetime, project_id=None):
                     try:
                         cell_date = pd.to_datetime(val, format=fmt, errors='raise')
                         break
-                    except:
+                    except Exception:
                         continue
                 if cell_date is None or pd.isna(cell_date):
                     cell_date = pd.to_datetime(val, errors='coerce')
@@ -3365,7 +3534,7 @@ def execute5_process2(df, current_datetime, project_id=None):
             cell_date = adjust_date_for_project(cell_date, project_id)
             if start_date <= cell_date <= end_date:
                 result_rows.add(idx)
-        except:
+        except Exception:
             continue
     return result_rows
 
@@ -3390,7 +3559,6 @@ def export_result_to_excel5(df, original_file_path, current_datetime, output_dir
     结构与其他导出函数一致；当源为.xls时仅复制值，不复制样式
     """
     from openpyxl import Workbook, load_workbook
-    from copy import copy
     try:
         # 根据项目号创建结果文件夹
         if project_id:
@@ -3653,6 +3821,9 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
     match = re.search(r'(\d{4})', filename)
     project_id = match.group(1) if match else None
 
+    # 版次筛选：先确定同接口号最高版本（文件6：AC列）
+    version_allowed_rows = _filter_rows_by_highest_version(df, 6, set(range(1, len(df))), 28)
+
     p1 = execute6_process1(df)
     p_i_not_empty = execute6_process_i_not_empty(df)  # 【新增】I列非空检查
     p4 = execute6_process4(df)
@@ -3670,7 +3841,7 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
     
     # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
     try:
-        from registry.util import extract_interface_id, extract_project_id
+        from registry.util import extract_interface_id
         from registry.db import get_connection
         from registry.hooks import _cfg
         
@@ -3709,7 +3880,7 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
                         if key not in excel_index:
                             excel_index[key] = []
                         excel_index[key].append(idx)
-                except:
+                except Exception:
                     continue
             
             # 【方案A】必须通过科室筛选(p1)
@@ -3731,6 +3902,9 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
     except Exception as e:
         print(f"[Registry] 查询待审查任务失败: {e}")
     
+    # 版次筛选：同接口号只保留最高版本（文件6：AC列）
+    final_rows = final_rows & version_allowed_rows
+
     print(f"最终完成处理数据（含待确认）: {len(final_rows)} 行")
     
     # 日志记录
@@ -3819,6 +3993,9 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
     
     # 【新增】添加source_file列
     result_df['source_file'] = os.path.abspath(file_path)
+
+    # 【新增】应用指派记忆
+    result_df = apply_assignment_memory(result_df, file_type=6)
 
     return result_df
 
@@ -3923,7 +4100,6 @@ def export_result_to_excel6(df, original_file_path, current_datetime, output_dir
     注：待处理文件6项目号空值 → 不新建项目号结果文件夹
     """
     from openpyxl import Workbook, load_workbook
-    from copy import copy
     try:
         # 根据项目号决定输出目录（项目号为空则直接用输出目录）
         if project_id:

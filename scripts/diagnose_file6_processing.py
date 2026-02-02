@@ -72,7 +72,7 @@ def diagnose():
             result_df = main.process_target_file6(file_path, current_datetime, skip_date_filter=True)
             
             if result_df is None or result_df.empty:
-                print(f"  结果: 无数据")
+                print("  结果: 无数据")
                 continue
             
             print(f"  结果行数: {len(result_df)}")
@@ -85,22 +85,22 @@ def diagnose():
                     print(f"    - {sf}")
                     # 检查是否是绝对路径
                     if os.path.isabs(sf):
-                        print(f"      ✓ 是绝对路径")
+                        print("      ✓ 是绝对路径")
                     else:
-                        print(f"      ✗ 不是绝对路径")
+                        print("      ✗ 不是绝对路径")
             else:
-                print(f"  ✗ 没有source_file列")
+                print("  ✗ 没有source_file列")
             
             # 检查项目号列（如果添加了）
             if '项目号' in result_df.columns:
                 unique_project_ids = result_df['项目号'].unique()
                 print(f"  项目号列: {unique_project_ids}")
             else:
-                print(f"  注意: 没有项目号列（会在start_processing中添加）")
+                print("  注意: 没有项目号列（会在start_processing中添加）")
             
             # 显示前几行的接口号
             if len(result_df) > 0:
-                print(f"  前3个接口号:")
+                print("  前3个接口号:")
                 for i, row in result_df.head(3).iterrows():
                     interface_id = row.iloc[4] if len(row) > 4 else "N/A"  # E列
                     print(f"    {i}: {interface_id}")

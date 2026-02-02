@@ -13,7 +13,7 @@ import os
 import sys
 
 from write_tasks import get_write_task_manager, get_pending_cache
-from ui.ui_copy import copy_text, format_tsv, normalize_interface_id
+from ui.ui_copy import copy_text, normalize_interface_id
 
 # 导入文件锁定检测函数
 try:
@@ -393,7 +393,7 @@ def save_assignments_batch(assignments):
             
             # 2. 文件锁定检测
             try:
-                with open(file_path, 'r+b') as f:
+                with open(file_path, 'r+b'):
                     pass
             except PermissionError:
                 # 尝试获取占用者信息
@@ -516,7 +516,23 @@ def save_assignments_batch(assignments):
                     'interface_id': assignment.get('interface_id', '未知'),
                     'reason': str(e)
                 })
-    
+
+    # 【新增】保存指派记忆（只记录成功的指派）
+    if success_count > 0:
+        try:
+            from services.assignment_memory import batch_save_memories
+            # 过滤出成功的指派（不在failed_tasks中的）
+            failed_interface_ids = {t.get('interface_id') for t in failed_tasks}
+            successful_assignments = [
+                a for a in assignments
+                if a.get('interface_id') not in failed_interface_ids
+            ]
+            memory_count = batch_save_memories(successful_assignments)
+            if memory_count > 0:
+                print(f"[AssignmentMemory] 已保存 {memory_count} 条指派记忆")
+        except Exception as mem_error:
+            print(f"[AssignmentMemory] 保存指派记忆失败: {mem_error}")
+
     return {
         'success_count': success_count,
         'failed_tasks': failed_tasks,
@@ -573,13 +589,25 @@ class AssignmentDialog(tk.Toplevel):
         self.transient(self.master)
         self.grab_set()
         
+        # 标题区域（包含标题和重新指派按钮）
+        title_frame = ttk.Frame(self)
+        title_frame.pack(fill='x', pady=10)
+        
         # 标题
         title_label = ttk.Label(
-            self,
+            title_frame,
             text=f"任务指派（共{len(self.unassigned_tasks)}个未指派任务）",
             font=('Arial', 14, 'bold')
         )
-        title_label.pack(pady=10)
+        title_label.pack(side='left', padx=20)
+        
+        # 重新指派按钮（强制指派功能）
+        force_assign_btn = ttk.Button(
+            title_frame,
+            text="重新指派",
+            command=self._show_force_assign_dialog
+        )
+        force_assign_btn.pack(side='right', padx=20)
         
         # 创建滚动区域
         canvas_frame = ttk.Frame(self)
@@ -868,6 +896,315 @@ class AssignmentDialog(tk.Toplevel):
             messagebox.showerror("错误", f"指派任务提交失败：\n{str(e)}", parent=self)
             import traceback
             traceback.print_exc()
+
+    def _show_force_assign_dialog(self):
+        """打开强制指派弹窗"""
+        dialog = ForceAssignDialog(
+            self,
+            self.name_list,
+            self.user_name,
+            self.user_roles
+        )
+        dialog.wait_window()
+
+
+class ForceAssignDialog(tk.Toplevel):
+    """强制指派弹窗 - 手动输入业务标识进行指派"""
+
+    # 文件类型映射
+    FILE_TYPE_NAMES = {
+        1: "内部需打开",
+        2: "内部需回复",
+        3: "外部需打开",
+        4: "外部需回复",
+        5: "三维提资",
+        6: "收发文函"
+    }
+
+    def __init__(self, parent, name_list, user_name, user_roles):
+        """
+        初始化强制指派对话框
+
+        参数:
+            parent: 父窗口
+            name_list: 姓名列表
+            user_name: 当前用户姓名
+            user_roles: 当前用户角色列表
+        """
+        super().__init__(parent)
+
+        self.name_list = name_list
+        self.user_name = user_name
+        self.user_roles = user_roles
+
+        self.setup_ui()
+
+    def setup_ui(self):
+        """设置界面"""
+        self.title("重新指派")
+        self.geometry("450x350")
+
+        # 居中显示
+        self.transient(self.master)
+        self.grab_set()
+
+        # 标题
+        title_label = ttk.Label(
+            self,
+            text="手动指定任务进行重新指派",
+            font=('Arial', 12, 'bold')
+        )
+        title_label.pack(pady=15)
+
+        # 表单区域
+        form_frame = ttk.Frame(self)
+        form_frame.pack(fill='x', padx=30, pady=10)
+
+        # 文件类型
+        ttk.Label(form_frame, text="文件类型：").grid(row=0, column=0, sticky='e', pady=8)
+        self.file_type_var = tk.StringVar()
+        file_type_combo = ttk.Combobox(
+            form_frame,
+            textvariable=self.file_type_var,
+            values=[f"{k} - {v}" for k, v in self.FILE_TYPE_NAMES.items()],
+            width=25,
+            state='readonly'
+        )
+        file_type_combo.grid(row=0, column=1, sticky='w', pady=8, padx=5)
+        file_type_combo.current(0)  # 默认选中第一项
+
+        # 项目号
+        ttk.Label(form_frame, text="项目号：").grid(row=1, column=0, sticky='e', pady=8)
+        self.project_id_var = tk.StringVar()
+        project_entry = ttk.Entry(form_frame, textvariable=self.project_id_var, width=28)
+        project_entry.grid(row=1, column=1, sticky='w', pady=8, padx=5)
+
+        # 接口号
+        ttk.Label(form_frame, text="接口号：").grid(row=2, column=0, sticky='e', pady=8)
+        self.interface_id_var = tk.StringVar()
+        interface_entry = ttk.Entry(form_frame, textvariable=self.interface_id_var, width=28)
+        interface_entry.grid(row=2, column=1, sticky='w', pady=8, padx=5)
+
+        # 指派对象
+        ttk.Label(form_frame, text="指派给：").grid(row=3, column=0, sticky='e', pady=8)
+        self.assigned_name_var = tk.StringVar()
+        assigned_combo = ttk.Combobox(
+            form_frame,
+            textvariable=self.assigned_name_var,
+            values=self.name_list,
+            width=25
+        )
+        assigned_combo.grid(row=3, column=1, sticky='w', pady=8, padx=5)
+        # 绑定实时搜索
+        assigned_combo.bind('<KeyRelease>', lambda e: self._on_name_search(e, assigned_combo))
+
+        # 提示信息
+        hint_label = ttk.Label(
+            self,
+            text="提示：将根据输入的业务标识查找任务并覆盖指派人",
+            foreground='gray'
+        )
+        hint_label.pack(pady=10)
+
+        # 按钮区域
+        button_frame = ttk.Frame(self)
+        button_frame.pack(pady=20)
+
+        ttk.Button(button_frame, text="确认指派", command=self._on_confirm).pack(side='left', padx=10)
+        ttk.Button(button_frame, text="取消", command=self.destroy).pack(side='left', padx=10)
+
+    def _on_name_search(self, event, combobox):
+        """姓名下拉框实时搜索"""
+        search_text = combobox.get().strip()
+
+        if not search_text:
+            combobox['values'] = self.name_list
+            return
+
+        filtered = [name for name in self.name_list if search_text in name]
+        combobox['values'] = filtered
+
+    def _on_confirm(self):
+        """确认指派按钮回调"""
+        # 获取输入值
+        file_type_str = self.file_type_var.get()
+        project_id = self.project_id_var.get().strip()
+        interface_id = self.interface_id_var.get().strip()
+        assigned_name = self.assigned_name_var.get().strip()
+
+        # 验证输入
+        if not file_type_str:
+            messagebox.showwarning("提示", "请选择文件类型", parent=self)
+            return
+
+        if not project_id:
+            messagebox.showwarning("提示", "请输入项目号", parent=self)
+            return
+
+        if not interface_id:
+            messagebox.showwarning("提示", "请输入接口号", parent=self)
+            return
+
+        if not assigned_name:
+            messagebox.showwarning("提示", "请选择指派对象", parent=self)
+            return
+
+        # 解析文件类型
+        try:
+            file_type = int(file_type_str.split(' - ')[0])
+        except (ValueError, IndexError):
+            messagebox.showerror("错误", "文件类型格式错误", parent=self)
+            return
+
+        # 从Registry数据库查找匹配的任务
+        try:
+            from registry.service import find_tasks_for_force_assign
+            from registry.config import get_config
+
+            cfg = get_config()
+            db_path = cfg.get('registry_db_path')
+            wal = cfg.get('registry_wal', False)
+
+            if not db_path:
+                messagebox.showerror("错误", "未配置Registry数据库路径", parent=self)
+                return
+
+            tasks = find_tasks_for_force_assign(db_path, wal, file_type, project_id, interface_id)
+
+            if not tasks:
+                messagebox.showwarning(
+                    "未找到任务",
+                    f"未找到匹配的任务：\n"
+                    f"文件类型：{self.FILE_TYPE_NAMES.get(file_type, file_type)}\n"
+                    f"项目号：{project_id}\n"
+                    f"接口号：{interface_id}\n\n"
+                    f"请检查输入是否正确。",
+                    parent=self
+                )
+                return
+
+            # 构建指派人信息
+            assigned_by = self.user_name
+            if self.user_roles:
+                role = self.user_roles[0] if self.user_roles else ""
+                assigned_by = f"{self.user_name}（{role}）"
+
+            # 构建指派列表（可能有多个源文件中的相同任务）
+            assignments = []
+            for task in tasks:
+                # 需要根据 source_file（文件名）找到完整的文件路径
+                # 由于数据库中只存储文件名，需要从配置中获取数据文件夹路径
+                source_file = task['source_file']
+                data_folder = cfg.get('data_folder', '')
+
+                # 尝试在数据文件夹中查找匹配的文件
+                file_path = self._find_source_file(data_folder, source_file, file_type)
+
+                if file_path:
+                    assignments.append({
+                        'file_type': file_type,
+                        'file_path': file_path,
+                        'row_index': task['row_index'],
+                        'assigned_name': assigned_name,
+                        'assigned_by': assigned_by,
+                        'interface_id': interface_id,
+                        'project_id': project_id,
+                        'status_text': '待完成',
+                    })
+
+            if not assignments:
+                messagebox.showwarning(
+                    "无法定位源文件",
+                    f"找到了 {len(tasks)} 个匹配的任务记录，但无法定位源Excel文件。\n"
+                    f"源文件名：{tasks[0]['source_file']}\n\n"
+                    f"请确保数据文件夹配置正确且文件存在。",
+                    parent=self
+                )
+                return
+
+            # 提交指派任务
+            manager = get_write_task_manager()
+            desc = f"{self.user_name} 强制指派 {interface_id} -> {assigned_name}"
+            write_task = manager.submit_assignment_task(
+                assignments=assignments,
+                submitted_by=self.user_name,
+                description=desc,
+            )
+
+            # 记录到待处理缓存
+            try:
+                pending_cache = get_pending_cache()
+                pending_cache.add_assignment_entries(write_task.task_id, assignments)
+            except Exception as cache_error:
+                print(f"[PendingCache] 记录强制指派任务失败: {cache_error}")
+
+            # 保存到指派记忆
+            try:
+                from services.assignment_memory import save_memory
+                save_memory(file_type, project_id, interface_id, assigned_name)
+            except Exception as mem_error:
+                print(f"[AssignmentMemory] 保存指派记忆失败: {mem_error}")
+
+            messagebox.showinfo(
+                "已提交",
+                f"已提交强制指派任务：\n"
+                f"接口号：{interface_id}\n"
+                f"指派给：{assigned_name}\n"
+                f"涉及 {len(assignments)} 个源文件。",
+                parent=self
+            )
+            self.destroy()
+
+        except Exception as e:
+            messagebox.showerror("错误", f"强制指派失败：\n{str(e)}", parent=self)
+            import traceback
+            traceback.print_exc()
+
+    def _find_source_file(self, data_folder, source_file, file_type):
+        """
+        在数据文件夹中查找源文件
+
+        参数:
+            data_folder: 数据文件夹路径
+            source_file: 源文件名（数据库中存储的）
+            file_type: 文件类型
+
+        返回:
+            str: 完整文件路径，如果找不到返回None
+        """
+        if not data_folder or not os.path.exists(data_folder):
+            return None
+
+        # 文件类型对应的子文件夹名称模式
+        folder_patterns = {
+            1: ['待处理文件1', '内部需打开'],
+            2: ['待处理文件2', '内部需回复'],
+            3: ['待处理文件3', '外部需打开'],
+            4: ['待处理文件4', '外部需回复'],
+            5: ['待处理文件5', '三维提资'],
+            6: ['待处理文件6', '收发文函'],
+        }
+
+        # 尝试在对应的子文件夹中查找
+        patterns = folder_patterns.get(file_type, [])
+        for pattern in patterns:
+            folder_path = os.path.join(data_folder, pattern)
+            if os.path.exists(folder_path):
+                file_path = os.path.join(folder_path, source_file)
+                if os.path.exists(file_path):
+                    return file_path
+
+        # 如果在子文件夹中找不到，尝试直接在数据文件夹中查找
+        file_path = os.path.join(data_folder, source_file)
+        if os.path.exists(file_path):
+            return file_path
+
+        # 递归搜索
+        for root, _dirs, files in os.walk(data_folder):
+            if source_file in files:
+                return os.path.join(root, source_file)
+
+        return None
 
 
 def show_assignment_dialog(parent, unassigned_tasks, name_list):

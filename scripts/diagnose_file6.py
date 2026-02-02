@@ -24,7 +24,7 @@ def diagnose_file6():
     print("【1】检查文件6列配置")
     print("-" * 80)
     
-    from input_handler import get_write_columns
+    from ui.input_handler import get_write_columns
     
     # 模拟文件6的列配置
     columns = get_write_columns(6, 2, None)
@@ -54,8 +54,6 @@ def diagnose_file6():
     try:
         from registry.hooks import _cfg
         from registry.db import get_connection
-        import sqlite3
-        
         cfg = _cfg()
         db_path = cfg.get('registry_db_path')
         
@@ -172,7 +170,7 @@ def diagnose_file6():
                     print()
                     
                     # 分析差异
-                    print(f"    [ANALYSIS] 差异分析:")
+                    print("    [ANALYSIS] 差异分析:")
                     if len(task_list) == 2:
                         t1, t2 = task_list
                         if t1['responsible_person'] != t2['responsible_person']:

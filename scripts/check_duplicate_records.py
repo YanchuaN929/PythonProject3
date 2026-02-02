@@ -78,7 +78,7 @@ def check_duplicates():
             """, (business_id,))
             
             tasks = cursor.fetchall()
-            print(f"\n  详细信息:")
+            print("\n  详细信息:")
             for i, task in enumerate(tasks, 1):
                 print(f"    记录{i}:")
                 print(f"      id: {task[0]}")

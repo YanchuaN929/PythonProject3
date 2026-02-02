@@ -8,10 +8,11 @@ from datetime import datetime
 import time
 import random
 import sqlite3
+import os
 import pandas as pd
 from .config import load_config
 from .service import write_event, mark_completed, mark_confirmed, batch_upsert_tasks
-from .db import close_connection
+from .db import close_connection, close_connection_after_use, MaintenanceModeError
 from .models import EventType
 from .util import (
     build_task_key_from_row, 
@@ -112,11 +113,16 @@ def get_display_status(task_keys: List[Dict[str, Any]], current_user_roles_str: 
         from .service import get_display_status as service_get_display_status
         return service_get_display_status(db_path, wal, task_keys, user_roles)
         
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
+        return {}
     except Exception as e:
         print(f"[Registry] get_display_status 失败: {e}")
         import traceback
         traceback.print_exc()
         return {}
+    finally:
+        close_connection_after_use()
 
 def _cfg():
     """加载配置（内部辅助函数）"""
@@ -125,6 +131,30 @@ def _cfg():
 def _enabled(cfg: dict) -> bool:
     """检查registry是否启用（内部辅助函数）"""
     return bool(cfg.get('registry_enabled', True))
+
+
+def _handle_maintenance_mode(error: Exception):
+    """维护模式处理：释放连接、提示并退出。"""
+    try:
+        close_connection()
+    except Exception:
+        pass
+    
+    msg = "Registry 已进入维护模式，请稍后再试。\n程序将退出以释放占用。"
+    try:
+        from services.db_status import notify_error
+        notify_error(msg, show_dialog=True)
+    except Exception:
+        try:
+            from tkinter import messagebox
+            messagebox.showwarning("Registry维护模式", msg)
+        except Exception:
+            print(f"[Registry] {msg}")
+    
+    try:
+        os._exit(0)
+    except Exception:
+        pass
 
 def on_process_done(
     file_type: int, 
@@ -185,6 +215,8 @@ def on_process_done(
         if count == 0:
             print(f"[Registry] ⚠ 文件{file_type}项目{project_id}: 写入0条（数据库可能未正确初始化）")
         
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
     except Exception as e:
         print(f"[Registry] on_process_done 失败: {e}")
         import traceback
@@ -199,6 +231,8 @@ def on_process_done(
                 notify_error(str(e), show_dialog=True)
         except ImportError:
             pass
+    finally:
+        close_connection_after_use()
 
 def on_export_done(
     file_type: int, 
@@ -237,8 +271,12 @@ def on_export_done(
         
         # 控制台输出优化：已验证逻辑，默认不输出
         
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
     except Exception as e:
         print(f"[Registry] on_export_done 失败: {e}")
+    finally:
+        close_connection_after_use()
 
 def on_assigned(
     file_type: int,
@@ -311,10 +349,14 @@ def on_assigned(
         
         # 控制台输出优化：已验证逻辑，默认不输出
         
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
     except Exception as e:
         print(f"[Registry] on_assigned 失败: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        close_connection_after_use()
 
 def on_response_written(
     file_type: int,
@@ -463,10 +505,14 @@ def on_response_written(
         
         # 控制台输出优化：已验证逻辑，默认不输出
         
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
     except Exception as e:
         print(f"[Registry] on_response_written 失败: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        close_connection_after_use()
 
 def on_confirmed_by_superior(
     file_type: int,
@@ -526,10 +572,14 @@ def on_confirmed_by_superior(
         
         # 控制台输出优化：已验证逻辑，默认不输出
         
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
     except Exception as e:
         print(f"[Registry] on_confirmed_by_superior 失败: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        close_connection_after_use()
 
 def on_unconfirmed_by_superior(
     key: Dict[str, Any],
@@ -557,10 +607,14 @@ def on_unconfirmed_by_superior(
         
         mark_unconfirmed(db_path, wal, key, now)
         
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
     except Exception as e:
         print(f"[Registry] on_unconfirmed_by_superior 失败: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        close_connection_after_use()
 
 def on_scan_finalize(
     batch_tag: str,
@@ -595,8 +649,12 @@ def on_scan_finalize(
         
         print(f"[Registry] scan_finalize: batch={batch_tag}, missing_keep_days={days}")
         
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
     except Exception as e:
         print(f"[Registry] on_scan_finalize 失败: {e}")
+    finally:
+        close_connection_after_use()
 
 def write_event_only(event: str, payload: dict) -> None:
     """
@@ -619,8 +677,12 @@ def write_event_only(event: str, payload: dict) -> None:
         
         write_event(db_path, wal, event, payload, now)
         
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
     except Exception as e:
         print(f"[Registry] write_event_only 失败: {e}")
+    finally:
+        close_connection_after_use()
 
 
 # ============================================================

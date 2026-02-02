@@ -96,7 +96,7 @@ def clean_duplicates():
             
             # 选择最新的记录作为主记录
             primary = records[0]
-            print(f"    => 保留记录1 (最新)")
+            print("    => 保留记录1 (最新)")
             
             # 删除其他记录
             for record in records[1:]:

@@ -5,9 +5,8 @@ pytest配置文件和共享fixtures
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, MagicMock
 import tkinter as tk
-from tkinter import ttk
 import pandas as pd
 
 
@@ -122,7 +121,6 @@ def config_data():
 def base_app(monkeypatch):
     """创建ExcelProcessorApp实例用于测试"""
     from unittest.mock import MagicMock
-    import tkinter as tk
     
     # Mock所有messagebox
     monkeypatch.setattr('tkinter.messagebox.showinfo', MagicMock())
@@ -132,8 +130,6 @@ def base_app(monkeypatch):
     
     # Mock load_user_role to prevent file loading errors
     from base import ExcelProcessorApp
-    original_load_user_role = ExcelProcessorApp.load_user_role
-    
     def mock_load_user_role(self):
         """Mock的load_user_role，避免文件读取错误"""
         self.user_name = self.config.get("user_name", "").strip()
@@ -151,6 +147,6 @@ def base_app(monkeypatch):
     # 清理
     try:
         app.root.destroy()
-    except:
+    except Exception:
         pass
 

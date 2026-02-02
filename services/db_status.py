@@ -9,7 +9,7 @@
 
 import tkinter as tk
 from tkinter import ttk, messagebox
-from typing import Optional, Callable
+from typing import Optional
 from datetime import datetime
 import threading
 
@@ -281,7 +281,7 @@ class DatabaseStatusIndicator:
     def _show_error_dialog(self, message: str):
         """显示错误弹窗"""
         def show():
-            result = messagebox.showerror(
+            messagebox.showerror(
                 "数据库连接失败",
                 f"数据库操作失败：{message}\n\n"
                 "可能的原因：\n"

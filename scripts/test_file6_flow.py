@@ -14,7 +14,6 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import pandas as pd
 from datetime import datetime
 
 def test_file6_processing():
@@ -109,14 +108,14 @@ def test_file6_processing():
         source_file = first_row.get('source_file', '')
         if source_file:
             if os.path.isabs(source_file):
-                print(f"  [OK] source_file是绝对路径")
+                print("  [OK] source_file是绝对路径")
             else:
                 print(f"  [WARN] source_file是相对路径: {source_file}")
             
             if os.path.exists(source_file):
-                print(f"  [OK] source_file文件存在")
+                print("  [OK] source_file文件存在")
             else:
-                print(f"  [ERROR] source_file文件不存在！")
+                print("  [ERROR] source_file文件不存在！")
         print()
     
     # 5. 模拟写入回文单号
@@ -185,7 +184,7 @@ def test_file6_processing():
                     WHERE file_type = 6
                     LIMIT 3
                 """)
-                print(f"  前3条记录:")
+                print("  前3条记录:")
                 for row in cursor.fetchall():
                     pid, iid, sf, ri, ds, rp, rn = row
                     print(f"    - {pid}/{iid} | row:{ri} | status:{ds} | resp_person:{rp} | resp_num:{rn}")

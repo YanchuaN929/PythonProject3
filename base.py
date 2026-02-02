@@ -26,6 +26,9 @@ from typing import List, Dict, Any, Optional, Tuple
 from ui.window import WindowManager
 from write_tasks import get_write_task_manager, get_pending_cache
 
+FORCED_DEFAULT_FOLDER = r"\\DESKTOP-816SBHM\software-self\接口文件"
+DEV_OVERRIDE_PASSWORD = "0929"
+
 
 # ============================================================================
 # 源文件“最新版本”选择工具：仅依赖文件名（不依赖文件mtime）
@@ -301,6 +304,7 @@ class ExcelProcessorApp:
             pass
         self.update_manager = self._create_update_manager()
         self.load_config()
+        self._ensure_not_running_from_default_path()
         # 启动阶段：严格不触网。任何涉及 folder_path(可能为UNC) 的访问，
         # 统一延迟到用户点击“刷新文件列表”后再执行。
         self._deferred_network_folder_path = self.config.get('folder_path', '').strip()
@@ -855,7 +859,7 @@ class ExcelProcessorApp:
             "hide_previous_months": False,
             "simple_export_mode": False,
             "defaults": {
-                "folder_path": "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册",
+                "folder_path": FORCED_DEFAULT_FOLDER,
                 "export_path": "D:/jilu"
             },
             "role_export_days": {
@@ -885,6 +889,13 @@ class ExcelProcessorApp:
                             self.default_config[key] = value
         except Exception as e:
             print(f"[配置] 读取项目默认配置失败: {e}")
+
+        # 强制覆盖默认数据目录，避免被旧配置覆盖
+        try:
+            if isinstance(self.default_config.get("defaults"), dict):
+                self.default_config["defaults"]["folder_path"] = FORCED_DEFAULT_FOLDER
+        except Exception:
+            pass
         
         # 加载用户配置
         try:
@@ -900,16 +911,18 @@ class ExcelProcessorApp:
         if "auto_startup" not in self.config:
             self.config["auto_startup"] = True
 
-        # 【默认路径填充】对于未设置路径的用户，使用默认路径
-        # 规则：已有选过路径的用户优先使用其记忆的地址
-        defaults = self.config.get("defaults", self.default_config.get("defaults", {}))
+        # 【默认路径填充】强制使用默认数据文件夹（不读取缓存）
+        defaults = self.default_config.get("defaults", {})
+        if not isinstance(defaults, dict):
+            defaults = {}
+        defaults = defaults.copy()
+        defaults["folder_path"] = FORCED_DEFAULT_FOLDER
+        self.config["defaults"] = defaults.copy()
         default_folder = defaults.get("folder_path", "")
         default_export = defaults.get("export_path", "")
-        
-        if not self.config.get("folder_path", "").strip():
+
+        if default_folder:
             self.config["folder_path"] = default_folder
-            if default_folder:
-                print(f"[配置] 使用默认数据文件夹: {default_folder}")
         
         if not self.config.get("export_folder_path", "").strip():
             self.config["export_folder_path"] = default_export
@@ -935,11 +948,66 @@ class ExcelProcessorApp:
         self.timer_grace_minutes = 10
         self._load_yaml_settings()
 
+        if default_folder:
+            self.config["folder_path"] = default_folder
+
+    def _normalize_folder_path(self, value: str) -> str:
+        if not value:
+            return ""
+        normalized = value.strip().replace("/", "\\")
+        while normalized.endswith("\\"):
+            normalized = normalized[:-1]
+        return normalized.lower()
+
+    def _get_default_folder_path(self) -> str:
+        defaults = self.default_config.get("defaults", {})
+        if not isinstance(defaults, dict):
+            return ""
+        return defaults.get("folder_path", FORCED_DEFAULT_FOLDER) or FORCED_DEFAULT_FOLDER
+
+    def _get_persisted_folder_path(self) -> str:
+        current_folder = self.config.get("folder_path", "")
+        default_folder = self._get_default_folder_path()
+        if self._normalize_folder_path(current_folder) == self._normalize_folder_path(default_folder):
+            return ""
+        return current_folder
+
+    def _ensure_not_running_from_default_path(self) -> None:
+        default_folder = self._get_default_folder_path()
+        if not default_folder:
+            return
+        app_root_norm = self._normalize_folder_path(self.app_root)
+        default_norm = self._normalize_folder_path(default_folder)
+        if app_root_norm and default_norm and app_root_norm.startswith(default_norm):
+            try:
+                prompt = (
+                    "检测到程序正在默认数据目录内运行。\n"
+                    "为避免在公共盘运行导致异常，请将程序复制到本地磁盘后再启动。\n\n"
+                    "如需在开发平台临时测试，请输入密码继续运行。\n\n"
+                    f"默认目录：{default_folder}"
+                )
+                password = simpledialog.askstring("禁止运行", prompt, show="*")
+                if password == DEV_OVERRIDE_PASSWORD:
+                    print("[配置] 已通过密码验证，允许在默认目录运行")
+                    return
+                if password:
+                    messagebox.showerror("禁止运行", "密码错误，程序将自动退出。")
+                else:
+                    messagebox.showerror("禁止运行", "未输入密码，程序将自动退出。")
+            finally:
+                try:
+                    self.root.destroy()
+                except Exception:
+                    pass
+            raise SystemExit(0)
+
     def save_config(self):
         """保存配置文件"""
         try:
+            config_to_save = self.config.copy()
+            config_to_save["folder_path"] = self._get_persisted_folder_path()
             with open(self.config_file, 'w', encoding='utf-8') as f:
-                json.dump(self.config, f, ensure_ascii=False, indent=2)
+                json.dump(config_to_save, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"保存配置失败: {e}")
         # 同步保存 YAML（包含迁移后的通用参数）
@@ -981,7 +1049,9 @@ class ExcelProcessorApp:
                         
                         elif current_section == 'general':
                             # 将旧参数迁移到 self.config
-                            if key in ("folder_path","export_folder_path","user_name"):
+                            if key == "folder_path":
+                                continue
+                            if key in ("export_folder_path","user_name"):
                                 self.config[key] = val
                             elif key in ("auto_startup","minimize_to_tray","dont_ask_again","hide_previous_months","simple_export_mode"):
                                 self.config[key] = (val.lower() == 'true')
@@ -994,7 +1064,7 @@ class ExcelProcessorApp:
             lines = []
             # general 区域：写入旧有参数
             lines.append("general:")
-            lines.append(f"  folder_path: \"{self.config.get('folder_path','')}\"")
+            lines.append(f"  folder_path: \"{self._get_persisted_folder_path()}\"")
             lines.append(f"  export_folder_path: \"{self.config.get('export_folder_path','')}\"")
             lines.append(f"  user_name: \"{self.config.get('user_name','')}\"")
             lines.append(f"  auto_startup: {'true' if self.config.get('auto_startup', False) else 'false'}")
@@ -1266,7 +1336,7 @@ class ExcelProcessorApp:
                 self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
             else:
                 self.show_empty_message(self.tab1_viewer, "请点击开始处理生成结果")
-        elif selected_tab == 1 and self.target_file2:  # 内部需回复接口
+        elif selected_tab == 1 and (self.target_file2 or self.has_processed_results2):  # 内部需回复接口
             if self.has_processed_results2 and self.processing_results2 is not None and not self.processing_results2.empty:
                 # 统一走 display_results2：确保 PendingCache 覆盖（责任人/状态）生效
                 self.display_results2(self.processing_results2, show_popup=False)
@@ -1274,29 +1344,29 @@ class ExcelProcessorApp:
                 self.show_empty_message(self.tab2_viewer, "无内部需回复接口")
             else:
                 self.show_empty_message(self.tab2_viewer, "请点击开始处理生成结果")
-        elif selected_tab == 2 and self.target_file3:  # 外部需打开接口
+        elif selected_tab == 2 and (self.target_file3 or self.has_processed_results3):  # 外部需打开接口
             if self.has_processed_results3 and self.processing_results3 is not None and not self.processing_results3.empty:
                 self.display_results3(self.processing_results3, show_popup=False)
             elif self.has_processed_results3:
                 self.show_empty_message(self.tab3_viewer, "无外部需打开接口")
             else:
                 self.show_empty_message(self.tab3_viewer, "请点击开始处理生成结果")
-        elif selected_tab == 3 and self.target_file4:  # 外部需回复接口
+        elif selected_tab == 3 and (self.target_file4 or self.has_processed_results4):  # 外部需回复接口
             if self.has_processed_results4 and self.processing_results4 is not None and not self.processing_results4.empty:
                 self.display_results4(self.processing_results4, show_popup=False)
             elif self.has_processed_results4:
                 self.show_empty_message(self.tab4_viewer, "无外部需回复接口")
             else:
                 self.show_empty_message(self.tab4_viewer, "请点击开始处理生成结果")
-        elif selected_tab == 4 and getattr(self, 'target_files5', None):  # 三维提资接口
+        elif selected_tab == 4 and (getattr(self, 'target_files5', None) or self.has_processed_results5):  # 三维提资接口
             if self.has_processed_results5 and self.processing_results5 is not None and not self.processing_results5.empty:
                 self.display_results5(self.processing_results5, show_popup=False)
             elif self.has_processed_results5:
                 # 【修复】处理后无数据，显示空提示，不显示原始数据
-                self.show_empty_message(self.tab5_viewer, "无三维提资接口")
+                self.show_empty_message(self.tab5_viewer, "无三维接口")
             else:
                 self.show_empty_message(self.tab5_viewer, "请点击开始处理生成结果")
-        elif selected_tab == 5 and getattr(self, 'target_files6', None):  # 收发文函
+        elif selected_tab == 5 and (getattr(self, 'target_files6', None) or self.has_processed_results6):  # 收发文函
             if self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
                 self.display_results6(self.processing_results6, show_popup=False)
             elif self.has_processed_results6:
@@ -2637,6 +2707,31 @@ class ExcelProcessorApp:
 
     def browse_folder(self):
         """浏览文件夹"""
+        default_folder = self._get_default_folder_path()
+        if default_folder:
+            prompt = (
+                f"当前数据文件夹路径已强制固定为:\n{default_folder}\n\n"
+                "如需临时使用其他路径，请输入密码继续。\n"
+                "未输入或密码错误将继续使用默认路径。"
+            )
+            password = simpledialog.askstring("路径已固定", prompt, show="*")
+            if password != DEV_OVERRIDE_PASSWORD:
+                if password:
+                    messagebox.showerror("路径已固定", "密码错误，仍使用默认路径。")
+                else:
+                    messagebox.showinfo("路径已固定", f"仍使用默认路径:\n{default_folder}")
+                folder_path = default_folder
+                self.path_var.set(folder_path)
+                self.config["folder_path"] = folder_path
+                self.save_config()
+                try:
+                    from registry import hooks as registry_hooks
+                    registry_hooks.set_data_folder(folder_path)
+                except Exception as e:
+                    print(f"[Registry] 设置数据文件夹失败: {e}")
+                self.refresh_file_list()
+                return
+
         folder_path = filedialog.askdirectory(
             title="选择包含Excel文件的文件夹",
             initialdir=self.path_var.get() or os.path.expanduser("~")
@@ -2686,7 +2781,7 @@ class ExcelProcessorApp:
         # 创建设置菜单窗口
         settings_menu = tk.Toplevel(self.root)
         settings_menu.title("设置")
-        settings_menu.geometry("560x460")  # 增加高度以适应新增的"简洁显示模式"选项
+        settings_menu.geometry("560x520")  # 增加高度以适应新增选项
         settings_menu.transient(self.root)
         settings_menu.grab_set()
         settings_menu.resizable(False, False)
@@ -2763,6 +2858,81 @@ class ExcelProcessorApp:
         # 仅当用户角色为管理员时显示
         if "管理员" in self.user_roles:
             simple_export_check.pack(anchor=tk.W, pady=(0, 10))
+
+        # Registry维护模式（仅管理员可见）
+        if "管理员" in self.user_roles:
+            maintenance_frame = ttk.LabelFrame(frame, text="Registry维护模式（管理员）", padding="8")
+            maintenance_frame.pack(fill=tk.X, pady=(0, 10))
+            ttk.Label(
+                maintenance_frame,
+                text="进入维护模式会提示其他客户端退出以释放占用",
+                foreground="gray"
+            ).pack(anchor=tk.W)
+            
+            def _get_registry_folder():
+                folder_path = self.path_var.get().strip()
+                if not folder_path:
+                    messagebox.showwarning("提示", "请先选择数据文件夹后再进行维护操作。", parent=settings_menu)
+                    return None
+                return folder_path
+            
+            def _enter_maintenance():
+                folder_path = _get_registry_folder()
+                if not folder_path:
+                    return
+                try:
+                    from registry.db import enable_maintenance_mode, is_maintenance_mode
+                    if is_maintenance_mode(data_folder=folder_path):
+                        messagebox.showinfo("维护模式", "当前已处于维护模式。", parent=settings_menu)
+                        return
+                    if not messagebox.askyesno(
+                        "确认进入维护模式",
+                        "进入维护模式将提示其他客户端退出以释放占用。\n是否继续？",
+                        parent=settings_menu
+                    ):
+                        return
+                    flag_path = enable_maintenance_mode(folder_path)
+                    messagebox.showinfo(
+                        "维护模式已开启",
+                        f"已创建维护标志文件：\n{flag_path}\n\n请等待其他客户端退出后再继续维护操作。",
+                        parent=settings_menu
+                    )
+                except Exception as e:
+                    messagebox.showerror("维护模式失败", f"进入维护模式失败：{e}", parent=settings_menu)
+            
+            def _exit_maintenance():
+                folder_path = _get_registry_folder()
+                if not folder_path:
+                    return
+                try:
+                    from registry.db import disable_maintenance_mode, get_maintenance_flag_path, is_maintenance_mode
+                    flag_path = get_maintenance_flag_path(data_folder=folder_path)
+                    if not is_maintenance_mode(data_folder=folder_path):
+                        messagebox.showinfo("维护模式", "当前未处于维护模式。", parent=settings_menu)
+                        return
+                    if not messagebox.askyesno("确认退出维护模式", "确认关闭维护模式？", parent=settings_menu):
+                        return
+                    disable_maintenance_mode(folder_path)
+                    messagebox.showinfo(
+                        "维护模式已关闭",
+                        f"已移除维护标志文件：\n{flag_path}",
+                        parent=settings_menu
+                    )
+                except Exception as e:
+                    messagebox.showerror("维护模式失败", f"退出维护模式失败：{e}", parent=settings_menu)
+            
+            maintenance_btn_row = ttk.Frame(maintenance_frame)
+            maintenance_btn_row.pack(fill=tk.X, pady=(6, 0))
+            ttk.Button(
+                maintenance_btn_row,
+                text="进入维护模式（释放占用）",
+                command=_enter_maintenance
+            ).pack(side=tk.LEFT, padx=(0, 8))
+            ttk.Button(
+                maintenance_btn_row,
+                text="退出维护模式",
+                command=_exit_maintenance
+            ).pack(side=tk.LEFT)
 
         # 【新增】自动隐藏超期任务设置
         auto_hide_frame = ttk.Frame(frame)
@@ -4295,16 +4465,33 @@ class ExcelProcessorApp:
                                 # 仅在“DB为空/新库”时做一次 bootstrap（写入当前结果以获得 display_status）
                                 # 这不会破坏 Step3 的性能目标：只会在少见的“空库”场景触发一次。
                                 try:
-                                    from registry.db import get_connection
-                                    conn = get_connection(db_path, bool(cfg.get("registry_wal", False)))
-                                    row = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'").fetchone()
-                                    if not row:
-                                        registry_bootstrap_needed = True
-                                    else:
-                                        c = conn.execute("SELECT COUNT(*) FROM tasks").fetchone()
-                                        registry_bootstrap_needed = bool((c[0] if c else 0) == 0)
-                                    if registry_bootstrap_needed:
-                                        print("[Registry] 检测到 tasks 为空：本轮将执行一次 bootstrap 写入以恢复状态显示")
+                                    from registry.db import get_connection, close_connection_after_use, MaintenanceModeError
+                                    try:
+                                        conn = get_connection(db_path, bool(cfg.get("registry_wal", False)))
+                                        row = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'").fetchone()
+                                        if not row:
+                                            registry_bootstrap_needed = True
+                                        else:
+                                            c = conn.execute("SELECT COUNT(*) FROM tasks").fetchone()
+                                            registry_bootstrap_needed = bool((c[0] if c else 0) == 0)
+                                        if registry_bootstrap_needed:
+                                            print("[Registry] 检测到 tasks 为空：本轮将执行一次 bootstrap 写入以恢复状态显示")
+                                    except MaintenanceModeError:
+                                        msg = "Registry 已进入维护模式，请稍后再试。\n程序将退出以释放占用。"
+                                        try:
+                                            messagebox.showwarning("Registry维护模式", msg)
+                                        except Exception:
+                                            print(f"[Registry] {msg}")
+                                        try:
+                                            close_connection_after_use()
+                                        except Exception:
+                                            pass
+                                        try:
+                                            os._exit(0)
+                                        except Exception:
+                                            pass
+                                    finally:
+                                        close_connection_after_use()
                                 except Exception as _e2:
                                     # 探测失败不影响主流程；后续 status_map 仍可能为空
                                     print(f"[Registry] 检测 tasks 计数失败（可能导致status_map为空）: {_e2}")
@@ -5048,6 +5235,8 @@ class ExcelProcessorApp:
                                 results5 = pd.DataFrame()
                                 self.processing_results5 = results5
                                 self.has_processed_results5 = True
+                                if not process_file1 and not process_file2 and not process_file3 and not process_file4:
+                                    active_tab = 4
                                 completion_messages.append("三维提资接口：无符合条件的数据")
 
                     # 处理待处理文件6（批量）
@@ -5179,6 +5368,8 @@ class ExcelProcessorApp:
                                     pass
                                 self.processing_results6 = results6
                                 self.has_processed_results6 = True
+                                if not process_file1 and not process_file2 and not process_file3 and not process_file4 and not process_file5:
+                                    active_tab = 5
                                 completion_messages.append("收发文函：无符合条件的数据")
 
                     # Step4：更新导出按钮状态（不依赖当前tab是否已渲染）
@@ -5429,7 +5620,7 @@ class ExcelProcessorApp:
         """显示三维提资接口处理结果"""
         if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
             self.has_processed_results5 = True
-            self.show_empty_message(self.tab5_viewer, "无三维提资接口")
+            self.show_empty_message(self.tab5_viewer, "无三维接口")
             self.update_export_button_state()
             return
         self.processing_results5 = results

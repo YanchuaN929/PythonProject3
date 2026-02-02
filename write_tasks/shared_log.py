@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
-from typing import Iterable, List, Optional
-
+from typing import List, Optional
 from .models import WriteTask
 
 

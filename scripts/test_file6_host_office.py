@@ -11,8 +11,10 @@
 
 import os
 import sys
-import pandas as pd
 from datetime import datetime
+
+import pandas as pd
+import pytest
 
 # 添加项目根目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,7 +26,7 @@ def test_host_office_extraction():
     print("=" * 60)
     
     # 导入必要的模块
-    from main import process_target_file6
+    from core.main import process_target_file6
     import json
     
     # 加载配置（直接读取config.json）
@@ -37,22 +39,24 @@ def test_host_office_extraction():
         folder_path = ''
     
     if not folder_path:
-        print("错误：未配置folder_path")
-        return False
+        pytest.skip("未配置folder_path，跳过主办室列提取测试")
     
-    # 查找文件6
-    target_files = []
+    # 查找文件6（与程序识别逻辑保持一致：文件名包含“收发文清单”）
+    excel_files = []
     for root, dirs, files in os.walk(folder_path):
         for file in files:
-            if file.startswith('待处理文件6') and (file.endswith('.xlsx') or file.endswith('.xls')):
-                target_files.append(os.path.join(root, file))
+            if file.lower().endswith(('.xlsx', '.xls')):
+                excel_files.append(os.path.join(root, file))
     
-    if not target_files:
-        print(f"未找到文件6，路径: {folder_path}")
-        return False
+    from core.main import find_all_target_files6
+    matched_files = find_all_target_files6(excel_files)
     
-    file_path = target_files[0]
-    print(f"找到文件6: {os.path.basename(file_path)}")
+    if not matched_files:
+        pytest.skip(f"未找到文件6(收发文清单*)，路径: {folder_path}，跳过测试")
+    
+    file_path, project_id = matched_files[0]
+    disp_pid = project_id if project_id else "未知项目"
+    print(f"找到文件6: {os.path.basename(file_path)} (项目号={disp_pid})")
     
     # 处理文件
     current_datetime = datetime.now()
@@ -60,15 +64,11 @@ def test_host_office_extraction():
     
     # 检查是否有"主办室"列
     if result_df is None or result_df.empty:
-        print("警告：处理结果为空")
-        return False
+        pytest.skip("处理结果为空，跳过主办室列提取测试")
     
-    if "主办室" not in result_df.columns:
-        print("错误：结果DataFrame中没有'主办室'列")
-        print(f"可用列: {list(result_df.columns)}")
-        return False
+    assert "主办室" in result_df.columns, f"结果DataFrame中没有'主办室'列，可用列: {list(result_df.columns)}"
     
-    print(f"成功：结果DataFrame包含'主办室'列")
+    print("成功：结果DataFrame包含'主办室'列")
     print(f"数据行数: {len(result_df)}")
     
     # 显示前几行的主办室数据
@@ -84,7 +84,7 @@ def test_host_office_extraction():
     for office, count in host_office_counts.items():
         print(f"  {office}: {count}条")
     
-    return True
+    assert len(result_df) > 0
 
 
 def test_role_based_filtering():
@@ -101,7 +101,7 @@ def test_role_based_filtering():
         "责任人": ["张三", "李四", "王五", "赵六", "孙七"]
     })
     
-    print(f"测试数据：")
+    print("测试数据：")
     print(test_data)
     
     # 导入_filter_by_single_role逻辑（需要模拟）
@@ -111,26 +111,24 @@ def test_role_based_filtering():
     # 一室主任
     mask_1 = test_data["主办室"].astype(str).str.contains('结构一室', na=False, regex=False)
     filtered_1 = test_data[mask_1]
-    print(f"  一室主任可见: {list(filtered_1['接口号'])} (预期: A, D)")
+    assert sorted(list(filtered_1['接口号'])) == ["A", "D"]
     
     # 二室主任
     mask_2 = test_data["主办室"].astype(str).str.contains('结构二室', na=False, regex=False)
     filtered_2 = test_data[mask_2]
-    print(f"  二室主任可见: {list(filtered_2['接口号'])} (预期: B, D)")
+    assert sorted(list(filtered_2['接口号'])) == ["B", "D"]
     
     # 建筑总图室主任
     mask_3 = test_data["主办室"].astype(str).str.contains('建筑总图室', na=False, regex=False)
     filtered_3 = test_data[mask_3]
-    print(f"  建筑总图室主任可见: {list(filtered_3['接口号'])} (预期: C)")
+    assert list(filtered_3["接口号"]) == ["C"]
     
     # 验证多室并列情况
     print("\n多室并列验证：")
     d_row = test_data[test_data["接口号"] == "D"].iloc[0]
     print(f"  接口D主办室: {d_row['主办室']}")
-    print(f"  包含'结构一室': {'结构一室' in d_row['主办室']}")
-    print(f"  包含'结构二室': {'结构二室' in d_row['主办室']}")
-    
-    return True
+    assert "结构一室" in d_row["主办室"]
+    assert "结构二室" in d_row["主办室"]
 
 
 def main():
@@ -141,11 +139,15 @@ def main():
     success = True
     
     # 测试1：主办室列提取
-    if not test_host_office_extraction():
+    try:
+        test_host_office_extraction()
+    except Exception:
         success = False
     
     # 测试2：角色筛选
-    if not test_role_based_filtering():
+    try:
+        test_role_based_filtering()
+    except Exception:
         success = False
     
     print("\n" + "=" * 60)

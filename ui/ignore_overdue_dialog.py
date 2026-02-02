@@ -7,7 +7,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from typing import List, Dict, Any
-from datetime import datetime
+
 
 
 class IgnoreOverdueDialog(tk.Toplevel):
@@ -326,7 +326,7 @@ class IgnoreOverdueDialog(tk.Toplevel):
             if column_name == '项目号':
                 try:
                     return int(str(sort_value)) if sort_value and str(sort_value).strip() else 0
-                except:
+                except Exception:
                     return 0
             
             # 显示状态列（按优先级：待完成 > 待审查 > 已审查）

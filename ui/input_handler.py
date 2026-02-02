@@ -6,7 +6,6 @@
 
 import tkinter as tk
 from tkinter import ttk, messagebox
-import pandas as pd
 from openpyxl import load_workbook
 from datetime import date
 import os
@@ -78,7 +77,7 @@ def get_excel_lock_owner(file_path: str) -> str:
             
             if user_name and len(user_name) >= 2:
                 return user_name.strip()
-        except:
+        except Exception:
             pass
         
         # 方法2: 尝试 GBK 解码（中文Windows系统）
@@ -93,7 +92,7 @@ def get_excel_lock_owner(file_path: str) -> str:
             
             if user_name and len(user_name) >= 2:
                 return user_name.strip()
-        except:
+        except Exception:
             pass
         
         return ""
@@ -352,7 +351,7 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
         # 文件锁定检测
         try:
             # 尝试以独占模式打开
-            with open(file_path, 'r+b') as f:
+            with open(file_path, 'r+b'):
                 pass
         except PermissionError:
             # 尝试获取占用者信息
@@ -421,11 +420,11 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
                             ws.cell(row_index, 13, reply_status)  # M列是第13列
                             print(f"[文件6] 自动更新M列: {reply_status} (预期:{expected_date}, 实际:{today})")
                         else:
-                            print(f"[文件6] 无法解析预期时间，跳过M列更新")
+                            print("[文件6] 无法解析预期时间，跳过M列更新")
                     except Exception as parse_error:
                         print(f"[文件6] 解析预期时间失败: {parse_error}")
                 else:
-                    print(f"[文件6] I列预期时间为空，跳过M列更新")
+                    print("[文件6] I列预期时间为空，跳过M列更新")
             except Exception as e:
                 print(f"[文件6] 更新M列失败: {e}")
                 # 即使M列更新失败，也不影响回文单号写入
@@ -436,7 +435,7 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
             wb.close()
             
             # 【关键】验证写入是否成功：重新打开文件检查
-            print(f"[验证] 开始验证Excel写入...")
+            print("[验证] 开始验证Excel写入...")
             verify_wb = load_workbook(file_path, read_only=True)
             verify_ws = verify_wb.active
             
@@ -447,7 +446,7 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
                 raise Exception(f"验证失败：回文单号列写入不匹配。期望:{response_number}, 实际:{verify_response}")
             
             verify_wb.close()
-            print(f"[验证] ✓ Excel写入验证成功")
+            print("[验证] ✓ Excel写入验证成功")
             print(f"成功写入: {file_path}, 行{row_index}, 回文单号={response_number}")
             return True
             
@@ -456,7 +455,7 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
             raise  # 重新抛出异常，让上层处理
         
     except Exception as e:
-        print(f"[ERROR] 写入回文单号失败!")
+        print("[ERROR] 写入回文单号失败!")
         print(f"  文件路径: {file_path}")
         print(f"  文件类型: {file_type}")
         print(f"  行号: {row_index}")
@@ -464,7 +463,6 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
         print(f"  错误信息: {e}")
         import traceback
         traceback.print_exc()
-        from tkinter import messagebox
         messagebox.showerror("写入失败", f"无法写入回文单号到Excel文件\n\n错误：{str(e)}")
         return False
 
