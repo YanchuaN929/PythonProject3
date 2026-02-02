@@ -26,7 +26,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from ui.window import WindowManager
 from write_tasks import get_write_task_manager, get_pending_cache
 
-FORCED_DEFAULT_FOLDER = r"\\DESKTOP-816SBHM\software-self\接口文件"
+FORCED_DEFAULT_FOLDER = r"//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册"
 DEV_OVERRIDE_PASSWORD = "0929"
 
 
@@ -457,6 +457,12 @@ class ExcelProcessorApp:
         except Exception:
             pass
 
+        # 启动后自动检测更新（不阻塞UI；若需更新将自动退出并重启）
+        try:
+            self._schedule_startup_update_check()
+        except Exception:
+            pass
+
         self.tray_icon = None
         self.is_closing = False
         
@@ -697,6 +703,117 @@ class ExcelProcessorApp:
         except Exception as e:
             print(f"[Update] 版本检查失败: {e}")
             return True
+
+    def _schedule_startup_update_check(self) -> None:
+        """
+        程序启动后自动检测更新（后台线程执行网络/IO，避免阻塞UI）。
+        更新逻辑不变：仍通过 UpdateManager 判断版本并启动 update.exe。
+        """
+        if getattr(self, "_startup_update_check_scheduled", False):
+            return
+        self._startup_update_check_scheduled = True
+
+        # 测试环境/显式跳过：避免pytest运行时触发外部路径检查或退出
+        if getattr(self, "_skip_auto_startup_bootstrap", False):
+            return
+
+        def _kickoff():
+            try:
+                threading.Thread(
+                    target=self._startup_update_check_worker,
+                    daemon=True,
+                    name="StartupUpdateCheck",
+                ).start()
+            except Exception:
+                pass
+
+        try:
+            # 让主窗口先完成一次渲染，再启动后台检查
+            self.root.after(200, _kickoff)
+        except Exception:
+            _kickoff()
+
+    def _startup_update_check_worker(self) -> None:
+        """后台线程：检查远程版本，必要时在主线程触发更新并退出。"""
+        manager = getattr(self, "update_manager", None)
+        if not manager:
+            return
+
+        # 启动阶段不读取 Tk 变量，避免线程不安全；优先用配置中的路径
+        folder_path = ""
+        try:
+            folder_path = (getattr(self, "config", {}) or {}).get("folder_path", "") or ""
+            folder_path = str(folder_path).strip()
+        except Exception:
+            folder_path = ""
+
+        # 先同步 update.exe（保持原更新逻辑：update.exe 由主程序负责自更新）
+        try:
+            manager.sync_update_executable(folder_path)
+        except Exception as e:
+            try:
+                self._log_update_message(f"sync_update_executable 失败: {e}")
+            except Exception:
+                pass
+
+        try:
+            # 复用 UpdateManager 的内部方法，避免改动更新判定逻辑
+            remote_root = manager._resolve_remote_dir(folder_path)  # type: ignore[attr-defined]
+            if not remote_root:
+                return
+
+            local_version = manager._read_local_version()  # type: ignore[attr-defined]
+            remote_version = manager._read_remote_version(remote_root)  # type: ignore[attr-defined]
+
+            from update.versioning import compare_versions, DEFAULT_VERSION
+
+            if remote_version == DEFAULT_VERSION:
+                try:
+                    manager._log(f"远程目录缺少版本文件，跳过更新: {remote_root}")  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+                return
+
+            if compare_versions(local_version, remote_version) >= 0:
+                try:
+                    manager._log(f"启动检查：版本已最新 local={local_version}, remote={remote_version}")  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+                return
+
+            # 需要更新：回到主线程弹窗/启动update并退出
+            from update.manager import UpdateContext
+
+            context = UpdateContext(
+                local_root=manager.app_root,
+                remote_root=remote_root,
+                remote_version=remote_version,
+                resume_action="startup",
+                auto_mode=bool(getattr(self, "auto_mode", False)),
+                parent_window=getattr(self, "root", None),
+            )
+
+            def _trigger():
+                try:
+                    manager._notify_user(context)  # type: ignore[attr-defined]
+                    manager._launch_update_exe(context)  # type: ignore[attr-defined]
+                except Exception as e:
+                    try:
+                        self._log_update_message(f"启动更新失败: {e}")
+                    except Exception:
+                        pass
+                finally:
+                    self._schedule_exit_for_update()
+
+            try:
+                self.root.after(0, _trigger)
+            except Exception:
+                _trigger()
+        except Exception as e:
+            try:
+                self._log_update_message(f"启动版本检查失败: {e}")
+            except Exception:
+                pass
 
     def _load_current_version(self) -> str:
         candidate_paths = []

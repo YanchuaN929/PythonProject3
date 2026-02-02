@@ -154,7 +154,7 @@ class InterfaceInputDialog(tk.Toplevel):
         """从Registry查询已填写的回文单号"""
         try:
             from registry.hooks import _cfg
-            from registry.db import get_connection
+            from registry.db import get_connection, close_connection_after_use
             from registry.util import make_task_id
             
             cfg = _cfg()
@@ -179,19 +179,22 @@ class InterfaceInputDialog(tk.Toplevel):
             )
             
             conn = get_connection(db_path, bool(cfg.get('registry_wal', False)))
-            cursor = conn.execute("""
-                SELECT response_number, completed_at, completed_by
-                FROM tasks
-                WHERE id = ? AND status IN ('completed', 'confirmed')
-            """, (task_id,))
-            
-            row = cursor.fetchone()
-            if row and row[0]:  # 确保response_number不为空
-                self.existing_response = row[0]
-                self.completed_info = {
-                    'completed_at': row[1],
-                    'completed_by': row[2]
-                }
+            try:
+                cursor = conn.execute("""
+                    SELECT response_number, completed_at, completed_by
+                    FROM tasks
+                    WHERE id = ? AND status IN ('completed', 'confirmed')
+                """, (task_id,))
+                
+                row = cursor.fetchone()
+                if row and row[0]:  # 确保response_number不为空
+                    self.existing_response = row[0]
+                    self.completed_info = {
+                        'completed_at': row[1],
+                        'completed_by': row[2]
+                    }
+            finally:
+                close_connection_after_use()
         except Exception as e:
             print(f"[Registry] 查询已填写回文单号失败: {e}")
     

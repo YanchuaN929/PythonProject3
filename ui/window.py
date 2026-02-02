@@ -612,7 +612,7 @@ class WindowManager:
         try:
             from registry import hooks as registry_hooks
             from registry.util import extract_interface_id, extract_project_id
-            from registry.db import get_connection
+            from registry.db import get_connection, close_connection_after_use
             from registry.config import load_config
             
             # 根据tab_name确定file_type
@@ -679,33 +679,36 @@ class WindowManager:
                     db_path = cfg.get('registry_db_path', 'registry/task_registry.db')
                     wal = cfg.get('registry_wal', False)
                     conn = get_connection(db_path, wal)
-                    current_user_name = getattr(self.app, 'user_name', '').strip()
-                    
-                    # 映射回display_df的索引（取第一个匹配的状态）
-                    for df_idx, task_key in task_keys:
-                        from registry.util import make_task_id
-                        tid = make_task_id(
-                            task_key['file_type'],
-                            task_key['project_id'],
-                            task_key['interface_id'],
-                            task_key['source_file'],
-                            task_key['row_index']
-                        )
-                        if tid in registry_status_map_raw and df_idx not in registry_status_map:
-                            # 只使用第一个匹配的状态（避免重复）
-                            registry_status_map[df_idx] = registry_status_map_raw[tid]
+                    try:
+                        current_user_name = getattr(self.app, 'user_name', '').strip()
                         
-                        # 查询confirmed_by
-                        if df_idx not in registry_confirmed_map:
-                            try:
-                                row = conn.execute(
-                                    "SELECT confirmed_by FROM tasks WHERE id = ?",
-                                    (tid,)
-                                ).fetchone()
-                                if row and row[0]:
-                                    registry_confirmed_map[df_idx] = (row[0], current_user_name)
-                            except Exception:
-                                pass
+                        # 映射回display_df的索引（取第一个匹配的状态）
+                        for df_idx, task_key in task_keys:
+                            from registry.util import make_task_id
+                            tid = make_task_id(
+                                task_key['file_type'],
+                                task_key['project_id'],
+                                task_key['interface_id'],
+                                task_key['source_file'],
+                                task_key['row_index']
+                            )
+                            if tid in registry_status_map_raw and df_idx not in registry_status_map:
+                                # 只使用第一个匹配的状态（避免重复）
+                                registry_status_map[df_idx] = registry_status_map_raw[tid]
+                            
+                            # 查询confirmed_by
+                            if df_idx not in registry_confirmed_map:
+                                try:
+                                    row = conn.execute(
+                                        "SELECT confirmed_by FROM tasks WHERE id = ?",
+                                        (tid,)
+                                    ).fetchone()
+                                    if row and row[0]:
+                                        registry_confirmed_map[df_idx] = (row[0], current_user_name)
+                                except Exception:
+                                    pass
+                    finally:
+                        close_connection_after_use()
         except Exception as e:
             print(f"[Registry] 状态查询失败（不影响主流程）: {e}")
         
@@ -1107,7 +1110,7 @@ class WindowManager:
                         
                         # 【关键修复】查询任务的当前状态，确保只能确认已完成的任务
                         from registry.util import make_task_id
-                        from registry.db import get_connection
+                        from registry.db import get_connection, close_connection_after_use
                         
                         # 获取Registry配置
                         try:
@@ -1125,11 +1128,14 @@ class WindowManager:
                         )
                         
                         conn = get_connection(db_path, wal)
-                        cursor = conn.execute(
-                            "SELECT status, confirmed_at FROM tasks WHERE id = ?",
-                            (tid,)
-                        )
-                        task_row = cursor.fetchone()
+                        try:
+                            cursor = conn.execute(
+                                "SELECT status, confirmed_at FROM tasks WHERE id = ?",
+                                (tid,)
+                            )
+                            task_row = cursor.fetchone()
+                        finally:
+                            close_connection_after_use()
                         
                         if not task_row:
                             print(f"[Registry] 警告：找不到任务记录 {interface_id_clean}")

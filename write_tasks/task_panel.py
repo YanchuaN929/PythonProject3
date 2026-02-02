@@ -439,18 +439,21 @@ class TaskRecordPanel(ttk.LabelFrame):
             if not db_path:
                 return None
             wal = bool(cfg.get("registry_wal", False))
-            from registry.db import get_connection
+            from registry.db import get_connection, close_connection_after_use
 
             conn = get_connection(db_path, wal)
-            if self.only_mine_var.get():
-                current_user = (self.get_current_user() or "").strip()
-                tasks = shared_list_tasks(conn, limit=100, only_user=current_user)
-            else:
-                tasks = shared_list_tasks(conn, limit=100, only_user=None)
-            # 仅当共享有数据时才显示“共享”状态；为空时交给上层决定是否回退
-            if tasks:
-                self.status_var.set(f"显示 {len(tasks)} 条任务（共享）")
-            return tasks
+            try:
+                if self.only_mine_var.get():
+                    current_user = (self.get_current_user() or "").strip()
+                    tasks = shared_list_tasks(conn, limit=100, only_user=current_user)
+                else:
+                    tasks = shared_list_tasks(conn, limit=100, only_user=None)
+                # 仅当共享有数据时才显示“共享”状态；为空时交给上层决定是否回退
+                if tasks:
+                    self.status_var.set(f"显示 {len(tasks)} 条任务（共享）")
+                return tasks
+            finally:
+                close_connection_after_use()
         except Exception as exc:
             # 共享读取失败时不阻塞，回退到本机显示
             self.status_var.set(f"共享任务读取失败，已回退本机: {exc}")

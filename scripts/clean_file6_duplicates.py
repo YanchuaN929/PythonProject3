@@ -21,7 +21,7 @@ def clean_duplicates():
     print()
     
     from registry.hooks import _cfg
-    from registry.db import get_connection
+    from registry.db import get_connection, close_connection_after_use
     
     cfg = _cfg()
     db_path = cfg.get('registry_db_path')
@@ -38,140 +38,142 @@ def clean_duplicates():
     print()
     
     conn = get_connection(db_path, True)
-    
-    # 1. 统计文件6的总记录数
-    cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE file_type = 6")
-    total_count = cursor.fetchone()[0]
-    print(f"文件6总记录数: {total_count}")
-    print()
-    
-    # 2. 找到所有重复的接口（同一project_id和interface_id）
-    print("[1] 查找重复的接口...")
-    cursor = conn.execute("""
-        SELECT project_id, interface_id, COUNT(*) as cnt
-        FROM tasks
-        WHERE file_type = 6
-        GROUP BY project_id, interface_id
-        HAVING cnt > 1
-    """)
-    
-    interface_duplicates = cursor.fetchall()
-    
-    if not interface_duplicates:
-        print("    [OK] 没有发现重复的接口记录")
-        print()
-    else:
-        print(f"    [WARN] 发现{len(interface_duplicates)}个重复的接口")
+    try:
+        # 1. 统计文件6的总记录数
+        cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE file_type = 6")
+        total_count = cursor.fetchone()[0]
+        print(f"文件6总记录数: {total_count}")
         print()
         
-        total_deleted = 0
+        # 2. 找到所有重复的接口（同一project_id和interface_id）
+        print("[1] 查找重复的接口...")
+        cursor = conn.execute("""
+            SELECT project_id, interface_id, COUNT(*) as cnt
+            FROM tasks
+            WHERE file_type = 6
+            GROUP BY project_id, interface_id
+            HAVING cnt > 1
+        """)
         
-        for pid, iid, cnt in interface_duplicates:
-            print(f"  处理 项目{pid} - 接口{iid} ({cnt}条记录)")
+        interface_duplicates = cursor.fetchall()
+        
+        if not interface_duplicates:
+            print("    [OK] 没有发现重复的接口记录")
+            print()
+        else:
+            print(f"    [WARN] 发现{len(interface_duplicates)}个重复的接口")
+            print()
             
-            # 获取所有相关记录
-            cursor = conn.execute("""
-                SELECT id, row_index, first_seen_at, 
-                       status, display_status, responsible_person, response_number,
-                       completed_at, confirmed_at, source_file
-                FROM tasks
-                WHERE file_type = 6 AND project_id = ? AND interface_id = ?
-                ORDER BY first_seen_at DESC
-            """, (pid, iid))
+            total_deleted = 0
             
-            records = cursor.fetchall()
+            for pid, iid, cnt in interface_duplicates:
+                print(f"  处理 项目{pid} - 接口{iid} ({cnt}条记录)")
+                
+                # 获取所有相关记录
+                cursor = conn.execute("""
+                    SELECT id, row_index, first_seen_at, 
+                           status, display_status, responsible_person, response_number,
+                           completed_at, confirmed_at, source_file
+                    FROM tasks
+                    WHERE file_type = 6 AND project_id = ? AND interface_id = ?
+                    ORDER BY first_seen_at DESC
+                """, (pid, iid))
+                
+                records = cursor.fetchall()
+                
+                # 打印所有记录
+                for idx, record in enumerate(records, 1):
+                    rid, row_idx, first_seen, status, ds, rp, rn, ca, conf, sf = record
+                    print(f"    记录{idx}: id={rid[:8]}...")
+                    print(f"      - row_index: {row_idx}")
+                    print(f"      - source_file: {sf}")
+                    print(f"      - first_seen_at: {first_seen}")
+                    print(f"      - status: {status}")
+                    print(f"      - display_status: {ds}")
+                    print(f"      - responsible_person: {rp}")
+                    print(f"      - response_number: {rn}")
+                    print(f"      - completed_at: {ca}")
+                
+                # 选择最新的记录作为主记录
+                primary = records[0]
+                print("    => 保留记录1 (最新)")
+                
+                # 删除其他记录
+                for record in records[1:]:
+                    rid = record[0]
+                    print(f"    => 删除记录{records.index(record)+1}")
+                    conn.execute("DELETE FROM tasks WHERE id = ?", (rid,))
+                    total_deleted += 1
+                
+                print()
             
-            # 打印所有记录
-            for idx, record in enumerate(records, 1):
-                rid, row_idx, first_seen, status, ds, rp, rn, ca, conf, sf = record
-                print(f"    记录{idx}: id={rid[:8]}...")
-                print(f"      - row_index: {row_idx}")
-                print(f"      - source_file: {sf}")
-                print(f"      - first_seen_at: {first_seen}")
-                print(f"      - status: {status}")
-                print(f"      - display_status: {ds}")
-                print(f"      - responsible_person: {rp}")
-                print(f"      - response_number: {rn}")
-                print(f"      - completed_at: {ca}")
-            
-            # 选择最新的记录作为主记录
-            primary = records[0]
-            print("    => 保留记录1 (最新)")
-            
-            # 删除其他记录
-            for record in records[1:]:
-                rid = record[0]
-                print(f"    => 删除记录{records.index(record)+1}")
-                conn.execute("DELETE FROM tasks WHERE id = ?", (rid,))
-                total_deleted += 1
-            
+            conn.commit()
+            print(f"[完成] 共删除{total_deleted}条重复记录")
             print()
         
-        conn.commit()
-        print(f"[完成] 共删除{total_deleted}条重复记录")
-        print()
-    
-    # 3. 找到所有重复的business_id（如果有）
-    print("[2] 查找重复的business_id...")
-    cursor = conn.execute("""
-        SELECT business_id, COUNT(*) as cnt
-        FROM tasks
-        WHERE file_type = 6 AND business_id IS NOT NULL
-        GROUP BY business_id
-        HAVING cnt > 1
-    """)
-    
-    bid_duplicates = cursor.fetchall()
-    
-    if not bid_duplicates:
-        print("    [OK] 没有发现重复的business_id")
-        print()
-    else:
-        print(f"    [WARN] 发现{len(bid_duplicates)}个重复的business_id")
-        print()
+        # 3. 找到所有重复的business_id（如果有）
+        print("[2] 查找重复的business_id...")
+        cursor = conn.execute("""
+            SELECT business_id, COUNT(*) as cnt
+            FROM tasks
+            WHERE file_type = 6 AND business_id IS NOT NULL
+            GROUP BY business_id
+            HAVING cnt > 1
+        """)
         
-        total_deleted = 0
+        bid_duplicates = cursor.fetchall()
         
-        for bid, cnt in bid_duplicates:
-            print(f"  处理 business_id: {bid} ({cnt}条记录)")
+        if not bid_duplicates:
+            print("    [OK] 没有发现重复的business_id")
+            print()
+        else:
+            print(f"    [WARN] 发现{len(bid_duplicates)}个重复的business_id")
+            print()
             
-            # 获取所有相关记录
-            cursor = conn.execute("""
-                SELECT id, project_id, interface_id, row_index, first_seen_at, 
-                       status, display_status, responsible_person, response_number,
-                       completed_at
-                FROM tasks
-                WHERE business_id = ?
-                ORDER BY first_seen_at DESC
-            """, (bid,))
+            total_deleted = 0
             
-            records = cursor.fetchall()
+            for bid, cnt in bid_duplicates:
+                print(f"  处理 business_id: {bid} ({cnt}条记录)")
+                
+                # 获取所有相关记录
+                cursor = conn.execute("""
+                    SELECT id, project_id, interface_id, row_index, first_seen_at, 
+                           status, display_status, responsible_person, response_number,
+                           completed_at
+                    FROM tasks
+                    WHERE business_id = ?
+                    ORDER BY first_seen_at DESC
+                """, (bid,))
+                
+                records = cursor.fetchall()
+                
+                # 选择最新的记录作为主记录
+                primary = records[0]
+                print(f"    保留最新记录: {primary[0][:8]}... (first_seen: {primary[4]})")
+                
+                # 删除其他记录
+                for record in records[1:]:
+                    print(f"    删除旧记录: {record[0][:8]}... (first_seen: {record[4]})")
+                    conn.execute("DELETE FROM tasks WHERE id = ?", (record[0],))
+                    total_deleted += 1
+                
+                print()
             
-            # 选择最新的记录作为主记录
-            primary = records[0]
-            print(f"    保留最新记录: {primary[0][:8]}... (first_seen: {primary[4]})")
-            
-            # 删除其他记录
-            for record in records[1:]:
-                print(f"    删除旧记录: {record[0][:8]}... (first_seen: {record[4]})")
-                conn.execute("DELETE FROM tasks WHERE id = ?", (record[0],))
-                total_deleted += 1
-            
+            conn.commit()
+            print(f"[完成] 共删除{total_deleted}条重复记录")
             print()
         
-        conn.commit()
-        print(f"[完成] 共删除{total_deleted}条重复记录")
+        # 4. 统计清理后的记录数
+        cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE file_type = 6")
+        final_count = cursor.fetchone()[0]
+        print(f"清理后文件6记录数: {final_count} (减少了{total_count - final_count}条)")
         print()
-    
-    # 4. 统计清理后的记录数
-    cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE file_type = 6")
-    final_count = cursor.fetchone()[0]
-    print(f"清理后文件6记录数: {final_count} (减少了{total_count - final_count}条)")
-    print()
-    
-    print("=" * 80)
-    print("清理完成")
-    print("=" * 80)
+        
+        print("=" * 80)
+        print("清理完成")
+        print("=" * 80)
+    finally:
+        close_connection_after_use()
 
 if __name__ == "__main__":
     # 确认操作

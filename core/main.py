@@ -522,7 +522,7 @@ def process_target_file(file_path, current_datetime):
     
     try:
         from registry.util import extract_interface_id
-        from registry.db import get_connection
+        from registry.db import get_connection, close_connection_after_use
         
         # 【修复】直接查询数据库中有display_status的任务，按business_id匹配
         # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
@@ -533,19 +533,20 @@ def process_target_file(file_path, current_datetime):
         if db_path and os.path.exists(db_path):
             wal = bool(cfg.get("registry_wal", False))
             conn = get_connection(db_path, wal)
-            
-            # 【方案A】只查询"待审查"状态的任务（设计人员已填写回文单号，等待确认）
-            # 不加回"待完成"或"请指派"状态，这些应该依赖Excel筛选条件
-            cursor = conn.execute("""
-                SELECT interface_id, project_id, display_status, row_index, source_file
-                FROM tasks
-                WHERE file_type = 1
-                  AND display_status IN ('待审查', '待指派人审查')
-                  AND (ignored = 0 OR ignored IS NULL)
-                  AND status != 'archived'
-            """)
-            
-            registry_tasks = cursor.fetchall()
+            try:
+                # 【方案A】只查询"待审查"状态的任务（设计人员已填写回文单号，等待确认）
+                # 不加回"待完成"或"请指派"状态，这些应该依赖Excel筛选条件
+                cursor = conn.execute("""
+                    SELECT interface_id, project_id, display_status, row_index, source_file
+                    FROM tasks
+                    WHERE file_type = 1
+                      AND display_status IN ('待审查', '待指派人审查')
+                      AND (ignored = 0 OR ignored IS NULL)
+                      AND status != 'archived'
+                """)
+                registry_tasks = cursor.fetchall()
+            finally:
+                close_connection_after_use()
             print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个有状态的任务（包括待完成、待审查等）")
             
             # 在当前Excel中查找这些接口号
@@ -1244,7 +1245,7 @@ def process_target_file2(file_path, current_datetime, project_id=None):
     print("\n========== [Registry] 开始查询待审查任务（文件类型2） ==========")
     try:
         from registry.util import extract_interface_id
-        from registry.db import get_connection
+        from registry.db import get_connection, close_connection_after_use
         
         # 【修复】直接查询数据库中有display_status的任务，按business_id匹配
         # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
@@ -1257,18 +1258,19 @@ def process_target_file2(file_path, current_datetime, project_id=None):
         if db_path and os.path.exists(db_path):
             wal = bool(cfg.get("registry_wal", False))
             conn = get_connection(db_path, wal)
-            
-            # 【方案A】只查询"待审查"状态的任务（设计人员已填写回文单号，等待确认）
-            cursor = conn.execute("""
-                SELECT interface_id, project_id, display_status
-                FROM tasks
-                WHERE file_type = 2
-                  AND display_status IN ('待审查', '待指派人审查')
-                  AND (ignored = 0 OR ignored IS NULL)
-                  AND status != 'archived'
-            """)
-            
-            registry_tasks = cursor.fetchall()
+            try:
+                # 【方案A】只查询"待审查"状态的任务（设计人员已填写回文单号，等待确认）
+                cursor = conn.execute("""
+                    SELECT interface_id, project_id, display_status
+                    FROM tasks
+                    WHERE file_type = 2
+                      AND display_status IN ('待审查', '待指派人审查')
+                      AND (ignored = 0 OR ignored IS NULL)
+                      AND status != 'archived'
+                """)
+                registry_tasks = cursor.fetchall()
+            finally:
+                close_connection_after_use()
             print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个有状态的任务")
             
             # 【优化】从文件名提取项目号，建立Excel索引
@@ -1737,7 +1739,7 @@ def process_target_file3(file_path, current_datetime):
     print("\n========== [Registry] 开始查询待审查任务（文件类型3） ==========")
     try:
         from registry.util import extract_interface_id
-        from registry.db import get_connection
+        from registry.db import get_connection, close_connection_after_use
         
         # 【修复】直接查询数据库中有display_status的任务，按business_id匹配
         # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
@@ -1749,18 +1751,19 @@ def process_target_file3(file_path, current_datetime):
         
         if db_path and os.path.exists(db_path):
             conn = get_connection(db_path, True)
-            
-            # 【方案A】只查询"待审查"状态的任务
-            cursor = conn.execute("""
-                SELECT interface_id, project_id, display_status
-                FROM tasks
-                WHERE file_type = 3
-                  AND display_status IN ('待审查', '待指派人审查')
-                  AND (ignored = 0 OR ignored IS NULL)
-                  AND status != 'archived'
-            """)
-            
-            registry_tasks = cursor.fetchall()
+            try:
+                # 【方案A】只查询"待审查"状态的任务
+                cursor = conn.execute("""
+                    SELECT interface_id, project_id, display_status
+                    FROM tasks
+                    WHERE file_type = 3
+                      AND display_status IN ('待审查', '待指派人审查')
+                      AND (ignored = 0 OR ignored IS NULL)
+                      AND status != 'archived'
+                """)
+                registry_tasks = cursor.fetchall()
+            finally:
+                close_connection_after_use()
             print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个有状态的任务")
             
             # 【优化】从文件名提取项目号，建立Excel索引
@@ -2623,7 +2626,7 @@ def process_target_file4(file_path, current_datetime):
     # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
     try:
         from registry.util import extract_interface_id, extract_project_id
-        from registry.db import get_connection
+        from registry.db import get_connection, close_connection_after_use
         from registry.hooks import _cfg
         
         # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
@@ -2633,16 +2636,19 @@ def process_target_file4(file_path, current_datetime):
         
         if db_path and os.path.exists(db_path):
             conn = get_connection(db_path, True)
-            # 【方案A】只查询"待审查"状态的任务
-            cursor = conn.execute("""
-                SELECT interface_id, project_id, display_status
-                FROM tasks
-                WHERE file_type = 4
-                  AND display_status IN ('待审查', '待指派人审查')
-                  AND (ignored = 0 OR ignored IS NULL)
-                  AND status != 'archived'
-            """)
-            registry_tasks = cursor.fetchall()
+            try:
+                # 【方案A】只查询"待审查"状态的任务
+                cursor = conn.execute("""
+                    SELECT interface_id, project_id, display_status
+                    FROM tasks
+                    WHERE file_type = 4
+                      AND display_status IN ('待审查', '待指派人审查')
+                      AND (ignored = 0 OR ignored IS NULL)
+                      AND status != 'archived'
+                """)
+                registry_tasks = cursor.fetchall()
+            finally:
+                close_connection_after_use()
             
             # Excel索引优化：
             # - 优先从行数据提取项目号（更稳，测试文件名可能不含4位项目号）
@@ -3338,7 +3344,7 @@ def process_target_file5(file_path, current_datetime):
     # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
     try:
         from registry.util import extract_interface_id
-        from registry.db import get_connection
+        from registry.db import get_connection, close_connection_after_use
         from registry.hooks import _cfg
         
         # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
@@ -3348,16 +3354,19 @@ def process_target_file5(file_path, current_datetime):
         
         if db_path and os.path.exists(db_path):
             conn = get_connection(db_path, True)
-            # 【方案A】只查询"待审查"状态的任务
-            cursor = conn.execute("""
-                SELECT interface_id, project_id, display_status
-                FROM tasks
-                WHERE file_type = 5
-                  AND display_status IN ('待审查', '待指派人审查')
-                  AND (ignored = 0 OR ignored IS NULL)
-                  AND status != 'archived'
-            """)
-            registry_tasks = cursor.fetchall()
+            try:
+                # 【方案A】只查询"待审查"状态的任务
+                cursor = conn.execute("""
+                    SELECT interface_id, project_id, display_status
+                    FROM tasks
+                    WHERE file_type = 5
+                      AND display_status IN ('待审查', '待指派人审查')
+                      AND (ignored = 0 OR ignored IS NULL)
+                      AND status != 'archived'
+                """)
+                registry_tasks = cursor.fetchall()
+            finally:
+                close_connection_after_use()
             
             # Excel索引优化+从文件名提取项目号
             filename = os.path.basename(file_path)
@@ -3842,7 +3851,7 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
     # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
     try:
         from registry.util import extract_interface_id
-        from registry.db import get_connection
+        from registry.db import get_connection, close_connection_after_use
         from registry.hooks import _cfg
         
         # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
@@ -3852,16 +3861,19 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
         
         if db_path and os.path.exists(db_path):
             conn = get_connection(db_path, True)
-            # 【方案A】只查询"待审查"状态的任务
-            cursor = conn.execute("""
-                SELECT interface_id, project_id, display_status
-                FROM tasks
-                WHERE file_type = 6
-                  AND display_status IN ('待审查', '待指派人审查')
-                  AND (ignored = 0 OR ignored IS NULL)
-                  AND status != 'archived'
-            """)
-            registry_tasks = cursor.fetchall()
+            try:
+                # 【方案A】只查询"待审查"状态的任务
+                cursor = conn.execute("""
+                    SELECT interface_id, project_id, display_status
+                    FROM tasks
+                    WHERE file_type = 6
+                      AND display_status IN ('待审查', '待指派人审查')
+                      AND (ignored = 0 OR ignored IS NULL)
+                      AND status != 'archived'
+                """)
+                registry_tasks = cursor.fetchall()
+            finally:
+                close_connection_after_use()
             
             # Excel索引优化+从文件名提取项目号
             filename = os.path.basename(file_path)

@@ -138,8 +138,11 @@ def base_app(monkeypatch):
     
     monkeypatch.setattr(ExcelProcessorApp, 'load_user_role', mock_load_user_role)
     
-    # 创建app实例
-    app = ExcelProcessorApp(auto_mode=True)
+    # 创建app实例（部分环境可能缺少 Tcl/Tk，需跳过）
+    try:
+        app = ExcelProcessorApp(auto_mode=True)
+    except tk.TclError as e:
+        pytest.skip(f"当前环境 Tk 不可用，跳过GUI相关测试：{e}")
     app.user_roles = []  # 默认空角色
     
     yield app

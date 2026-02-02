@@ -40,6 +40,10 @@ def test_host_office_extraction():
     
     if not folder_path:
         pytest.skip("未配置folder_path，跳过主办室列提取测试")
+
+    # 避免在 pytest 默认运行时走 UNC 网络盘导致卡死
+    if (folder_path.startswith("\\\\") or folder_path.startswith("//")) and not os.environ.get("RUN_NETWORK_TESTS"):
+        pytest.skip("folder_path 为 UNC 网络路径，默认跳过（设置 RUN_NETWORK_TESTS=1 可强制运行）")
     
     # 查找文件6（与程序识别逻辑保持一致：文件名包含“收发文清单”）
     excel_files = []

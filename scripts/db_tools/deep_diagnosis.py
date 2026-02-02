@@ -7,7 +7,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from registry.config import load_config
-from registry.db import get_connection
+from registry.db import get_connection, close_connection_after_use
 import pandas as pd
 import json
 
@@ -80,65 +80,67 @@ def check_problem1():
     print(f"\n[使用数据库] {db_path}\n")
     
     conn = get_connection(db_path, True)
-    
-    # 步骤1：检查表结构
-    print("\n[步骤1] 检查表结构")
-    cursor = conn.execute("PRAGMA table_info(tasks)")
-    columns = [row[1] for row in cursor.fetchall()]
-    print(f"  表字段: {', '.join(columns)}")
-    
-    if 'display_status' not in columns:
-        print("  [错误] 缺少display_status字段！")
-        return
-    
-    if 'business_id' not in columns:
-        print("  [警告] 缺少business_id字段！")
-    
-    # 步骤2：统计任务
-    print("\n[步骤2] 统计任务")
-    cursor = conn.execute("SELECT COUNT(*) FROM tasks")
-    total = cursor.fetchone()[0]
-    print(f"  总任务数: {total}")
-    
-    cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE display_status IS NOT NULL AND display_status != ''")
-    has_status = cursor.fetchone()[0]
-    print(f"  有display_status的任务: {has_status}")
-    
-    cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE display_status IN ('待审查', '待指派人审查')")
-    pending = cursor.fetchone()[0]
-    print(f"  待审查的任务: {pending}")
-    
-    cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE status = 'completed'")
-    completed = cursor.fetchone()[0]
-    print(f"  status=completed的任务: {completed}")
-    
-    # 步骤3：查看具体任务
-    if pending > 0:
-        print(f"\n[步骤3] 查看待审查任务详情")
-        cursor = conn.execute("""
-            SELECT interface_id, display_status, status, completed_at, 
-                   interface_time, source_file, row_index
-            FROM tasks
-            WHERE display_status IN ('待审查', '待指派人审查')
-            LIMIT 5
-        """)
+    try:
+        # 步骤1：检查表结构
+        print("\n[步骤1] 检查表结构")
+        cursor = conn.execute("PRAGMA table_info(tasks)")
+        columns = [row[1] for row in cursor.fetchall()]
+        print(f"  表字段: {', '.join(columns)}")
         
-        print("  待审查任务示例：")
-        for row in cursor.fetchall():
-            print(f"    接口: {row[0][:40]}")
-            print(f"      display_status: {row[1]}")
-            print(f"      status: {row[2]}")
-            print(f"      completed_at: {row[3]}")
-            print(f"      interface_time: {row[4]}")
-            print(f"      source_file: {row[5]}")
-            print(f"      row_index: {row[6]}")
-            print()
-    else:
-        print(f"\n[关键发现] 数据库中没有待审查的任务！")
-        print("  [可能原因]")
-        print("  1. on_response_written没有正确设置display_status")
-        print("  2. 接口号继承逻辑错误地重置了display_status")
-        print("  3. 用户还没有填写过回文单号")
+        if 'display_status' not in columns:
+            print("  [错误] 缺少display_status字段！")
+            return
+        
+        if 'business_id' not in columns:
+            print("  [警告] 缺少business_id字段！")
+        
+        # 步骤2：统计任务
+        print("\n[步骤2] 统计任务")
+        cursor = conn.execute("SELECT COUNT(*) FROM tasks")
+        total = cursor.fetchone()[0]
+        print(f"  总任务数: {total}")
+        
+        cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE display_status IS NOT NULL AND display_status != ''")
+        has_status = cursor.fetchone()[0]
+        print(f"  有display_status的任务: {has_status}")
+        
+        cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE display_status IN ('待审查', '待指派人审查')")
+        pending = cursor.fetchone()[0]
+        print(f"  待审查的任务: {pending}")
+        
+        cursor = conn.execute("SELECT COUNT(*) FROM tasks WHERE status = 'completed'")
+        completed = cursor.fetchone()[0]
+        print(f"  status=completed的任务: {completed}")
+        
+        # 步骤3：查看具体任务
+        if pending > 0:
+            print(f"\n[步骤3] 查看待审查任务详情")
+            cursor = conn.execute("""
+                SELECT interface_id, display_status, status, completed_at, 
+                       interface_time, source_file, row_index
+                FROM tasks
+                WHERE display_status IN ('待审查', '待指派人审查')
+                LIMIT 5
+            """)
+            
+            print("  待审查任务示例：")
+            for row in cursor.fetchall():
+                print(f"    接口: {row[0][:40]}")
+                print(f"      display_status: {row[1]}")
+                print(f"      status: {row[2]}")
+                print(f"      completed_at: {row[3]}")
+                print(f"      interface_time: {row[4]}")
+                print(f"      source_file: {row[5]}")
+                print(f"      row_index: {row[6]}")
+                print()
+        else:
+            print(f"\n[关键发现] 数据库中没有待审查的任务！")
+            print("  [可能原因]")
+            print("  1. on_response_written没有正确设置display_status")
+            print("  2. 接口号继承逻辑错误地重置了display_status")
+            print("  3. 用户还没有填写过回文单号")
+    finally:
+        close_connection_after_use()
 
 
 def check_problem2():
@@ -164,45 +166,47 @@ def check_problem2():
         return
     
     conn = get_connection(db_path, True)
-    
-    # 查找status=completed的任务（应该有M列值）
-    print("\n[检查] status=completed的任务")
-    cursor = conn.execute("""
-        SELECT interface_id, display_status, status, completed_at, interface_time
-        FROM tasks
-        WHERE status = 'completed'
-        LIMIT 5
-    """)
-    
-    completed_tasks = cursor.fetchall()
-    
-    if completed_tasks:
-        print(f"  找到{len(completed_tasks)}个completed任务：")
-        for row in completed_tasks:
-            print(f"    接口: {row[0][:40]}")
-            print(f"      display_status: {row[1]}")
-            print(f"      status: {row[2]}")
-            print(f"      completed_at: {row[3]}")
-            print(f"      interface_time: {row[4]}")
-            print()
+    try:
+        # 查找status=completed的任务（应该有M列值）
+        print("\n[检查] status=completed的任务")
+        cursor = conn.execute("""
+            SELECT interface_id, display_status, status, completed_at, interface_time
+            FROM tasks
+            WHERE status = 'completed'
+            LIMIT 5
+        """)
         
-        print("\n[分析] 状态重置逻辑")
-        print("  当前逻辑：检测completed_at是否存在，以及Excel中完成列的实际值")
-        print("  完成列定义：")
-        print("    - 文件1: M列（索引12）")
-        print("    - 文件2: N列（索引13）")
-        print("    - 文件3: Q列或T列（索引16/19）")
-        print("    - 文件4: V列（索引21）")
-        print("    - 文件5: N列（索引13）")
-        print("    - 文件6: J列（索引9）")
-        print()
-        print("  [已修复] 特殊检测逻辑（registry/service.py 138-141行）")
-        print("  if not new_completed_val and old_task['completed_at']:")
-        print("      need_reset = True  # 强制重置")
-        print()
-        print("  [效果] 即使Excel中完成列被删除，也会触发状态重置")
-    else:
-        print("  没有completed任务")
+        completed_tasks = cursor.fetchall()
+        
+        if completed_tasks:
+            print(f"  找到{len(completed_tasks)}个completed任务：")
+            for row in completed_tasks:
+                print(f"    接口: {row[0][:40]}")
+                print(f"      display_status: {row[1]}")
+                print(f"      status: {row[2]}")
+                print(f"      completed_at: {row[3]}")
+                print(f"      interface_time: {row[4]}")
+                print()
+            
+            print("\n[分析] 状态重置逻辑")
+            print("  当前逻辑：检测completed_at是否存在，以及Excel中完成列的实际值")
+            print("  完成列定义：")
+            print("    - 文件1: M列（索引12）")
+            print("    - 文件2: N列（索引13）")
+            print("    - 文件3: Q列或T列（索引16/19）")
+            print("    - 文件4: V列（索引21）")
+            print("    - 文件5: N列（索引13）")
+            print("    - 文件6: J列（索引9）")
+            print()
+            print("  [已修复] 特殊检测逻辑（registry/service.py 138-141行）")
+            print("  if not new_completed_val and old_task['completed_at']:")
+            print("      need_reset = True  # 强制重置")
+            print()
+            print("  [效果] 即使Excel中完成列被删除，也会触发状态重置")
+        else:
+            print("  没有completed任务")
+    finally:
+        close_connection_after_use()
 
 
 if __name__ == "__main__":

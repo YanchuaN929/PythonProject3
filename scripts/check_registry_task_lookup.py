@@ -37,7 +37,7 @@ def main() -> int:
 
     import registry.hooks as registry_hooks
     from registry.config import load_config
-    from registry.db import get_connection
+    from registry.db import get_connection, close_connection_after_use
     from registry.util import make_task_id
 
     registry_hooks.set_data_folder(data_folder)
@@ -54,11 +54,14 @@ def main() -> int:
     )
 
     conn = get_connection(db_path, wal)
-    row = conn.execute(
-        "SELECT status, display_status, assigned_by, role, confirmed_at, responsible_person, ignored "
-        "FROM tasks WHERE id = ?",
-        (tid,),
-    ).fetchone()
+    try:
+        row = conn.execute(
+            "SELECT status, display_status, assigned_by, role, confirmed_at, responsible_person, ignored "
+            "FROM tasks WHERE id = ?",
+            (tid,),
+        ).fetchone()
+    finally:
+        close_connection_after_use()
 
     print(f"db_path={db_path}")
     print(f"task_id={tid}")

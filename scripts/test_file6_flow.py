@@ -15,6 +15,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import datetime
+import pytest
 
 def test_file6_processing():
     print("=" * 80)
@@ -36,16 +37,25 @@ def test_file6_processing():
     
     folder_path = config.get('folder_path')
     if not folder_path:
-        print("配置文件中缺少folder_path")
-        return
+        pytest.skip("配置文件中缺少folder_path，跳过文件6流程测试")
+
+    # 避免在 pytest 默认运行时走 UNC 网络盘导致卡死/失败
+    if (folder_path.startswith("\\\\") or folder_path.startswith("//")) and not os.environ.get("RUN_NETWORK_TESTS"):
+        pytest.skip("folder_path 为 UNC 网络路径，默认跳过（设置 RUN_NETWORK_TESTS=1 可强制运行）")
+
+    if not os.path.exists(folder_path):
+        pytest.skip(f"folder_path 不存在或不可访问：{folder_path}")
     
     print(f"源文件夹: {folder_path}")
     
     # 查找Excel文件
     excel_files = []
-    for file in os.listdir(folder_path):
-        if file.endswith(('.xlsx', '.xls')):
-            excel_files.append(os.path.join(folder_path, file))
+    try:
+        for file in os.listdir(folder_path):
+            if file.endswith(('.xlsx', '.xls')):
+                excel_files.append(os.path.join(folder_path, file))
+    except Exception as e:
+        pytest.skip(f"无法访问 folder_path：{folder_path}，原因：{e}")
     
     # 查找文件6
     from core import main
@@ -159,7 +169,7 @@ def test_file6_processing():
     print("[6] 检查Registry记录...")
     try:
         from registry.hooks import _cfg
-        from registry.db import get_connection
+        from registry.db import get_connection, close_connection_after_use
         
         cfg = _cfg()
         db_path = cfg.get('registry_db_path')
@@ -168,26 +178,29 @@ def test_file6_processing():
             print(f"  [WARN] Registry数据库不存在: {db_path}")
         else:
             conn = get_connection(db_path, True)
-            cursor = conn.execute("""
-                SELECT COUNT(*) 
-                FROM tasks 
-                WHERE file_type = 6
-            """)
-            count = cursor.fetchone()[0]
-            print(f"  [INFO] 数据库中文件6的任务数: {count}")
-            
-            if count > 0:
+            try:
                 cursor = conn.execute("""
-                    SELECT project_id, interface_id, source_file, row_index, 
-                           display_status, responsible_person, response_number
-                    FROM tasks
+                    SELECT COUNT(*) 
+                    FROM tasks 
                     WHERE file_type = 6
-                    LIMIT 3
                 """)
-                print("  前3条记录:")
-                for row in cursor.fetchall():
-                    pid, iid, sf, ri, ds, rp, rn = row
-                    print(f"    - {pid}/{iid} | row:{ri} | status:{ds} | resp_person:{rp} | resp_num:{rn}")
+                count = cursor.fetchone()[0]
+                print(f"  [INFO] 数据库中文件6的任务数: {count}")
+                
+                if count > 0:
+                    cursor = conn.execute("""
+                        SELECT project_id, interface_id, source_file, row_index, 
+                               display_status, responsible_person, response_number
+                        FROM tasks
+                        WHERE file_type = 6
+                        LIMIT 3
+                    """)
+                    print("  前3条记录:")
+                    for row in cursor.fetchall():
+                        pid, iid, sf, ri, ds, rp, rn = row
+                        print(f"    - {pid}/{iid} | row:{ri} | status:{ds} | resp_person:{rp} | resp_num:{rn}")
+            finally:
+                close_connection_after_use()
     except Exception as e:
         print(f"  [ERROR] 检查Registry失败: {e}")
     

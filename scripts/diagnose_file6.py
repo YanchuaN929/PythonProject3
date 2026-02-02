@@ -53,7 +53,7 @@ def diagnose_file6():
     
     try:
         from registry.hooks import _cfg
-        from registry.db import get_connection
+        from registry.db import get_connection, close_connection_after_use
         cfg = _cfg()
         db_path = cfg.get('registry_db_path')
         
@@ -64,27 +64,29 @@ def diagnose_file6():
             print(f"数据库路径: {db_path}")
             
             conn = get_connection(db_path, True)
-            
-            # 检查response_number字段是否存在
-            cursor = conn.execute("PRAGMA table_info(tasks)")
-            columns = [row[1] for row in cursor.fetchall()]
-            if 'response_number' in columns:
-                print("[OK] response_number字段存在")
-            else:
-                print("[ERROR] response_number字段不存在！需要运行迁移脚本")
-            print()
-            
-            # 查找文件6的所有任务
-            cursor = conn.execute("""
-                SELECT id, file_type, project_id, interface_id, source_file, row_index,
-                       business_id, status, display_status, responsible_person, 
-                       response_number, completed_at
-                FROM tasks
-                WHERE file_type = 6
-                ORDER BY project_id, interface_id, first_seen_at
-            """)
-            
-            tasks = cursor.fetchall()
+            try:
+                # 检查response_number字段是否存在
+                cursor = conn.execute("PRAGMA table_info(tasks)")
+                columns = [row[1] for row in cursor.fetchall()]
+                if 'response_number' in columns:
+                    print("[OK] response_number字段存在")
+                else:
+                    print("[ERROR] response_number字段不存在！需要运行迁移脚本")
+                print()
+                
+                # 查找文件6的所有任务
+                cursor = conn.execute("""
+                    SELECT id, file_type, project_id, interface_id, source_file, row_index,
+                           business_id, status, display_status, responsible_person, 
+                           response_number, completed_at
+                    FROM tasks
+                    WHERE file_type = 6
+                    ORDER BY project_id, interface_id, first_seen_at
+                """)
+                
+                tasks = cursor.fetchall()
+            finally:
+                close_connection_after_use()
             print(f"文件6总任务数: {len(tasks)}")
             print()
             

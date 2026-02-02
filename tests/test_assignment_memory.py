@@ -382,20 +382,23 @@ class TestFindTasksForForceAssign:
     def test_find_tasks_returns_matching_tasks(self, tmp_path):
         """测试查找返回匹配的任务"""
         db_path = str(tmp_path / "test1.db")
-        from registry.db import init_db, get_connection
+        from registry.db import init_db, get_connection, close_connection_after_use
         from registry.service import find_tasks_for_force_assign
 
         conn = get_connection(db_path, wal=False)
-        init_db(conn)
-        conn.execute("""
-            INSERT INTO tasks (
-                id, file_type, project_id, interface_id, source_file, row_index,
-                business_id, status, first_seen_at, last_seen_at
-            ) VALUES
-            ('task1', 1, '1907', 'HQ-TA-001', 'file1.xlsx', 10, '1|1907|HQ-TA-001', 'open', '2025-01-01', '2025-01-01'),
-            ('task2', 1, '1907', 'HQ-TA-001', 'file2.xlsx', 20, '1|1907|HQ-TA-001', 'open', '2025-01-01', '2025-01-01')
-        """)
-        conn.commit()
+        try:
+            init_db(conn)
+            conn.execute("""
+                INSERT INTO tasks (
+                    id, file_type, project_id, interface_id, source_file, row_index,
+                    business_id, status, first_seen_at, last_seen_at
+                ) VALUES
+                ('task1', 1, '1907', 'HQ-TA-001', 'file1.xlsx', 10, '1|1907|HQ-TA-001', 'open', '2025-01-01', '2025-01-01'),
+                ('task2', 1, '1907', 'HQ-TA-001', 'file2.xlsx', 20, '1|1907|HQ-TA-001', 'open', '2025-01-01', '2025-01-01')
+            """)
+            conn.commit()
+        finally:
+            close_connection_after_use()
 
         tasks = find_tasks_for_force_assign(
             db_path=db_path,
@@ -412,19 +415,22 @@ class TestFindTasksForForceAssign:
     def test_find_tasks_excludes_archived(self, tmp_path):
         """测试排除已归档的任务"""
         db_path = str(tmp_path / "test2.db")
-        from registry.db import init_db, get_connection
+        from registry.db import init_db, get_connection, close_connection_after_use
         from registry.service import find_tasks_for_force_assign
 
         conn = get_connection(db_path, wal=False)
-        init_db(conn)
-        conn.execute("""
-            INSERT INTO tasks (
-                id, file_type, project_id, interface_id, source_file, row_index,
-                business_id, status, first_seen_at, last_seen_at
-            ) VALUES
-            ('task_archived', 1, '1907', 'HQ-TA-003', 'file1.xlsx', 40, '1|1907|HQ-TA-003', 'archived', '2025-01-01', '2025-01-01')
-        """)
-        conn.commit()
+        try:
+            init_db(conn)
+            conn.execute("""
+                INSERT INTO tasks (
+                    id, file_type, project_id, interface_id, source_file, row_index,
+                    business_id, status, first_seen_at, last_seen_at
+                ) VALUES
+                ('task_archived', 1, '1907', 'HQ-TA-003', 'file1.xlsx', 40, '1|1907|HQ-TA-003', 'archived', '2025-01-01', '2025-01-01')
+            """)
+            conn.commit()
+        finally:
+            close_connection_after_use()
 
         tasks = find_tasks_for_force_assign(
             db_path=db_path,
@@ -440,12 +446,15 @@ class TestFindTasksForForceAssign:
     def test_find_tasks_returns_empty_for_nonexistent(self, tmp_path):
         """测试查找不存在的任务返回空列表"""
         db_path = str(tmp_path / "test3.db")
-        from registry.db import init_db, get_connection
+        from registry.db import init_db, get_connection, close_connection_after_use
         from registry.service import find_tasks_for_force_assign
 
         conn = get_connection(db_path, wal=False)
-        init_db(conn)
-        conn.commit()
+        try:
+            init_db(conn)
+            conn.commit()
+        finally:
+            close_connection_after_use()
 
         tasks = find_tasks_for_force_assign(
             db_path=db_path,

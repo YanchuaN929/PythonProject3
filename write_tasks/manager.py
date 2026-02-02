@@ -295,10 +295,13 @@ class WriteTaskManager:
             if not db_path:
                 return
             wal = bool(cfg.get("registry_wal", False))
-            from registry.db import get_connection
+            from registry.db import get_connection, close_connection_after_use
 
             conn = get_connection(db_path, wal)
-            _shared_log_upsert_task(conn, task)
+            try:
+                _shared_log_upsert_task(conn, task)
+            finally:
+                close_connection_after_use()
         except Exception as e:
             print(f"[WriteTaskManager] 同步全局任务日志失败(已忽略): {e}")
 

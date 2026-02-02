@@ -28,7 +28,7 @@ def main() -> int:
 
     import registry.hooks as registry_hooks
     from registry.config import load_config
-    from registry.db import get_connection
+    from registry.db import get_connection, close_connection_after_use
 
     registry_hooks.set_data_folder(data_folder)
     cfg = load_config(data_folder=data_folder, ensure_registry_dir=True)
@@ -36,32 +36,34 @@ def main() -> int:
     wal = bool(cfg.get("registry_wal", False))
 
     conn = get_connection(db_path, wal)
+    try:
+        # 确保 tasks 表存在（正常情况下 init_db 会创建）
+        row = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'"
+        ).fetchone()
+        if not row:
+            print(f"db_path={db_path}")
+            print("tasks_table_exists=False")
+            print("tasks_count=0")
+            return 0
 
-    # 确保 tasks 表存在（正常情况下 init_db 会创建）
-    row = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'"
-    ).fetchone()
-    if not row:
+        total = conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
         print(f"db_path={db_path}")
-        print("tasks_table_exists=False")
-        print("tasks_count=0")
+        print("tasks_table_exists=True")
+        print(f"tasks_count={int(total)}")
+
+        # file_type 分布
+        rows = conn.execute(
+            "SELECT file_type, COUNT(*) AS c FROM tasks GROUP BY file_type ORDER BY file_type"
+        ).fetchall()
+        if rows:
+            print("by_file_type=" + ", ".join([f"{r[0]}:{r[1]}" for r in rows]))
+        else:
+            print("by_file_type=(empty)")
+
         return 0
-
-    total = conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
-    print(f"db_path={db_path}")
-    print("tasks_table_exists=True")
-    print(f"tasks_count={int(total)}")
-
-    # file_type 分布
-    rows = conn.execute(
-        "SELECT file_type, COUNT(*) AS c FROM tasks GROUP BY file_type ORDER BY file_type"
-    ).fetchall()
-    if rows:
-        print("by_file_type=" + ", ".join([f"{r[0]}:{r[1]}" for r in rows]))
-    else:
-        print("by_file_type=(empty)")
-
-    return 0
+    finally:
+        close_connection_after_use()
 
 
 if __name__ == "__main__":
