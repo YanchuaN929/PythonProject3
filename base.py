@@ -676,6 +676,9 @@ class ExcelProcessorApp:
         """
         调用更新管理器进行版本校验；返回True代表可继续后续流程。
         """
+        # 已改为启动时自动检测更新，避免在“开始处理/导出”时触发退出
+        if getattr(self, "_startup_update_check_scheduled", False):
+            return True
         manager = getattr(self, 'update_manager', None)
         if not manager:
             return True
@@ -975,6 +978,7 @@ class ExcelProcessorApp:
             "dont_ask_again": False,
             "hide_previous_months": False,
             "simple_export_mode": False,
+            "folder_path_lock_enabled": True,
             "defaults": {
                 "folder_path": FORCED_DEFAULT_FOLDER,
                 "export_path": "D:/jilu"
@@ -1007,13 +1011,6 @@ class ExcelProcessorApp:
         except Exception as e:
             print(f"[配置] 读取项目默认配置失败: {e}")
 
-        # 强制覆盖默认数据目录，避免被旧配置覆盖
-        try:
-            if isinstance(self.default_config.get("defaults"), dict):
-                self.default_config["defaults"]["folder_path"] = FORCED_DEFAULT_FOLDER
-        except Exception:
-            pass
-        
         # 加载用户配置
         try:
             if os.path.exists(self.config_file):
@@ -1028,18 +1025,32 @@ class ExcelProcessorApp:
         if "auto_startup" not in self.config:
             self.config["auto_startup"] = True
 
+        # 【新增】路径锁定开关（默认启用；以项目配置为准，便于统一测试）
+        project_lock_enabled = bool(self.default_config.get("folder_path_lock_enabled", True))
+        self.config["folder_path_lock_enabled"] = project_lock_enabled
+        path_lock_enabled = project_lock_enabled
+
+        # 强制覆盖默认数据目录，避免被旧配置覆盖（仅在锁定开启时）
+        try:
+            if path_lock_enabled and isinstance(self.default_config.get("defaults"), dict):
+                self.default_config["defaults"]["folder_path"] = FORCED_DEFAULT_FOLDER
+        except Exception:
+            pass
+
         # 【默认路径填充】强制使用默认数据文件夹（不读取缓存）
         defaults = self.default_config.get("defaults", {})
         if not isinstance(defaults, dict):
             defaults = {}
         defaults = defaults.copy()
-        defaults["folder_path"] = FORCED_DEFAULT_FOLDER
+        if path_lock_enabled:
+            defaults["folder_path"] = FORCED_DEFAULT_FOLDER
         self.config["defaults"] = defaults.copy()
         default_folder = defaults.get("folder_path", "")
         default_export = defaults.get("export_path", "")
 
         if default_folder:
-            self.config["folder_path"] = default_folder
+            if path_lock_enabled or not self.config.get("folder_path", "").strip():
+                self.config["folder_path"] = default_folder
         
         if not self.config.get("export_folder_path", "").strip():
             self.config["export_folder_path"] = default_export
@@ -1065,7 +1076,7 @@ class ExcelProcessorApp:
         self.timer_grace_minutes = 10
         self._load_yaml_settings()
 
-        if default_folder:
+        if default_folder and path_lock_enabled:
             self.config["folder_path"] = default_folder
 
     def _normalize_folder_path(self, value: str) -> str:
@@ -1076,11 +1087,19 @@ class ExcelProcessorApp:
             normalized = normalized[:-1]
         return normalized.lower()
 
+    def _is_folder_path_lock_enabled(self) -> bool:
+        try:
+            return bool(self.config.get("folder_path_lock_enabled", self.default_config.get("folder_path_lock_enabled", True)))
+        except Exception:
+            return True
+
     def _get_default_folder_path(self) -> str:
         defaults = self.default_config.get("defaults", {})
         if not isinstance(defaults, dict):
             return ""
-        return defaults.get("folder_path", FORCED_DEFAULT_FOLDER) or FORCED_DEFAULT_FOLDER
+        if self._is_folder_path_lock_enabled():
+            return defaults.get("folder_path", FORCED_DEFAULT_FOLDER) or FORCED_DEFAULT_FOLDER
+        return defaults.get("folder_path", "")
 
     def _get_persisted_folder_path(self) -> str:
         current_folder = self.config.get("folder_path", "")
@@ -1090,6 +1109,8 @@ class ExcelProcessorApp:
         return current_folder
 
     def _ensure_not_running_from_default_path(self) -> None:
+        if not self._is_folder_path_lock_enabled():
+            return
         default_folder = self._get_default_folder_path()
         if not default_folder:
             return
@@ -2825,7 +2846,7 @@ class ExcelProcessorApp:
     def browse_folder(self):
         """浏览文件夹"""
         default_folder = self._get_default_folder_path()
-        if default_folder:
+        if default_folder and self._is_folder_path_lock_enabled():
             prompt = (
                 f"当前数据文件夹路径已强制固定为:\n{default_folder}\n\n"
                 "如需临时使用其他路径，请输入密码继续。\n"
@@ -2999,8 +3020,14 @@ class ExcelProcessorApp:
                     return
                 try:
                     from registry.db import enable_maintenance_mode, is_maintenance_mode
+                    from services.db_status import notify_maintenance
                     if is_maintenance_mode(data_folder=folder_path):
                         messagebox.showinfo("维护模式", "当前已处于维护模式。", parent=settings_menu)
+                        try:
+                            from registry.db import get_maintenance_flag_path
+                            notify_maintenance(flag_path=get_maintenance_flag_path(data_folder=folder_path))
+                        except Exception:
+                            notify_maintenance()
                         return
                     if not messagebox.askyesno(
                         "确认进入维护模式",
@@ -3014,6 +3041,7 @@ class ExcelProcessorApp:
                         f"已创建维护标志文件：\n{flag_path}\n\n请等待其他客户端退出后再继续维护操作。",
                         parent=settings_menu
                     )
+                    notify_maintenance(flag_path=flag_path)
                 except Exception as e:
                     messagebox.showerror("维护模式失败", f"进入维护模式失败：{e}", parent=settings_menu)
             
@@ -3023,6 +3051,7 @@ class ExcelProcessorApp:
                     return
                 try:
                     from registry.db import disable_maintenance_mode, get_maintenance_flag_path, is_maintenance_mode
+                    from services.db_status import notify_connected
                     flag_path = get_maintenance_flag_path(data_folder=folder_path)
                     if not is_maintenance_mode(data_folder=folder_path):
                         messagebox.showinfo("维护模式", "当前未处于维护模式。", parent=settings_menu)
@@ -3035,6 +3064,13 @@ class ExcelProcessorApp:
                         f"已移除维护标志文件：\n{flag_path}",
                         parent=settings_menu
                     )
+                    try:
+                        from registry.config import load_config
+                        cfg = load_config(data_folder=folder_path, ensure_registry_dir=False)
+                        db_path = cfg.get("registry_db_path", "")
+                    except Exception:
+                        db_path = ""
+                    notify_connected(db_path=db_path if db_path else None)
                 except Exception as e:
                     messagebox.showerror("维护模式失败", f"退出维护模式失败：{e}", parent=settings_menu)
             
@@ -3422,8 +3458,17 @@ class ExcelProcessorApp:
                         print(f"[Registry] 设置数据文件夹失败: {e}")
                     try:
                         from registry.config import load_config
+                        from registry.db import is_maintenance_mode, get_maintenance_flag_path
                         cfg = load_config(data_folder=folder_path, ensure_registry_dir=True)
                         db_path = cfg.get("registry_db_path", "")
+                        # 维护模式检测：提示状态栏标记
+                        try:
+                            if is_maintenance_mode(data_folder=folder_path):
+                                from services.db_status import notify_maintenance
+                                flag_path = get_maintenance_flag_path(data_folder=folder_path)
+                                notify_maintenance(flag_path=flag_path, db_path=db_path)
+                        except Exception:
+                            pass
                         # 若回退到了本地，给状态栏一个非阻塞错误提示
                         if db_path and "result_cache" in os.path.normcase(db_path):
                             db_error = "网络不可用，已回退到本地 registry.db"
@@ -6948,10 +6993,7 @@ class ExcelProcessorApp:
             if not distribution:
                 return
             
-            unassigned = self._check_unassigned_tasks()
-            if not unassigned:
-                messagebox.showinfo("提示", "当前没有需要指派的任务", parent=self.root)
-                return
+            unassigned = self._check_unassigned_tasks() or []
             
             name_list = distribution.get_name_list()
             if not name_list:

@@ -22,6 +22,7 @@ class DatabaseStatus:
     SYNCING = "syncing"                # 同步中
     WAITING = "waiting"                # 等待锁定
     ERROR = "error"                    # 连接失败
+    MAINTENANCE = "maintenance"        # 维护模式
 
 
 class DatabaseStatusIndicator:
@@ -42,6 +43,7 @@ class DatabaseStatusIndicator:
         DatabaseStatus.SYNCING: ("🔄", "同步中...", "#4169E1"),
         DatabaseStatus.WAITING: ("⏳", "等待锁定...", "#FF8C00"),
         DatabaseStatus.ERROR: ("❌", "连接失败", "#DC143C"),
+        DatabaseStatus.MAINTENANCE: ("🛠️", "当前处于维护模式", "#B22222"),
     }
     
     def __init__(self, parent_frame: ttk.Frame, row: int = 4, column: int = 0):
@@ -172,6 +174,13 @@ class DatabaseStatusIndicator:
         # 错误信息
         if self._error_message:
             lines.append(f"错误: {self._error_message}")
+
+        # 维护标志路径
+        maintenance_flag = self._detail_info.get("maintenance_flag")
+        if maintenance_flag:
+            if len(maintenance_flag) > 50:
+                maintenance_flag = "..." + maintenance_flag[-47:]
+            lines.append(f"维护标志: {maintenance_flag}")
         
         return "\n".join(lines)
     
@@ -277,6 +286,17 @@ class DatabaseStatusIndicator:
         # 弹窗提醒
         if show_dialog:
             self._show_error_dialog(message)
+
+    def set_maintenance(self, flag_path: Optional[str] = None, db_path: Optional[str] = None):
+        """设置为维护模式状态（不弹窗）"""
+        self._current_status = DatabaseStatus.MAINTENANCE
+        self._error_message = None
+        self.progress_label.config(text="")
+        if db_path:
+            self._detail_info['db_path'] = db_path
+        if flag_path:
+            self._detail_info['maintenance_flag'] = flag_path
+        self._update_display()
     
     def _show_error_dialog(self, message: str):
         """显示错误弹窗"""
@@ -362,6 +382,11 @@ def notify_error(message: str = "连接失败", show_dialog: bool = True):
     """通知：连接失败"""
     if _global_indicator:
         _global_indicator.set_error(message, show_dialog)
+
+def notify_maintenance(flag_path: Optional[str] = None, db_path: Optional[str] = None):
+    """通知：维护模式"""
+    if _global_indicator:
+        _global_indicator.set_maintenance(flag_path=flag_path, db_path=db_path)
 
 
 def notify_not_configured():

@@ -1216,10 +1216,6 @@ def show_assignment_dialog(parent, unassigned_tasks, name_list):
         unassigned_tasks: 未指派任务列表
         name_list: 姓名列表
     """
-    if not unassigned_tasks:
-        messagebox.showinfo("提示", "当前没有需要指派的任务", parent=parent)
-        return
-    
     if not name_list:
         messagebox.showwarning("警告", "无法读取姓名列表，请检查姓名角色表.xlsx", parent=parent)
         return

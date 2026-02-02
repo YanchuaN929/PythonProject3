@@ -10,7 +10,7 @@ import random
 import sqlite3
 import os
 import pandas as pd
-from .config import load_config
+from .config import load_config, set_config
 from .service import write_event, mark_completed, mark_confirmed, batch_upsert_tasks
 from .db import close_connection, close_connection_after_use, MaintenanceModeError
 from .models import EventType
@@ -55,6 +55,68 @@ def _retry_on_lock(operation_name: str, func, max_retries: int = 5):
 _DATA_FOLDER = None
 _DISABLED_NOTIFIED = False
 
+def _normalize_folder_path(path: str) -> str:
+    if not path:
+        return ""
+    normalized = str(path).strip().replace("/", "\\")
+    while normalized.endswith("\\"):
+        normalized = normalized[:-1]
+    return normalized.lower()
+
+def _ensure_data_folder_from_path(source_path: Optional[str]) -> None:
+    """
+    尝试从源文件路径推导并设置数据目录，避免误用旧的 _DATA_FOLDER。
+    仅在 source_path 为绝对路径（含 UNC）时生效。
+    """
+    if not source_path:
+        return
+    try:
+        source_path = str(source_path)
+        if not (os.path.isabs(source_path) or source_path.startswith("\\\\") or source_path.startswith("//")):
+            return
+        folder = source_path
+        if not os.path.isdir(folder):
+            folder = os.path.dirname(source_path)
+        if not folder:
+            return
+
+        source_norm = _normalize_folder_path(source_path)
+        current_norm = _normalize_folder_path(_DATA_FOLDER or "")
+        if current_norm and source_norm.startswith(current_norm + "\\"):
+            return
+
+        # 优先向上寻找包含 .registry 的目录（避免子目录误判）
+        search_dir = folder
+        for _ in range(5):
+            try:
+                if os.path.isdir(os.path.join(search_dir, ".registry")):
+                    set_data_folder(search_dir)
+                    return
+            except Exception:
+                pass
+            parent = os.path.dirname(search_dir)
+            if not parent or parent == search_dir:
+                break
+            search_dir = parent
+
+        if _normalize_folder_path(folder) != current_norm:
+            set_data_folder(folder)
+    except Exception:
+        pass
+
+def _ensure_data_folder_from_task_keys(task_keys: List[Dict[str, Any]]) -> None:
+    """从 task_keys 中尽力推导数据目录（优先使用绝对 source_file）。"""
+    if not task_keys:
+        return
+    for tk in task_keys:
+        try:
+            source_file = tk.get("source_file")
+            if source_file and (os.path.isabs(source_file) or str(source_file).startswith("\\\\") or str(source_file).startswith("//")):
+                _ensure_data_folder_from_path(source_file)
+                return
+        except Exception:
+            continue
+
 def set_data_folder(folder_path: str):
     """
     设置数据文件夹路径（用于多用户协作）
@@ -71,6 +133,11 @@ def set_data_folder(folder_path: str):
     # 若不可用：直接禁用并提示（不回退到本地 result_cache/registry.db）。
     try:
         cfg = load_config(data_folder=_DATA_FOLDER, ensure_registry_dir=True)
+        try:
+            # 同步更新全局配置缓存，避免后续 get_config 读到旧的 db_path
+            set_config(cfg)
+        except Exception:
+            pass
         if not _enabled(cfg):
             global _DISABLED_NOTIFIED
             if not _DISABLED_NOTIFIED:
@@ -98,6 +165,7 @@ def get_display_status(task_keys: List[Dict[str, Any]], current_user_roles_str: 
         Dict[task_id, display_status_text]: 任务ID到显示文本的映射
     """
     try:
+        _ensure_data_folder_from_task_keys(task_keys)
         cfg = _cfg()
         if not _enabled(cfg):
             return {}
@@ -142,14 +210,23 @@ def _handle_maintenance_mode(error: Exception):
     
     msg = "Registry 已进入维护模式，请稍后再试。\n程序将退出以释放占用。"
     try:
-        from services.db_status import notify_error
-        notify_error(msg, show_dialog=True)
-    except Exception:
+        from services.db_status import notify_maintenance
+        flag_path = None
         try:
-            from tkinter import messagebox
-            messagebox.showwarning("Registry维护模式", msg)
+            from .db import get_maintenance_flag_path
+            if _DATA_FOLDER:
+                flag_path = get_maintenance_flag_path(data_folder=_DATA_FOLDER)
         except Exception:
-            print(f"[Registry] {msg}")
+            flag_path = None
+        notify_maintenance(flag_path=flag_path)
+    except Exception:
+        pass
+    
+    try:
+        from tkinter import messagebox
+        messagebox.showwarning("Registry维护模式", msg)
+    except Exception:
+        print(f"[Registry] {msg}")
     
     try:
         os._exit(0)
@@ -177,6 +254,7 @@ def on_process_done(
         now: 当前时间（可选，默认为当前系统时间）
     """
     try:
+        _ensure_data_folder_from_path(source_file)
         cfg = _cfg()
         if not _enabled(cfg):
             return
@@ -304,6 +382,7 @@ def on_assigned(
         now: 当前时间（可选）
     """
     try:
+        _ensure_data_folder_from_path(file_path)
         cfg = _cfg()
         if not _enabled(cfg):
             return
@@ -390,6 +469,7 @@ def on_response_written(
         now: 当前时间（可选）
     """
     try:
+        _ensure_data_folder_from_path(file_path)
         cfg = _cfg()
         if not _enabled(cfg):
             return
@@ -540,6 +620,7 @@ def on_confirmed_by_superior(
         now: 当前时间（可选）
     """
     try:
+        _ensure_data_folder_from_path(file_path)
         cfg = _cfg()
         if not _enabled(cfg):
             return
@@ -593,6 +674,10 @@ def on_unconfirmed_by_superior(
         user_name: 操作人姓名
     """
     try:
+        try:
+            _ensure_data_folder_from_path(key.get("source_file"))
+        except Exception:
+            pass
         from .service import mark_unconfirmed
         
         cfg = _cfg()
@@ -667,6 +752,10 @@ def write_event_only(event: str, payload: dict) -> None:
         payload: 事件数据
     """
     try:
+        try:
+            _ensure_data_folder_from_path(payload.get("source_file") or payload.get("file_path"))
+        except Exception:
+            pass
         cfg = _cfg()
         if not _enabled(cfg):
             return

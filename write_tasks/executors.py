@@ -37,6 +37,14 @@ def execute_response_task(payload: Dict[str, Any]) -> bool:
         registry_hooks = None
 
     if registry_hooks:
+        # 确保 Registry 使用当前文件所在目录，避免误判维护模式
+        try:
+            file_path = str(payload.get("file_path", "") or "").strip()
+            if file_path:
+                import os
+                registry_hooks.set_data_folder(os.path.dirname(file_path))
+        except Exception as e:
+            print(f"[Registry] 设置数据目录失败(已忽略): {e}")
         interface_id = str(payload.get("interface_id", "") or "").strip()
         # 去除角色后缀：S-XXX(...)->S-XXX
         if interface_id.endswith(")") and "(" in interface_id:
