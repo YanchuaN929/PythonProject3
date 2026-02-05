@@ -375,6 +375,42 @@ class TestForceAssignDialog:
             result4 = dialog._find_source_file("", "test_file.xlsx", 1)
             assert result4 is None
 
+    def test_resolve_data_folder_prefers_registry_hook(self, tmp_path):
+        """测试：_resolve_data_folder 优先使用 hooks 已设置的路径"""
+        from services.distribution import ForceAssignDialog
+        from registry import hooks as registry_hooks
+
+        original = registry_hooks._DATA_FOLDER
+        try:
+            preferred = "E:/preferred/data"
+            registry_hooks._DATA_FOLDER = preferred
+
+            with patch.object(ForceAssignDialog, "__init__", return_value=None):
+                dialog = ForceAssignDialog.__new__(ForceAssignDialog)
+                db_path = tmp_path / "data" / ".registry" / "registry.db"
+                result = dialog._resolve_data_folder(str(db_path))
+                assert result == preferred
+        finally:
+            registry_hooks._DATA_FOLDER = original
+
+    def test_resolve_data_folder_fallbacks_to_db_path(self, tmp_path):
+        """测试：_resolve_data_folder 在 hooks 未设置时从 db_path 反推"""
+        from services.distribution import ForceAssignDialog
+        from registry import hooks as registry_hooks
+
+        original = registry_hooks._DATA_FOLDER
+        try:
+            registry_hooks._DATA_FOLDER = None
+            db_path = tmp_path / "data" / ".registry" / "registry.db"
+            expected = tmp_path / "data"
+
+            with patch.object(ForceAssignDialog, "__init__", return_value=None):
+                dialog = ForceAssignDialog.__new__(ForceAssignDialog)
+                result = dialog._resolve_data_folder(str(db_path))
+                assert str(expected) == result
+        finally:
+            registry_hooks._DATA_FOLDER = original
+
 
 class TestFindTasksForForceAssign:
     """测试数据库查询函数"""

@@ -12,6 +12,9 @@ import os
 import sys
 import json
 import datetime
+import traceback
+import faulthandler
+import atexit
 import threading
 import time
 import winreg
@@ -28,6 +31,70 @@ from write_tasks import get_write_task_manager, get_pending_cache
 
 FORCED_DEFAULT_FOLDER = r"//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册"
 DEV_OVERRIDE_PASSWORD = "0929"
+
+_CRASH_LOG_FH = None
+
+
+def _init_crash_logging():
+    """Initialize crash/exit logging to a file."""
+    global _CRASH_LOG_FH
+    try:
+        log_dir = os.path.expanduser("~/.excel_processor")
+        os.makedirs(log_dir, exist_ok=True)
+        exit_log = os.path.join(log_dir, "exit_reason.log")
+        crash_log = os.path.join(log_dir, "crash.log")
+
+        try:
+            with open(exit_log, "a", encoding="utf-8") as f:
+                f.write(f"{datetime.datetime.now().isoformat()} crash_logging_init\n")
+        except Exception:
+            pass
+
+        if _CRASH_LOG_FH is None:
+            _CRASH_LOG_FH = open(crash_log, "a", encoding="utf-8")
+            faulthandler.enable(file=_CRASH_LOG_FH, all_threads=True)
+
+        def _atexit_log():
+            try:
+                with open(exit_log, "a", encoding="utf-8") as f:
+                    f.write(f"{datetime.datetime.now().isoformat()} atexit\n")
+            except Exception:
+                pass
+
+        atexit.register(_atexit_log)
+
+        def _log_exception(prefix: str, exc_type, exc_value, exc_tb):
+            try:
+                with open(crash_log, "a", encoding="utf-8") as f:
+                    f.write(f"\n{datetime.datetime.now().isoformat()} {prefix}\n")
+                    traceback.print_exception(exc_type, exc_value, exc_tb, file=f)
+            except Exception:
+                pass
+
+        original_excepthook = sys.excepthook
+
+        def _sys_excepthook(exc_type, exc_value, exc_tb):
+            _log_exception("sys.excepthook", exc_type, exc_value, exc_tb)
+            try:
+                original_excepthook(exc_type, exc_value, exc_tb)
+            except Exception:
+                pass
+
+        sys.excepthook = _sys_excepthook
+
+        if hasattr(threading, "excepthook"):
+            original_thread_excepthook = threading.excepthook
+
+            def _thread_excepthook(args):
+                _log_exception("threading.excepthook", args.exc_type, args.exc_value, args.exc_traceback)
+                try:
+                    original_thread_excepthook(args)
+                except Exception:
+                    pass
+
+            threading.excepthook = _thread_excepthook
+    except Exception:
+        pass
 
 
 # ============================================================================
@@ -304,6 +371,12 @@ class ExcelProcessorApp:
             pass
         self.update_manager = self._create_update_manager()
         self.load_config()
+        try:
+            self._log_exit_reason(
+                f"startup pid={os.getpid()} app_root={self.app_root} folder_path={self.config.get('folder_path', '')}"
+            )
+        except Exception:
+            pass
         self._ensure_not_running_from_default_path()
         # 启动阶段：严格不触网。任何涉及 folder_path(可能为UNC) 的访问，
         # 统一延迟到用户点击“刷新文件列表”后再执行。
@@ -614,6 +687,17 @@ class ExcelProcessorApp:
         except Exception:
             pass
 
+    def _log_exit_reason(self, reason: str):
+        try:
+            user_config_dir = os.path.expanduser("~/.excel_processor")
+            os.makedirs(user_config_dir, exist_ok=True)
+            log_path = os.path.join(user_config_dir, "exit_reason.log")
+            ts = datetime.datetime.now().isoformat()
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(f"{ts} {reason}\n")
+        except Exception:
+            pass
+
     def _schedule_exit_for_update(self):
         if getattr(self, "_update_shutdown_scheduled", False):
             return
@@ -633,6 +717,7 @@ class ExcelProcessorApp:
                     except Exception:
                         pass
             finally:
+                self._log_exit_reason("update_exit")
                 os._exit(0)
 
         try:
@@ -1030,19 +1115,13 @@ class ExcelProcessorApp:
         self.config["folder_path_lock_enabled"] = project_lock_enabled
         path_lock_enabled = project_lock_enabled
 
-        # 强制覆盖默认数据目录，避免被旧配置覆盖（仅在锁定开启时）
-        try:
-            if path_lock_enabled and isinstance(self.default_config.get("defaults"), dict):
-                self.default_config["defaults"]["folder_path"] = FORCED_DEFAULT_FOLDER
-        except Exception:
-            pass
-
-        # 【默认路径填充】强制使用默认数据文件夹（不读取缓存）
+        # 【默认路径填充】从项目配置文件读取默认数据文件夹，仅在为空时使用硬编码后备值
         defaults = self.default_config.get("defaults", {})
         if not isinstance(defaults, dict):
             defaults = {}
         defaults = defaults.copy()
-        if path_lock_enabled:
+        # 如果项目配置中的 defaults.folder_path 为空，使用硬编码后备值
+        if not defaults.get("folder_path", "").strip():
             defaults["folder_path"] = FORCED_DEFAULT_FOLDER
         self.config["defaults"] = defaults.copy()
         default_folder = defaults.get("folder_path", "")
@@ -4649,6 +4728,7 @@ class ExcelProcessorApp:
                                         except Exception:
                                             pass
                                         try:
+                                            self._log_exit_reason("maintenance_exit_in_bootstrap")
                                             os._exit(0)
                                         except Exception:
                                             pass
@@ -7333,6 +7413,7 @@ def parse_cli_args(argv):
 
 def main():
     """主函数"""
+    _init_crash_logging()
     auto_mode, resume_action = parse_cli_args(sys.argv[1:])
     app = ExcelProcessorApp(auto_mode=auto_mode, resume_action=resume_action)
     app.run()

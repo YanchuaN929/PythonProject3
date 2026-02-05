@@ -65,9 +65,16 @@ def _normalize_folder_path(path: str) -> str:
 
 def _ensure_data_folder_from_path(source_path: Optional[str]) -> None:
     """
-    尝试从源文件路径推导并设置数据目录，避免误用旧的 _DATA_FOLDER。
-    仅在 source_path 为绝对路径（含 UNC）时生效。
+    尝试从源文件路径推导并设置数据目录。
+    
+    【重要】此函数仅在 _DATA_FOLDER 尚未设置时才会尝试推导。
+    正常情况下，_DATA_FOLDER 应该由主程序在启动时/用户选择路径时通过 set_data_folder() 设置。
+    此函数是一个后备机制，用于处理某些边缘情况。
     """
+    # 【关键】如果 _DATA_FOLDER 已经设置，不再尝试推导（避免覆盖用户选择的路径）
+    if _DATA_FOLDER:
+        return
+    
     if not source_path:
         return
     try:
@@ -80,16 +87,12 @@ def _ensure_data_folder_from_path(source_path: Optional[str]) -> None:
         if not folder:
             return
 
-        source_norm = _normalize_folder_path(source_path)
-        current_norm = _normalize_folder_path(_DATA_FOLDER or "")
-        if current_norm and source_norm.startswith(current_norm + "\\"):
-            return
-
-        # 优先向上寻找包含 .registry 的目录（避免子目录误判）
+        # 向上寻找包含 .registry 的目录（数据根目录的标志）
         search_dir = folder
         for _ in range(5):
             try:
-                if os.path.isdir(os.path.join(search_dir, ".registry")):
+                registry_dir_candidate = os.path.join(search_dir, ".registry")
+                if os.path.isdir(registry_dir_candidate):
                     set_data_folder(search_dir)
                     return
             except Exception:
@@ -99,8 +102,8 @@ def _ensure_data_folder_from_path(source_path: Optional[str]) -> None:
                 break
             search_dir = parent
 
-        if _normalize_folder_path(folder) != current_norm:
-            set_data_folder(folder)
+        # 如果没找到 .registry 目录，使用文件所在目录
+        set_data_folder(folder)
     except Exception:
         pass
 
@@ -153,6 +156,15 @@ def set_data_folder(folder_path: str):
         # set_data_folder 不应影响主流程
         pass
 
+def get_data_folder() -> Optional[str]:
+    """
+    获取当前设置的数据文件夹路径
+    
+    返回:
+        当前的 _DATA_FOLDER 值，如果未设置则返回 None
+    """
+    return _DATA_FOLDER
+
 def get_display_status(task_keys: List[Dict[str, Any]], current_user_roles_str: str = None) -> Dict[str, str]:
     """
     批量查询任务的显示状态（用于UI显示）
@@ -203,6 +215,15 @@ def _enabled(cfg: dict) -> bool:
 
 def _handle_maintenance_mode(error: Exception):
     """维护模式处理：释放连接、提示并退出。"""
+    flag_path = None
+    try:
+        from .db import get_maintenance_flag_path
+        if _DATA_FOLDER:
+            flag_path = get_maintenance_flag_path(data_folder=_DATA_FOLDER)
+    except Exception:
+        flag_path = None
+    print(f"[Registry] 维护模式触发退出: {error}, flag_path={flag_path}")
+    
     try:
         close_connection()
     except Exception:
@@ -229,6 +250,21 @@ def _handle_maintenance_mode(error: Exception):
         print(f"[Registry] {msg}")
     
     try:
+        try:
+            log_dir = os.path.expanduser("~/.excel_processor")
+            os.makedirs(log_dir, exist_ok=True)
+            log_path = os.path.join(log_dir, "exit_reason.log")
+            ts = safe_now().isoformat()
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(f"{ts} maintenance_exit flag_path={flag_path} error={error}\n")
+        except Exception:
+            pass
+        import sys
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+        except Exception:
+            pass
         os._exit(0)
     except Exception:
         pass
@@ -332,6 +368,7 @@ def on_export_done(
         now: 当前时间（可选）
     """
     try:
+        _ensure_data_folder_from_path(export_path)
         cfg = _cfg()
         if not _enabled(cfg):
             return
@@ -499,7 +536,7 @@ def on_response_written(
             key['row_index']
         )
         
-        # 连接数据库查询
+        # 连接数据库查询（后续复用同一连接，避免重复打开/维护模式误触发）
         conn = get_connection(db_path, wal)
         try:
             cursor = conn.execute("SELECT assigned_by FROM tasks WHERE id=?", (tid,))
@@ -557,16 +594,16 @@ def on_response_written(
             fields_to_update['confirmed_at'] = now.isoformat()  # 【新增】明确设置确认时间
         
         from .service import upsert_task
-        upsert_task(db_path, wal, key, fields_to_update, now)
+        upsert_task(db_path, wal, key, fields_to_update, now, conn=conn)
         
         print(f"[Registry] upsert_task完成，display_status={display_status}, completed_by={user_name}")
         
         # 更新状态为completed
-        mark_completed(db_path, wal, key, now)
+        mark_completed(db_path, wal, key, now, conn=conn)
         
         # 如果是上级角色，同时更新状态为confirmed
         if is_superior:
-            mark_confirmed(db_path, wal, key, now, confirmed_by=user_name)
+            mark_confirmed(db_path, wal, key, now, confirmed_by=user_name, conn=conn)
             print(f"[Registry] 上级角色{role}自动确认完成")
         
         # 写入response_written事件
@@ -581,7 +618,7 @@ def on_response_written(
                 'user_name': user_name,
                 'source_column': source_column
             }
-        }, now)
+        }, now, conn=conn)
         
         # 控制台输出优化：已验证逻辑，默认不输出
         

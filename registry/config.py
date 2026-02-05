@@ -5,6 +5,7 @@
 """
 import json
 import os
+import sys
 
 # 默认配置
 DEFAULTS = {
@@ -84,26 +85,9 @@ def load_config(
     # 注意：ensure_registry_dir=False 时仅“计算出”应使用的 db_path，不做任何文件系统操作，
     # 用于避免程序启动阶段触发网络盘访问（如 UNC 路径不可用导致卡死）。
     if config['registry_db_path'] is None and data_folder:
-        # 兼容现场公共盘既有目录结构：<data_folder>/registry/registry.db
-        # 若存在该目录/文件，则优先使用（避免多份DB导致“写入了但看不到”）
-        legacy_registry_dir = os.path.join(data_folder, 'registry')
-        legacy_db_path = os.path.join(legacy_registry_dir, 'registry.db')
-
-        # 默认新结构：<data_folder>/.registry/registry.db
+        # 固定使用新结构：<data_folder>/.registry/registry.db
         registry_dir = os.path.join(data_folder, '.registry')
         new_db_path = os.path.join(registry_dir, 'registry.db')
-
-        # ensure_registry_dir=False 时不做任何文件系统探测/创建（避免启动阶段触网）
-        if ensure_registry_dir:
-            try:
-                # 只要 registry 目录存在就优先使用（DB文件可由sqlite自动创建）
-                if os.path.exists(legacy_registry_dir):
-                    config['registry_db_path'] = legacy_db_path
-                    return config
-            except Exception:
-                # 探测失败则走新结构
-                pass
-
         config['registry_db_path'] = new_db_path
         if ensure_registry_dir:
             # 确保目录存在（可能触发网络盘访问）
@@ -139,6 +123,19 @@ def get_config() -> dict:
     global _config_cache
     if _config_cache is None:
         _config_cache = load_config()
+    else:
+        # 如果 hooks 已设置 data_folder，确保缓存里的 db_path 与之同步
+        data_folder = None
+        try:
+            hooks = sys.modules.get("registry.hooks")
+            if hooks and hasattr(hooks, "get_data_folder"):
+                data_folder = hooks.get_data_folder()
+        except Exception:
+            data_folder = None
+        if data_folder:
+            expected_db_path = os.path.join(data_folder, ".registry", "registry.db")
+            if _config_cache.get("registry_db_path") != expected_db_path:
+                _config_cache = load_config(data_folder=data_folder, ensure_registry_dir=True)
     return _config_cache
 
 

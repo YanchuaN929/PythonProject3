@@ -21,6 +21,14 @@ try:
 except ImportError:
     get_excel_lock_owner = None
 
+# 导入监控器
+try:
+    from core.Monitor import log_success, log_info, log_error
+except ImportError:
+    def log_success(msg): print(f"[成功] {msg}")
+    def log_info(msg): print(f"[信息] {msg}")
+    def log_error(msg): print(f"[错误] {msg}")
+
 
 def get_resource_path(relative_path):
     """获取资源文件的绝对路径（支持打包后的exe）"""
@@ -447,8 +455,6 @@ def save_assignments_batch(assignments):
                     ws[f"{col_name}{row_index}"] = assigned_name
                     success_count += 1
                     
-                    print(f"[指派] 成功: 行{row_index}, 责任人={assigned_name}")
-                    
                 except Exception as e:
                     print(f"[指派] 单个任务失败: {e}")
                     failed_tasks.append({
@@ -459,7 +465,6 @@ def save_assignments_batch(assignments):
             # 6. 保存Excel（只保存一次）
             wb.save(file_path)
             wb.close()
-            print(f"[指派] 文件已保存: {file_path}")
             
             # 7. 批量调用Registry钩子（不依赖 DataFrame 一定成功；优先使用 assignment payload 的接口号/项目号兜底）
             try:
@@ -503,7 +508,8 @@ def save_assignments_batch(assignments):
                     except Exception as e:
                         print(f"[Registry] 单个任务钩子失败: {e}")
 
-                print(f"[Registry] 共更新 {registry_updates} 个任务")
+                if registry_updates > 0:
+                    log_info(f"Registry: 已更新 {registry_updates} 个任务状态")
             except Exception as e:
                 print(f"[Registry] 批量钩子失败: {e}")
             
@@ -527,11 +533,15 @@ def save_assignments_batch(assignments):
                 a for a in assignments
                 if a.get('interface_id') not in failed_interface_ids
             ]
-            memory_count = batch_save_memories(successful_assignments)
-            if memory_count > 0:
-                print(f"[AssignmentMemory] 已保存 {memory_count} 条指派记忆")
-        except Exception as mem_error:
-            print(f"[AssignmentMemory] 保存指派记忆失败: {mem_error}")
+            batch_save_memories(successful_assignments)
+        except Exception:
+            pass
+
+    # 输出到监控器
+    if success_count > 0:
+        log_success(f"指派完成: 成功 {success_count} 条" + (f", 失败 {len(failed_tasks)} 条" if failed_tasks else ""))
+    elif failed_tasks:
+        log_error(f"指派失败: {len(failed_tasks)} 条")
 
     return {
         'success_count': success_count,
@@ -1095,7 +1105,7 @@ class ForceAssignDialog(tk.Toplevel):
                 # 需要根据 source_file（文件名）找到完整的文件路径
                 # 由于数据库中只存储文件名，需要从配置中获取数据文件夹路径
                 source_file = task['source_file']
-                data_folder = cfg.get('data_folder', '')
+                data_folder = self._resolve_data_folder(db_path)
 
                 # 尝试在数据文件夹中查找匹配的文件
                 file_path = self._find_source_file(data_folder, source_file, file_type)
@@ -1159,6 +1169,29 @@ class ForceAssignDialog(tk.Toplevel):
             messagebox.showerror("错误", f"强制指派失败：\n{str(e)}", parent=self)
             import traceback
             traceback.print_exc()
+
+    def _resolve_data_folder(self, db_path: str) -> str:
+        """
+        解析数据文件夹路径（用于强制指派时定位源文件）。
+
+        优先使用 registry hooks 已设置的路径；如果为空，则从 registry_db_path 反推。
+        """
+        data_folder = ""
+        try:
+            from registry import hooks as registry_hooks
+
+            data_folder = registry_hooks.get_data_folder() or ""
+        except Exception:
+            pass
+
+        if not data_folder and db_path:
+            try:
+                registry_dir = os.path.dirname(db_path)
+                data_folder = os.path.dirname(registry_dir)
+            except Exception:
+                data_folder = ""
+
+        return data_folder
 
     def _find_source_file(self, data_folder, source_file, file_type):
         """

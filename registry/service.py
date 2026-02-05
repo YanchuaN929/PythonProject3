@@ -479,13 +479,6 @@ def upsert_task(
     )
     conn.commit()
     
-    # 【调试】验证display_status是否正确写入
-    if fields.get('display_status'):
-        cursor = conn.execute("SELECT display_status FROM tasks WHERE id=?", (tid,))
-        row = cursor.fetchone()
-        if row:
-            # 【修复】不截断接口号，避免误导（之前[:20]会截断长接口号）
-            print(f"[Registry调试] 任务{key.get('interface_id', '?')}写入后的display_status={row[0]}")
     if owns_conn:
         close_connection_after_use()
 

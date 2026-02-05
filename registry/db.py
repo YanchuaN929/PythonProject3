@@ -50,13 +50,21 @@ def is_maintenance_mode(db_path: Optional[str] = None, data_folder: Optional[str
         flag_path = get_maintenance_flag_path(db_path=db_path, data_folder=data_folder)
     except Exception:
         return False
-    return os.path.exists(flag_path)
+    exists = os.path.exists(flag_path)
+    if exists:
+        print(f"[Registry] !!!检测到维护模式!!! flag_path={flag_path}")
+    return exists
 
 
 def ensure_not_in_maintenance(db_path: Optional[str] = None, data_folder: Optional[str] = None) -> None:
     """检测维护模式，若开启则抛出异常。"""
-    if is_maintenance_mode(db_path=db_path, data_folder=data_folder):
-        raise MaintenanceModeError("Registry 正在维护中，请稍后重试")
+    try:
+        flag_path = get_maintenance_flag_path(db_path=db_path, data_folder=data_folder)
+    except Exception:
+        return
+    if os.path.exists(flag_path):
+        print(f"[Registry] !!!检测到维护模式!!! flag_path={flag_path}")
+        raise MaintenanceModeError(f"Registry 正在维护中，请稍后重试 (flag_path={flag_path})")
 
 
 def enable_maintenance_mode(data_folder: str) -> str:
@@ -233,14 +241,22 @@ def get_connection(db_path: str, wal: bool = True) -> sqlite3.Connection:
     with _LOCK:
         # 【修复Bug】检查连接是否已关闭
         if _CONN is not None:
-            try:
-                # 测试连接是否有效
-                _CONN.execute("SELECT 1")
-                return _CONN
-            except (sqlite3.ProgrammingError, sqlite3.OperationalError):
-                # 连接已关闭，需要重新创建
-                print("[Registry] 检测到连接已关闭，重新创建...")
+            # 若目标 db_path 发生变化，必须切换连接
+            if _DB_PATH and _DB_PATH != db_path:
+                try:
+                    _CONN.close()
+                except Exception:
+                    pass
                 _CONN = None
+            else:
+                try:
+                    # 测试连接是否有效
+                    _CONN.execute("SELECT 1")
+                    return _CONN
+                except (sqlite3.ProgrammingError, sqlite3.OperationalError):
+                    # 连接已关闭，需要重新创建
+                    print("[Registry] 检测到连接已关闭，重新创建...")
+                    _CONN = None
         
         # 确保目录存在
         db_dir = os.path.dirname(db_path)
@@ -316,6 +332,55 @@ def get_connection(db_path: str, wal: bool = True) -> sqlite3.Connection:
         
         _CONN = conn
         return conn
+
+
+def open_isolated_connection(db_path: str, wal: bool = True) -> sqlite3.Connection:
+    """
+    打开独立连接（不使用全局单例连接）。
+
+    用于跨线程读取/写入共享日志，避免关闭全局连接导致崩溃。
+    """
+    # 维护模式检测：若开启则禁止连接
+    ensure_not_in_maintenance(db_path=db_path)
+
+    # 确保目录存在
+    db_dir = os.path.dirname(db_path)
+    if db_dir and not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
+
+    is_network = _FORCE_NETWORK_MODE or _is_network_path(db_path)
+
+    # 网络路径自动禁用WAL模式
+    if is_network and wal:
+        wal = False
+        _cleanup_wal_files(db_path)
+
+    timeout = 30.0 if is_network else 60.0
+    conn = sqlite3.connect(db_path, check_same_thread=False, timeout=timeout)
+
+    try:
+        if wal:
+            result = conn.execute("PRAGMA journal_mode=WAL").fetchone()
+        else:
+            result = conn.execute("PRAGMA journal_mode=DELETE").fetchone()
+
+        actual_mode = result[0] if result else "unknown"
+        expected_mode = "wal" if wal else "delete"
+        if actual_mode.lower() != expected_mode and is_network and actual_mode.lower() == "wal":
+            # 强制切回 DELETE，避免网络盘 WAL 问题
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute("COMMIT")
+            conn.execute("PRAGMA journal_mode=DELETE").fetchone()
+
+        busy_timeout = 60000 if is_network else 30000
+        conn.execute(f"PRAGMA busy_timeout={busy_timeout}")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        if is_network:
+            conn.execute("PRAGMA mmap_size=0")
+    except Exception as e:
+        print(f"[Registry] 独立连接配置失败: {e}")
+
+    return conn
 
 def init_db(conn: sqlite3.Connection) -> None:
     """
@@ -484,6 +549,19 @@ def get_read_connection(db_path: str) -> sqlite3.Connection:
     
     # 维护模式检测：若开启则禁止读取
     ensure_not_in_maintenance(db_path=db_path)
+
+    # db_path 变化时重置本地缓存管理器，避免读取旧库
+    try:
+        if _local_cache_manager is not None:
+            current_path = getattr(_local_cache_manager, "network_db_path", None)
+            if current_path and current_path != db_path:
+                try:
+                    _local_cache_manager.cleanup()
+                except Exception:
+                    pass
+                _local_cache_manager = None
+    except Exception:
+        pass
     
     # 检查是否为网络路径且启用了本地缓存
     if _local_cache_enabled and _is_network_path(db_path):

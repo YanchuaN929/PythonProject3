@@ -10,6 +10,15 @@ def execute_assignment_task(payload: Dict[str, Any]) -> Dict[str, Any]:
     """执行指派写入任务。"""
     from services.distribution import save_assignments_batch
 
+    # 【路径统一】确保 data_folder 已设置
+    try:
+        from registry import hooks as registry_hooks
+        data_folder = str(payload.get("data_folder", "") or "").strip()
+        if data_folder:
+            registry_hooks.set_data_folder(data_folder)
+    except Exception:
+        pass
+
     assignments = payload.get("assignments", [])
     return save_assignments_batch(assignments)
 
@@ -37,12 +46,12 @@ def execute_response_task(payload: Dict[str, Any]) -> bool:
         registry_hooks = None
 
     if registry_hooks:
-        # 确保 Registry 使用当前文件所在目录，避免误判维护模式
+        # 【修复】不再从文件路径推导数据目录，应由主程序在启动/刷新时统一设置
+        # 如果 _DATA_FOLDER 尚未设置，则尝试从 payload 中获取（如果调用方传入了 data_folder）
         try:
-            file_path = str(payload.get("file_path", "") or "").strip()
-            if file_path:
-                import os
-                registry_hooks.set_data_folder(os.path.dirname(file_path))
+            data_folder = str(payload.get("data_folder", "") or "").strip()
+            if data_folder:
+                registry_hooks.set_data_folder(data_folder)
         except Exception as e:
             print(f"[Registry] 设置数据目录失败(已忽略): {e}")
         interface_id = str(payload.get("interface_id", "") or "").strip()

@@ -144,11 +144,56 @@ class InterfaceInputDialog(tk.Toplevel):
         # 【新增】存储已填写的回文单号信息
         self.existing_response = None  # 存储已填写的回文单号
         self.completed_info = None     # 存储完成信息
+
+        # 优先从主程序配置中获取 data_folder，并同步到 registry hooks
+        data_folder = self._resolve_data_folder_from_app()
+        if data_folder:
+            try:
+                from registry import hooks as registry_hooks
+                registry_hooks.set_data_folder(data_folder)
+            except Exception:
+                pass
+        else:
+            # 兜底：从当前文件路径推导（寻找 .registry）
+            try:
+                from registry import hooks as registry_hooks
+                registry_hooks._ensure_data_folder_from_path(self.file_path)
+            except Exception:
+                pass
         
         # 查询Registry中是否已填写回文单号
         self._load_existing_response()
         
         self.setup_ui()
+
+    def _resolve_data_folder_from_app(self) -> str:
+        """从主程序配置中解析数据文件夹路径。"""
+        # 优先从顶层窗口获取 app 引用
+        try:
+            top = self.winfo_toplevel()
+            app = getattr(top, "app", None)
+            if app and isinstance(getattr(app, "config", None), dict):
+                folder = str(app.config.get("folder_path", "") or "").strip()
+                if folder:
+                    return folder
+        except Exception:
+            pass
+
+        # 兜底：沿 master 链查找 app 引用
+        try:
+            node = self
+            for _ in range(10):
+                app = getattr(node, "app", None)
+                if app and isinstance(getattr(app, "config", None), dict):
+                    folder = str(app.config.get("folder_path", "") or "").strip()
+                    if folder:
+                        return folder
+                node = getattr(node, "master", None)
+                if node is None:
+                    break
+        except Exception:
+            pass
+        return ""
     
     def _load_existing_response(self):
         """从Registry查询已填写的回文单号"""
@@ -289,6 +334,13 @@ class InterfaceInputDialog(tk.Toplevel):
                     role = str(self.user_roles)
             except Exception:
                 role = ""
+            data_folder = self._resolve_data_folder_from_app() or None
+            if not data_folder:
+                try:
+                    from registry import hooks as registry_hooks
+                    data_folder = registry_hooks.get_data_folder()
+                except Exception:
+                    data_folder = None
             task = manager.submit_response_task(
                 file_path=self.file_path,
                 file_type=self.file_type,
@@ -299,6 +351,7 @@ class InterfaceInputDialog(tk.Toplevel):
                 project_id=self.project_id,
                 source_column=self.source_column,
                 role=role,
+                data_folder=data_folder,
                 description=f"{self.user_name} 填写回文单号 {self.interface_id}",
             )
             try:

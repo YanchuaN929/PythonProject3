@@ -513,10 +513,12 @@ def get_write_queue(db_path: str = None) -> WriteQueue:
     global _write_queue
     
     with _queue_lock:
+        from registry.config import get_config
+        config = get_config()
+        if not db_path:
+            db_path = config.get("registry_db_path")
+
         if _write_queue is None:
-            from registry.config import get_config
-            config = get_config()
-            
             _write_queue = WriteQueue(
                 db_path=db_path,
                 batch_interval=config.get('registry_write_batch_interval', 1.0),

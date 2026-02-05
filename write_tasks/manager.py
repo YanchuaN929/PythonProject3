@@ -126,7 +126,14 @@ class WriteTaskManager:
     # Submission API
     # ------------------------------------------------------------------ #
     def submit_assignment_task(self, assignments, submitted_by: str, description: str) -> WriteTask:
-        payload = {"assignments": assignments}
+        # 【路径统一】获取当前的 data_folder
+        data_folder = None
+        try:
+            from registry import hooks as registry_hooks
+            data_folder = registry_hooks.get_data_folder()
+        except Exception:
+            pass
+        payload = {"assignments": assignments, "data_folder": data_folder}
         return self._submit("assignment", payload, submitted_by, description)
 
     def submit_response_task(
@@ -141,8 +148,16 @@ class WriteTaskManager:
         project_id: str,
         source_column: Optional[str],
         role: Optional[str] = None,
+        data_folder: Optional[str] = None,
         description: str,
     ) -> WriteTask:
+        # 【路径统一】如果未传入 data_folder，尝试从 registry hooks 获取当前设置的路径
+        if not data_folder:
+            try:
+                from registry import hooks as registry_hooks
+                data_folder = registry_hooks.get_data_folder()
+            except Exception:
+                pass
         payload = {
             "file_path": file_path,
             "file_type": file_type,
@@ -153,6 +168,7 @@ class WriteTaskManager:
             "project_id": project_id,
             "source_column": source_column,
             "role": role,
+            "data_folder": data_folder,
         }
         return self._submit("response", payload, user_name or "未知用户", description)
 
@@ -295,13 +311,16 @@ class WriteTaskManager:
             if not db_path:
                 return
             wal = bool(cfg.get("registry_wal", False))
-            from registry.db import get_connection, close_connection_after_use
+            from registry.db import open_isolated_connection
 
-            conn = get_connection(db_path, wal)
+            conn = open_isolated_connection(db_path, wal)
             try:
                 _shared_log_upsert_task(conn, task)
             finally:
-                close_connection_after_use()
+                try:
+                    conn.close()
+                except Exception:
+                    pass
         except Exception as e:
             print(f"[WriteTaskManager] 同步全局任务日志失败(已忽略): {e}")
 
