@@ -31,6 +31,10 @@ a = Analysis(
         # 配置文件
         ('config.json', '.'),
         ('version.json', '.'),
+        # 更新脚本（CLI 更新）
+        ('update/updater_cli.py', 'update'),
+        # 打包虚拟环境（用于 CLI 更新）
+        ('.venv', 'python'),
         # 文档文件
         ('document/4_使用说明.md', 'document'),
         # 资源文件

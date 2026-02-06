@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import os
+import ctypes
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -100,8 +101,9 @@ class UpdateManager:
             parent_window=parent_window,
         )
         self._notify_user(context)
-        self._launch_update_exe(context)
-        return False
+        launched = self._launch_update_exe(context)
+        # 仅当更新器成功启动时才返回 False（触发主程序退出）
+        return False if launched else True
 
     # ------------------------------------------------------------------ #
     # Internal helpers
@@ -147,11 +149,11 @@ class UpdateManager:
             # 在某些无界面环境下可能失败，静默忽略
             pass
 
-    def _launch_update_exe(self, context: UpdateContext) -> None:
+    def _launch_update_exe(self, context: UpdateContext) -> bool:
         update_runner = self._resolve_update_runner()
         if not update_runner:
             self._log("未找到 update.exe 或 updater_cli.py，无法执行更新")
-            return
+            return False
 
         cmd = list(update_runner)
         cmd += [
@@ -176,20 +178,60 @@ class UpdateManager:
 
         try:
             subprocess.Popen(cmd, close_fds=False)
+            return True
         except Exception as exc:
             self._log(f"启动 update 失败: {exc}")
-            raise
+            return False
 
     def _resolve_update_runner(self):
+        # 优先使用 CLI 更新（使用打包内置的 Python 解释器）
+        script_path = os.path.join(self.app_root, "update", "updater_cli.py")
+        python_path = self._resolve_cli_python()
+        if python_path and os.path.exists(script_path):
+            return [python_path, script_path]
+
+        # 兜底：使用 update.exe（若可用）
         exe_path = os.path.join(self.app_root, self.update_executable)
         if os.path.exists(exe_path):
-            return [exe_path]
-
-        script_path = os.path.join(self.app_root, "update", "updater_cli.py")
-        if os.path.exists(script_path):
-            return [sys.executable, script_path]
+            if self._can_run_update_exe(exe_path):
+                return [exe_path]
+            self._log("update.exe 依赖缺失或不可用，跳过更新")
 
         return None
+
+    def _resolve_cli_python(self) -> Optional[str]:
+        """查找打包目录内可用的 Python 解释器。"""
+        # 1) 优先使用打包时携带的虚拟环境
+        venv_python = os.path.join(self.app_root, "python", "Scripts", "python.exe")
+        if os.path.exists(venv_python):
+            return venv_python
+
+        # 2) 兼容直接放在 .venv 目录的场景
+        venv_python = os.path.join(self.app_root, ".venv", "Scripts", "python.exe")
+        if os.path.exists(venv_python):
+            return venv_python
+
+        # 3) 如果当前是脚本模式（非打包），尝试使用 sys.executable
+        try:
+            if os.path.basename(sys.executable).lower().startswith("python"):
+                return sys.executable
+        except Exception:
+            pass
+
+        return None
+
+    def _can_run_update_exe(self, exe_path: str) -> bool:
+        """检测 update.exe 是否可用（缺少系统 DLL 时跳过）。"""
+        if os.name != "nt":
+            return False
+        if not os.path.exists(exe_path):
+            return False
+        try:
+            ctypes.WinDLL("api-ms-win-core-sysinfo-l1-2-0.dll")
+            return True
+        except Exception as exc:
+            self._log(f"update.exe 依赖缺失，跳过: {exc}")
+            return False
 
     def _log(self, message: str) -> None:
         try:
