@@ -29,7 +29,35 @@ from typing import List, Dict, Any, Optional, Tuple
 from ui.window import WindowManager
 from write_tasks import get_write_task_manager, get_pending_cache
 
-FORCED_DEFAULT_FOLDER = r"//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册"
+try:
+    from utils.dept_config import (
+        get_default_folder_path,
+        get_director_role_mapping,
+        get_director_roles,
+        get_role_export_days,
+        get_time_window_roles,
+        get_use_workdays_roles,
+        get_watermark_text,
+    )
+except ImportError:
+    # 后备：兼容极端打包异常
+    def get_default_folder_path():
+        return r"//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册"
+    def get_director_role_mapping():
+        return {"一室主任": "结构一室", "二室主任": "结构二室", "建筑总图室主任": "建筑总图室"}
+    def get_director_roles():
+        return ["一室主任", "二室主任", "建筑总图室主任"]
+    def get_time_window_roles():
+        return {"所领导", "一室主任", "二室主任", "建筑总图室主任"}
+    def get_role_export_days():
+        return {"一室主任": 7, "二室主任": 7, "建筑总图室主任": 7,
+                "所领导": 2, "管理员": None, "设计人员": None}
+    def get_use_workdays_roles():
+        return ["所领导", "一室主任", "二室主任", "建筑总图室主任"]
+    def get_watermark_text():
+        return "建筑结构所"
+
+FORCED_DEFAULT_FOLDER = get_default_folder_path()
 DEV_OVERRIDE_PASSWORD = "0929"
 
 _CRASH_LOG_FH = None
@@ -1044,6 +1072,11 @@ class ExcelProcessorApp:
         self.root.update_idletasks()
         self.center_window_if_needed()
 
+    @staticmethod
+    def _build_default_role_export_days():
+        """从当前科室参数族获取 role_export_days（以 config.json 为准）"""
+        return dict(get_role_export_days())
+
     def load_config(self):
         """加载配置文件"""
         # 配置文件放在用户目录，避免打包后权限问题
@@ -1068,14 +1101,7 @@ class ExcelProcessorApp:
                 "folder_path": FORCED_DEFAULT_FOLDER,
                 "export_path": "D:/jilu"
             },
-            "role_export_days": {
-                "一室主任": 7,
-                "二室主任": 7,
-                "建筑总图室主任": 7,
-                "所领导": 2,
-                "管理员": None,
-                "设计人员": None
-            }
+            "role_export_days": self._build_default_role_export_days()
         }
         
         # 尝试从项目根目录的config.json读取默认配置
@@ -2507,11 +2533,7 @@ class ExcelProcessorApp:
                 return safe_df
             
             # 3-5. 室主任：科室过滤 + 时间窗口过滤（与导出统一）
-            director_roles = {
-                '一室主任': '结构一室',
-                '二室主任': '结构二室',
-                '建筑总图室主任': '建筑总图室'
-            }
+            director_roles = get_director_role_mapping()
             
             if role in director_roles:
                 target_dept = director_roles[role]
@@ -2675,7 +2697,7 @@ class ExcelProcessorApp:
             # 当存在这些时间窗口角色时，忽略“管理员”角色参与合并。
             # ------------------------------------------------------------
             try:
-                time_window_roles = {"所领导", "一室主任", "二室主任", "建筑总图室主任"}
+                time_window_roles = get_time_window_roles()
                 if "管理员" in user_roles and any(r in time_window_roles for r in user_roles):
                     user_roles = [r for r in user_roles if r != "管理员"]
             except Exception:
@@ -2735,7 +2757,7 @@ class ExcelProcessorApp:
         依据列：'接口时间'（格式 mm.dd）。
         规则：仅当 auto_mode=True 且 用户角色在 role_export_days 映射中时生效；
              仅保留 (due_date - today).days <= 指定天数 的记录（支持负值，即已超期亦保留）。
-             对于"所领导"、"一室主任"、"二室主任"、"建筑总图室主任"，使用工作日计算（排除周六周日）。
+             对于所领导及各室主任角色（由科室参数族定义），使用工作日计算（排除周六周日）。
         解析失败或无'接口时间'的记录将被排除。
         """
         try:
@@ -2762,7 +2784,7 @@ class ExcelProcessorApp:
             today = date.today()
             # 判断是否使用工作日计算（所领导、室主任使用工作日）
             # 管理员、设计人员无天数限制；接口工程师不在此配置中
-            use_workdays = (user_role in ["所领导", "一室主任", "二室主任", "建筑总图室主任"])
+            use_workdays = (user_role in get_use_workdays_roles())
             
             kept_idx = []
             for idx, val in df["接口时间"].items():

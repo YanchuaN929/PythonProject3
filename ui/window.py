@@ -13,6 +13,12 @@ import os
 import sys
 from utils.date_utils import is_date_overdue
 
+try:
+    from utils.dept_config import get_watermark_text
+except ImportError:
+    def get_watermark_text():
+        return "建筑结构所"
+
 from write_tasks.task_panel import TaskRecordPanel
 
 # 导入数据库状态显示器
@@ -220,7 +226,7 @@ class WindowManager:
         try:
             footer_frame = ttk.Frame(main_frame)
             footer_frame.grid(row=5, column=2, sticky=tk.E, padx=(0, 4), pady=(6, 2))
-            watermark = ttk.Label(footer_frame, text="——by 建筑结构所,王任超", foreground="gray")
+            watermark = ttk.Label(footer_frame, text=f"——by {get_watermark_text()},王任超", foreground="gray")
             watermark.pack(anchor=tk.E)
             version_text = ""
             try:

@@ -12,6 +12,19 @@ import sys
 import re
 from typing import Optional, List, Tuple, Dict
 
+try:
+    from utils.dept_config import get_help_section_map
+except ImportError:
+    def get_help_section_map():
+        return {
+            '设计人员': '2-设计人员使用指南',
+            '一室主任': '3-室主任使用指南',
+            '二室主任': '3-室主任使用指南',
+            '建筑总图室主任': '3-室主任使用指南',
+            '所领导': '4-所领导使用指南',
+            '管理员': '5-管理员使用指南',
+        }
+
 
 def get_resource_path(relative_path: str) -> str:
     """获取资源文件的绝对路径（支持打包后的exe）"""
@@ -25,15 +38,8 @@ def get_resource_path(relative_path: str) -> str:
 class HelpViewer:
     """帮助文档查看窗口"""
     
-    # 角色到章节ID的映射
-    ROLE_SECTION_MAP = {
-        '设计人员': '2-设计人员使用指南',
-        '一室主任': '3-室主任使用指南',
-        '二室主任': '3-室主任使用指南',
-        '建筑总图室主任': '3-室主任使用指南',
-        '所领导': '4-所领导使用指南',
-        '管理员': '5-管理员使用指南',
-    }
+    # 角色到章节ID的映射（从科室参数化配置动态生成）
+    ROLE_SECTION_MAP = get_help_section_map()
     
     def __init__(self, parent: tk.Tk, user_role: str = None):
         """

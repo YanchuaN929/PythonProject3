@@ -11,6 +11,12 @@ import sqlite3
 import os
 import pandas as pd
 from .config import load_config, set_config
+
+try:
+    from utils.dept_config import get_superior_keywords
+except ImportError:
+    def get_superior_keywords():
+        return ['一室主任', '二室主任', '建筑总图室主任', '所长', '所领导', '接口工程师']
 from .service import write_event, mark_completed, mark_confirmed, batch_upsert_tasks
 from .db import close_connection, close_connection_after_use, MaintenanceModeError
 from .models import EventType
@@ -569,7 +575,7 @@ def on_response_written(
             print(f"[Registry] 查询旧interface_time失败: {e}")
         
         # 【关键】判断是否为上级角色（自动确认逻辑）
-        superior_roles = ['一室主任', '二室主任', '建筑总图室主任', '所长', '所领导', '接口工程师']
+        superior_roles = get_superior_keywords()
         is_superior = role and any(sup_role in role for sup_role in superior_roles)
         
         # 【修复】如果是上级角色填写，直接设置display_status为"已审查"

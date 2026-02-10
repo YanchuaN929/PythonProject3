@@ -6,10 +6,16 @@ from typing import Dict, List, Tuple
 
 from .models import WriteTask
 
+try:
+    from utils.dept_config import get_superior_keywords
+except ImportError:
+    def get_superior_keywords():
+        return ['一室主任', '二室主任', '建筑总图室主任', '所长', '所领导', '接口工程师']
+
 Key = Tuple[str, int, int]  # (file_path, row_index, file_type)
 
 DESIGNER_KEYWORD = "设计人员"
-SUPERIOR_KEYWORDS = ["一室主任", "二室主任", "建筑总图室主任", "所长", "所领导", "接口工程师"]
+SUPERIOR_KEYWORDS = get_superior_keywords()
 EMOJI_MAP = {
     "待完成": "📌",
     "待设计人员完成": "📌",

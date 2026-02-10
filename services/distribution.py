@@ -13,6 +13,14 @@ import os
 import sys
 
 from write_tasks import get_write_task_manager, get_pending_cache
+
+try:
+    from utils.dept_config import get_director_roles, get_director_role_mapping
+except ImportError:
+    def get_director_roles():
+        return ['一室主任', '二室主任', '建筑总图室主任']
+    def get_director_role_mapping():
+        return {"一室主任": "结构一室", "二室主任": "结构二室", "建筑总图室主任": "建筑总图室"}
 from ui.ui_copy import copy_text, normalize_interface_id
 
 # 导入文件锁定检测函数
@@ -129,10 +137,10 @@ def is_director(user_roles):
     if not user_roles:
         return False
     
-    director_roles = ['一室主任', '二室主任', '建筑总图室主任']
+    _director_roles = get_director_roles()
     
     for role in user_roles:
-        if role in director_roles:
+        if role in _director_roles:
             return True
     
     return False
@@ -148,11 +156,7 @@ def get_department(user_roles):
     返回:
         str: 科室名称
     """
-    dept_map = {
-        "一室主任": "结构一室",
-        "二室主任": "结构二室",
-        "建筑总图室主任": "建筑总图室"
-    }
+    dept_map = get_director_role_mapping()
     
     for role in user_roles:
         if role in dept_map:

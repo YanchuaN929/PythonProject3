@@ -16,14 +16,34 @@
     "export_path": "D:/jilu"
   },
 
-  "role_export_days": {
-    "一室主任": 7,
-    "二室主任": 7,
-    "建筑总图室主任": 7,
-    "所领导": 2,
-    "管理员": null,
-    "设计人员": null
-  },
+  "registry_force_network_mode": true,
 
-  "registry_force_network_mode": true
+  "department_profile": "建筑结构所",
+  "department_profiles": {
+    "建筑结构所": {
+      "organization_filter": "河北分公司-建筑结构所",
+      "organization_filter_file6": "河北分公司.建筑结构所",
+      "department_codes": ["25C1", "25C2", "25C3"],
+      "department_code_mapping": {
+        "25C1": "结构一室",
+        "25C2": "结构二室",
+        "25C3": "建筑总图室"
+      },
+      "director_role_mapping": {
+        "一室主任": "结构一室",
+        "二室主任": "结构二室",
+        "建筑总图室主任": "建筑总图室"
+      },
+      "role_export_days": {
+        "一室主任": 7,
+        "二室主任": 7,
+        "建筑总图室主任": 7,
+        "所领导": 2,
+        "管理员": null,
+        "设计人员": null
+      },
+      "default_folder_path": "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册",
+      "watermark_text": "建筑结构所"
+    }
+  }
 }

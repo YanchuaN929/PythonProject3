@@ -15,6 +15,37 @@ from copy import copy
 # 忽略pandas警告
 warnings.filterwarnings('ignore')
 
+# 导入科室参数化配置
+try:
+    from utils.dept_config import (
+        get_department_codes,
+        get_organization_filter,
+        get_organization_filter_file6,
+        map_code_to_department,
+        match_department_name,
+        contains_department_code,
+    )
+except ImportError:
+    # 后备：模块不可用时使用硬编码默认值（不应发生）
+    def get_department_codes():
+        return ["25C1", "25C2", "25C3"]
+    def get_organization_filter():
+        return "河北分公司-建筑结构所"
+    def get_organization_filter_file6():
+        return "河北分公司.建筑结构所"
+    def map_code_to_department(s):
+        for code, name in {"25C1": "结构一室", "25C2": "结构二室", "25C3": "建筑总图室"}.items():
+            if code in s:
+                return name
+        return ""
+    def match_department_name(s):
+        for name in ["结构一室", "结构二室", "建筑总图室"]:
+            if name in s:
+                return name
+        return s
+    def contains_department_code(s):
+        return any(c in s for c in ["25C1", "25C2", "25C3"])
+
 # 导入项目特殊调整模块（1818项目日期减6天等）
 try:
     from utils.adjust import adjust_date_for_project
@@ -649,14 +680,7 @@ def process_target_file(file_path, current_datetime):
         department_values = []
         for idx in result_df.index:
             cell_str = str(df.iloc[idx, 7]) if 7 < len(df.columns) else ""
-            if "25C1" in cell_str:
-                department_values.append("结构一室")
-            elif "25C2" in cell_str:
-                department_values.append("结构二室")
-            elif "25C3" in cell_str:
-                department_values.append("建筑总图室")
-            else:
-                department_values.append("")
+            department_values.append(map_code_to_department(cell_str))
         result_df["科室"] = department_values
     except Exception:
         result_df["科室"] = ""
@@ -738,8 +762,8 @@ def execute_process1(df):
     
     h_column = df.iloc[:, 7]  # H列是第8列（索引7）
     
-    # 搜索包含指定字符串的行
-    target_values = ["25C1", "25C2", "25C3"]
+    # 搜索包含指定科室编码的行（从配置读取）
+    target_values = get_department_codes()
     
     for idx, cell_value in h_column.items():
         if idx == 0:  # 跳过第一行标题
@@ -1363,14 +1387,8 @@ def process_target_file2(file_path, current_datetime, project_id=None):
         department_values = []
         for idx in result_df.index:
             cell_str = str(df.iloc[idx, 8]) if 8 < len(df.columns) else ""
-            if "结构一室" in cell_str:
-                department_values.append("结构一室")
-            elif "结构二室" in cell_str:
-                department_values.append("结构二室")
-            elif "建筑总图室" in cell_str:
-                department_values.append("建筑总图室")
-            else:
-                department_values.append("")
+            matched = match_department_name(cell_str)
+            department_values.append(matched if matched != cell_str else "")
         result_df["科室"] = department_values
     except Exception:
         result_df["科室"] = ""
@@ -1408,7 +1426,7 @@ def execute2_process1(df):
         if idx == 0:
             continue
         s = str(val)
-        if ("河北分公司-建筑结构所" in s) or ("25C1" in s) or ("25C2" in s) or ("25C3" in s):
+        if (get_organization_filter() in s) or contains_department_code(s):
             result_rows.add(idx)
     return result_rows
 
@@ -1861,14 +1879,9 @@ def process_target_file3(file_path, current_datetime):
             cell_str = "" if (cell_val is None or (isinstance(cell_val, float) and pd.isna(cell_val))) else str(cell_val).strip()
             if cell_str == "":
                 department_values.append("请室主任确认")
-            elif "结构一室" in cell_str:
-                department_values.append("结构一室")
-            elif "结构二室" in cell_str:
-                department_values.append("结构二室")
-            elif "建筑总图室" in cell_str:
-                department_values.append("建筑总图室")
             else:
-                department_values.append(cell_str)
+                matched = match_department_name(cell_str)
+                department_values.append(matched)
         result_df["科室"] = department_values
     except Exception:
         result_df["科室"] = "请室主任确认"
@@ -2026,7 +2039,7 @@ def execute3_process2(df):
     try:
         # AL列索引为37（从0开始）
         al_column = df.iloc[:, 37]
-        target_prefix = "河北分公司-建筑结构所"
+        target_prefix = get_organization_filter()
         
         for index, value in enumerate(al_column):
             if pd.notna(value) and str(value).strip().startswith(target_prefix):
@@ -2746,14 +2759,9 @@ def process_target_file4(file_path, current_datetime):
             cell_str = "" if (cell_val is None or (isinstance(cell_val, float) and pd.isna(cell_val))) else str(cell_val).strip()
             if cell_str == "":
                 department_values.append("请室主任确认")
-            elif "结构一室" in cell_str:
-                department_values.append("结构一室")
-            elif "结构二室" in cell_str:
-                department_values.append("结构二室")
-            elif "建筑总图室" in cell_str:
-                department_values.append("建筑总图室")
             else:
-                department_values.append(cell_str)
+                matched = match_department_name(cell_str)
+                department_values.append(matched)
         result_df["科室"] = department_values
     except Exception:
         result_df["科室"] = "请室主任确认"
@@ -2827,7 +2835,7 @@ def execute4_process1(df):
     try:
         # AF列索引为31（从0开始）
         af_column = df.iloc[:, 31]
-        target_prefix = "河北分公司-建筑结构所"
+        target_prefix = get_organization_filter()
         
         for index, value in enumerate(af_column):
             if pd.notna(value) and str(value).strip().startswith(target_prefix):
@@ -3432,14 +3440,7 @@ def process_target_file5(file_path, current_datetime):
         department_values = []
         for idx in result_df.index:
             cell_str = str(df.iloc[idx, 6]) if 6 < len(df.columns) else ""
-            if "25C1" in cell_str:
-                department_values.append("结构一室")
-            elif "25C2" in cell_str:
-                department_values.append("结构二室")
-            elif "25C3" in cell_str:
-                department_values.append("建筑总图室")
-            else:
-                department_values.append("")
+            department_values.append(map_code_to_department(cell_str))
         result_df["科室"] = department_values
     except Exception:
         result_df["科室"] = ""
@@ -3494,7 +3495,7 @@ def execute5_process1(df):
         if idx == 0:
             continue
         s = str(val) if val is not None else ""
-        if ("25C1" in s) or ("25C2" in s) or ("25C3" in s):
+        if contains_department_code(s):
             result_rows.add(idx)
     return result_rows
 
@@ -4022,7 +4023,7 @@ def execute6_process1(df):
         if idx == 0:
             continue
         s = str(val) if val is not None else ""
-        if "河北分公司.建筑结构所" in s:
+        if get_organization_filter_file6() in s:
             result_rows.add(idx)
     return result_rows
 
