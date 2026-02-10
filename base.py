@@ -7040,7 +7040,7 @@ class ExcelProcessorApp:
                 # 现在指派
                 name_list = distribution.get_name_list()
                 if not name_list:
-                    messagebox.showwarning("警告", "无法读取姓名列表，请检查姓名角色表.xlsx", parent=self.root)
+                    messagebox.showwarning("警告", f"无法读取姓名列表，请检查{get_role_table_file()}", parent=self.root)
                     return
                 
                 dialog = distribution.AssignmentDialog(
@@ -7087,7 +7087,7 @@ class ExcelProcessorApp:
             
             name_list = distribution.get_name_list()
             if not name_list:
-                messagebox.showwarning("警告", "无法读取姓名列表，请检查姓名角色表.xlsx", parent=self.root)
+                messagebox.showwarning("警告", f"无法读取姓名列表，请检查{get_role_table_file()}", parent=self.root)
                 return
             
             dialog = distribution.AssignmentDialog(

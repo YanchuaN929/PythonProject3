@@ -44,31 +44,34 @@ def check_pre_build():
     # 检查主要Python文件
     print("【核心模块】")
     all_ok &= check_file("base.py", "主程序")
-    all_ok &= check_file("main.py", "处理模块1")
-    all_ok &= check_file("main2.py", "处理模块2")
-    all_ok &= check_file("Monitor.py", "监控模块")
-    all_ok &= check_file("window.py", "窗口管理模块")
-    all_ok &= check_file("file_manager.py", "文件管理模块")
+    all_ok &= check_file("core/main.py", "处理模块1")
+    all_ok &= check_file("core/main2.py", "处理模块2")
+    all_ok &= check_file("core/Monitor.py", "监控模块")
+    all_ok &= check_file("ui/window.py", "窗口管理模块")
+    all_ok &= check_file("services/file_manager.py", "文件管理模块")
     print()
     
-    # 检查功能模块（之前缺失的）
+    # 检查功能模块
     print("【功能模块】")
-    all_ok &= check_file("ignore_overdue_dialog.py", "忽略延期对话框")
-    all_ok &= check_file("date_utils.py", "日期工具模块")
-    all_ok &= check_file("input_handler.py", "输入处理模块")
-    all_ok &= check_file("distribution.py", "任务指派模块")
-    all_ok &= check_file("db_status.py", "数据库状态显示器")
+    all_ok &= check_file("ui/ignore_overdue_dialog.py", "忽略延期对话框")
+    all_ok &= check_file("utils/date_utils.py", "日期工具模块")
+    all_ok &= check_file("ui/input_handler.py", "输入处理模块")
+    all_ok &= check_file("services/distribution.py", "任务指派模块")
+    all_ok &= check_file("services/db_status.py", "数据库状态显示器")
+    all_ok &= check_file("utils/dept_config.py", "科室配置模块")
     print()
     
     # 检查配置文件
     print("【配置文件】")
     all_ok &= check_file("config.json", "配置文件")
+    all_ok &= check_file("version.json", "版本文件")
     print()
     
     # 检查资源文件
     print("【资源文件】")
     all_ok &= check_file("ico_bin/tubiao.ico", "程序图标")
-    all_ok &= check_file("excel_bin/姓名角色表.xlsx", "角色表")
+    all_ok &= check_file("excel_bin/姓名角色表.xlsx", "角色表(建筑结构所)")
+    all_ok &= check_file("excel_bin/姓名角色表-电力工程研究设计所.xlsx", "角色表(电力工程研究设计所)")
     print()
     
     # 检查打包配置
@@ -93,7 +96,7 @@ def check_pre_build():
         all_ok = False
     
     try:
-        import pystray
+        import pystray  # noqa: F401
         print_ok("pystray: installed")
     except ImportError:
         print_error("pystray 未安装")
@@ -148,33 +151,36 @@ def check_post_build():
     print()
     
     # 检查Python模块
+    internal = os.path.join(dist_dir, "_internal")
     print("【核心模块】")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "main.py"), "处理模块1")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "main2.py"), "处理模块2")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "Monitor.py"), "监控模块")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "window.py"), "窗口管理模块")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "file_manager.py"), "文件管理模块")
+    all_ok &= check_file(os.path.join(internal, "core", "main.py"), "处理模块1")
+    all_ok &= check_file(os.path.join(internal, "core", "main2.py"), "处理模块2")
+    all_ok &= check_file(os.path.join(internal, "core", "Monitor.py"), "监控模块")
+    all_ok &= check_file(os.path.join(internal, "ui", "window.py"), "窗口管理模块")
+    all_ok &= check_file(os.path.join(internal, "services", "file_manager.py"), "文件管理模块")
     print()
     
-    # 检查功能模块（之前缺失的）
+    # 检查功能模块
     print("【功能模块】")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "ignore_overdue_dialog.py"), "忽略延期对话框")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "date_utils.py"), "日期工具模块")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "input_handler.py"), "输入处理模块")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "distribution.py"), "任务指派模块")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "db_status.py"), "数据库状态显示器")
+    all_ok &= check_file(os.path.join(internal, "ui", "ignore_overdue_dialog.py"), "忽略延期对话框")
+    all_ok &= check_file(os.path.join(internal, "utils", "date_utils.py"), "日期工具模块")
+    all_ok &= check_file(os.path.join(internal, "ui", "input_handler.py"), "输入处理模块")
+    all_ok &= check_file(os.path.join(internal, "services", "distribution.py"), "任务指派模块")
+    all_ok &= check_file(os.path.join(internal, "services", "db_status.py"), "数据库状态显示器")
+    all_ok &= check_file(os.path.join(internal, "utils", "dept_config.py"), "科室配置模块")
     print()
     
     # 检查配置文件
     print("【配置文件】")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "config.json"), "配置文件")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "version.json"), "版本文件")
+    all_ok &= check_file(os.path.join(internal, "config.json"), "配置文件")
+    all_ok &= check_file(os.path.join(internal, "version.json"), "版本文件")
     print()
     
     # 检查资源文件
     print("【资源文件】")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "ico_bin", "tubiao.ico"), "程序图标")
-    all_ok &= check_file(os.path.join(dist_dir, "_internal", "excel_bin", "姓名角色表.xlsx"), "角色表")
+    all_ok &= check_file(os.path.join(internal, "ico_bin", "tubiao.ico"), "程序图标")
+    all_ok &= check_file(os.path.join(internal, "excel_bin", "姓名角色表.xlsx"), "角色表(建筑结构所)")
+    all_ok &= check_file(os.path.join(internal, "excel_bin", "姓名角色表-电力工程研究设计所.xlsx"), "角色表(电力工程研究设计所)")
     print()
     
     # 检查更新程序
@@ -184,10 +190,9 @@ def check_post_build():
     
     # 检查依赖库
     print("【依赖库】")
-    internal_dir = os.path.join(dist_dir, "_internal")
-    if os.path.exists(internal_dir):
-        dll_files = [f for f in os.listdir(internal_dir) if f.endswith('.dll')]
-        pyd_files = [f for f in os.listdir(internal_dir) if f.endswith('.pyd')]
+    if os.path.exists(internal):
+        dll_files = [f for f in os.listdir(internal) if f.endswith('.dll')]
+        pyd_files = [f for f in os.listdir(internal) if f.endswith('.pyd')]
         print_ok(f"找到 {len(dll_files)} 个DLL文件")
         print_ok(f"找到 {len(pyd_files)} 个PYD文件")
     else:

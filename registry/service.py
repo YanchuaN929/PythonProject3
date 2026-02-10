@@ -842,13 +842,19 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
     result = {}
     
     # 判断用户角色类型
+    try:
+        from utils.dept_config import get_superior_keywords
+        _superior_kw = get_superior_keywords()
+    except Exception:
+        _superior_kw = ['所领导', '室主任', '接口工程师']
+
     is_designer = False
     is_superior = False
     if current_user_roles:
         for role in current_user_roles:
             if "设计人员" in role:
                 is_designer = True
-            if any(keyword in role for keyword in ['所领导', '室主任', '接口工程师']):
+            if any(keyword in role for keyword in _superior_kw):
                 is_superior = True
     
     # 导入延期判断函数

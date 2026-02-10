@@ -59,6 +59,7 @@ def _default_profile():
             "设计人员": None,
         },
         "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306"],
+        "projects_standard_filter": ["1907", "2016"],
         "role_table_file": "excel_bin/姓名角色表.xlsx",
         "default_folder_path": (
             r"//10.102.2.7/文件服务器/建筑结构所"
@@ -196,6 +197,17 @@ def get_projects():
         ["1818", "1907", "1915", "1916", "2016", "2026", "2306"]
     """
     return get_active_profile().get("projects", [])
+
+
+def get_projects_standard_filter():
+    """获取使用标准筛选逻辑（不排除 process3）的项目号列表
+
+    用于 ``core/main.py`` 中文件2的筛选分支判断。
+    返回示例::
+
+        ["1907", "2016"]
+    """
+    return get_active_profile().get("projects_standard_filter", ["1907", "2016"])
 
 
 def get_role_table_file():

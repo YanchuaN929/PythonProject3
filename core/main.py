@@ -21,6 +21,7 @@ try:
         get_department_codes,
         get_organization_filter,
         get_organization_filter_file6,
+        get_projects_standard_filter,
         map_code_to_department,
         match_department_name,
         contains_department_code,
@@ -45,6 +46,8 @@ except ImportError:
         return s
     def contains_department_code(s):
         return any(c in s for c in ["25C1", "25C2", "25C3"])
+    def get_projects_standard_filter():
+        return ["1907", "2016"]
 
 # 导入项目特殊调整模块（1818项目日期减6天等）
 try:
@@ -1254,9 +1257,9 @@ def process_target_file2(file_path, current_datetime, project_id=None):
     # 处理4
     process4_rows = execute2_process4(df)
 
-    # 根据项目号决定筛选逻辑
-    # 1907和2016使用现有逻辑，其他项目排除process3
-    if project_id in ['1907', '2016']:
+    # 根据项目号决定筛选逻辑（标准/扩展逻辑由 config.json 参数化）
+    standard_projects = get_projects_standard_filter()
+    if project_id in standard_projects:
         final_rows = process1_rows & process2_rows & process4_rows
         print(f"项目{project_id}使用标准逻辑（不排除process3）")
     else:
