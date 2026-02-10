@@ -58,6 +58,8 @@ def _default_profile():
             "管理员": None,
             "设计人员": None,
         },
+        "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306"],
+        "role_table_file": "excel_bin/姓名角色表.xlsx",
         "default_folder_path": (
             r"//10.102.2.7/文件服务器/建筑结构所"
             r"/接口文件/各项目内外部接口手册"
@@ -184,6 +186,26 @@ def get_default_folder_path():
 def get_watermark_text():
     """获取水印显示文本，如 ``"建筑结构所"``"""
     return get_active_profile().get("watermark_text", "")
+
+
+def get_projects():
+    """获取当前科室参数族的项目号列表
+
+    返回示例::
+
+        ["1818", "1907", "1915", "1916", "2016", "2026", "2306"]
+    """
+    return get_active_profile().get("projects", [])
+
+
+def get_role_table_file():
+    """获取当前科室参数族的姓名角色表文件路径
+
+    返回示例::
+
+        "excel_bin/姓名角色表.xlsx"
+    """
+    return get_active_profile().get("role_table_file", "excel_bin/姓名角色表.xlsx")
 
 
 def get_role_export_days():

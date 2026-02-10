@@ -73,8 +73,41 @@ ELECTRIC_PROFILE = {
         "管理员": None,
         "设计人员": None,
     },
+    "projects": ["1818", "1907"],
+    "role_table_file": "excel_bin/姓名角色表.xlsx",
     "default_folder_path": "//server/电气所/接口文件",
     "watermark_text": "电气工程及其自动化所",
+}
+
+POWER_ENGINEERING_PROFILE = {
+    "organization_filter": "河北分公司-电力工程研究设计所",
+    "organization_filter_file6": "河北分公司.电力工程研究设计所",
+    "department_codes": ["25D1", "25D2", "25D3", "25D4"],
+    "department_code_mapping": {
+        "25D1": "机务室",
+        "25D2": "电气室",
+        "25D3": "土建室",
+        "25D4": "仪控室",
+    },
+    "director_role_mapping": {
+        "机务室主任": "机务室",
+        "电气室主任": "电气室",
+        "土建室主任": "土建室",
+        "仪控室主任": "仪控室",
+    },
+    "role_export_days": {
+        "机务室主任": 7,
+        "电气室主任": 7,
+        "土建室主任": 7,
+        "仪控室主任": 7,
+        "所领导": 2,
+        "管理员": None,
+        "设计人员": None,
+    },
+    "projects": ["1116", "1517", "1817", "1907", "1915", "2016", "2026", "2306", "2416"],
+    "role_table_file": "excel_bin/姓名角色表-电力工程研究设计所.xlsx",
+    "default_folder_path": "//10.102.2.7/电力工程研究设计所/软件/接口管理软件",
+    "watermark_text": "建筑结构所",
 }
 
 
@@ -109,6 +142,8 @@ class TestDefaultProfile:
             "department_code_mapping",
             "director_role_mapping",
             "role_export_days",
+            "projects",
+            "role_table_file",
             "default_folder_path",
             "watermark_text",
         ]
@@ -661,3 +696,251 @@ class TestHelpViewerIntegration:
         assert "设计人员" in mapping
         assert "所领导" in mapping
         assert "管理员" in mapping
+
+
+# =========================================================================
+# 13. 新增函数 get_projects / get_role_table_file 测试（默认参数族）
+# =========================================================================
+
+class TestProjectsAndRoleTableDefault:
+    """默认参数族下 get_projects / get_role_table_file 测试"""
+
+    def test_get_projects_default(self):
+        from utils.dept_config import get_projects
+        with patch("utils.dept_config._get_config_path",
+                    return_value="/nonexistent"):
+            projects = get_projects()
+        assert projects == ["1818", "1907", "1915", "1916", "2016", "2026", "2306"]
+
+    def test_get_role_table_file_default(self):
+        from utils.dept_config import get_role_table_file
+        with patch("utils.dept_config._get_config_path",
+                    return_value="/nonexistent"):
+            path = get_role_table_file()
+        assert path == "excel_bin/姓名角色表.xlsx"
+
+
+# =========================================================================
+# 14. 电力工程研究设计所参数族全面测试
+# =========================================================================
+
+class TestPowerEngineeringProfile:
+    """电力工程研究设计所参数族全面测试"""
+
+    @pytest.fixture(autouse=True)
+    def load_power_eng_profile(self, patch_config_path):
+        config = {
+            "department_profile": "电力工程研究设计所",
+            "department_profiles": {
+                "电力工程研究设计所": POWER_ENGINEERING_PROFILE,
+            },
+        }
+        with patch_config_path(config):
+            yield
+
+    def test_department_codes(self):
+        from utils.dept_config import get_department_codes
+        assert get_department_codes() == ["25D1", "25D2", "25D3", "25D4"]
+
+    def test_department_code_mapping(self):
+        from utils.dept_config import get_department_code_mapping
+        mapping = get_department_code_mapping()
+        assert mapping == {
+            "25D1": "机务室",
+            "25D2": "电气室",
+            "25D3": "土建室",
+            "25D4": "仪控室",
+        }
+
+    def test_department_names(self):
+        from utils.dept_config import get_department_names
+        names = get_department_names()
+        assert set(names) == {"机务室", "电气室", "土建室", "仪控室"}
+        assert len(names) == 4
+
+    def test_organization_filter(self):
+        from utils.dept_config import get_organization_filter
+        assert get_organization_filter() == "河北分公司-电力工程研究设计所"
+
+    def test_organization_filter_file6(self):
+        from utils.dept_config import get_organization_filter_file6
+        assert get_organization_filter_file6() == "河北分公司.电力工程研究设计所"
+
+    def test_director_role_mapping(self):
+        from utils.dept_config import get_director_role_mapping
+        mapping = get_director_role_mapping()
+        assert mapping == {
+            "机务室主任": "机务室",
+            "电气室主任": "电气室",
+            "土建室主任": "土建室",
+            "仪控室主任": "仪控室",
+        }
+
+    def test_director_roles(self):
+        from utils.dept_config import get_director_roles
+        roles = get_director_roles()
+        assert set(roles) == {"机务室主任", "电气室主任", "土建室主任", "仪控室主任"}
+
+    def test_superior_keywords(self):
+        from utils.dept_config import get_superior_keywords
+        kw = get_superior_keywords()
+        assert "机务室主任" in kw
+        assert "仪控室主任" in kw
+        assert "所领导" in kw
+        assert "接口工程师" in kw
+        # 不含建筑结构所角色
+        assert "一室主任" not in kw
+
+    def test_role_export_days(self):
+        from utils.dept_config import get_role_export_days
+        days = get_role_export_days()
+        assert days["机务室主任"] == 7
+        assert days["电气室主任"] == 7
+        assert days["土建室主任"] == 7
+        assert days["仪控室主任"] == 7
+        assert days["所领导"] == 2
+        assert days["管理员"] is None
+        assert days["设计人员"] is None
+        assert "一室主任" not in days
+
+    def test_projects(self):
+        from utils.dept_config import get_projects
+        projects = get_projects()
+        assert projects == [
+            "1116", "1517", "1817", "1907", "1915",
+            "2016", "2026", "2306", "2416",
+        ]
+
+    def test_role_table_file(self):
+        from utils.dept_config import get_role_table_file
+        assert get_role_table_file() == "excel_bin/姓名角色表-电力工程研究设计所.xlsx"
+
+    def test_default_folder_path(self):
+        from utils.dept_config import get_default_folder_path
+        assert get_default_folder_path() == "//10.102.2.7/电力工程研究设计所/软件/接口管理软件"
+
+    def test_watermark_stays_fixed(self):
+        from utils.dept_config import get_watermark_text
+        assert get_watermark_text() == "建筑结构所"
+
+    def test_help_section_map(self):
+        from utils.dept_config import get_help_section_map
+        mapping = get_help_section_map()
+        assert mapping["机务室主任"] == "3-室主任使用指南"
+        assert mapping["仪控室主任"] == "3-室主任使用指南"
+        assert mapping["设计人员"] == "2-设计人员使用指南"
+        assert "一室主任" not in mapping
+
+    def test_time_window_roles(self):
+        from utils.dept_config import get_time_window_roles
+        roles = get_time_window_roles()
+        assert "机务室主任" in roles
+        assert "所领导" in roles
+        assert "一室主任" not in roles
+
+    def test_use_workdays_roles(self):
+        from utils.dept_config import get_use_workdays_roles
+        roles = get_use_workdays_roles()
+        assert "土建室主任" in roles
+        assert "所领导" in roles
+
+    def test_map_code_to_department(self):
+        from utils.dept_config import map_code_to_department
+        assert map_code_to_department("XX-25D1-YY") == "机务室"
+        assert map_code_to_department("25D3abc") == "土建室"
+        assert map_code_to_department("25C1") == ""  # 建筑结构所编码不匹配
+
+    def test_match_department_name(self):
+        from utils.dept_config import match_department_name
+        assert match_department_name("河北-电气室-xx") == "电气室"
+        assert match_department_name("仪控室") == "仪控室"
+        assert match_department_name("结构一室") == "结构一室"  # 未匹配返回原始
+
+    def test_contains_department_code(self):
+        from utils.dept_config import contains_department_code
+        assert contains_department_code("25D2-test") is True
+        assert contains_department_code("25D4!!") is True
+        assert contains_department_code("25C1") is False
+
+
+# =========================================================================
+# 15. 切换科室参数族后项目号/角色表联动测试
+# =========================================================================
+
+class TestProjectsAndRoleTableSwitching:
+    """切换科室参数族后 get_projects / get_role_table_file 联动验证"""
+
+    def test_switch_projects(self, patch_config_path):
+        from utils.dept_config import get_projects
+        import utils.dept_config as dc
+
+        # 建筑结构所
+        config_building = {
+            "department_profile": "建筑结构所",
+            "department_profiles": {
+                "建筑结构所": {
+                    "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306"],
+                    "director_role_mapping": {"一室主任": "结构一室"},
+                },
+            },
+        }
+        with patch_config_path(config_building):
+            assert get_projects() == ["1818", "1907", "1915", "1916", "2016", "2026", "2306"]
+
+        # 切换到电力工程研究设计所
+        dc._profile_cache = None
+        config_power = {
+            "department_profile": "电力工程研究设计所",
+            "department_profiles": {
+                "电力工程研究设计所": POWER_ENGINEERING_PROFILE,
+            },
+        }
+        with patch_config_path(config_power):
+            projects = get_projects()
+        assert "1116" in projects
+        assert "2416" in projects
+        assert "1818" not in projects
+
+    def test_switch_role_table_file(self, patch_config_path):
+        from utils.dept_config import get_role_table_file
+        import utils.dept_config as dc
+
+        config_building = {
+            "department_profile": "建筑结构所",
+            "department_profiles": {
+                "建筑结构所": {
+                    "role_table_file": "excel_bin/姓名角色表.xlsx",
+                    "director_role_mapping": {"一室主任": "结构一室"},
+                },
+            },
+        }
+        with patch_config_path(config_building):
+            assert get_role_table_file() == "excel_bin/姓名角色表.xlsx"
+
+        dc._profile_cache = None
+        config_power = {
+            "department_profile": "电力工程研究设计所",
+            "department_profiles": {
+                "电力工程研究设计所": POWER_ENGINEERING_PROFILE,
+            },
+        }
+        with patch_config_path(config_power):
+            path = get_role_table_file()
+        assert path == "excel_bin/姓名角色表-电力工程研究设计所.xlsx"
+
+    def test_distribution_integration_power_eng(self, patch_config_path):
+        """电力工程研究设计所下 distribution 集成测试"""
+        from utils import dept_config as dc
+        from services.distribution import is_director, get_department
+        config = {
+            "department_profile": "电力工程研究设计所",
+            "department_profiles": {
+                "电力工程研究设计所": POWER_ENGINEERING_PROFILE,
+            },
+        }
+        with patch_config_path(config):
+            dc._profile_cache = None
+            assert is_director(["机务室主任"]) is True
+            assert is_director(["一室主任"]) is False
+            assert get_department(["土建室主任"]) == "土建室"
+            assert get_department(["仪控室主任"]) == "仪控室"

@@ -34,7 +34,9 @@ try:
         get_default_folder_path,
         get_director_role_mapping,
         get_director_roles,
+        get_projects,
         get_role_export_days,
+        get_role_table_file,
         get_time_window_roles,
         get_use_workdays_roles,
         get_watermark_text,
@@ -47,6 +49,10 @@ except ImportError:
         return {"一室主任": "结构一室", "二室主任": "结构二室", "建筑总图室主任": "建筑总图室"}
     def get_director_roles():
         return ["一室主任", "二室主任", "建筑总图室主任"]
+    def get_projects():
+        return ["1818", "1907", "1915", "1916", "2016", "2026", "2306"]
+    def get_role_table_file():
+        return "excel_bin/姓名角色表.xlsx"
     def get_time_window_roles():
         return {"所领导", "一室主任", "二室主任", "建筑总图室主任"}
     def get_role_export_days():
@@ -433,14 +439,10 @@ class ExcelProcessorApp:
         self.write_task_manager = get_write_task_manager()
         self.pending_cache = get_pending_cache()
         
-        # 项目号筛选变量（7个项目号，默认全选）
-        self.project_1818_var = tk.BooleanVar(master=self.root, value=True)
-        self.project_1907_var = tk.BooleanVar(master=self.root, value=True)
-        self.project_1915_var = tk.BooleanVar(master=self.root, value=True)
-        self.project_1916_var = tk.BooleanVar(master=self.root, value=True)
-        self.project_2016_var = tk.BooleanVar(master=self.root, value=True)
-        self.project_2026_var = tk.BooleanVar(master=self.root, value=True)
-        self.project_2306_var = tk.BooleanVar(master=self.root, value=True)
+        # 项目号筛选变量（从科室参数族动态生成，默认全选）
+        self.project_vars = {}
+        for pid in get_projects():
+            self.project_vars[pid] = tk.BooleanVar(master=self.root, value=True)
         
         # 六个勾选框变量（指定root作为master）
         self.process_file1_var = tk.BooleanVar(master=self.root, value=True)
@@ -490,15 +492,7 @@ class ExcelProcessorApp:
             'export_folder_path': self.config.get('export_folder_path', ''),
         }
         
-        project_vars = {
-            '1818': self.project_1818_var,
-            '1907': self.project_1907_var,
-            '1915': self.project_1915_var,
-            '1916': self.project_1916_var,
-            '2016': self.project_2016_var,
-            '2026': self.project_2026_var,
-            '2306': self.project_2306_var,
-        }
+        project_vars = self.project_vars
         
         # 使用WindowManager创建界面
         self.window_manager = WindowManager(self.root, callbacks)
@@ -960,22 +954,7 @@ class ExcelProcessorApp:
         获取用户勾选的项目号列表
         返回: 勾选的项目号列表，如 ['1818', '1907', ...]
         """
-        enabled_projects = []
-        if self.project_1818_var.get():
-            enabled_projects.append('1818')
-        if self.project_1907_var.get():
-            enabled_projects.append('1907')
-        if self.project_1915_var.get():
-            enabled_projects.append('1915')
-        if self.project_1916_var.get():
-            enabled_projects.append('1916')
-        if self.project_2016_var.get():
-            enabled_projects.append('2016')
-        if self.project_2026_var.get():
-            enabled_projects.append('2026')
-        if self.project_2306_var.get():
-            enabled_projects.append('2306')
-        return enabled_projects
+        return [pid for pid, var in self.project_vars.items() if var.get()]
     
     def _filter_files_by_project(self, file_list, enabled_projects, file_type_name):
         """
@@ -1121,6 +1100,15 @@ class ExcelProcessorApp:
                             self.default_config[key] = value
         except Exception as e:
             print(f"[配置] 读取项目默认配置失败: {e}")
+
+        # 【修正】用当前科室参数族的值覆盖 config.json 顶层可能残留的建筑结构所路径
+        # 避免 config.json 的 defaults.folder_path / role_export_days 覆盖参数族动态值
+        profile_folder = get_default_folder_path()
+        if profile_folder:
+            if isinstance(self.default_config.get("defaults"), dict):
+                self.default_config["defaults"]["folder_path"] = profile_folder
+            self.default_config["folder_path"] = profile_folder
+        self.default_config["role_export_days"] = self._build_default_role_export_days()
 
         # 加载用户配置
         try:
@@ -2816,7 +2804,7 @@ class ExcelProcessorApp:
 
     def load_user_role(self):
         """
-        加载用户角色：从 excel_bin/姓名角色表.xlsx 中读取 A列=姓名，B列=角色
+        加载用户角色：从科室参数族指定的姓名角色表中读取 A列=姓名，B列=角色
         支持多重角色（用顿号、分隔），识别接口工程师角色
         """
         self.user_name = self.config.get("user_name", "").strip()
@@ -2825,7 +2813,7 @@ class ExcelProcessorApp:
         if not self.user_name:
             return
         try:
-            xls_path = get_resource_path("excel_bin/姓名角色表.xlsx")
+            xls_path = get_resource_path(get_role_table_file())
             if not os.path.exists(xls_path):
                 return
             # 使用优化的读取方法
@@ -2871,7 +2859,7 @@ class ExcelProcessorApp:
         """
         valid_names = set()
         try:
-            xls_path = get_resource_path("excel_bin/姓名角色表.xlsx")
+            xls_path = get_resource_path(get_role_table_file())
             if not os.path.exists(xls_path):
                 print("姓名角色表不存在")
                 return valid_names

@@ -333,18 +333,8 @@ class WindowManager:
         # 获取项目号变量（从回调参数传入）
         project_vars = getattr(self, 'project_vars', {})
         
-        # 创建7个项目号复选框，横向排列
-        projects = [
-            ('1818', project_vars.get('1818')),
-            ('1907', project_vars.get('1907')),
-            ('1915', project_vars.get('1915')),
-            ('1916', project_vars.get('1916')),
-            ('2016', project_vars.get('2016')),
-            ('2026', project_vars.get('2026')),
-            ('2306', project_vars.get('2306'))
-        ]
-        
-        for idx, (project_id, var) in enumerate(projects):
+        # 动态创建项目号复选框，横向排列（项目列表由科室参数族决定）
+        for idx, (project_id, var) in enumerate(sorted(project_vars.items())):
             if var:
                 cb = ttk.Checkbutton(
                     project_filter_frame,

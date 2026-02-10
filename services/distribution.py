@@ -15,12 +15,18 @@ import sys
 from write_tasks import get_write_task_manager, get_pending_cache
 
 try:
-    from utils.dept_config import get_director_roles, get_director_role_mapping
+    from utils.dept_config import (
+        get_director_roles,
+        get_director_role_mapping,
+        get_role_table_file,
+    )
 except ImportError:
     def get_director_roles():
         return ['一室主任', '二室主任', '建筑总图室主任']
     def get_director_role_mapping():
         return {"一室主任": "结构一室", "二室主任": "结构二室", "建筑总图室主任": "建筑总图室"}
+    def get_role_table_file():
+        return "excel_bin/姓名角色表.xlsx"
 from ui.ui_copy import copy_text, normalize_interface_id
 
 # 导入文件锁定检测函数
@@ -70,13 +76,13 @@ def get_responsible_column(file_type):
 
 def get_name_list():
     """
-    从姓名角色表读取姓名列表
+    从当前科室参数族的姓名角色表读取姓名列表
     
     返回:
         list: 姓名列表（已去重排序）
     """
     try:
-        xls_path = get_resource_path("excel_bin/姓名角色表.xlsx")
+        xls_path = get_resource_path(get_role_table_file())
         if not os.path.exists(xls_path):
             print(f"姓名角色表不存在: {xls_path}")
             return []

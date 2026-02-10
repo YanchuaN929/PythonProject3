@@ -1,5 +1,5 @@
 {
-  "folder_path": "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册",
+  "folder_path": "",
   "folder_path_lock_enabled": true,
   "export_folder_path": "",
   "user_name": "",
@@ -12,13 +12,12 @@
   "auto_hide_overdue_days": 30,
 
   "defaults": {
-    "folder_path": "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册",
     "export_path": "D:/jilu"
   },
 
   "registry_force_network_mode": true,
 
-  "department_profile": "建筑结构所",
+  "department_profile": "电力工程研究设计所",
   "department_profiles": {
     "建筑结构所": {
       "organization_filter": "河北分公司-建筑结构所",
@@ -42,7 +41,39 @@
         "管理员": null,
         "设计人员": null
       },
+      "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306"],
+      "role_table_file": "excel_bin/姓名角色表.xlsx",
       "default_folder_path": "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册",
+      "watermark_text": "建筑结构所"
+    },
+    "电力工程研究设计所": {
+      "organization_filter": "河北分公司-电力工程研究设计所",
+      "organization_filter_file6": "河北分公司.电力工程研究设计所",
+      "department_codes": ["25D1", "25D2", "25D3", "25D4"],
+      "department_code_mapping": {
+        "25D1": "机务室",
+        "25D2": "电气室",
+        "25D3": "土建室",
+        "25D4": "仪控室"
+      },
+      "director_role_mapping": {
+        "机务室主任": "机务室",
+        "电气室主任": "电气室",
+        "土建室主任": "土建室",
+        "仪控室主任": "仪控室"
+      },
+      "role_export_days": {
+        "机务室主任": 7,
+        "电气室主任": 7,
+        "土建室主任": 7,
+        "仪控室主任": 7,
+        "所领导": 2,
+        "管理员": null,
+        "设计人员": null
+      },
+      "projects": ["1116", "1517", "1817", "1907", "1915", "2016", "2026", "2306", "2416"],
+      "role_table_file": "excel_bin/姓名角色表-电力工程研究设计所.xlsx",
+      "default_folder_path": "//10.102.2.7/电力工程研究设计所/软件/接口管理软件",
       "watermark_text": "建筑结构所"
     }
   }

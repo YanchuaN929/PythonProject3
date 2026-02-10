@@ -353,3 +353,122 @@ class TestDepartmentMappingInProcessing:
             assert map_code_to_department("X-25D1-Y") == "电气一室"
             assert map_code_to_department("X-25D2-Y") == "电气二室"
             assert map_code_to_department("X-25C1-Y") == ""
+
+
+# =========================================================================
+# 电力工程研究设计所参数族筛选测试
+# =========================================================================
+
+@pytest.fixture
+def patch_power_eng_profile(tmp_path):
+    """将 dept_config 切换到电力工程研究设计所参数族"""
+    config = {
+        "department_profile": "电力工程研究设计所",
+        "department_profiles": {
+            "电力工程研究设计所": {
+                "organization_filter": "河北分公司-电力工程研究设计所",
+                "organization_filter_file6": "河北分公司.电力工程研究设计所",
+                "department_codes": ["25D1", "25D2", "25D3", "25D4"],
+                "department_code_mapping": {
+                    "25D1": "机务室",
+                    "25D2": "电气室",
+                    "25D3": "土建室",
+                    "25D4": "仪控室",
+                },
+                "director_role_mapping": {
+                    "机务室主任": "机务室",
+                    "电气室主任": "电气室",
+                    "土建室主任": "土建室",
+                    "仪控室主任": "仪控室",
+                },
+                "default_folder_path": "//10.102.2.7/电力工程研究设计所/软件/接口管理软件",
+                "watermark_text": "建筑结构所",
+            }
+        },
+    }
+    config_file = tmp_path / "config.json"
+    config_file.write_text(
+        json.dumps(config, ensure_ascii=False), encoding="utf-8"
+    )
+    return patch(
+        "utils.dept_config._get_config_path",
+        return_value=str(config_file),
+    )
+
+
+class TestPowerEngFile1:
+    """电力工程研究设计所 File1 H列筛选"""
+
+    def _make_df(self, h_values):
+        data = {}
+        for i in range(8):
+            col_name = f"col{i}"
+            if i == 7:
+                data[col_name] = ["标题"] + h_values
+            else:
+                data[col_name] = [""] * (len(h_values) + 1)
+        return pd.DataFrame(data)
+
+    def test_filters_25D_codes(self, patch_power_eng_profile):
+        """电力工程研究设计所下，25D1-25D4 被筛选"""
+        from core.main import execute_process1
+        with patch_power_eng_profile:
+            df = self._make_df(["25D1", "25D2", "25D3", "25D4", "25C1", "无关"])
+            result = execute_process1(df)
+        assert result == {1, 2, 3, 4}
+
+    def test_25C_codes_not_matched(self, patch_power_eng_profile):
+        """电力工程研究设计所下，25C 编码不匹配"""
+        from core.main import execute_process1
+        with patch_power_eng_profile:
+            df = self._make_df(["25C1", "25C2", "25C3"])
+            result = execute_process1(df)
+        assert result == set()
+
+
+class TestPowerEngFile5:
+    """电力工程研究设计所 File5 G列筛选"""
+
+    def _make_df(self, g_values):
+        data = {}
+        for i in range(7):
+            col_name = f"col{i}"
+            if i == 6:
+                data[col_name] = ["标题"] + g_values
+            else:
+                data[col_name] = [""] * (len(g_values) + 1)
+        return pd.DataFrame(data)
+
+    def test_filters_25D_codes(self, patch_power_eng_profile):
+        from core.main import execute5_process1
+        with patch_power_eng_profile:
+            df = self._make_df(["25D1", "25D2", "25D3", "25D4", "25C1"])
+            result = execute5_process1(df)
+        assert result == {1, 2, 3, 4}
+
+
+class TestPowerEngDeptMapping:
+    """电力工程研究设计所科室映射测试"""
+
+    def test_map_code(self, patch_power_eng_profile):
+        from utils.dept_config import map_code_to_department
+        with patch_power_eng_profile:
+            assert map_code_to_department("X-25D1-Y") == "机务室"
+            assert map_code_to_department("X-25D2-Y") == "电气室"
+            assert map_code_to_department("X-25D3-Y") == "土建室"
+            assert map_code_to_department("X-25D4-Y") == "仪控室"
+            assert map_code_to_department("X-25C1-Y") == ""
+
+    def test_match_dept_name(self, patch_power_eng_profile):
+        from utils.dept_config import match_department_name
+        with patch_power_eng_profile:
+            assert match_department_name("河北-机务室-xx") == "机务室"
+            assert match_department_name("仪控室") == "仪控室"
+            assert match_department_name("结构一室") == "结构一室"  # 未匹配返回原始
+
+    def test_contains_code(self, patch_power_eng_profile):
+        from utils.dept_config import contains_department_code
+        with patch_power_eng_profile:
+            assert contains_department_code("25D1") is True
+            assert contains_department_code("25D4!!") is True
+            assert contains_department_code("25C1") is False

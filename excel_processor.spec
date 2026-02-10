@@ -27,6 +27,7 @@ a = Analysis(
         # 工具模块 (utils/)
         ('utils/date_utils.py', 'utils'),
         ('utils/adjust.py', 'utils'),
+        ('utils/dept_config.py', 'utils'),
         ('utils/__init__.py', 'utils'),
         # 配置文件
         ('config.json', '.'),
@@ -40,6 +41,7 @@ a = Analysis(
         # 资源文件
         ('ico_bin/tubiao.ico', 'ico_bin'),
         ('excel_bin/姓名角色表.xlsx', 'excel_bin'),
+        ('excel_bin/姓名角色表-电力工程研究设计所.xlsx', 'excel_bin'),
     ],
     hiddenimports=[
         # 核心模块 (core/)
@@ -63,6 +65,7 @@ a = Analysis(
         'utils',
         'utils.date_utils',
         'utils.adjust',
+        'utils.dept_config',
         # write_tasks 模块（写入任务面板/回文提交等）
         'write_tasks',
         'write_tasks.manager',
