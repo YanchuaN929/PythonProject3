@@ -77,6 +77,31 @@
       "role_table_file": "excel_bin/姓名角色表-电力工程研究设计所.xlsx",
       "default_folder_path": "//10.102.2.7/文件服务器/电力工程研究设计所/软件/接口管理软件",
       "watermark_text": "建筑结构所"
+    },
+    "核工程研究设计所": {
+      "organization_filter": "河北分公司-核工程研究设计所",
+      "organization_filter_file6": "河北分公司.核工程研究设计所",
+      "department_codes": ["25E5", "25E6"],
+      "department_code_mapping": {
+        "25E5": "设备室",
+        "25E6": "通信室"
+      },
+      "director_role_mapping": {
+        "设备室主任": "设备室",
+        "通信室主任": "通信室"
+      },
+      "role_export_days": {
+        "设备室主任": 7,
+        "通信室主任": 7,
+        "所领导": 2,
+        "管理员": null,
+        "设计人员": null
+      },
+      "projects": ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"],
+      "projects_standard_filter": ["1907", "2016"],
+      "role_table_file": "excel_bin/姓名角色表——核工程所通信专业+设备专业.xlsx",
+      "default_folder_path": "//10.102.2.7/文件服务器/核工程研究设计所/软件/接口管理软件",
+      "watermark_text": "建筑结构所"
     }
   }
 }

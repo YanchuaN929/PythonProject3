@@ -42,6 +42,7 @@ a = Analysis(
         ('ico_bin/tubiao.ico', 'ico_bin'),
         ('excel_bin/姓名角色表.xlsx', 'excel_bin'),
         ('excel_bin/姓名角色表-电力工程研究设计所.xlsx', 'excel_bin'),
+        ('excel_bin/姓名角色表——核工程所通信专业+设备专业.xlsx', 'excel_bin'),
     ],
     hiddenimports=[
         # 核心模块 (core/)

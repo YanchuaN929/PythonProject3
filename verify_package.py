@@ -72,6 +72,7 @@ def check_pre_build():
     all_ok &= check_file("ico_bin/tubiao.ico", "程序图标")
     all_ok &= check_file("excel_bin/姓名角色表.xlsx", "角色表(建筑结构所)")
     all_ok &= check_file("excel_bin/姓名角色表-电力工程研究设计所.xlsx", "角色表(电力工程研究设计所)")
+    all_ok &= check_file("excel_bin/姓名角色表——核工程所通信专业+设备专业.xlsx", "角色表(核工程研究设计所)")
     print()
     
     # 检查打包配置
@@ -181,6 +182,7 @@ def check_post_build():
     all_ok &= check_file(os.path.join(internal, "ico_bin", "tubiao.ico"), "程序图标")
     all_ok &= check_file(os.path.join(internal, "excel_bin", "姓名角色表.xlsx"), "角色表(建筑结构所)")
     all_ok &= check_file(os.path.join(internal, "excel_bin", "姓名角色表-电力工程研究设计所.xlsx"), "角色表(电力工程研究设计所)")
+    all_ok &= check_file(os.path.join(internal, "excel_bin", "姓名角色表——核工程所通信专业+设备专业.xlsx"), "角色表(核工程研究设计所)")
     print()
     
     # 检查更新程序
