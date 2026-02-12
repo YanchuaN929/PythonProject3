@@ -1,0 +1,82 @@
+{
+  "version": "2026-02-11",
+  "description": "SQL探索模板规范（文件1/2/3/4/6）",
+  "file_types": {
+    "1": {
+      "name": "内部需打开接口",
+      "template_file": "待处理文件1_模板.xlsx",
+      "filename_regex": "(\\d{4})按项目导出IDI手册.*",
+      "columns": {
+        "department": { "letter": "H", "index": 7 },
+        "interface_time": { "letter": "K", "index": 10 },
+        "completed": { "letter": "M", "index": 12 },
+        "responsible_person": { "letter": "R", "index": 17 },
+        "interface_id": { "letter": "A", "index": 0 }
+      }
+    },
+    "2": {
+      "name": "内部需回复接口",
+      "template_file": "待处理文件2_模板.xlsx",
+      "filename_regex": "内部接口信息单报表(\\d{4}).*",
+      "columns": {
+        "department": { "letter": "I", "index": 8 },
+        "interface_time": { "letter": "M", "index": 12 },
+        "completed": { "letter": "N", "index": 13 },
+        "responsible_person": { "letter": "AM", "index": 38 },
+        "version": { "letter": "E", "index": 4 },
+        "interface_id": { "letter": "R", "index": 17 }
+      }
+    },
+    "3": {
+      "name": "外部需打开接口",
+      "template_file": "待处理文件3_模板.xlsx",
+      "filename_regex": "外部接口ICM报表(\\d{4}).*",
+      "columns": {
+        "department": { "letter": "AO", "index": 40 },
+        "interface_time": [
+          { "letter": "M", "index": 12 },
+          { "letter": "L", "index": 11 }
+        ],
+        "completed": [
+          { "letter": "Q", "index": 16 },
+          { "letter": "T", "index": 19 }
+        ],
+        "responsible_person": { "letter": "AP", "index": 41 },
+        "version": { "letter": "AC", "index": 28 },
+        "interface_id": { "letter": "C", "index": 2 }
+      }
+    },
+    "4": {
+      "name": "外部需回复接口",
+      "template_file": "待处理文件4_模板.xlsx",
+      "filename_regex": "外部接口单报表(\\d{4}).*",
+      "columns": {
+        "department": { "letter": "AG", "index": 32 },
+        "interface_time": { "letter": "S", "index": 18 },
+        "completed": { "letter": "V", "index": 21 },
+        "responsible_person": { "letter": "AH", "index": 33 },
+        "version": { "letter": "I", "index": 8 },
+        "interface_id": { "letter": "E", "index": 4 }
+      }
+    },
+    "6": {
+      "name": "收发文函",
+      "template_file": "待处理文件6_模板.xlsx",
+      "filename_regex": "收发文清单(\\d{4})?.*",
+      "columns": {
+        "host_office": { "letter": "W", "index": 22 },
+        "interface_time": { "letter": "I", "index": 8 },
+        "completed": { "letter": "J", "index": 9 },
+        "responsible_person": { "letter": "X", "index": 23 },
+        "version": { "letter": "AC", "index": 28 },
+        "interface_id": { "letter": "E", "index": 4 }
+      },
+      "owner_delimiters": [",", "，", ";", "；", "/", "、"]
+    }
+  },
+  "quality_rules": {
+    "owner_match_roster": true,
+    "owner_invalid_values": ["", "无", "nan", "None"],
+    "date_formats": ["yyyy.mm.dd", "mm.dd", "yyyy-mm-dd", "yyyy/mm/dd"]
+  }
+}

@@ -10,6 +10,7 @@ scripts/
 │   ├── check_and_fix_db_location.py      # 检查并修复数据库位置
 │   ├── migrate_db_to_data_folder.py      # 迁移数据库到数据文件夹
 │   └── check_excel_db_mapping.py         # 检查Excel与数据库字段映射
+│   └── sql_explorer/                     # SQL探索工具（独立EXE来源）
 │
 └── debug/           # 调试脚本
     ├── debug_assigned_simple.py          # 简单的指派任务调试
@@ -66,6 +67,33 @@ python scripts/db_tools/check_excel_db_mapping.py
 - Excel列与DB字段对应关系
 - 数据流向分析
 - 映射完整性报告
+
+---
+
+### sql_explorer/（新增）
+**功能**：探索 SQL Server 表结构与字段候选，重点定位文件1/2/3/4/6的时间列与责任人列，并输出映射报告。
+
+**主要入口**：
+```bash
+python scripts/db_tools/sql_explorer_main.py --help
+python scripts/db_tools/sql_explorer_main.py run --host 10.27.14.216 --database master --username hbgs --password "******"
+```
+
+**模板生成**：
+```bash
+python scripts/db_tools/sql_explorer/generate_example_templates.py
+```
+
+**打包EXE**：
+```bash
+scripts\db_tools\sql_explorer\build_sql_explorer.bat
+```
+
+**输出目录**：`sql_explorer_output/<timestamp>/`
+- mapping_report.md/json
+- candidate_columns.csv
+- quality_report.csv
+- run_diagnostics.txt
 
 ---
 

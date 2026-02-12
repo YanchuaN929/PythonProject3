@@ -1,6 +1,6 @@
 {
   "folder_path": "",
-  "folder_path_lock_enabled": true,
+  "folder_path_lock_enabled": false,
   "export_folder_path": "",
   "user_name": "",
   "auto_startup": true,
@@ -17,7 +17,7 @@
 
   "registry_force_network_mode": true,
 
-  "department_profile": "电力工程研究设计所",
+  "department_profile": "建筑结构所",
   "department_profiles": {
     "建筑结构所": {
       "organization_filter": "河北分公司-建筑结构所",
