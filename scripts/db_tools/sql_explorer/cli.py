@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import traceback
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from .config_store import (
     ConnectionProfile,
@@ -19,11 +20,40 @@ from .config_store import (
 )
 from .connect import connect_sql_server, run_connect_test
 from .discovery import discover_candidates
+from .identity_resolver import build_identity_context
 from .report import build_markdown_report, flatten_candidates_for_csv, write_csv, write_json
 from .roster import load_roster_names, validate_owner_values
 from .sampling import sample_table
 from .schema import scan_schema_snapshot
 from .template_spec import load_template_spec
+
+PRIORITY_TABLE_NAMES = {
+    "idiacp1000",
+    "icmacp1000",
+    "intinterfacedoc",
+    "intinterfacedocidiacp1000",
+    "iitf",
+    "iics",
+    "sendreceivedata",
+    "ta",
+    "tareply",
+    "tadesigndoc",
+    "taminiofile",
+    "telefax",
+    "memorandum",
+    "internalminutes",
+    "externalminutes",
+    "filetransmission",
+    "user",
+    "department",
+    "project",
+    "projectmember",
+    "staffscheme",
+    "staffschemeuser",
+    "interfacereopeninfo",
+    "idiinterfacereopeninfolink",
+    "icminterfacereopeninfolink",
+}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -40,7 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser = subparsers.add_parser("run", help="执行完整探索流程")
     _add_common_args(run_parser)
     run_parser.add_argument("--top", type=int, default=200, help="每表采样行数")
-    run_parser.add_argument("--table-limit", type=int, default=80, help="最大采样表数量")
+    run_parser.add_argument("--table-limit", type=int, default=160, help="最大采样表数量")
     run_parser.add_argument("--candidate-top", type=int, default=5, help="每类输出候选数量")
     run_parser.add_argument("--include-views", action="store_true", help="包含视图")
     run_parser.add_argument("--schema", action="append", default=None, help="仅扫描指定schema")
@@ -82,6 +112,80 @@ def _add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--output-root", default=None, help="输出根目录")
     parser.add_argument("--roster-file", default=None, help="指定姓名角色表路径")
     parser.add_argument("--no-wizard", action="store_true", help="无参数时禁用向导")
+    parser.add_argument(
+        "--pause-on-error", action="store_true", help="发生错误时退出前等待按键"
+    )
+    parser.add_argument(
+        "--no-pause-on-error", action="store_true", help="发生错误时退出前不等待按键"
+    )
+
+
+def _build_connection_hints(profile: ConnectionProfile, error_message: str) -> List[str]:
+    """Build user-facing connection troubleshooting hints."""
+
+    hints: List[str] = []
+    host = (profile.host or "").strip().lower()
+    msg = (error_message or "").lower()
+
+    if host in {"127.0.0.1", "localhost", "."}:
+        hints.append(
+            "当前连接目标是本机地址（127.0.0.1/localhost），如果数据库在内网服务器，请改为真实IP。"
+        )
+    if "10061" in msg or "unable to connect" in msg or "unavailable" in msg:
+        hints.append("目标服务器不可达或端口不通，请确认IP/端口及目标机 SQL Server 服务状态。")
+    if "18456" in msg or "login failed" in msg:
+        hints.append("登录失败，请检查用户名、密码和数据库访问权限。")
+    if "pyodbc 无可用 sql server 驱动" in error_message:
+        hints.append("pyodbc 未找到可用驱动，建议安装 ODBC Driver 17/18 for SQL Server。")
+    if "timeout" in msg:
+        hints.append("连接超时，请检查网络连通性、防火墙策略和端口开放情况。")
+
+    hints.append(f"本地保存连接配置位置: {get_profile_path()}")
+    return hints
+
+
+def _prioritize_tables_for_sampling(
+    tables: Sequence[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Move key business tables to the front before sampling."""
+
+    prioritized: List[Dict[str, Any]] = []
+    others: List[Dict[str, Any]] = []
+
+    for item in tables:
+        table_name = str(item.get("table", "")).strip("[] ").lower()
+        if table_name in PRIORITY_TABLE_NAMES:
+            prioritized.append(item)
+        else:
+            others.append(item)
+    return [*prioritized, *others]
+
+
+def _normalize_argv_for_subcommand(raw_argv: List[str]) -> List[str]:
+    """
+    Normalize argv so subcommand appears first.
+
+    This allows both forms:
+    - sql_explorer.exe run --host 10.27.14.216 ...
+    - sql_explorer.exe --host 10.27.14.216 ... run
+    """
+
+    commands = {"run", "connect-test", "schema", "sample"}
+    if not raw_argv:
+        return raw_argv
+
+    cmd_index = -1
+    for idx, token in enumerate(raw_argv):
+        if token in commands:
+            cmd_index = idx
+            break
+
+    if cmd_index <= 0:
+        return raw_argv
+
+    cmd = raw_argv[cmd_index]
+    rest = [item for i, item in enumerate(raw_argv) if i != cmd_index]
+    return [cmd, *rest]
 
 
 def _prompt_with_tk(existing: Optional[ConnectionProfile]) -> Optional[ConnectionProfile]:
@@ -223,7 +327,10 @@ def run_full_pipeline(args: argparse.Namespace, profile: ConnectionProfile) -> i
     test_result = run_connect_test(profile)
     if not test_result.success:
         diag(f"[ERROR] 连接测试失败: {test_result.message}")
+        for hint in _build_connection_hints(profile, test_result.message):
+            diag(f"[HINT] {hint}")
         diagnostics_path.write_text("\n".join(diagnostics_lines), encoding="utf-8")
+        diag(f"[INFO] 诊断日志: {diagnostics_path}")
         return 2
     diag(f"[OK] 连接测试成功，连接器: {test_result.connector}")
 
@@ -238,22 +345,60 @@ def run_full_pipeline(args: argparse.Namespace, profile: ConnectionProfile) -> i
         diag(f"[INFO] Schema 扫描完成，表数量: {schema_snapshot.get('table_count', 0)}")
 
         tables = schema_snapshot.get("tables", [])
-        table_limit = max(1, int(getattr(args, "table_limit", 80)))
+        tables = _prioritize_tables_for_sampling(tables)
+        table_limit = max(1, int(getattr(args, "table_limit", 160)))
         top_n = max(20, int(getattr(args, "top", 200)))
         sampled_tables: List[Dict[str, Any]] = []
+        is_current_filtered_count = 0
 
         for table_item in tables[:table_limit]:
             table_ref = f"{table_item['schema']}.{table_item['table']}"
             try:
-                sampled = sample_table(conn, table_ref, top_n=top_n, where_clause=None)
+                columns = {
+                    str(col.get("name", "")).lower()
+                    for col in (table_item.get("columns", []) or [])
+                }
+                where_clause = None
+                if "is_current" in columns:
+                    where_clause = "IS_CURRENT = '1'"
+                    is_current_filtered_count += 1
+
+                sampled = sample_table(
+                    conn, table_ref, top_n=top_n, where_clause=where_clause
+                )
                 sampled_tables.append(sampled)
             except Exception as exc:
                 diag(f"[WARN] 采样失败 {table_ref}: {exc}")
 
         diag(f"[INFO] 采样完成，成功采样表数: {len(sampled_tables)}")
+        if is_current_filtered_count:
+            diag(
+                f"[INFO] 采样策略: {is_current_filtered_count} 张表自动附加 IS_CURRENT='1' 过滤"
+            )
 
         roster_names = load_roster_names(args.roster_file)
         diag(f"[INFO] 姓名角色表加载人数: {len(roster_names)}")
+
+        identity_context = build_identity_context(
+            conn,
+            schema_snapshot=schema_snapshot,
+            schema_whitelist=getattr(args, "schema", None),
+        )
+        user_id_map = identity_context.get("user_id_map") or {}
+        diag(
+            "[INFO] 身份映射加载: "
+            f"USER={identity_context.get('user_count', 0)}, "
+            f"DEPARTMENT={identity_context.get('department_count', 0)}"
+        )
+        if identity_context.get("user_schema") or identity_context.get("department_schema"):
+            diag(
+                "[INFO] 身份映射来源schema: "
+                f"USER={identity_context.get('user_schema', '')}, "
+                f"DEPARTMENT={identity_context.get('department_schema', '')}"
+            )
+        for warning in (identity_context.get("warnings") or []):
+            diag(f"[WARN] 身份映射: {warning}")
+
         template_spec = load_template_spec()
         if template_spec:
             diag(
@@ -265,6 +410,7 @@ def run_full_pipeline(args: argparse.Namespace, profile: ConnectionProfile) -> i
         discovery_result = discover_candidates(
             sampled_tables,
             roster_names=roster_names,
+            user_id_map=user_id_map,
             top_n=max(3, int(getattr(args, "candidate_top", 5))),
         )
 
@@ -278,7 +424,7 @@ def run_full_pipeline(args: argparse.Namespace, profile: ConnectionProfile) -> i
             if not table_match:
                 continue
             values = [record.get(col) for record in table_match.get("records", [])]
-            quality = validate_owner_values(values, roster_names)
+            quality = validate_owner_values(values, roster_names, user_id_map=user_id_map)
             quality_rows.append(
                 {
                     "table_ref": table_ref,
@@ -286,6 +432,14 @@ def run_full_pipeline(args: argparse.Namespace, profile: ConnectionProfile) -> i
                     **quality,
                 }
             )
+
+        identity_summary = {
+            "user_count": int(identity_context.get("user_count", 0)),
+            "department_count": int(identity_context.get("department_count", 0)),
+            "user_schema": identity_context.get("user_schema", ""),
+            "department_schema": identity_context.get("department_schema", ""),
+            "warnings": list(identity_context.get("warnings", []) or []),
+        }
 
         report_payload = {
             "metadata": {
@@ -304,6 +458,7 @@ def run_full_pipeline(args: argparse.Namespace, profile: ConnectionProfile) -> i
             "schema_snapshot": schema_snapshot,
             "discovery_result": discovery_result,
             "quality_result": quality_rows,
+            "identity_summary": identity_summary,
             "template_spec": template_spec,
         }
 
@@ -328,6 +483,13 @@ def run_full_pipeline(args: argparse.Namespace, profile: ConnectionProfile) -> i
                 "invalid_name_examples",
                 "total_name_tokens",
                 "matched_name_tokens",
+                "id_token_count",
+                "resolved_id_count",
+                "id_resolved_rate",
+                "resolved_name_rate",
+                "resolved_dept_rate",
+                "unresolved_id_examples",
+                "resolved_user_examples",
             ],
         )
 
@@ -335,7 +497,11 @@ def run_full_pipeline(args: argparse.Namespace, profile: ConnectionProfile) -> i
             schema_snapshot=schema_snapshot,
             discovery_result=discovery_result,
             quality_rows=quality_rows,
-            metadata={"connector": connector, "database": profile.database},
+            metadata={
+                "connector": connector,
+                "database": profile.database,
+                "identity_summary": identity_summary,
+            },
             template_spec=template_spec,
         )
         (run_dir / "mapping_report.md").write_text(markdown_text, encoding="utf-8")
@@ -348,6 +514,7 @@ def run_full_pipeline(args: argparse.Namespace, profile: ConnectionProfile) -> i
         diag(f"[ERROR] 执行失败: {exc}")
         diag(traceback.format_exc())
         diagnostics_path.write_text("\n".join(diagnostics_lines), encoding="utf-8")
+        diag(f"[INFO] 诊断日志: {diagnostics_path}")
         return 1
     finally:
         if conn is not None:
@@ -406,7 +573,7 @@ def _handle_no_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -
         include_views=False,
         schema=None,
         top=200,
-        table_limit=80,
+        table_limit=160,
         candidate_top=5,
         output_root=None,
         roster_file=None,
@@ -418,38 +585,74 @@ def main(argv: Optional[List[str]] = None) -> int:
     """Main entry point."""
 
     parser = build_parser()
-    args = parser.parse_args(argv)
+    try:
+        raw_argv = list(argv) if argv is not None else sys.argv[1:]
+        normalized_argv = _normalize_argv_for_subcommand(raw_argv)
+        args = parser.parse_args(normalized_argv)
 
-    if args.command is None and not any(
-        [args.host, args.database, args.username, args.password, args.clear_profile]
-    ):
-        return _handle_no_args(parser, args)
+        if args.command is None and not any(
+            [args.host, args.database, args.username, args.password, args.clear_profile]
+        ):
+            return _handle_no_args(parser, args)
 
-    profile = resolve_profile(args)
-    if args.command in {"run", "connect-test", "schema", "sample"} and profile is None:
-        print("连接信息不完整，请提供参数或使用向导。")
-        return 2
+        profile = resolve_profile(args)
+        if args.command in {"run", "connect-test", "schema", "sample"} and profile is None:
+            print("连接信息不完整，请提供参数或使用向导。")
+            return 2
 
-    if args.command == "connect-test":
-        assert profile is not None
-        result = run_connect_test(profile)
-        print(json.dumps(result.__dict__, ensure_ascii=False, indent=2))
-        return 0 if result.success else 2
+        if args.command == "connect-test":
+            assert profile is not None
+            result = run_connect_test(profile)
+            print(json.dumps(result.__dict__, ensure_ascii=False, indent=2))
+            return 0 if result.success else 2
 
-    if args.command == "schema":
-        assert profile is not None
-        return run_schema_only(args, profile)
+        if args.command == "schema":
+            assert profile is not None
+            return run_schema_only(args, profile)
 
-    if args.command == "sample":
-        assert profile is not None
-        return run_sample_only(args, profile)
+        if args.command == "sample":
+            assert profile is not None
+            return run_sample_only(args, profile)
 
-    if args.command == "run":
-        assert profile is not None
-        return run_full_pipeline(args, profile)
+        if args.command == "run":
+            assert profile is not None
+            return run_full_pipeline(args, profile)
 
-    parser.print_help()
-    return 0
+        parser.print_help()
+        return 0
+    except Exception as exc:
+        print(f"[FATAL] 程序出现未处理异常: {exc}")
+        print(traceback.format_exc())
+        return 1
+
+
+def maybe_pause_on_error(exit_code: int) -> None:
+    """
+    Prevent console from closing immediately on failure.
+
+    Default behavior:
+    - Double-click launch (no args): pause on non-zero exit.
+    - CLI launch with args: no pause unless --pause-on-error.
+    """
+
+    if exit_code == 0:
+        return
+
+    argv = sys.argv[1:]
+    if "--no-pause-on-error" in argv:
+        return
+
+    try:
+        import msvcrt
+
+        print("\n程序执行失败，按任意键退出...", end="", flush=True)
+        msvcrt.getch()
+        print("")
+    except Exception:
+        try:
+            input("\n程序执行失败，按回车键退出...")
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

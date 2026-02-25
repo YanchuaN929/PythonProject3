@@ -7,13 +7,29 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set
 
-from .profiling import CHINESE_NAME_PATTERN, OWNER_DELIMITERS, profile_records
+from .profiling import profile_records
+from .roster import validate_owner_values
 
 TIME_KEYWORDS = (
     "time",
     "date",
     "deadline",
     "due",
+    "submit",
+    "start",
+    "close",
+    "finish",
+    "forecast",
+    "schedule",
+    "reply",
+    "answer",
+    "swap",
+    "author_date",
+    "meeting_date",
+    "send_date",
+    "receive_date",
+    "created_on",
+    "modified_on",
     "plan",
     "expected",
     "接口时间",
@@ -29,6 +45,16 @@ OWNER_KEYWORDS = (
     "assignee",
     "person",
     "principal",
+    "created_by_id",
+    "owned_by_id",
+    "managed_by_id",
+    "modified_by_id",
+    "dept_user",
+    "shezong",
+    "relevant_person",
+    "compile_user",
+    "delay_open_person",
+    "reopen_person",
     "责任人",
     "负责人",
     "经办",
@@ -38,11 +64,20 @@ OWNER_KEYWORDS = (
 )
 
 FILE_TYPE_TABLE_HINTS = {
-    "1": ("idi", "internal", "open", "打开", "内部"),
-    "2": ("internal", "reply", "回复", "内部"),
-    "3": ("external", "icm", "open", "外部"),
-    "4": ("external", "reply", "外部", "回复"),
-    "6": ("receive", "send", "doc", "函", "收发"),
+    "1": ("idiacp1000", "idiinterfacereopeninfolink", "intinterfacedocidiacp1000"),
+    "2": ("intinterfacedoc", "intinterfacedocidiacp1000", "internalminutes"),
+    "3": ("icmacp1000", "icminterfacereopeninfolink", "iics", "iitf"),
+    "4": ("iitf", "iics", "icmacp1000"),
+    "6": (
+        "sendreceivedata",
+        "ta",
+        "tareply",
+        "telefax",
+        "memorandum",
+        "internalminutes",
+        "externalminutes",
+        "filetransmission",
+    ),
 }
 
 
@@ -73,34 +108,12 @@ def _keyword_score(name: str, keywords: Sequence[str]) -> float:
     return min(1.0, 0.35 * hit)
 
 
-def _calc_owner_match_rate(values: Iterable[Any], roster_names: Set[str]) -> float:
-    if not roster_names:
-        return 0.0
-
-    valid_hits = 0
-    valid_total = 0
-    for value in values:
-        if value is None:
-            continue
-        raw = str(value).strip()
-        if not raw:
-            continue
-        normalized = raw
-        for sep in OWNER_DELIMITERS:
-            normalized = normalized.replace(sep, ",")
-        tokens = [item.strip() for item in normalized.split(",") if item.strip()]
-        if not tokens:
-            continue
-        for token in tokens:
-            valid_total += 1
-            name_match = CHINESE_NAME_PATTERN.findall(token)
-            candidate_name = "".join(name_match) if name_match else token
-            candidate_name = re.sub(r"[a-zA-Z]+$", "", candidate_name).strip()
-            if candidate_name in roster_names:
-                valid_hits += 1
-    if valid_total == 0:
-        return 0.0
-    return valid_hits / valid_total
+def _calc_owner_metrics(
+    values: Iterable[Any],
+    roster_names: Set[str],
+    user_id_map: Dict[str, Dict[str, Any]],
+) -> Dict[str, Any]:
+    return validate_owner_values(values, roster_names, user_id_map=user_id_map)
 
 
 def _time_score(column_name: str, profile: Dict[str, Any]) -> float:
@@ -115,24 +128,53 @@ def _time_score(column_name: str, profile: Dict[str, Any]) -> float:
 def _owner_score(
     column_name: str,
     profile: Dict[str, Any],
-    owner_match_rate: float,
+    owner_metrics: Dict[str, Any],
 ) -> float:
+    keyword_score = _keyword_score(column_name, OWNER_KEYWORDS)
+    roster_match_rate = float(owner_metrics.get("name_in_roster_rate", 0.0))
+    id_resolved_rate = float(owner_metrics.get("id_resolved_rate", 0.0))
+    resolved_name_rate = float(owner_metrics.get("resolved_name_rate", 0.0))
+    resolved_dept_rate = float(owner_metrics.get("resolved_dept_rate", 0.0))
+    id_token_count = float(owner_metrics.get("id_token_count", 0.0))
+    keyword_gate = 0.4 + 0.6 * keyword_score
+
     score = 0.0
-    score += 0.35 * _keyword_score(column_name, OWNER_KEYWORDS)
-    score += 0.30 * float(profile.get("chinese_name_rate", 0.0))
-    score += 0.25 * owner_match_rate
-    score += 0.10 * float(profile.get("multi_owner_rate", 0.0))
+    score += 0.28 * keyword_score
+    score += 0.18 * float(profile.get("chinese_name_rate", 0.0))
+    score += 0.24 * roster_match_rate
+    score += 0.20 * id_resolved_rate * keyword_gate
+    score += 0.07 * resolved_name_rate * keyword_gate
+    score += 0.03 * resolved_dept_rate * keyword_gate
+    score += 0.05 * float(profile.get("multi_owner_rate", 0.0))
+
+    avg_length = float(profile.get("avg_length", 0.0))
+    unique_rate = float(profile.get("unique_rate", 0.0))
+    if avg_length > 40 and keyword_score < 0.35 and id_resolved_rate < 0.2:
+        score -= 0.18
+    if avg_length > 120:
+        score -= 0.12
+    if id_token_count > 1000:
+        score -= 0.12
+    if (
+        unique_rate > 0.98
+        and keyword_score < 0.01
+        and roster_match_rate < 0.01
+        and id_resolved_rate < 0.01
+    ):
+        score -= 0.08
     return max(0.0, min(1.0, score))
 
 
 def discover_candidates(
     sampled_tables: List[Dict[str, Any]],
     roster_names: Optional[Set[str]] = None,
+    user_id_map: Optional[Dict[str, Dict[str, Any]]] = None,
     top_n: int = 5,
 ) -> Dict[str, Any]:
     """Discover global time/owner candidate columns from sampled tables."""
 
     roster_names = roster_names or set()
+    user_id_map = user_id_map or {}
     time_candidates: List[Candidate] = []
     owner_candidates: List[Candidate] = []
     table_profiles: List[Dict[str, Any]] = []
@@ -145,10 +187,10 @@ def discover_candidates(
 
         for col_name, profile in profiles.items():
             values = [record.get(col_name) for record in records]
-            owner_match_rate = _calc_owner_match_rate(values, roster_names)
+            owner_metrics = _calc_owner_metrics(values, roster_names, user_id_map)
 
             t_score = _time_score(col_name, profile)
-            o_score = _owner_score(col_name, profile, owner_match_rate)
+            o_score = _owner_score(col_name, profile, owner_metrics)
 
             t_evidence = {
                 "date_parse_rate": profile.get("date_parse_rate", 0.0),
@@ -158,9 +200,14 @@ def discover_candidates(
             }
             o_evidence = {
                 "chinese_name_rate": profile.get("chinese_name_rate", 0.0),
-                "roster_match_rate": round(owner_match_rate, 6),
+                "roster_match_rate": owner_metrics.get("name_in_roster_rate", 0.0),
+                "id_resolved_rate": owner_metrics.get("id_resolved_rate", 0.0),
+                "resolved_name_rate": owner_metrics.get("resolved_name_rate", 0.0),
+                "resolved_dept_rate": owner_metrics.get("resolved_dept_rate", 0.0),
                 "multi_owner_rate": profile.get("multi_owner_rate", 0.0),
                 "keyword_score": _keyword_score(col_name, OWNER_KEYWORDS),
+                "resolved_user_examples": owner_metrics.get("resolved_user_examples", [])[:3],
+                "unresolved_id_examples": owner_metrics.get("unresolved_id_examples", [])[:3],
                 "top_values": profile.get("top_values", [])[:3],
             }
 
@@ -205,9 +252,37 @@ def _project_file_type_candidates(
 def _filter_by_hints(candidates: List[Candidate], hints: Sequence[str]) -> List[Candidate]:
     rows: List[Candidate] = []
     for item in candidates:
-        table_name = item.table_ref.lower()
-        matched = any(hint.lower() in table_name for hint in hints)
+        matched = any(_table_hint_matched(item.table_ref, hint) for hint in hints)
         if matched:
             rows.append(item)
     rows.sort(key=lambda c: c.score + math.log1p(len(c.table_ref)) * 0.001, reverse=True)
     return rows
+
+
+def _table_hint_matched(table_ref: str, hint: str) -> bool:
+    """Match table hint with bounded/semantic logic."""
+
+    table_name = table_ref.split(".")[-1].strip("[] ").lower()
+    hint_norm = (hint or "").strip().lower()
+    if not table_name or not hint_norm:
+        return False
+
+    # Chinese hints keep substring behavior.
+    if re.search(r"[\u4e00-\u9fff]", hint_norm):
+        return hint_norm in table_ref.lower()
+
+    # Exact is the strongest signal.
+    if hint_norm == table_name:
+        return True
+
+    # Prefix support for short, meaningful identifiers like TA/IITF/IICS.
+    if hint_norm in {"ta", "iitf", "iics"} and table_name.startswith(hint_norm):
+        return True
+
+    # Long English hints use contains match.
+    if len(hint_norm) >= 4 and hint_norm in table_name:
+        return True
+
+    # Token-level fallback for snake-case or mixed separators.
+    tokens = [token for token in re.split(r"[^a-z0-9]+", table_name) if token]
+    return hint_norm in tokens

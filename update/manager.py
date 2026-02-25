@@ -184,10 +184,11 @@ class UpdateManager:
             return False
 
     def _resolve_update_runner(self):
-        # 优先使用 CLI 更新（使用打包内置的 Python 解释器）
-        script_path = os.path.join(self.app_root, "update", "updater_cli.py")
+        # 优先使用 CLI 更新（使用打包内置的 Python 解释器运行脚本）
+        # 用普通 Python 进程（非 PyInstaller EXE）运行更新，避免 python38.dll 被自身锁住
+        script_path = self._resolve_updater_script()
         python_path = self._resolve_cli_python()
-        if python_path and os.path.exists(script_path):
+        if python_path and script_path and os.path.exists(script_path):
             return [python_path, script_path]
 
         # 兜底：使用 update.exe（若可用）
@@ -199,19 +200,43 @@ class UpdateManager:
 
         return None
 
+    def _resolve_updater_script(self) -> Optional[str]:
+        """定位 updater_cli.py 的实际路径（兼容打包版和开发模式）。"""
+        # 打包版：脚本被打包到 _internal/update/updater_cli.py
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            candidate = os.path.join(meipass, "update", "updater_cli.py")
+            if os.path.exists(candidate):
+                return candidate
+
+        # 开发模式：脚本在源码目录
+        candidate = os.path.join(self.app_root, "update", "updater_cli.py")
+        if os.path.exists(candidate):
+            return candidate
+
+        return None
+
     def _resolve_cli_python(self) -> Optional[str]:
-        """查找打包目录内可用的 Python 解释器。"""
-        # 1) 优先使用打包时携带的虚拟环境
-        venv_python = os.path.join(self.app_root, "python", "Scripts", "python.exe")
-        if os.path.exists(venv_python):
-            return venv_python
+        """查找打包目录内可用的 Python 解释器。
 
-        # 2) 兼容直接放在 .venv 目录的场景
-        venv_python = os.path.join(self.app_root, ".venv", "Scripts", "python.exe")
-        if os.path.exists(venv_python):
-            return venv_python
+        优先使用打包时随附的 .venv（普通 Python 进程），
+        这样更新脚本运行时不会占用 _internal/ 下的 python38.dll，
+        从而允许更新过程自由替换该 DLL，解决间歇性"python interpreter 启动失败"问题。
+        """
+        # 1) 打包版：.venv 被打包到 _internal/python/
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            venv_python = os.path.join(meipass, "python", "Scripts", "python.exe")
+            if os.path.exists(venv_python):
+                return venv_python
 
-        # 3) 如果当前是脚本模式（非打包），尝试使用 sys.executable
+        # 2) 开发模式：python/ 或 .venv/ 目录在 app_root 下
+        for rel in ("python", ".venv"):
+            venv_python = os.path.join(self.app_root, rel, "Scripts", "python.exe")
+            if os.path.exists(venv_python):
+                return venv_python
+
+        # 3) 脚本模式（非打包），直接使用当前 sys.executable
         try:
             if os.path.basename(sys.executable).lower().startswith("python"):
                 return sys.executable

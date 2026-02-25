@@ -71,6 +71,13 @@ def build_markdown_report(
     lines.append(f"- 连接器: `{metadata.get('connector', 'unknown')}`")
     lines.append(f"- 数据库: `{metadata.get('database', '')}`")
     lines.append(f"- 表数量: `{schema_snapshot.get('table_count', 0)}`")
+    identity_summary = metadata.get("identity_summary") or {}
+    if identity_summary:
+        lines.append(
+            "- 身份映射: "
+            f"USER={identity_summary.get('user_count', 0)}, "
+            f"DEPARTMENT={identity_summary.get('department_count', 0)}"
+        )
     if template_spec:
         lines.append(f"- 模板规范版本: `{template_spec.get('version', 'unknown')}`")
     lines.append("")
@@ -112,8 +119,9 @@ def build_markdown_report(
                 f"- 文件{file_type} `{spec.get('name', '')}` "
                 f"模板: `{spec.get('template_file', '')}`"
             )
+        file6_scoped = (discovery_result.get("file_type_candidates") or {}).get("6", {})
         lines.append("- 责任人列候选:")
-        for item in scoped.get("owner_candidates", [])[:3]:
+        for item in file6_scoped.get("owner_candidates", [])[:3]:
             lines.append(
                 f"  - `{item.get('table_ref')}.{item.get('column')}` "
                 f"(score={item.get('score')})"
@@ -128,7 +136,9 @@ def build_markdown_report(
                 "- "
                 f"`{row.get('table_ref')}.{row.get('column')}` "
                 f"匹配率 `{row.get('name_in_roster_rate')}`，"
-                f"多人率 `{row.get('multi_owner_rate')}`"
+                f"多人率 `{row.get('multi_owner_rate')}`，"
+                f"ID解析率 `{row.get('id_resolved_rate', 0.0)}`，"
+                f"部门解析率 `{row.get('resolved_dept_rate', 0.0)}`"
             )
 
     lines.append("")

@@ -9,6 +9,8 @@ from typing import Any, Dict, Iterable, List, Optional, Set
 
 import pandas as pd
 
+from .identity_resolver import resolve_owner_value
+
 INVALID_OWNER_VALUES = {"", "无", "nan", "none", "null"}
 
 
@@ -104,18 +106,65 @@ def normalize_owner_tokens(value: Any) -> List[str]:
 
 
 def validate_owner_values(
-    values: Iterable[Any], roster_names: Set[str]
+    values: Iterable[Any],
+    roster_names: Set[str],
+    user_id_map: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Validate owner values against roster names."""
+
+    user_id_map = user_id_map or {}
 
     total_tokens = 0
     match_tokens = 0
     invalid_examples: List[str] = []
     multi_owner_rows = 0
     non_empty_rows = 0
+    id_token_count = 0
+    resolved_id_count = 0
+    resolved_id_with_dept_count = 0
+    rows_with_id_token = 0
+    rows_with_resolved_name = 0
+    unresolved_id_examples: List[str] = []
+    resolved_user_examples: List[str] = []
 
     for value in values:
         tokens = normalize_owner_tokens(value)
+
+        resolved = resolve_owner_value(value, user_id_map)
+        id_tokens = list(resolved.get("id_tokens", []) or [])
+        resolved_users = list(resolved.get("resolved_users", []) or [])
+        resolved_names = list(resolved.get("resolved_names", []) or [])
+        unresolved_ids = list(resolved.get("unresolved_ids", []) or [])
+
+        if id_tokens:
+            rows_with_id_token += 1
+        id_token_count += len(id_tokens)
+        resolved_id_count += len(resolved_users)
+        resolved_id_with_dept_count += int(resolved.get("resolved_dept_count", 0) or 0)
+
+        if resolved_names:
+            rows_with_resolved_name += 1
+        for name in resolved_names:
+            if name and name not in tokens:
+                tokens.append(name)
+
+        for uid in unresolved_ids:
+            if len(unresolved_id_examples) >= 20:
+                break
+            if uid not in unresolved_id_examples:
+                unresolved_id_examples.append(uid)
+
+        for item in resolved_users:
+            if len(resolved_user_examples) >= 20:
+                break
+            user_name = str(item.get("user_name", "") or "").strip()
+            dept_name = str(item.get("dept_name", "") or "").strip()
+            if not user_name:
+                continue
+            text = f"{user_name}@{dept_name}" if dept_name else user_name
+            if text not in resolved_user_examples:
+                resolved_user_examples.append(text)
+
         if not tokens:
             continue
         non_empty_rows += 1
@@ -130,10 +179,24 @@ def validate_owner_values(
 
     match_rate = (match_tokens / total_tokens) if total_tokens else 0.0
     multi_rate = (multi_owner_rows / non_empty_rows) if non_empty_rows else 0.0
+    id_resolved_rate = (resolved_id_count / id_token_count) if id_token_count else 0.0
+    resolved_name_rate = (
+        rows_with_resolved_name / rows_with_id_token if rows_with_id_token else 0.0
+    )
+    resolved_dept_rate = (
+        resolved_id_with_dept_count / resolved_id_count if resolved_id_count else 0.0
+    )
     return {
         "name_in_roster_rate": round(match_rate, 6),
         "multi_owner_rate": round(multi_rate, 6),
         "invalid_name_examples": invalid_examples,
         "total_name_tokens": total_tokens,
         "matched_name_tokens": match_tokens,
+        "id_token_count": id_token_count,
+        "resolved_id_count": resolved_id_count,
+        "id_resolved_rate": round(id_resolved_rate, 6),
+        "resolved_name_rate": round(resolved_name_rate, 6),
+        "resolved_dept_rate": round(resolved_dept_rate, 6),
+        "unresolved_id_examples": unresolved_id_examples,
+        "resolved_user_examples": resolved_user_examples,
     }

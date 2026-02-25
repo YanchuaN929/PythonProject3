@@ -9,6 +9,7 @@ import time
 import random
 import sqlite3
 import os
+import threading
 import pandas as pd
 from .config import load_config, set_config
 
@@ -18,7 +19,7 @@ except ImportError:
     def get_superior_keywords():
         return ['一室主任', '二室主任', '建筑总图室主任', '所长', '所领导', '接口工程师']
 from .service import write_event, mark_completed, mark_confirmed, batch_upsert_tasks
-from .db import close_connection, close_connection_after_use, MaintenanceModeError
+from .db import close_connection, close_connection_after_use, MaintenanceModeError, _diag_log
 from .models import EventType
 from .util import (
     build_task_key_from_row, 
@@ -222,12 +223,20 @@ def _enabled(cfg: dict) -> bool:
 def _handle_maintenance_mode(error: Exception):
     """维护模式处理：释放连接、提示并退出。"""
     flag_path = None
+    is_main_thread = threading.current_thread() is threading.main_thread()
     try:
         from .db import get_maintenance_flag_path
         if _DATA_FOLDER:
             flag_path = get_maintenance_flag_path(data_folder=_DATA_FOLDER)
     except Exception:
         flag_path = None
+    _diag_log(
+        "maintenance_handle_start",
+        data_folder=_DATA_FOLDER or "",
+        flag_path=flag_path or "",
+        error=str(error),
+        is_main_thread=is_main_thread,
+    )
     print(f"[Registry] 维护模式触发退出: {error}, flag_path={flag_path}")
     
     try:
@@ -249,11 +258,15 @@ def _handle_maintenance_mode(error: Exception):
     except Exception:
         pass
     
-    try:
-        from tkinter import messagebox
-        messagebox.showwarning("Registry维护模式", msg)
-    except Exception:
-        print(f"[Registry] {msg}")
+    if is_main_thread:
+        try:
+            from tkinter import messagebox
+            messagebox.showwarning("Registry维护模式", msg)
+        except Exception:
+            print(f"[Registry] {msg}")
+    else:
+        # 后台线程禁止直接触发Tk对话框，避免跨线程UI调用导致卡顿
+        print(f"[Registry] {msg}（后台线程触发，跳过弹窗）")
     
     try:
         try:
@@ -266,6 +279,13 @@ def _handle_maintenance_mode(error: Exception):
         except Exception:
             pass
         import sys
+        _diag_log(
+            "maintenance_exit",
+            data_folder=_DATA_FOLDER or "",
+            flag_path=flag_path or "",
+            error=str(error),
+            is_main_thread=is_main_thread,
+        )
         try:
             sys.stdout.flush()
             sys.stderr.flush()

@@ -13,8 +13,9 @@ import sqlite3
 import os
 import time
 import random
+import threading
 from threading import Lock
-from typing import Optional, Callable, TypeVar
+from typing import Optional, Callable, TypeVar, Dict, Any
 
 # 全局连接缓存和锁
 _CONN: Optional[sqlite3.Connection] = None
@@ -22,12 +23,53 @@ _LOCK = Lock()
 _IS_NETWORK_PATH: Optional[bool] = None  # 缓存网络路径检测结果
 _DB_PATH: Optional[str] = None  # 缓存数据库路径
 _FORCE_NETWORK_MODE: bool = False  # 强制使用网络模式（用于本地测试）
+_CONN_BY_THREAD: Dict[int, sqlite3.Connection] = {}
+_DB_PATH_BY_THREAD: Dict[int, str] = {}
+_NETWORK_PATH_CACHE: Dict[str, bool] = {}
+_DIAG_VERBOSE: bool = os.environ.get("REGISTRY_DIAG_VERBOSE", "0") == "1"
 
 T = TypeVar('T')
 
 
 class MaintenanceModeError(RuntimeError):
     """Registry 维护模式异常（用于协作式释放连接）。"""
+
+
+def _diag_log(event: str, **fields: Any) -> None:
+    """
+    轻量级诊断日志，默认记录关键事件；可通过 REGISTRY_DIAG_VERBOSE=1 开启详细模式。
+    """
+    if not _DIAG_VERBOSE and event not in {
+        "maintenance_block",
+        "maintenance_path_error",
+        "conn_open",
+        "conn_close",
+        "conn_close_path_switch",
+        "conn_recreate_closed",
+        "maintenance_handle_start",
+        "maintenance_exit",
+    }:
+        return
+    try:
+        log_dir = os.path.expanduser("~/.excel_processor")
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, "registry_diag.log")
+        ts = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
+        payload = {
+            "pid": os.getpid(),
+            "tid": threading.get_ident(),
+            "thread": threading.current_thread().name,
+        }
+        payload.update(fields or {})
+        parts = []
+        for k in sorted(payload.keys()):
+            v = payload.get(k)
+            text = str(v).replace("\n", "\\n")
+            parts.append(f"{k}={text}")
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(f"{ts} {event} {' '.join(parts)}\n")
+    except Exception:
+        pass
 
 
 def _get_data_folder_from_db_path(db_path: str) -> str:
@@ -41,6 +83,7 @@ def get_maintenance_flag_path(db_path: Optional[str] = None, data_folder: Option
     base_folder = data_folder or (_get_data_folder_from_db_path(db_path) if db_path else None)
     if not base_folder:
         raise ValueError("data_folder 和 db_path 不能同时为空")
+    base_folder = os.path.normpath(str(base_folder))
     return os.path.join(base_folder, ".registry", "maintenance.lock")
 
 
@@ -48,9 +91,23 @@ def is_maintenance_mode(db_path: Optional[str] = None, data_folder: Optional[str
     """检查是否处于维护模式（存在维护标志文件）。"""
     try:
         flag_path = get_maintenance_flag_path(db_path=db_path, data_folder=data_folder)
-    except Exception:
+    except Exception as e:
+        _diag_log(
+            "maintenance_path_error",
+            db_path=db_path or "",
+            data_folder=data_folder or "",
+            error=str(e),
+        )
         return False
     exists = os.path.exists(flag_path)
+    if exists or _DIAG_VERBOSE:
+        _diag_log(
+            "maintenance_check",
+            db_path=db_path or "",
+            data_folder=data_folder or "",
+            flag_path=flag_path,
+            exists=exists,
+        )
     if exists:
         print(f"[Registry] !!!检测到维护模式!!! flag_path={flag_path}")
     return exists
@@ -60,10 +117,31 @@ def ensure_not_in_maintenance(db_path: Optional[str] = None, data_folder: Option
     """检测维护模式，若开启则抛出异常。"""
     try:
         flag_path = get_maintenance_flag_path(db_path=db_path, data_folder=data_folder)
-    except Exception:
+    except Exception as e:
+        _diag_log(
+            "maintenance_path_error",
+            db_path=db_path or "",
+            data_folder=data_folder or "",
+            error=str(e),
+        )
         return
-    if os.path.exists(flag_path):
+    exists = os.path.exists(flag_path)
+    if exists or _DIAG_VERBOSE:
+        _diag_log(
+            "maintenance_check",
+            db_path=db_path or "",
+            data_folder=data_folder or "",
+            flag_path=flag_path,
+            exists=exists,
+        )
+    if exists:
         print(f"[Registry] !!!检测到维护模式!!! flag_path={flag_path}")
+        _diag_log(
+            "maintenance_block",
+            db_path=db_path or "",
+            data_folder=data_folder or "",
+            flag_path=flag_path,
+        )
         raise MaintenanceModeError(f"Registry 正在维护中，请稍后重试 (flag_path={flag_path})")
 
 
@@ -106,9 +184,10 @@ def set_force_network_mode(enabled: bool = True) -> None:
     参数:
         enabled: True 强制网络模式，False 自动检测
     """
-    global _FORCE_NETWORK_MODE, _IS_NETWORK_PATH
+    global _FORCE_NETWORK_MODE, _IS_NETWORK_PATH, _NETWORK_PATH_CACHE
     _FORCE_NETWORK_MODE = enabled
     _IS_NETWORK_PATH = None  # 重置缓存，下次连接时重新评估
+    _NETWORK_PATH_CACHE = {}
     
     # 控制台输出优化：已验证逻辑，默认不输出
 
@@ -224,7 +303,7 @@ def execute_with_retry(
 
 def get_connection(db_path: str, wal: bool = True) -> sqlite3.Connection:
     """
-    获取或创建数据库连接（单例模式）
+    获取或创建数据库连接（线程级缓存）
     
     参数:
         db_path: 数据库文件路径
@@ -237,46 +316,73 @@ def get_connection(db_path: str, wal: bool = True) -> sqlite3.Connection:
     
     # 维护模式检测：若开启则禁止连接
     ensure_not_in_maintenance(db_path=db_path)
+
+    thread_id = threading.get_ident()
+    thread_name = threading.current_thread().name
     
     with _LOCK:
-        # 【修复Bug】检查连接是否已关闭
-        if _CONN is not None:
-            # 若目标 db_path 发生变化，必须切换连接
-            if _DB_PATH and _DB_PATH != db_path:
+        conn = _CONN_BY_THREAD.get(thread_id)
+        cached_path = _DB_PATH_BY_THREAD.get(thread_id)
+
+        # 线程内连接复用：db_path 变更时仅关闭本线程连接，不影响其他线程
+        if conn is not None:
+            if cached_path and cached_path != db_path:
                 try:
-                    _CONN.close()
+                    conn.close()
                 except Exception:
                     pass
-                _CONN = None
+                _CONN_BY_THREAD.pop(thread_id, None)
+                _DB_PATH_BY_THREAD.pop(thread_id, None)
+                conn = None
+                _diag_log(
+                    "conn_close_path_switch",
+                    thread_id=thread_id,
+                    thread_name=thread_name,
+                    old_db_path=cached_path,
+                    new_db_path=db_path,
+                )
             else:
                 try:
-                    # 测试连接是否有效
-                    _CONN.execute("SELECT 1")
-                    return _CONN
+                    conn.execute("SELECT 1")
+                    _CONN = conn  # 兼容旧代码中的调试变量
+                    _DB_PATH = cached_path or db_path
+                    return conn
                 except (sqlite3.ProgrammingError, sqlite3.OperationalError):
-                    # 连接已关闭，需要重新创建
-                    print("[Registry] 检测到连接已关闭，重新创建...")
-                    _CONN = None
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+                    _CONN_BY_THREAD.pop(thread_id, None)
+                    _DB_PATH_BY_THREAD.pop(thread_id, None)
+                    conn = None
+                    _diag_log(
+                        "conn_recreate_closed",
+                        thread_id=thread_id,
+                        thread_name=thread_name,
+                        db_path=db_path,
+                    )
         
         # 确保目录存在
         db_dir = os.path.dirname(db_path)
         if db_dir and not os.path.exists(db_dir):
             os.makedirs(db_dir, exist_ok=True)
         
-        # 缓存网络路径检测结果（避免重复检测）
-        if _DB_PATH != db_path:
-            if _FORCE_NETWORK_MODE:
-                _IS_NETWORK_PATH = True
-            else:
-                _IS_NETWORK_PATH = _is_network_path(db_path)
-                # 控制台输出优化：已验证逻辑，默认不输出
-            _DB_PATH = db_path
+        # 缓存网络路径检测结果（按 db_path 维度缓存）
+        if _FORCE_NETWORK_MODE:
+            is_network = True
+        else:
+            is_network = _NETWORK_PATH_CACHE.get(db_path)
+            if is_network is None:
+                is_network = _is_network_path(db_path)
+                _NETWORK_PATH_CACHE[db_path] = is_network
         
-        is_network = _IS_NETWORK_PATH or _FORCE_NETWORK_MODE
+        _IS_NETWORK_PATH = bool(is_network)
+        _DB_PATH = db_path
         
         # 【关键修复】网络路径自动禁用WAL模式
-        if is_network and wal:
-            wal = False
+        use_wal = bool(wal)
+        if is_network and use_wal:
+            use_wal = False
             # 尝试清理旧的WAL文件
             _cleanup_wal_files(db_path)
         
@@ -287,13 +393,13 @@ def get_connection(db_path: str, wal: bool = True) -> sqlite3.Connection:
         # 配置日志模式和性能优化
         try:
             # 设置日志模式
-            if wal:
+            if use_wal:
                 result = conn.execute("PRAGMA journal_mode=WAL").fetchone()
             else:
                 result = conn.execute("PRAGMA journal_mode=DELETE").fetchone()
             
             actual_mode = result[0] if result else "unknown"
-            expected_mode = "wal" if wal else "delete"
+            expected_mode = "wal" if use_wal else "delete"
             
             if actual_mode.lower() != expected_mode:
                 print(f"[Registry] 警告: 日志模式设置失败! 期望={expected_mode}, 实际={actual_mode}")
@@ -330,7 +436,17 @@ def get_connection(db_path: str, wal: bool = True) -> sqlite3.Connection:
         
         init_db(conn)
         
+        _CONN_BY_THREAD[thread_id] = conn
+        _DB_PATH_BY_THREAD[thread_id] = db_path
         _CONN = conn
+        _diag_log(
+            "conn_open",
+            thread_id=thread_id,
+            thread_name=thread_name,
+            db_path=db_path,
+            wal=use_wal,
+            is_network=bool(is_network),
+        )
         return conn
 
 
@@ -488,15 +604,41 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 def close_connection():
-    """关闭全局数据库连接"""
-    global _CONN
+    """关闭当前线程数据库连接"""
+    global _CONN, _DB_PATH
+    thread_id = threading.get_ident()
+    thread_name = threading.current_thread().name
     with _LOCK:
-        if _CONN is not None:
+        conn = _CONN_BY_THREAD.pop(thread_id, None)
+        db_path = _DB_PATH_BY_THREAD.pop(thread_id, None)
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            _diag_log(
+                "conn_close",
+                thread_id=thread_id,
+                thread_name=thread_name,
+                db_path=db_path or "",
+            )
+            if _CONN is conn:
+                _CONN = None
+                _DB_PATH = None
+        elif _CONN is not None and not _CONN_BY_THREAD:
+            # 兼容旧逻辑：仅当没有线程缓存时，回收遗留的全局连接
             try:
                 _CONN.close()
             except Exception:
                 pass
+            _diag_log(
+                "conn_close",
+                thread_id=thread_id,
+                thread_name=thread_name,
+                db_path=_DB_PATH or "",
+            )
             _CONN = None
+            _DB_PATH = None
 
 
 def is_network_database() -> bool:

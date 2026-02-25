@@ -185,8 +185,8 @@ update_exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
-    console=False,
+    upx=False,
+    console=True,
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
@@ -201,6 +201,6 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,
     name='接口筛选'
 )
