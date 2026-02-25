@@ -40,6 +40,7 @@ file_cache.json
 # Result cache (optional - contains processing results)
 # 运行产物：缓存结果/数据库文件（建议不纳入版本控制）
 result_cache/
+sql_explorer_output/
 *.pkl
 *.db
 *.sqlite
