@@ -6,10 +6,10 @@
 - 依据来源：
   - `core/main.py`（现网筛选逻辑与Excel列位）
   - `example/template_spec.json`（文件1/2/3/4/6模板基线）
-  - `sql_explorer_output/CIMS-sql/*.sql`（离线快照字段）
+  - `example/CIMS-sql/*.sql`（离线快照）
 - 说明：
   - `col_idx` 为 SQL 表内 0-based 列序号。
-  - 责任人多为 32 位 ID，需走 `USER/DEPARTMENT` 映射后转姓名与科室。
+  - 人员字段多为 32 位 ID，需经 `USER/DEPARTMENT` 解析成“姓名@login”。
 
 ## 2. 总览（按文件类型）
 
@@ -24,22 +24,45 @@
 
 ## 3. 文件1（内部需打开接口）
 
+> 以下“角色列/责任人列”依据 `example/1818按项目导出IDI手册2026-01-28-15_11_50.xlsx` 与 `example/CIMS-sql/IDIACP1000.sql` 实测校验。
+
 | 程序字段 | Excel列 | SQL主映射 | SQL回退/补充 |
 |---|---|---|---|
 | 项目号 | 文件名4位 | `IDIACP1000.PROJ_NUM` (`col_idx=28`) | 文件名项目号兜底 |
 | 接口号 | `A(0)` | `IDIACP1000.ITEM_NUMBER` (`27`) | - |
-| 科室 | `H(7)` | `IDIACP1000.RESP_SHEZONG` (`38`) -> `USER.id` -> `DEPARTMENT` | `IDIACP1000.DEPART_USER` (`39`) |
+| 科室 | `H(7)` | `IDIACP1000.RELEASE_PARTY` (`36`) | - |
 | 接口时间 | `K(10)` | `IDIACP1000.SWAP_START_DATE` (`40`) | `IDIACP1000.ACTUAL_OPEN_DATE` (`44`) |
-| 完成标记 | `M(12)` | `IDIACP1000.CLOSE_NUM` (`60`) | `IDIACP1000.LATEST_REPLY` (`57`) |
-| 责任人 | `R(17)` | `IDIACP1000.RESP_SHEZONG` (`38`) | `DELAY_OPEN_PERSON` (`63`), `CREATED_BY_ID` (`5`) |
+| 完成标记（当前程序口径） | `M(12)` | `IDIACP1000.ACTUAL_OPEN_DATE` (`44`) | `IDIACP1000.ACTUAL_CLOSE_DATE` (`45`) |
+| 角色列（设总） | `Q(16)` | `IDIACP1000.RESP_SHEZONG` (`38`) -> `USER/DEPARTMENT` | - |
+| 责任人列（所编制人） | `R(17)` | `IDIACP1000.DEPART_USER` (`39`) -> `USER/DEPARTMENT` | `DELAY_OPEN_PERSON` (`63`), `CREATED_BY_ID` (`5`) |
+
+### 3.1 文件1实测匹配率（6299/6299 行可对齐）
+
+- `发布方(H)` -> `RELEASE_PARTY`：`100%`
+- `首发时间(K)` -> `SWAP_START_DATE`：`99.7777%`
+- `完成标记(M)` -> `ACTUAL_OPEN_DATE`：`99.7120%`
+- `角色列(设总Q)` -> `RESP_SHEZONG`：
+  - 当前记录口径（`IS_CURRENT`优先）=`99.9524%`
+  - 全版本口径（同接口号任一版本可命中）=`100%`
+- `责任人列(所编制人R)` -> `DEPART_USER`：
+  - 原值直比=`84.95%`
+  - 去除姓名尾部字母（a/b/d）后=`99.8095%`
+  - 未命中的 7 条为占位账号差异（如 `111@1112311` vs `weicc111@1112311`）
+
+### 3.2 责任人还需要“别名对照表”
+
+结论：是的，需要。仅靠 `USER` 表无法覆盖少量历史/占位写法，建议增加一份“责任人别名对照表”（本地配置）：
+
+| excel值 | 规范值 | 用途 |
+|---|---|---|
+| `111@1112311` | `weicc111@1112311` | 修正占位账号 |
+| `张海波a@zhanghba` | `张海波@zhanghba` | 去尾字母规范化 |
+| `杨健d@yangjiand` | `杨健@yangjiand` | 去尾字母规范化 |
 
 ## 4. 文件2（内部需回复接口）
 
-> [原生测试] keep-undo 测试
-
 | 程序字段 | Excel列 | SQL主映射 | SQL回退/补充 |
 |---|---|---|---|
-> [测试改动2] 当前可视区域标记（用于验证改动高亮/Keep/Undo 是否出现）
 | 项目号 | 文件名4位 | `INTINTERFACEDOC.PROJ_NUM` (`28`) | 文件名项目号兜底 |
 | 接口号 | `R(17)` | `INTINTERFACEDOC.ITEM_NUMBER` (`27`) | - |
 | 科室 | `I(8)` | `INTINTERFACEDOC.RECEIVE_DEPT` (`39`) | `PROPOSED_DEPT` (`38`) + 责任人部门映射 |
@@ -82,7 +105,7 @@
 | 完成标记 | `N(13)` | 待确认 |
 | 责任人 | `K(10)` | 待确认 |
 
-说明：文件5当前未纳入 `sql_explorer` 模板与离线验证范围，建议先补一份文件5样本并单独做字段定位。
+说明：文件5当前未纳入 `sql_explorer` 模板与离线验证范围，建议补样本后单独定位。
 
 ## 8. 文件6（收发文函）
 
@@ -100,9 +123,9 @@
 | 责任人 | `X(23)` | `SENDRECEIVEDATA.CREATED_BY_ID` (`4`) -> `USER/DEPARTMENT` | `MODIFIED_BY_ID` (`8`) |
 | 版次 | `AC(28)` | 文函主表无稳定版次字段 | 需业务定义 |
 
-### 8.2 兼容映射（接口单口径的“收发文清单”导出版）
+### 8.2 兼容映射（接口单口径“收发文清单”导出版）
 
-在 `example/收发文清单1818.xlsx` 中，`E` 列值形态与 `INTINTERFACEDOC.ITEM_NUMBER` 一致（如 `1818-5-...`），因此需保留兼容方案：
+在 `example/收发文清单1818.xlsx` 中，`E` 列值形态与 `INTINTERFACEDOC.ITEM_NUMBER` 一致（如 `1818-5-...`），需保留兼容方案：
 
 - 接口号：`INTINTERFACEDOC.ITEM_NUMBER` (`27`)
 - 项目号：`INTINTERFACEDOC.PROJ_NUM` (`28`)
@@ -110,19 +133,11 @@
 - 回文日期：`INTINTERFACEDOC.ANSWER_DATE` (`58`)
 - 责任人：`INTINTERFACEDOC.RESP_SHEZONG` (`55`) / `RE_OPEN_RESP_SHEZONG` (`61`)
 
-## 9. 责任人ID统一解析（所有文件通用）
+## 9. 责任人ID统一解析（通用）
 
-当责任人字段为 32 位 ID 时，统一解析链路如下：
-
-1. 取责任人列中的 ID（可多值）
+1. 提取责任人列中的 32 位 ID（支持多值）
 2. 关联 `USER.id`
 3. 姓名优先级：`LAST_NAME + FIRST_NAME` > `KEYED_NAME` > `LOGIN_NAME`
 4. 科室关联：`USER.DEPARTMENT` -> `DEPARTMENT.id`
-5. 输出字段：姓名、登录名、科室名称、科室编码（`DEPT_NUMBER`）
-
----
-
-如果你需要，我可以在下一步把这份对照表再导出成一份 `CSV`（每行一条“文件类型+字段”的映射），方便你直接给开发或DBA落配置。
-
-> [测试改动] 用于验证 Agent 的改动高亮/Keep/Undo 面板，测试后可直接删除。
+5. 输出：姓名、登录名、科室名称、科室编码（`DEPT_NUMBER`）
 
