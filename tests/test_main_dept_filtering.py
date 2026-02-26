@@ -587,3 +587,116 @@ class TestNuclearEngDeptMapping:
             assert contains_department_code("25E6!!") is True
             assert contains_department_code("25C1") is False
             assert contains_department_code("25D1") is False
+
+
+# =========================================================================
+# 电气自动化所参数族筛选测试
+# =========================================================================
+
+@pytest.fixture
+def patch_automation_profile(tmp_path):
+    """将 dept_config 切换到电气自动化所参数族"""
+    config = {
+        "department_profile": "电气自动化所",
+        "department_profiles": {
+            "电气自动化所": {
+                "organization_filter": "河北分公司-电气自动化所",
+                "organization_filter_file6": "河北分公司.电气自动化所",
+                "department_codes": ["25B1", "25B2", "25B3"],
+                "department_code_mapping": {
+                    "25B1": "电气室",
+                    "25B2": "仪控一室",
+                    "25B3": "仪控二室",
+                },
+                "director_role_mapping": {
+                    "电气室主任": "电气室",
+                    "一室主任": "仪控一室",
+                    "二室主任": "仪控二室",
+                },
+                "default_folder_path": "//10.102.2.7/文件服务器/电气自动化所/自动化室/21 接口管理",
+                "watermark_text": "建筑结构所",
+            }
+        },
+    }
+    config_file = tmp_path / "config.json"
+    config_file.write_text(
+        json.dumps(config, ensure_ascii=False), encoding="utf-8"
+    )
+    return patch(
+        "utils.dept_config._get_config_path",
+        return_value=str(config_file),
+    )
+
+
+class TestAutomationFile1:
+    """电气自动化所 File1 H列筛选"""
+
+    def _make_df(self, h_values):
+        data = {}
+        for i in range(8):
+            col_name = f"col{i}"
+            if i == 7:
+                data[col_name] = ["标题"] + h_values
+            else:
+                data[col_name] = [""] * (len(h_values) + 1)
+        return pd.DataFrame(data)
+
+    def test_filters_25B_codes(self, patch_automation_profile):
+        from core.main import execute_process1
+        with patch_automation_profile:
+            df = self._make_df(["25B1", "25B2", "25B3", "25C1", "25D1", "25E5"])
+            result = execute_process1(df)
+        assert result == {1, 2, 3}
+
+
+class TestAutomationFile5:
+    """电气自动化所 File5 G列筛选"""
+
+    def _make_df(self, g_values):
+        data = {}
+        for i in range(7):
+            col_name = f"col{i}"
+            if i == 6:
+                data[col_name] = ["标题"] + g_values
+            else:
+                data[col_name] = [""] * (len(g_values) + 1)
+        return pd.DataFrame(data)
+
+    def test_filters_25B_codes(self, patch_automation_profile):
+        from core.main import execute5_process1
+        with patch_automation_profile:
+            df = self._make_df(["25B1", "25B2", "25B3", "25C1", "25D2", "25E6"])
+            result = execute5_process1(df)
+        assert result == {1, 2, 3}
+
+
+class TestAutomationDeptMapping:
+    """电气自动化所科室映射测试"""
+
+    def test_map_code(self, patch_automation_profile):
+        from utils.dept_config import map_code_to_department
+        with patch_automation_profile:
+            assert map_code_to_department("X-25B1-Y") == "电气室"
+            assert map_code_to_department("X-25B2-Y") == "仪控一室"
+            assert map_code_to_department("X-25B3-Y") == "仪控二室"
+            assert map_code_to_department("X-25C1-Y") == ""
+            assert map_code_to_department("X-25D1-Y") == ""
+            assert map_code_to_department("X-25E5-Y") == ""
+
+    def test_match_dept_name(self, patch_automation_profile):
+        from utils.dept_config import match_department_name
+        with patch_automation_profile:
+            assert match_department_name("河北-电气室-xx") == "电气室"
+            assert match_department_name("河北-仪控一室-xx") == "仪控一室"
+            assert match_department_name("河北-仪控二室-xx") == "仪控二室"
+            assert match_department_name("结构一室") == "结构一室"
+
+    def test_contains_code(self, patch_automation_profile):
+        from utils.dept_config import contains_department_code
+        with patch_automation_profile:
+            assert contains_department_code("25B1") is True
+            assert contains_department_code("25B2!!") is True
+            assert contains_department_code("25B3 test") is True
+            assert contains_department_code("25C1") is False
+            assert contains_department_code("25D1") is False
+            assert contains_department_code("25E5") is False

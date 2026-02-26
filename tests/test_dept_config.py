@@ -136,6 +136,35 @@ NUCLEAR_ENGINEERING_PROFILE = {
     "watermark_text": "建筑结构所",
 }
 
+AUTOMATION_ENGINEERING_PROFILE = {
+    "organization_filter": "河北分公司-电气自动化所",
+    "organization_filter_file6": "河北分公司.电气自动化所",
+    "department_codes": ["25B1", "25B2", "25B3"],
+    "department_code_mapping": {
+        "25B1": "电气室",
+        "25B2": "仪控一室",
+        "25B3": "仪控二室",
+    },
+    "director_role_mapping": {
+        "电气室主任": "电气室",
+        "一室主任": "仪控一室",
+        "二室主任": "仪控二室",
+    },
+    "role_export_days": {
+        "电气室主任": 7,
+        "一室主任": 7,
+        "二室主任": 7,
+        "所领导": 2,
+        "管理员": None,
+        "设计人员": None,
+    },
+    "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306"],
+    "projects_standard_filter": ["1907", "2016"],
+    "role_table_file": "excel_bin/姓名角色表-电气自动化所.xlsx",
+    "default_folder_path": "//10.102.2.7/文件服务器/电气自动化所/自动化室/21 接口管理",
+    "watermark_text": "建筑结构所",
+}
+
 
 # =========================================================================
 # 1. 默认参数族（无 config.json 时）
@@ -1187,3 +1216,131 @@ class TestThreeProfileSwitching:
             assert is_director(["机务室主任"]) is False
             assert get_department(["设备室主任"]) == "设备室"
             assert get_department(["通信室主任"]) == "通信室"
+
+
+# =========================================================================
+# 19. 电气自动化所参数族全面测试
+# =========================================================================
+
+class TestAutomationEngineeringProfile:
+    """电气自动化所参数族全面测试"""
+
+    @pytest.fixture(autouse=True)
+    def load_automation_profile(self, patch_config_path):
+        config = {
+            "department_profile": "电气自动化所",
+            "department_profiles": {
+                "电气自动化所": AUTOMATION_ENGINEERING_PROFILE,
+            },
+        }
+        with patch_config_path(config):
+            yield
+
+    def test_department_codes(self):
+        from utils.dept_config import get_department_codes
+        assert get_department_codes() == ["25B1", "25B2", "25B3"]
+
+    def test_department_code_mapping(self):
+        from utils.dept_config import get_department_code_mapping
+        assert get_department_code_mapping() == {
+            "25B1": "电气室",
+            "25B2": "仪控一室",
+            "25B3": "仪控二室",
+        }
+
+    def test_organization_filters(self):
+        from utils.dept_config import get_organization_filter, get_organization_filter_file6
+        assert get_organization_filter() == "河北分公司-电气自动化所"
+        assert get_organization_filter_file6() == "河北分公司.电气自动化所"
+
+    def test_director_roles(self):
+        from utils.dept_config import get_director_roles, get_director_role_mapping
+        roles = get_director_roles()
+        mapping = get_director_role_mapping()
+        assert roles == ["电气室主任", "一室主任", "二室主任"]
+        assert mapping["电气室主任"] == "电气室"
+        assert mapping["一室主任"] == "仪控一室"
+        assert mapping["二室主任"] == "仪控二室"
+
+    def test_role_export_days(self):
+        from utils.dept_config import get_role_export_days
+        days = get_role_export_days()
+        assert days["电气室主任"] == 7
+        assert days["一室主任"] == 7
+        assert days["二室主任"] == 7
+        assert days["所领导"] == 2
+
+    def test_projects_and_standard_filter(self):
+        from utils.dept_config import get_projects, get_projects_standard_filter
+        assert get_projects() == ["1818", "1907", "1915", "1916", "2016", "2026", "2306"]
+        assert get_projects_standard_filter() == ["1907", "2016"]
+
+    def test_role_table_and_folder_path(self):
+        from utils.dept_config import get_role_table_file, get_default_folder_path
+        assert get_role_table_file() == "excel_bin/姓名角色表-电气自动化所.xlsx"
+        assert get_default_folder_path() == "//10.102.2.7/文件服务器/电气自动化所/自动化室/21 接口管理"
+
+    def test_watermark_fixed(self):
+        from utils.dept_config import get_watermark_text
+        assert get_watermark_text() == "建筑结构所"
+
+    def test_matching_helpers(self):
+        from utils.dept_config import map_code_to_department, match_department_name, contains_department_code
+        assert map_code_to_department("X-25B1-Y") == "电气室"
+        assert map_code_to_department("X-25B2-Y") == "仪控一室"
+        assert map_code_to_department("X-25B3-Y") == "仪控二室"
+        assert match_department_name("河北-仪控二室-xx") == "仪控二室"
+        assert contains_department_code("xx25B1yy") is True
+        assert contains_department_code("25C1") is False
+
+
+# =========================================================================
+# 20. 四所切换测试
+# =========================================================================
+
+class TestFourProfileSwitching:
+    """四所之间切换验证"""
+
+    def test_switch_four_profiles(self, patch_config_path):
+        from utils.dept_config import get_department_codes, get_projects, get_role_table_file
+        import utils.dept_config as dc
+
+        config_building = {
+            "department_profile": "建筑结构所",
+            "department_profiles": {"建筑结构所": {"department_codes": ["25C1", "25C2", "25C3"], "director_role_mapping": {"一室主任": "结构一室"}}},
+        }
+        with patch_config_path(config_building):
+            assert get_department_codes() == ["25C1", "25C2", "25C3"]
+
+        dc._profile_cache = None
+        with patch_config_path({"department_profile": "电力工程研究设计所", "department_profiles": {"电力工程研究设计所": POWER_ENGINEERING_PROFILE}}):
+            assert get_department_codes() == ["25D1", "25D2", "25D3", "25D4"]
+
+        dc._profile_cache = None
+        with patch_config_path({"department_profile": "核工程研究设计所", "department_profiles": {"核工程研究设计所": NUCLEAR_ENGINEERING_PROFILE}}):
+            assert get_department_codes() == ["25E5", "25E6"]
+
+        dc._profile_cache = None
+        with patch_config_path({"department_profile": "电气自动化所", "department_profiles": {"电气自动化所": AUTOMATION_ENGINEERING_PROFILE}}):
+            assert get_department_codes() == ["25B1", "25B2", "25B3"]
+            assert "1907" in get_projects()
+            assert get_role_table_file() == "excel_bin/姓名角色表-电气自动化所.xlsx"
+
+    def test_distribution_integration_automation(self, patch_config_path):
+        from utils import dept_config as dc
+        from services.distribution import is_director, get_department
+        config = {
+            "department_profile": "电气自动化所",
+            "department_profiles": {
+                "电气自动化所": AUTOMATION_ENGINEERING_PROFILE,
+            },
+        }
+        with patch_config_path(config):
+            dc._profile_cache = None
+            assert is_director(["电气室主任"]) is True
+            assert is_director(["一室主任"]) is True
+            assert is_director(["二室主任"]) is True
+            assert is_director(["机务室主任"]) is False
+            assert get_department(["电气室主任"]) == "电气室"
+            assert get_department(["一室主任"]) == "仪控一室"
+            assert get_department(["二室主任"]) == "仪控二室"

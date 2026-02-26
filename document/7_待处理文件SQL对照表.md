@@ -33,7 +33,6 @@
 | 科室 | `H(7)` | `IDIACP1000.RELEASE_PARTY` (`36`) | - |
 | 接口时间 | `K(10)` | `IDIACP1000.SWAP_START_DATE` (`40`) | `IDIACP1000.ACTUAL_OPEN_DATE` (`44`) |
 | 完成标记（当前程序口径） | `M(12)` | `IDIACP1000.ACTUAL_OPEN_DATE` (`44`) | `IDIACP1000.ACTUAL_CLOSE_DATE` (`45`) |
-| 角色列（设总） | `Q(16)` | `IDIACP1000.RESP_SHEZONG` (`38`) -> `USER/DEPARTMENT` | - |
 | 责任人列（所编制人） | `R(17)` | `IDIACP1000.DEPART_USER` (`39`) -> `USER/DEPARTMENT` | `DELAY_OPEN_PERSON` (`63`), `CREATED_BY_ID` (`5`) |
 
 ### 3.1 文件1实测匹配率（6299/6299 行可对齐）
@@ -41,7 +40,7 @@
 - `发布方(H)` -> `RELEASE_PARTY`：`100%`
 - `首发时间(K)` -> `SWAP_START_DATE`：`99.7777%`
 - `完成标记(M)` -> `ACTUAL_OPEN_DATE`：`99.7120%`
-- `角色列(设总Q)` -> `RESP_SHEZONG`：
+- `角色列(设总Q，可选校验)` -> `RESP_SHEZONG`：
   - 当前记录口径（`IS_CURRENT`优先）=`99.9524%`
   - 全版本口径（同接口号任一版本可命中）=`100%`
 - `责任人列(所编制人R)` -> `DEPART_USER`：
@@ -58,6 +57,42 @@
 | `111@1112311` | `weicc111@1112311` | 修正占位账号 |
 | `张海波a@zhanghba` | `张海波@zhanghba` | 去尾字母规范化 |
 | `杨健d@yangjiand` | `杨健@yangjiand` | 去尾字母规范化 |
+
+### 3.3 文件1人员一致性判定规则（新增，按你的要求）
+
+用于判定类似 `刘婧d@liujingd` 与 `刘婧@liujingd` 是否同一人。
+
+1. **规则A（优先）**：`@` 后登录名一致即判定为同一人  
+   - 例：`刘婧d@liujingd` == `刘婧@liujingd`
+2. **规则B（补充）**：若登录名缺失或不稳定，中文姓名一致即判定为同一人  
+   - 因 `姓名角色表.xlsx` 主要是中文姓名，这一规则必须保留
+3. **规范化步骤**：姓名尾部字母标记（`a/b/d` 等）在比较前去除
+
+按以上规则重算后（仅看最新版本）：
+
+- 文件1责任人列 `R(17) -> DEPART_USER`：`6169 / 6173 = 99.9352%`
+- 剩余未命中 4 条（确认为真实人员不一致，不是别名问题）：
+  - `S-VAB---1NY-01-25A3-25B3`：`张烨@zhangyea` vs `卢艳超@luycd`
+  - `S-VMO---1ND-01-25A3-25B1`：`韩旭亮@hanxl` vs `赵若愚@l-zhaory`
+  - `B-FNP-BA-1GH-01-22Q8-22D3`：`张进@zhangjinc` vs `柏慧@baihui`
+  - `B-WAI-BA-1GH-02-22Q8-22D1`：`刘桂林@liugl` vs `薛佳@xuejia`
+
+### 3.4 文件1版本口径（仅最新版本，不看旧版本）
+
+你要求“只关注最新版本”，在 `IDIACP1000` 中建议按以下顺序判定：
+
+1. **主条件**：`IS_CURRENT = '1'` 视为当前版本  
+2. **版本族**：`CONFIG_ID` 标识同一对象的版本链  
+3. **版本号字段**：`MAJOR_REV` / `MINOR_REV`（可作辅助展示）  
+4. **并列处理**：若同一 `ITEM_NUMBER` 出现多条 `IS_CURRENT='1'`（样本里有 3 个），取 `MODIFIED_ON` 最大者
+
+离线快照统计（项目 1818）：
+
+- `ITEM_NUMBER` 总数：`7333`
+- 有多版本记录的接口：`5615`
+- 出现多条 `IS_CURRENT='1'` 的接口：`3`
+
+因此：`document/8_文件1未命中明细.json` 中“历史版本命中”这一类，在你当前口径下应统一按“当前版本不一致”处理，不再作为命中。
 
 ## 4. 文件2（内部需回复接口）
 

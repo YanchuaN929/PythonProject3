@@ -51,3 +51,6 @@ result_cache/write_tasks_state.json
 ~$*.xlsx
 ~$*.xls
 
+# Local SQL dump snapshots (do not sync)
+example/CIMS-sql/
+CIMS-sql/

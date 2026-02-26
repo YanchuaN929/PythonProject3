@@ -17,7 +17,7 @@
 
   "registry_force_network_mode": true,
 
-  "department_profile": "建筑结构所",
+  "department_profile": "电气自动化所",
   "department_profiles": {
     "建筑结构所": {
       "organization_filter": "河北分公司-建筑结构所",
@@ -101,6 +101,34 @@
       "projects_standard_filter": ["1907", "2016"],
       "role_table_file": "excel_bin/姓名角色表——核工程所通信专业+设备专业.xlsx",
       "default_folder_path": "//10.102.2.7/文件服务器/核工程研究设计所/软件/接口管理软件",
+      "watermark_text": "建筑结构所"
+    },
+    "电气自动化所": {
+      "organization_filter": "河北分公司-电气自动化所",
+      "organization_filter_file6": "河北分公司.电气自动化所",
+      "department_codes": ["25B1", "25B2", "25B3"],
+      "department_code_mapping": {
+        "25B1": "电气室",
+        "25B2": "仪控一室",
+        "25B3": "仪控二室"
+      },
+      "director_role_mapping": {
+        "电气室主任": "电气室",
+        "一室主任": "仪控一室",
+        "二室主任": "仪控二室"
+      },
+      "role_export_days": {
+        "电气室主任": 7,
+        "一室主任": 7,
+        "二室主任": 7,
+        "所领导": 2,
+        "管理员": null,
+        "设计人员": null
+      },
+      "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306"],
+      "projects_standard_filter": ["1907", "2016"],
+      "role_table_file": "excel_bin/姓名角色表-电气自动化所.xlsx",
+      "default_folder_path": "//10.102.2.7/文件服务器/电气自动化所/自动化室/21 接口管理",
       "watermark_text": "建筑结构所"
     }
   }
