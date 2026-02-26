@@ -68,6 +68,13 @@ a = Analysis(
         'utils.date_utils',
         'utils.adjust',
         'utils.dept_config',
+        # SQL数据源模块（文件1数据库驱动）
+        'core.sql',
+        'core.sql.file1_db_source',
+        # 复用 sql_explorer 的连接配置/建连逻辑
+        'scripts.db_tools.sql_explorer',
+        'scripts.db_tools.sql_explorer.config_store',
+        'scripts.db_tools.sql_explorer.connect',
         # write_tasks 模块（写入任务面板/回文提交等）
         'write_tasks',
         'write_tasks.manager',
@@ -82,6 +89,8 @@ a = Analysis(
         'openpyxl',
         'xlrd', 
         'numpy',
+        'pymssql',
+        'pyodbc',
         'pystray',
         'PIL',
         'PIL.Image',

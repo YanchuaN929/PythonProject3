@@ -25,6 +25,10 @@ def execute_assignment_task(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 def execute_response_task(payload: Dict[str, Any]) -> bool:
     """执行回文单号写入任务。"""
+    if int(payload.get("file_type", 0) or 0) == 1:
+        print("[只读限制] 待处理文件1为数据库只读模式，不支持回文单号写入")
+        return False
+
     from ui.input_handler import write_response_to_excel
 
     ok = write_response_to_excel(

@@ -248,6 +248,9 @@ def check_unassigned(processed_results, user_roles, project_id=None, config=None
         pending_cache = None
 
     for file_type, df in processed_results.items():
+        if int(file_type) == 1:
+            # 文件1已切换为数据库只读模式，不参与指派
+            continue
         if df is None or df.empty:
             continue
         
@@ -386,15 +389,23 @@ def save_assignments_batch(assignments):
     import pandas as pd
     from collections import defaultdict
     
-    # 按文件路径分组
-    file_groups = defaultdict(list)
-    for assignment in assignments:
-        file_path = assignment['file_path']
-        file_groups[file_path].append(assignment)
-    
     success_count = 0
     failed_tasks = []
     registry_updates = 0
+
+    # 按文件路径分组
+    file_groups = defaultdict(list)
+    for assignment in assignments:
+        if int(assignment.get("file_type", 0) or 0) == 1:
+            failed_tasks.append(
+                {
+                    "interface_id": assignment.get("interface_id", "未知"),
+                    "reason": "待处理文件1为数据库只读模式，不支持指派写入",
+                }
+            )
+            continue
+        file_path = assignment['file_path']
+        file_groups[file_path].append(assignment)
     
     # 按文件批量处理
     for file_path, file_assignments in file_groups.items():

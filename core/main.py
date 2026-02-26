@@ -12,6 +12,26 @@ import warnings
 import re
 from copy import copy
 
+try:
+    from core.sql.file1_db_source import (
+        build_file1_export_dataframe,
+        extract_project_id_from_virtual_source,
+        fetch_file1_db_dataframe,
+        is_file1_db_virtual_source,
+    )
+except Exception:
+    def is_file1_db_virtual_source(_path):
+        return False
+
+    def extract_project_id_from_virtual_source(_path):
+        return ""
+
+    def fetch_file1_db_dataframe(_project_id, _current_datetime):
+        return pd.DataFrame()
+
+    def build_file1_export_dataframe(df):
+        return df
+
 # 忽略pandas警告
 warnings.filterwarnings('ignore')
 
@@ -503,6 +523,29 @@ def process_target_file(file_path, current_datetime):
         Monitor.log_process(f"开始处理待处理文件1: {os.path.basename(file_path)}")
     except Exception:
         pass
+
+    # 文件1数据库模式：直接走 SQL 查询，不再读取 Excel
+    if is_file1_db_virtual_source(file_path):
+        project_id = extract_project_id_from_virtual_source(file_path)
+        try:
+            result_df = fetch_file1_db_dataframe(project_id, current_datetime)
+            print(f"文件1数据库查询完成: 项目{project_id}, {len(result_df)}行")
+            try:
+                from core import Monitor
+
+                Monitor.log_success(f"文件1数据库查询完成: 项目{project_id}, {len(result_df)}行")
+            except Exception:
+                pass
+            return result_df
+        except Exception as exc:
+            print(f"文件1数据库查询失败: {exc}")
+            try:
+                from core import Monitor
+
+                Monitor.log_error(f"文件1数据库查询失败: {exc}")
+            except Exception:
+                pass
+            return pd.DataFrame()
     
     # 读取Excel文件的第一个工作表（不强制Sheet1）
     if file_path.endswith('.xlsx'):
@@ -1083,6 +1126,40 @@ def export_result_to_excel(df, original_file_path, current_datetime, output_dir,
             output_path = os.path.join(final_output_dir, output_filename)
             counter += 1
         
+        # 文件1数据库模式：直接导出精简列，不依赖原始Excel模板
+        if is_file1_db_virtual_source(original_file_path):
+            export_df = build_file1_export_dataframe(df)
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "内部需打开接口"
+
+            headers = list(export_df.columns)
+            ws.append(headers)
+            for row in export_df.itertuples(index=False, name=None):
+                ws.append(list(row))
+
+            for col_idx, header in enumerate(headers, start=1):
+                max_len = len(str(header))
+                if not export_df.empty:
+                    max_len = max(
+                        max_len,
+                        max((len(str(item)) for item in export_df.iloc[:, col_idx - 1]), default=0),
+                    )
+                col_letter = ws.cell(row=1, column=col_idx).column_letter
+                ws.column_dimensions[col_letter].width = min(max(max_len * 1.4, 10), 40)
+
+            wb.save(output_path)
+            wb.close()
+
+            print(f"内部需打开接口（数据库模式）导出完成！文件保存到: {output_path}")
+            try:
+                from core import Monitor
+
+                Monitor.log_success(f"内部需打开接口（数据库模式）导出完成！文件保存到: {output_path}")
+            except Exception:
+                pass
+            return output_path
+
         # 第一步：新建空白Excel文件
         wb = Workbook()
         ws = wb.active

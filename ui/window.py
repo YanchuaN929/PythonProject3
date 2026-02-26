@@ -21,6 +21,12 @@ except ImportError:
 
 from write_tasks.task_panel import TaskRecordPanel
 
+try:
+    from core.sql.file1_db_source import is_file1_db_source_list
+except Exception:
+    def is_file1_db_source_list(source_files):
+        return bool(source_files) and all(str(item).startswith("db://file1/") for item in source_files)
+
 # 导入数据库状态显示器
 try:
     from services.db_status import DatabaseStatusIndicator, set_db_status_indicator
@@ -601,6 +607,13 @@ class WindowManager:
         
         # 优化显示列（仅显示关键列）
         display_df = self._create_optimized_display(filtered_df, tab_name, completed_rows=completed_rows_set)
+        is_file1_db_tab = (
+            tab_name == "内部需打开接口"
+            and source_files
+            and is_file1_db_source_list(source_files)
+        )
+        if is_file1_db_tab and "是否已完成" in display_df.columns:
+            display_df = display_df.drop(columns=["是否已完成"])
         
         # 【Registry状态提醒】批量查询任务状态和确认状态
         registry_status_map = {}
@@ -622,7 +635,7 @@ class WindowManager:
             }
             file_type = file_type_map.get(tab_name)
             
-            if file_type and source_files:
+            if file_type and source_files and not is_file1_db_tab:
                 # 构造task_keys
                 task_keys = []
                 for idx in range(len(display_df)):
@@ -956,13 +969,13 @@ class WindowManager:
                          values=["...（其他行已省略显示）"] + [""] * (len(columns) - 1))
         
         # 绑定点击事件处理勾选功能
-        if file_manager and source_files and "是否已完成" in columns:
+        if file_manager and source_files and "是否已完成" in columns and not is_file1_db_tab:
             self._bind_checkbox_click_event(viewer, df, display_df, columns, 
                                            original_row_numbers, source_files, 
                                            file_manager, tab_name)
         
         # 【新增】绑定接口号点击事件（用于回文单号输入）
-        if "接口号" in columns:
+        if "接口号" in columns and not is_file1_db_tab:
             self._bind_interface_click_event(viewer, df, display_df, columns,
                                             original_row_numbers, tab_name, file_manager)
         
@@ -1334,6 +1347,15 @@ class WindowManager:
                 
                 # 获取文件类型（根据选项卡名称）
                 file_type = self._get_file_type_from_tab(tab_name)
+                if file_type == 1:
+                    from tkinter import messagebox
+
+                    messagebox.showinfo(
+                        "只读提示",
+                        "待处理文件1当前为数据库只读模式，不支持填写回文单号。",
+                        parent=viewer,
+                    )
+                    return
                 
                 # 【调试】打印详细信息
                 print(f"[回文输入] item_id: {item_id}")
