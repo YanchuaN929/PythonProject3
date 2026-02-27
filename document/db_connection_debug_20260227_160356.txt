@@ -1,0 +1,47 @@
+=== File1 DB Diagnostic Report ===
+time: 2026-02-27 16:03:27
+app_version: 2026.02.25.1
+python_executable: F:\工作资料记录\程序开发\接口管理工具\程序本体\2026.2.27-电气自动化所和sql测试版本\接口筛选\接口筛选.exe
+python_version: 3.8.5 (tags/v3.8.5:580fbb0, Jul 20 2020, 15:57:54) [MSC v.1924 64 bit (AMD64)]
+platform: Windows-10-10.0.19041-SP0
+cwd: F:\工作资料记录\程序开发\接口管理工具\程序本体\2026.2.27-电气自动化所和sql测试版本\接口筛选
+
+[Config]
+file1_use_db_mode: True
+folder_path: //10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册
+export_folder_path: F:/jilu
+
+[Driver Module Check]
+pymssql: ok=0
+  error=No module named 'pymssql'
+pyodbc: ok=0
+  error=No module named 'pyodbc'
+
+[SQL Explorer Profile]
+profile_path: C:\Users\wangrca\AppData\Roaming\sql_explorer\connection_profile.json
+profile_loaded: yes
+host: 10.27.14.216
+port: 1433
+database: CIMS
+username: hbgs
+driver_preference: auto
+encrypt: False
+trust_server_certificate: True
+
+[SQL Server Connect Test]
+success: False
+connector: none
+message: 连接失败: pymssql: No module named 'pymssql' ; pyodbc: No module named 'pyodbc'
+
+[File1 DB Source Status]
+connected: 0
+connector: 
+message: 未连接：pymssql: No module named 'pymssql' ; pyodbc: No module named 'pyodbc'
+
+[Registry SQLite Health Check]
+registry_db_path: //10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册\.registry\registry.db
+registry_health_error: database disk image is malformed
+Traceback (most recent call last):
+  File "base.py", line 7314, in _build_db_diagnostic_report
+sqlite3.DatabaseError: database disk image is malformed
+

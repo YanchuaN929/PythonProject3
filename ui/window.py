@@ -57,6 +57,7 @@ class WindowManager:
                     'on_browse_folder': 浏览文件夹回调,
                     'on_browse_export_folder': 浏览导出文件夹回调,
                     'on_refresh_files': 刷新文件列表回调,
+                    'on_test_db_connection': 测试数据库连接回调,
                     'on_start_processing': 开始处理回调,
                     'on_export_results': 导出结果回调,
                     'on_open_folder': 打开文件夹回调,
@@ -486,6 +487,15 @@ class WindowManager:
         )
         refresh_btn.pack(side=tk.LEFT, padx=(20, 0))
         self.buttons['refresh'] = refresh_btn
+
+        # 测试数据库连接按钮（输出调试txt）
+        test_db_btn = ttk.Button(
+            button_frame,
+            text="🔌 测试数据库连接",
+            command=lambda: self._trigger_callback('on_test_db_connection')
+        )
+        test_db_btn.pack(side=tk.LEFT, padx=(10, 0))
+        self.buttons['test_db_connection'] = test_db_btn
         
         # 打开监控按钮
         monitor_btn = ttk.Button(

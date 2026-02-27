@@ -17,6 +17,7 @@ import faulthandler
 import atexit
 import threading
 import time
+import platform
 import winreg
 import re
 from pathlib import Path
@@ -499,6 +500,7 @@ class ExcelProcessorApp:
             'on_browse_folder': self.browse_folder,
             'on_browse_export_folder': self.browse_export_folder,
             'on_refresh_files': self.refresh_file_list,
+            'on_test_db_connection': self._on_test_db_connection_click,  # 数据库连接测试回调
             'on_start_processing': self._on_manual_start_processing,  # 使用手动操作包装器
             'on_export_results': self._on_manual_export_results,      # 使用手动操作包装器
             'on_open_folder': self.open_selected_folder,
@@ -533,6 +535,7 @@ class ExcelProcessorApp:
         self.export_button = self.window_manager.buttons.get('export')
         self.process_button = self.window_manager.buttons.get('process')
         self.assignment_button = self.window_manager.buttons.get('assignment')  # 【新增】指派任务按钮引用
+        self.test_db_button = self.window_manager.buttons.get('test_db_connection')
         
         # 保存tab viewers引用
         self.tab1_viewer = self.window_manager.viewers['tab1']
@@ -7182,8 +7185,194 @@ class ExcelProcessorApp:
             print(f"❌ 显示指派提醒失败: {e}")
             import traceback
             traceback.print_exc()
-    
-    
+
+    def _get_db_debug_output_dir(self) -> Path:
+        """获取数据库诊断报告输出目录（本机可写）。"""
+        appdata = os.getenv("APPDATA", "").strip()
+        if appdata:
+            output_dir = Path(appdata) / "excel_processor" / "diagnostics"
+        else:
+            output_dir = Path.home() / ".excel_processor" / "diagnostics"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return output_dir
+
+    @staticmethod
+    def _module_diag(name: str) -> Dict[str, str]:
+        """检查模块导入状态。"""
+        try:
+            mod = __import__(name)
+            return {
+                "name": name,
+                "ok": "1",
+                "version": str(getattr(mod, "__version__", "")),
+                "file": str(getattr(mod, "__file__", "")),
+                "error": "",
+            }
+        except Exception as exc:
+            return {"name": name, "ok": "0", "version": "", "file": "", "error": str(exc)}
+
+    def _build_db_diagnostic_report(self) -> str:
+        """构建数据库连接诊断报告文本。"""
+        lines = []
+        now = datetime.datetime.now()
+        lines.append("=== File1 DB Diagnostic Report ===")
+        lines.append(f"time: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append(f"app_version: {getattr(self, 'current_version', '')}")
+        lines.append(f"python_executable: {sys.executable}")
+        lines.append(f"python_version: {sys.version.replace(chr(10), ' ')}")
+        lines.append(f"platform: {platform.platform()}")
+        lines.append(f"cwd: {os.getcwd()}")
+        lines.append("")
+
+        lines.append("[Config]")
+        folder_path = str((self.config or {}).get("folder_path", "")).strip()
+        export_path = str((self.config or {}).get("export_folder_path", "")).strip()
+        lines.append(f"file1_use_db_mode: {bool((self.config or {}).get('file1_use_db_mode', True))}")
+        lines.append(f"folder_path: {folder_path}")
+        lines.append(f"export_folder_path: {export_path}")
+        lines.append("")
+
+        lines.append("[Driver Module Check]")
+        for module_name in ("pymssql", "pyodbc"):
+            info = self._module_diag(module_name)
+            lines.append(f"{info['name']}: ok={info['ok']}")
+            if info["version"]:
+                lines.append(f"  version={info['version']}")
+            if info["file"]:
+                lines.append(f"  file={info['file']}")
+            if info["error"]:
+                lines.append(f"  error={info['error']}")
+        lines.append("")
+
+        lines.append("[SQL Explorer Profile]")
+        profile = None
+        profile_path = ""
+        try:
+            from scripts.db_tools.sql_explorer.config_store import get_profile_path, load_profile
+
+            profile_path = str(get_profile_path())
+            profile = load_profile()
+            lines.append(f"profile_path: {profile_path}")
+            if profile is None:
+                lines.append("profile_loaded: no")
+            else:
+                lines.append("profile_loaded: yes")
+                lines.append(f"host: {str(getattr(profile, 'host', '')).strip()}")
+                lines.append(f"port: {str(getattr(profile, 'port', ''))}")
+                lines.append(f"database: {str(getattr(profile, 'database', '')).strip()}")
+                lines.append(f"username: {str(getattr(profile, 'username', '')).strip()}")
+                lines.append(f"driver_preference: {str(getattr(profile, 'driver_preference', '')).strip()}")
+                lines.append(f"encrypt: {bool(getattr(profile, 'encrypt', False))}")
+                lines.append(
+                    f"trust_server_certificate: {bool(getattr(profile, 'trust_server_certificate', True))}"
+                )
+        except Exception as exc:
+            lines.append(f"profile_error: {exc}")
+        lines.append("")
+
+        lines.append("[SQL Server Connect Test]")
+        try:
+            from scripts.db_tools.sql_explorer.connect import run_connect_test
+
+            if profile is None:
+                lines.append("connect_test: skipped (no profile)")
+            else:
+                result = run_connect_test(profile)
+                lines.append(f"success: {result.success}")
+                lines.append(f"connector: {result.connector}")
+                lines.append(f"message: {result.message}")
+                if result.details:
+                    for key, value in result.details.items():
+                        lines.append(f"  {key}: {value}")
+        except Exception as exc:
+            lines.append(f"connect_test_error: {exc}")
+            lines.append(traceback.format_exc())
+        lines.append("")
+
+        lines.append("[File1 DB Source Status]")
+        try:
+            status = get_file1_db_connection_status()
+            lines.append(f"connected: {status.get('connected', '')}")
+            lines.append(f"connector: {status.get('connector', '')}")
+            lines.append(f"message: {status.get('message', '')}")
+        except Exception as exc:
+            lines.append(f"file1_db_status_error: {exc}")
+            lines.append(traceback.format_exc())
+        lines.append("")
+
+        lines.append("[Registry SQLite Health Check]")
+        try:
+            import sqlite3
+            from registry.config import load_config
+
+            cfg = load_config(data_folder=folder_path or None, ensure_registry_dir=False)
+            db_path = str(cfg.get("registry_db_path", "") or "")
+            lines.append(f"registry_db_path: {db_path}")
+            if db_path and os.path.exists(db_path):
+                conn = sqlite3.connect(db_path, timeout=3)
+                try:
+                    quick = conn.execute("PRAGMA quick_check;").fetchone()
+                    lines.append(f"quick_check: {quick[0] if quick else ''}")
+                    row = conn.execute("SELECT COUNT(*) FROM tasks").fetchone()
+                    lines.append(f"tasks_count: {row[0] if row else ''}")
+                finally:
+                    conn.close()
+            else:
+                lines.append("registry_db_exists: no")
+        except Exception as exc:
+            lines.append(f"registry_health_error: {exc}")
+            lines.append(traceback.format_exc())
+        lines.append("")
+
+        return "\n".join(lines)
+
+    def _on_test_db_connection_click(self):
+        """测试数据库连接并生成调试报告。"""
+        waiting_dialog, _ = self.show_waiting_dialog("测试数据库连接", "正在测试并生成报告，请稍后...")
+
+        def worker():
+            report_path = ""
+            summary_title = "数据库连接测试结果"
+            summary_msg = ""
+            try:
+                report_text = self._build_db_diagnostic_report()
+                output_dir = self._get_db_debug_output_dir()
+                filename = f"db_connection_debug_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+                path_obj = output_dir / filename
+                path_obj.write_text(report_text, encoding="utf-8")
+                report_path = str(path_obj)
+
+                status = get_file1_db_connection_status()
+                if str(status.get("connected", "0")) == "1":
+                    summary_msg = f"连接成功：{status.get('message', '')}\n\n诊断文件已保存：\n{report_path}"
+                else:
+                    summary_msg = (
+                        f"连接失败：{status.get('message', '')}\n\n已输出诊断文件：\n{report_path}\n"
+                        "请将该txt回传用于排查。"
+                    )
+            except Exception as exc:
+                summary_title = "数据库连接测试失败"
+                summary_msg = f"执行测试时发生异常：{exc}\n请重试。"
+
+            def finalize():
+                try:
+                    self.close_waiting_dialog(waiting_dialog)
+                except Exception:
+                    pass
+                try:
+                    if summary_title.endswith("失败"):
+                        messagebox.showerror(summary_title, summary_msg, parent=self.root)
+                    else:
+                        messagebox.showinfo(summary_title, summary_msg, parent=self.root)
+                except Exception:
+                    pass
+                if report_path:
+                    print(f"[DB诊断] 报告已输出: {report_path}")
+
+            self.root.after(0, finalize)
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def _on_assignment_button_click(self):
         """指派任务按钮点击"""
         try:

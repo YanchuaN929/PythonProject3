@@ -47,6 +47,9 @@ def check_pre_build():
     all_ok &= check_file("core/main.py", "处理模块1")
     all_ok &= check_file("core/main2.py", "处理模块2")
     all_ok &= check_file("core/Monitor.py", "监控模块")
+    all_ok &= check_file("core/sql/file1_db_source.py", "文件1数据库数据源模块")
+    all_ok &= check_file("scripts/db_tools/sql_explorer/connect.py", "SQL连接模块")
+    all_ok &= check_file("scripts/db_tools/sql_explorer/config_store.py", "SQL配置存储模块")
     all_ok &= check_file("ui/window.py", "窗口管理模块")
     all_ok &= check_file("services/file_manager.py", "文件管理模块")
     print()
@@ -117,6 +120,20 @@ def check_pre_build():
     except ImportError:
         print_error("PyInstaller 未安装")
         all_ok = False
+
+    try:
+        import pymssql  # noqa: F401
+        print_ok("pymssql: installed")
+    except ImportError:
+        print_error("pymssql 未安装")
+        all_ok = False
+
+    try:
+        import pyodbc  # noqa: F401
+        print_ok("pyodbc: installed")
+    except ImportError:
+        print_error("pyodbc 未安装")
+        all_ok = False
     
     print()
     
@@ -158,6 +175,9 @@ def check_post_build():
     all_ok &= check_file(os.path.join(internal, "core", "main.py"), "处理模块1")
     all_ok &= check_file(os.path.join(internal, "core", "main2.py"), "处理模块2")
     all_ok &= check_file(os.path.join(internal, "core", "Monitor.py"), "监控模块")
+    all_ok &= check_file(os.path.join(internal, "core", "sql", "file1_db_source.py"), "文件1数据库数据源模块")
+    all_ok &= check_file(os.path.join(internal, "scripts", "db_tools", "sql_explorer", "connect.py"), "SQL连接模块")
+    all_ok &= check_file(os.path.join(internal, "scripts", "db_tools", "sql_explorer", "config_store.py"), "SQL配置存储模块")
     all_ok &= check_file(os.path.join(internal, "ui", "window.py"), "窗口管理模块")
     all_ok &= check_file(os.path.join(internal, "services", "file_manager.py"), "文件管理模块")
     print()

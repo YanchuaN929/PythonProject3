@@ -60,6 +60,9 @@ class DatabaseStatusIndicator:
         self._detail_info = {}
         self._last_sync_time: Optional[datetime] = None
         self._error_message: Optional[str] = None
+        self._last_error_popup_time: Optional[datetime] = None
+        self._last_error_popup_message: Optional[str] = None
+        self._error_popup_cooldown_seconds: int = 30
         self._lock = threading.Lock()
         
         # 创建UI组件
@@ -283,9 +286,26 @@ class DatabaseStatusIndicator:
         self.progress_label.config(text="")
         self._update_display()
         
-        # 弹窗提醒
-        if show_dialog:
+        # 弹窗提醒（同一错误短时间内仅提示一次，避免连续弹窗轰炸）
+        if show_dialog and self._should_show_error_popup(message):
             self._show_error_dialog(message)
+
+    def _should_show_error_popup(self, message: str) -> bool:
+        """判断是否应显示错误弹窗（节流+去重）。"""
+        try:
+            now = datetime.now()
+            if (
+                self._last_error_popup_time is not None
+                and self._last_error_popup_message == str(message or "")
+            ):
+                delta = (now - self._last_error_popup_time).total_seconds()
+                if delta < float(self._error_popup_cooldown_seconds):
+                    return False
+            self._last_error_popup_time = now
+            self._last_error_popup_message = str(message or "")
+            return True
+        except Exception:
+            return True
 
     def set_maintenance(self, flag_path: Optional[str] = None, db_path: Optional[str] = None):
         """设置为维护模式状态（不弹窗）"""

@@ -12,6 +12,11 @@ a = Analysis(
         ('core/main2.py', 'core'),
         ('core/Monitor.py', 'core'),
         ('core/__init__.py', 'core'),
+        ('core/sql/__init__.py', 'core/sql'),
+        ('core/sql/file1_db_source.py', 'core/sql'),
+        ('scripts/db_tools/sql_explorer/__init__.py', 'scripts/db_tools/sql_explorer'),
+        ('scripts/db_tools/sql_explorer/connect.py', 'scripts/db_tools/sql_explorer'),
+        ('scripts/db_tools/sql_explorer/config_store.py', 'scripts/db_tools/sql_explorer'),
         # UI模块 (ui/)
         ('ui/window.py', 'ui'),
         ('ui/input_handler.py', 'ui'),
