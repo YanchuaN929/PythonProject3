@@ -1,0 +1,3103 @@
+{
+  "input": {
+    "config": "e:\\program\\PythonProject3\\config.json",
+    "excel": "e:\\program\\PythonProject3\\example\\内部接口信息单报表181820260128.xlsx",
+    "excel_rows": 15776,
+    "matched_rows": 15775,
+    "unmatched_rows": 1,
+    "profiles_count": 4
+  },
+  "unmatched_samples": [
+    {
+      "row": 3528,
+      "A": "18185CSPZL25A2S648",
+      "E": "A",
+      "R": "S-CSP-NLS-2LX-01-25A2-25A5"
+    }
+  ],
+  "profiles": [
+    {
+      "profile_name": "建筑结构所",
+      "organization_filter": "河北分公司-建筑结构所",
+      "code_to_full": {
+        "25C1": "河北分公司-建筑结构所-结构一室",
+        "25C2": "河北分公司-建筑结构所-结构二室",
+        "25C3": "河北分公司-建筑结构所-建筑总图室"
+      },
+      "rows_in_excel_scope": 1474,
+      "best_candidate": "INT.RECEIVE_DEPT",
+      "best_match_rate": 0.955902,
+      "best_is_100_percent": false,
+      "candidates": [
+        {
+          "candidate": "INT.RECEIVE_DEPT",
+          "rows": 1474,
+          "match_rows": 1409,
+          "match_rate": 0.955902,
+          "is_100_percent": false,
+          "code_rows": 1459,
+          "code_equiv_rate": 0.964359,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 31,
+            "sql_code_conflict": 21,
+            "excel_no_code_text_mismatch": 13
+          },
+          "mismatch_samples": [
+            {
+              "row": 457,
+              "A": "18185NKZL25A2S005",
+              "E": "B",
+              "R": "S-5NK-NI-2D2-02-25A2-22P4",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 638,
+              "A": "181855NIZL25C1S001",
+              "E": "C",
+              "R": "S-5NI-5NI-1JJ-01-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 684,
+              "A": "181855NBZL22C3C001",
+              "E": "A",
+              "R": "C-5NB-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5,22P3",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 872,
+              "A": "18185NDZL22C3C002",
+              "E": "A",
+              "R": "C-5ND-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 939,
+              "A": "18185NLZL22C3C002",
+              "E": "A",
+              "R": "C-5NL-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 1045,
+              "A": "181855NKZL25C1S019",
+              "E": "C",
+              "R": "S-5NK-5NK-1JJ-05-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1072,
+              "A": "18185NAZL22C3C001",
+              "E": "A",
+              "R": "C-5NA-NI-2D1-01-22C3-22P7",
+              "excel_I": "建筑结构所-结构五室",
+              "sql_I": "22P7",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 1174,
+              "A": "181855NXZL22C3C001",
+              "E": "A",
+              "R": "C-5NX-NI-2D1-01-22C3-22P4",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1541,
+              "A": "181855NKZL25C1S007",
+              "E": "A",
+              "R": "S-5NK-5NK-1JJ-03-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1802,
+              "A": "181855NKZL25C1S003",
+              "E": "A",
+              "R": "S-5NK-5NK-1JJ-01-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1957,
+              "A": "181855NKZL25C1S011",
+              "E": "C",
+              "R": "S-5NK-5NK-1JJ-02-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 2005,
+              "A": "181855NKZL25C1S016",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-05-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 3023,
+              "A": "18185NEZL22C3C002",
+              "E": "A",
+              "R": "C-5NE-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 3127,
+              "A": "18185NKZL25C1S004",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-06-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 3595,
+              "A": "18185NBZL22C3C006",
+              "E": "B",
+              "R": "C-5NB-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5,22P3",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 3683,
+              "A": "18185NHZL22C3C001",
+              "E": "A",
+              "R": "C-5NH-NI-2D1-01-22C3-22P6",
+              "excel_I": "建筑结构所-结构四室",
+              "sql_I": "22P6",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 4444,
+              "A": "181855NKZL25C1S002",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-07-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 4618,
+              "A": "181855NKZL25A2S002",
+              "E": "A",
+              "R": "S-5NK-NI-2D2-10-25A2-22P3",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 4674,
+              "A": "181855NKZL25C1S009",
+              "E": "B",
+              "R": "S-5NK-5NK-1JJ-02-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 4820,
+              "A": "18185NIZL22B2C004",
+              "E": "A",
+              "R": "C-NI-NB-1FJ-08-22B2-22P3",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P1",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 4995,
+              "A": "181855NKZL25C1S008",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-02-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 5052,
+              "A": "181855NKZL25C1S013",
+              "E": "A",
+              "R": "S-5NK-5NK-1JJ-05-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 6462,
+              "A": "18185ZSTZL25E5S024",
+              "E": "B",
+              "R": "S-ZST-BA-1HJ-05-25E5-25C2",
+              "excel_I": "河北分公司-建筑结构所-结构二室",
+              "sql_I": "25C1",
+              "excel_codes": "25C2",
+              "sql_codes": "25C1"
+            },
+            {
+              "row": 6628,
+              "A": "18185NBZL22C3C005",
+              "E": "A",
+              "R": "C-5NB-NI-2D1-01-22C3-22P3",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 6706,
+              "A": "181855NKZL25C1S006",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-01-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            }
+          ]
+        },
+        {
+          "candidate": "CHAIN.RECEIVE_OR_PROPOSED",
+          "rows": 1474,
+          "match_rows": 1409,
+          "match_rate": 0.955902,
+          "is_100_percent": false,
+          "code_rows": 1459,
+          "code_equiv_rate": 0.964359,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 31,
+            "sql_code_conflict": 21,
+            "excel_no_code_text_mismatch": 13
+          },
+          "mismatch_samples": [
+            {
+              "row": 457,
+              "A": "18185NKZL25A2S005",
+              "E": "B",
+              "R": "S-5NK-NI-2D2-02-25A2-22P4",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 638,
+              "A": "181855NIZL25C1S001",
+              "E": "C",
+              "R": "S-5NI-5NI-1JJ-01-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 684,
+              "A": "181855NBZL22C3C001",
+              "E": "A",
+              "R": "C-5NB-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5,22P3",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 872,
+              "A": "18185NDZL22C3C002",
+              "E": "A",
+              "R": "C-5ND-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 939,
+              "A": "18185NLZL22C3C002",
+              "E": "A",
+              "R": "C-5NL-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 1045,
+              "A": "181855NKZL25C1S019",
+              "E": "C",
+              "R": "S-5NK-5NK-1JJ-05-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1072,
+              "A": "18185NAZL22C3C001",
+              "E": "A",
+              "R": "C-5NA-NI-2D1-01-22C3-22P7",
+              "excel_I": "建筑结构所-结构五室",
+              "sql_I": "22P7",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 1174,
+              "A": "181855NXZL22C3C001",
+              "E": "A",
+              "R": "C-5NX-NI-2D1-01-22C3-22P4",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1541,
+              "A": "181855NKZL25C1S007",
+              "E": "A",
+              "R": "S-5NK-5NK-1JJ-03-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1802,
+              "A": "181855NKZL25C1S003",
+              "E": "A",
+              "R": "S-5NK-5NK-1JJ-01-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1957,
+              "A": "181855NKZL25C1S011",
+              "E": "C",
+              "R": "S-5NK-5NK-1JJ-02-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 2005,
+              "A": "181855NKZL25C1S016",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-05-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 3023,
+              "A": "18185NEZL22C3C002",
+              "E": "A",
+              "R": "C-5NE-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 3127,
+              "A": "18185NKZL25C1S004",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-06-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 3595,
+              "A": "18185NBZL22C3C006",
+              "E": "B",
+              "R": "C-5NB-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5,22P3",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 3683,
+              "A": "18185NHZL22C3C001",
+              "E": "A",
+              "R": "C-5NH-NI-2D1-01-22C3-22P6",
+              "excel_I": "建筑结构所-结构四室",
+              "sql_I": "22P6",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 4444,
+              "A": "181855NKZL25C1S002",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-07-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 4618,
+              "A": "181855NKZL25A2S002",
+              "E": "A",
+              "R": "S-5NK-NI-2D2-10-25A2-22P3",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 4674,
+              "A": "181855NKZL25C1S009",
+              "E": "B",
+              "R": "S-5NK-5NK-1JJ-02-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 4820,
+              "A": "18185NIZL22B2C004",
+              "E": "A",
+              "R": "C-NI-NB-1FJ-08-22B2-22P3",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P1",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 4995,
+              "A": "181855NKZL25C1S008",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-02-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 5052,
+              "A": "181855NKZL25C1S013",
+              "E": "A",
+              "R": "S-5NK-5NK-1JJ-05-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 6462,
+              "A": "18185ZSTZL25E5S024",
+              "E": "B",
+              "R": "S-ZST-BA-1HJ-05-25E5-25C2",
+              "excel_I": "河北分公司-建筑结构所-结构二室",
+              "sql_I": "25C1",
+              "excel_codes": "25C2",
+              "sql_codes": "25C1"
+            },
+            {
+              "row": 6628,
+              "A": "18185NBZL22C3C005",
+              "E": "A",
+              "R": "C-5NB-NI-2D1-01-22C3-22P3",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 6706,
+              "A": "181855NKZL25C1S006",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-01-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            }
+          ]
+        },
+        {
+          "candidate": "CHAIN.RECEIVE_OR_RELEASE",
+          "rows": 1474,
+          "match_rows": 1409,
+          "match_rate": 0.955902,
+          "is_100_percent": false,
+          "code_rows": 1459,
+          "code_equiv_rate": 0.964359,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 31,
+            "sql_code_conflict": 21,
+            "excel_no_code_text_mismatch": 13
+          },
+          "mismatch_samples": [
+            {
+              "row": 457,
+              "A": "18185NKZL25A2S005",
+              "E": "B",
+              "R": "S-5NK-NI-2D2-02-25A2-22P4",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 638,
+              "A": "181855NIZL25C1S001",
+              "E": "C",
+              "R": "S-5NI-5NI-1JJ-01-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 684,
+              "A": "181855NBZL22C3C001",
+              "E": "A",
+              "R": "C-5NB-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5,22P3",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 872,
+              "A": "18185NDZL22C3C002",
+              "E": "A",
+              "R": "C-5ND-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 939,
+              "A": "18185NLZL22C3C002",
+              "E": "A",
+              "R": "C-5NL-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 1045,
+              "A": "181855NKZL25C1S019",
+              "E": "C",
+              "R": "S-5NK-5NK-1JJ-05-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1072,
+              "A": "18185NAZL22C3C001",
+              "E": "A",
+              "R": "C-5NA-NI-2D1-01-22C3-22P7",
+              "excel_I": "建筑结构所-结构五室",
+              "sql_I": "22P7",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 1174,
+              "A": "181855NXZL22C3C001",
+              "E": "A",
+              "R": "C-5NX-NI-2D1-01-22C3-22P4",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1541,
+              "A": "181855NKZL25C1S007",
+              "E": "A",
+              "R": "S-5NK-5NK-1JJ-03-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1802,
+              "A": "181855NKZL25C1S003",
+              "E": "A",
+              "R": "S-5NK-5NK-1JJ-01-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1957,
+              "A": "181855NKZL25C1S011",
+              "E": "C",
+              "R": "S-5NK-5NK-1JJ-02-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 2005,
+              "A": "181855NKZL25C1S016",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-05-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 3023,
+              "A": "18185NEZL22C3C002",
+              "E": "A",
+              "R": "C-5NE-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 3127,
+              "A": "18185NKZL25C1S004",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-06-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 3595,
+              "A": "18185NBZL22C3C006",
+              "E": "B",
+              "R": "C-5NB-NI-2D1-01-22C3-22P5",
+              "excel_I": "建筑结构所-结构三室",
+              "sql_I": "22P5,22P3",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 3683,
+              "A": "18185NHZL22C3C001",
+              "E": "A",
+              "R": "C-5NH-NI-2D1-01-22C3-22P6",
+              "excel_I": "建筑结构所-结构四室",
+              "sql_I": "22P6",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 4444,
+              "A": "181855NKZL25C1S002",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-07-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 4618,
+              "A": "181855NKZL25A2S002",
+              "E": "A",
+              "R": "S-5NK-NI-2D2-10-25A2-22P3",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 4674,
+              "A": "181855NKZL25C1S009",
+              "E": "B",
+              "R": "S-5NK-5NK-1JJ-02-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 4820,
+              "A": "18185NIZL22B2C004",
+              "E": "A",
+              "R": "C-NI-NB-1FJ-08-22B2-22P3",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P1",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 4995,
+              "A": "181855NKZL25C1S008",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-02-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 5052,
+              "A": "181855NKZL25C1S013",
+              "E": "A",
+              "R": "S-5NK-5NK-1JJ-05-22P4-25C1",
+              "excel_I": "建筑结构所-结构二室",
+              "sql_I": "22P4",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 6462,
+              "A": "18185ZSTZL25E5S024",
+              "E": "B",
+              "R": "S-ZST-BA-1HJ-05-25E5-25C2",
+              "excel_I": "河北分公司-建筑结构所-结构二室",
+              "sql_I": "25C1",
+              "excel_codes": "25C2",
+              "sql_codes": "25C1"
+            },
+            {
+              "row": 6628,
+              "A": "18185NBZL22C3C005",
+              "E": "A",
+              "R": "C-5NB-NI-2D1-01-22C3-22P3",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 6706,
+              "A": "181855NKZL25C1S006",
+              "E": "A",
+              "R": "S-5NK-NI-1JJ-01-22P3-25C1",
+              "excel_I": "建筑结构所-结构一室",
+              "sql_I": "22P3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            }
+          ]
+        },
+        {
+          "candidate": "INT.PROPOSED_DEPT",
+          "rows": 1474,
+          "match_rows": 62,
+          "match_rate": 0.042062,
+          "is_100_percent": false,
+          "code_rows": 1459,
+          "code_equiv_rate": 0.042495,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 1192,
+            "sql_code_conflict": 205,
+            "excel_no_code_text_mismatch": 15
+          },
+          "mismatch_samples": [
+            {
+              "row": 26,
+              "A": "18185NAZL25A1S605",
+              "E": "A",
+              "R": "S-5NA---2D3-01-25A1-25C3",
+              "excel_I": "河北分公司-建筑结构所-建筑总图室",
+              "sql_I": "25A1",
+              "excel_codes": "25C3",
+              "sql_codes": ""
+            },
+            {
+              "row": 30,
+              "A": "18185BOPZL25B3S003",
+              "E": "A",
+              "R": "S-BOP-PC-1JY-01-25C3-25B3",
+              "excel_I": "河北分公司-建筑结构所-建筑总图室",
+              "sql_I": "25B3",
+              "excel_codes": "25C3",
+              "sql_codes": ""
+            },
+            {
+              "row": 44,
+              "A": "18185BTZL25A3S005",
+              "E": "A",
+              "R": "S-BT---1NJ-03-25A3-25C1",
+              "excel_I": "河北分公司-建筑结构所-结构一室",
+              "sql_I": "25A3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 52,
+              "A": "18185BTZL25E6S015",
+              "E": "C",
+              "R": "S-BT---1TJ-01-25E6-25C1",
+              "excel_I": "河北分公司-建筑结构所-结构一室",
+              "sql_I": "25E6",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 78,
+              "A": "18185DWZL25E6S011",
+              "E": "B",
+              "R": "S-DW---1JT-01-25C3-25E6",
+              "excel_I": "河北分公司-建筑结构所-建筑总图室",
+              "sql_I": "25E6",
+              "excel_codes": "25C3",
+              "sql_codes": ""
+            },
+            {
+              "row": 81,
+              "A": "18185BOPZL25B1S016",
+              "E": "A",
+              "R": "S-BOP-GT-1DJ-01-25B1-25C2",
+              "excel_I": "河北分公司-建筑结构所-结构二室",
+              "sql_I": "25B1",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 95,
+              "A": "18185DWZL25A3S019",
+              "E": "A",
+              "R": "S-DW---1NJ-05-25A3-25C3",
+              "excel_I": "河北分公司-建筑结构所-建筑总图室",
+              "sql_I": "25A3",
+              "excel_codes": "25C3",
+              "sql_codes": ""
+            },
+            {
+              "row": 98,
+              "A": "18185NFZL25A2S039",
+              "E": "A",
+              "R": "S-5NF---2D3-04-25A2-25C3",
+              "excel_I": "河北分公司-建筑结构所-建筑总图室",
+              "sql_I": "25A2",
+              "excel_codes": "25C3",
+              "sql_codes": ""
+            },
+            {
+              "row": 110,
+              "A": "18185RFTZL25A2S032",
+              "E": "C",
+              "R": "S-RFT-NI-2D2-01-25A2-25C1",
+              "excel_I": "河北分公司-建筑结构所-结构一室",
+              "sql_I": "25A2",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 117,
+              "A": "18185WSZL25A3S004",
+              "E": "B",
+              "R": "S-WS---1NJ-02-25A3-25C2",
+              "excel_I": "河北分公司-建筑结构所-结构二室",
+              "sql_I": "25A3",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 120,
+              "A": "18185NRZL25B1S004",
+              "E": "A",
+              "R": "S-NR-NI-2DX-01-25B1-25C2",
+              "excel_I": "河北分公司-建筑结构所-结构二室",
+              "sql_I": "25B1",
+              "excel_codes": "25C2",
+              "sql_codes": ""
+            },
+            {
+              "row": 126,
+              "A": "18185TKZL25E6S005",
+              "E": "A",
+              "R": "S-TK---1TJ-01-25E6-25C1",
+              "excel_I": "河北分公司-建筑结构所-结构一室",
+              "sql_I": "25E6",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 132,
+              "A": "18185NXZL25A1S020",
+              "E": "B",
+              "R": "S-NX-NI-2D2-01-25A1-25C1",
+              "excel_I": "河北分公司-建筑结构所-结构一室",
+              "sql_I": "25A1",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 165,
+              "A": "18185NDZL25A1S032",
+              "E": "B",
+              "R": "S-ND-NI-2DX-05-25A1-25C1",
+              "excel_I": "河北分公司-建筑结构所-结构一室",
+              "sql_I": "25A1",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 184,
+              "A": "18185WAIZL25E5S014",
+              "E": "C",
+              "R": "S-WAI-BA-1HJ-02-25E5-25C1",
+              "excel_I": "河北分公司-建筑结构所-结构一室",
+              "sql_I": "25E5",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 192,
+              "A": "18185NXZL25A1S061",
+              "E": "A",
+              "R": "S-5NX---2D3-05-25A1-25C3",
+              "excel_I": "河北分公司-建筑结构所-建筑总图室",
+              "sql_I": "25A1",
+              "excel_codes": "25C3",
+              "sql_codes": ""
+            },
+            {
+              "row": 203,
+              "A": "18185BOPZL25D1S016",
+              "E": "A",
+              "R": "S-BOP-AS-1BJ-01-25D1-25C3",
+              "excel_I": "河北分公司-建筑结构所-建筑总图室",
+              "sql_I": "25D1",
+              "excel_codes": "25C3",
+              "sql_codes": ""
+            },
+            {
+              "row": 231,
+              "A": "18185DWZL25B3S022",
+              "E": "C",
+              "R": "S-DW---1JY-01-25C1-25B3",
+              "excel_I": "河北分公司-建筑结构所-结构一室",
+              "sql_I": "25B3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 232,
+              "A": "18185NIZL25A6S074",
+              "E": "B",
+              "R": "S-NI---1JN-01-25C3-25A6",
+              "excel_I": "河北分公司-建筑结构所-建筑总图室",
+              "sql_I": "25A6",
+              "excel_codes": "25C3",
+              "sql_codes": ""
+            },
+            {
+              "row": 248,
+              "A": "18185NDZL25A1S006",
+              "E": "A",
+              "R": "S-ND-NI-2D2-04-25A1-25C1",
+              "excel_I": "河北分公司-建筑结构所-结构一室",
+              "sql_I": "25A1",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 257,
+              "A": "18185BTZL25B2S003",
+              "E": "A",
+              "R": "S-BT---1JY-01-25C3-25B2",
+              "excel_I": "河北分公司-建筑结构所-建筑总图室",
+              "sql_I": "25B2",
+              "excel_codes": "25C3",
+              "sql_codes": ""
+            },
+            {
+              "row": 278,
+              "A": "18185BOPZL25B1S006",
+              "E": "A",
+              "R": "S-BOP-TK-1BJ-01-25B1-25C1",
+              "excel_I": "河北分公司-建筑结构所-结构一室",
+              "sql_I": "25B1",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 287,
+              "A": "181855NUZL25A1S019",
+              "E": "A",
+              "R": "S-5NU---2D3-05-25A1-25C3",
+              "excel_I": "河北分公司-建筑结构所-建筑总图室",
+              "sql_I": "25A1",
+              "excel_codes": "25C3",
+              "sql_codes": ""
+            },
+            {
+              "row": 323,
+              "A": "18185BOPZL25A3S001",
+              "E": "A",
+              "R": "S-BOP-PC-1NJ-02-25A3-25C1",
+              "excel_I": "河北分公司-建筑结构所-结构一室",
+              "sql_I": "25A3",
+              "excel_codes": "25C1",
+              "sql_codes": ""
+            },
+            {
+              "row": 363,
+              "A": "18185WSZL25B1S009",
+              "E": "A",
+              "R": "S-WS---1JD-01-25C3-25B1",
+              "excel_I": "河北分公司-建筑结构所-建筑总图室",
+              "sql_I": "25B1",
+              "excel_codes": "25C3",
+              "sql_codes": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "profile_name": "核工程研究设计所",
+      "organization_filter": "河北分公司-核工程研究设计所",
+      "code_to_full": {
+        "25E5": "河北分公司-核工程研究设计所-设备室",
+        "25E6": "河北分公司-核工程研究设计所-通信室"
+      },
+      "rows_in_excel_scope": 1211,
+      "best_candidate": "INT.RECEIVE_DEPT",
+      "best_match_rate": 0.981833,
+      "best_is_100_percent": false,
+      "candidates": [
+        {
+          "candidate": "INT.RECEIVE_DEPT",
+          "rows": 1211,
+          "match_rows": 1189,
+          "match_rate": 0.981833,
+          "is_100_percent": false,
+          "code_rows": 1195,
+          "code_equiv_rate": 0.990795,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 11,
+            "sql_code_conflict": 0,
+            "excel_no_code_text_mismatch": 11
+          },
+          "mismatch_samples": [
+            {
+              "row": 1322,
+              "A": "18185BLZL25A2S017",
+              "E": "A",
+              "R": "S-BL---1FD-01-25E1-25A2",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 2015,
+              "A": "18185TSAZL22C3B005",
+              "E": "D",
+              "R": "B-TSA-BA-1GH-01-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 2245,
+              "A": "18185RCVZL22C1S605",
+              "E": "A",
+              "R": "S-RCV-BA-1GH-02-22C1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "核设备所-核燃料运输与工艺室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 2285,
+              "A": "18185GLZL25A1S005",
+              "E": "A",
+              "R": "S-GL---1BH-01-25A1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25C1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 2297,
+              "A": "18185GLZL25A1S007",
+              "E": "A",
+              "R": "S-GL---1HB-01-25E1-25A1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 3560,
+              "A": "18185BLZL25A2S005",
+              "E": "A",
+              "R": "S-BL---1GF-01-25A2-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 5078,
+              "A": "18185GLZL25C1S009",
+              "E": "C",
+              "R": "S-GL---1JH-01-25C1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25A1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 5532,
+              "A": "18185ZGTZL25A6B600",
+              "E": "A",
+              "R": "B-ZGT-BA-1GH-01-25A6-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "核设备所-工艺及成套设备室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 5964,
+              "A": "18185GLZL25C1S005",
+              "E": "A",
+              "R": "S-GL---1JH-01-25C1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25A1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 6898,
+              "A": "18185TSAZL22C3C602",
+              "E": "B",
+              "R": "B-TSA-BA-1GH-01-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 7044,
+              "A": "18181RCVZL22C1S001",
+              "E": "B",
+              "R": "S-RCV-BA-1GH-02-22C1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 7348,
+              "A": "18185BLZL25C3S011",
+              "E": "A",
+              "R": "S-BL---1FJ-01-25E1-25C3",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 7737,
+              "A": "18185EMSZL22C3S001",
+              "E": "A",
+              "R": "S-EMS-BA-1GH-02-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 8462,
+              "A": "18185TFAZL25A1S604",
+              "E": "A",
+              "R": "S-TFA-RF-1BH-01-25A1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D2",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 9126,
+              "A": "18185ZSTZL25A6B602",
+              "E": "A",
+              "R": "B-ZST-BA-1GH-01-25A6-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "河北分公司-电气自动化所-仪控二室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 9889,
+              "A": "18185TSAZL22C3S001",
+              "E": "C",
+              "R": "B-TSA-BA-1GH-01-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 11211,
+              "A": "18185NIZL22C3C615",
+              "E": "A",
+              "R": "B-TSA-BA-1GH-01-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "核设备所-核燃料运输与工艺室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 11506,
+              "A": "18185NIZL22C7B600",
+              "E": "A",
+              "R": "B-WNC---1GH-01-22Q8-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "核设备所-堆本体与非标设备室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 12345,
+              "A": "18185BLZL25C2S005",
+              "E": "A",
+              "R": "S-BL---1FJ-02-25E1-25C2",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 13190,
+              "A": "18185GLZL25C1S007",
+              "E": "B",
+              "R": "S-GL---1JH-01-25C1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25A1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 13743,
+              "A": "18185GLZL25A1S009",
+              "E": "B",
+              "R": "S-GL---1BH-01-25A1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25C1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 14807,
+              "A": "18185BLZL25C3S003",
+              "E": "A",
+              "R": "S-BL---1JF-01-25C3-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E6,25E1,25B3,25B3,25B1,25A3,25A4,25A2,25C2,25C3",
+              "excel_codes": "",
+              "sql_codes": ""
+            }
+          ]
+        },
+        {
+          "candidate": "CHAIN.RECEIVE_OR_PROPOSED",
+          "rows": 1211,
+          "match_rows": 1189,
+          "match_rate": 0.981833,
+          "is_100_percent": false,
+          "code_rows": 1195,
+          "code_equiv_rate": 0.990795,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 11,
+            "sql_code_conflict": 0,
+            "excel_no_code_text_mismatch": 11
+          },
+          "mismatch_samples": [
+            {
+              "row": 1322,
+              "A": "18185BLZL25A2S017",
+              "E": "A",
+              "R": "S-BL---1FD-01-25E1-25A2",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 2015,
+              "A": "18185TSAZL22C3B005",
+              "E": "D",
+              "R": "B-TSA-BA-1GH-01-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 2245,
+              "A": "18185RCVZL22C1S605",
+              "E": "A",
+              "R": "S-RCV-BA-1GH-02-22C1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "核设备所-核燃料运输与工艺室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 2285,
+              "A": "18185GLZL25A1S005",
+              "E": "A",
+              "R": "S-GL---1BH-01-25A1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25C1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 2297,
+              "A": "18185GLZL25A1S007",
+              "E": "A",
+              "R": "S-GL---1HB-01-25E1-25A1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 3560,
+              "A": "18185BLZL25A2S005",
+              "E": "A",
+              "R": "S-BL---1GF-01-25A2-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 5078,
+              "A": "18185GLZL25C1S009",
+              "E": "C",
+              "R": "S-GL---1JH-01-25C1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25A1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 5532,
+              "A": "18185ZGTZL25A6B600",
+              "E": "A",
+              "R": "B-ZGT-BA-1GH-01-25A6-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "核设备所-工艺及成套设备室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 5964,
+              "A": "18185GLZL25C1S005",
+              "E": "A",
+              "R": "S-GL---1JH-01-25C1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25A1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 6898,
+              "A": "18185TSAZL22C3C602",
+              "E": "B",
+              "R": "B-TSA-BA-1GH-01-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 7044,
+              "A": "18181RCVZL22C1S001",
+              "E": "B",
+              "R": "S-RCV-BA-1GH-02-22C1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 7348,
+              "A": "18185BLZL25C3S011",
+              "E": "A",
+              "R": "S-BL---1FJ-01-25E1-25C3",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 7737,
+              "A": "18185EMSZL22C3S001",
+              "E": "A",
+              "R": "S-EMS-BA-1GH-02-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 8462,
+              "A": "18185TFAZL25A1S604",
+              "E": "A",
+              "R": "S-TFA-RF-1BH-01-25A1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D2",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 9126,
+              "A": "18185ZSTZL25A6B602",
+              "E": "A",
+              "R": "B-ZST-BA-1GH-01-25A6-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "河北分公司-电气自动化所-仪控二室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 9889,
+              "A": "18185TSAZL22C3S001",
+              "E": "C",
+              "R": "B-TSA-BA-1GH-01-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 11211,
+              "A": "18185NIZL22C3C615",
+              "E": "A",
+              "R": "B-TSA-BA-1GH-01-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "核设备所-核燃料运输与工艺室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 11506,
+              "A": "18185NIZL22C7B600",
+              "E": "A",
+              "R": "B-WNC---1GH-01-22Q8-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "核设备所-堆本体与非标设备室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 12345,
+              "A": "18185BLZL25C2S005",
+              "E": "A",
+              "R": "S-BL---1FJ-02-25E1-25C2",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 13190,
+              "A": "18185GLZL25C1S007",
+              "E": "B",
+              "R": "S-GL---1JH-01-25C1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25A1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 13743,
+              "A": "18185GLZL25A1S009",
+              "E": "B",
+              "R": "S-GL---1BH-01-25A1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25C1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 14807,
+              "A": "18185BLZL25C3S003",
+              "E": "A",
+              "R": "S-BL---1JF-01-25C3-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E6,25E1,25B3,25B3,25B1,25A3,25A4,25A2,25C2,25C3",
+              "excel_codes": "",
+              "sql_codes": ""
+            }
+          ]
+        },
+        {
+          "candidate": "CHAIN.RECEIVE_OR_RELEASE",
+          "rows": 1211,
+          "match_rows": 1189,
+          "match_rate": 0.981833,
+          "is_100_percent": false,
+          "code_rows": 1195,
+          "code_equiv_rate": 0.990795,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 11,
+            "sql_code_conflict": 0,
+            "excel_no_code_text_mismatch": 11
+          },
+          "mismatch_samples": [
+            {
+              "row": 1322,
+              "A": "18185BLZL25A2S017",
+              "E": "A",
+              "R": "S-BL---1FD-01-25E1-25A2",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 2015,
+              "A": "18185TSAZL22C3B005",
+              "E": "D",
+              "R": "B-TSA-BA-1GH-01-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 2245,
+              "A": "18185RCVZL22C1S605",
+              "E": "A",
+              "R": "S-RCV-BA-1GH-02-22C1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "核设备所-核燃料运输与工艺室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 2285,
+              "A": "18185GLZL25A1S005",
+              "E": "A",
+              "R": "S-GL---1BH-01-25A1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25C1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 2297,
+              "A": "18185GLZL25A1S007",
+              "E": "A",
+              "R": "S-GL---1HB-01-25E1-25A1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 3560,
+              "A": "18185BLZL25A2S005",
+              "E": "A",
+              "R": "S-BL---1GF-01-25A2-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 5078,
+              "A": "18185GLZL25C1S009",
+              "E": "C",
+              "R": "S-GL---1JH-01-25C1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25A1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 5532,
+              "A": "18185ZGTZL25A6B600",
+              "E": "A",
+              "R": "B-ZGT-BA-1GH-01-25A6-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "核设备所-工艺及成套设备室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 5964,
+              "A": "18185GLZL25C1S005",
+              "E": "A",
+              "R": "S-GL---1JH-01-25C1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25A1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 6898,
+              "A": "18185TSAZL22C3C602",
+              "E": "B",
+              "R": "B-TSA-BA-1GH-01-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 7044,
+              "A": "18181RCVZL22C1S001",
+              "E": "B",
+              "R": "S-RCV-BA-1GH-02-22C1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 7348,
+              "A": "18185BLZL25C3S011",
+              "E": "A",
+              "R": "S-BL---1FJ-01-25E1-25C3",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 7737,
+              "A": "18185EMSZL22C3S001",
+              "E": "A",
+              "R": "S-EMS-BA-1GH-02-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 8462,
+              "A": "18185TFAZL25A1S604",
+              "E": "A",
+              "R": "S-TFA-RF-1BH-01-25A1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D2",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 9126,
+              "A": "18185ZSTZL25A6B602",
+              "E": "A",
+              "R": "B-ZST-BA-1GH-01-25A6-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "河北分公司-电气自动化所-仪控二室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 9889,
+              "A": "18185TSAZL22C3S001",
+              "E": "C",
+              "R": "B-TSA-BA-1GH-01-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 11211,
+              "A": "18185NIZL22C3C615",
+              "E": "A",
+              "R": "B-TSA-BA-1GH-01-22C3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "核设备所-核燃料运输与工艺室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 11506,
+              "A": "18185NIZL22C7B600",
+              "E": "A",
+              "R": "B-WNC---1GH-01-22Q8-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "核设备所-堆本体与非标设备室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 12345,
+              "A": "18185BLZL25C2S005",
+              "E": "A",
+              "R": "S-BL---1FJ-02-25E1-25C2",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 13190,
+              "A": "18185GLZL25C1S007",
+              "E": "B",
+              "R": "S-GL---1JH-01-25C1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25A1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 13743,
+              "A": "18185GLZL25A1S009",
+              "E": "B",
+              "R": "S-GL---1BH-01-25A1-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E1,25C3,25C3,25C1",
+              "excel_codes": "",
+              "sql_codes": ""
+            },
+            {
+              "row": 14807,
+              "A": "18185BLZL25C3S003",
+              "E": "A",
+              "R": "S-BL---1JF-01-25C3-25E1",
+              "excel_I": "河北分公司-核工程研究设计所-工艺室",
+              "sql_I": "25E6,25E1,25B3,25B3,25B1,25A3,25A4,25A2,25C2,25C3",
+              "excel_codes": "",
+              "sql_codes": ""
+            }
+          ]
+        },
+        {
+          "candidate": "INT.PROPOSED_DEPT",
+          "rows": 1211,
+          "match_rows": 0,
+          "match_rate": 0.0,
+          "is_100_percent": false,
+          "code_rows": 1195,
+          "code_equiv_rate": 0.0,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 1195,
+            "sql_code_conflict": 0,
+            "excel_no_code_text_mismatch": 16
+          },
+          "mismatch_samples": [
+            {
+              "row": 19,
+              "A": "18185RVDZL25A1S001",
+              "E": "A",
+              "R": "S-RVD-CN-1BH-01-25A1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "25A1",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 38,
+              "A": "18185ACZL25B1S010",
+              "E": "A",
+              "R": "S-AC---1TD-01-25E6-25B1",
+              "excel_I": "河北分公司-核工程研究设计所-通信室",
+              "sql_I": "25B1",
+              "excel_codes": "25E6",
+              "sql_codes": ""
+            },
+            {
+              "row": 80,
+              "A": "1818XRFHZL22D4S004",
+              "E": "A",
+              "R": "S-RFH-RFH-1HH-05-22D4-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22D4",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 84,
+              "A": "18185ZBRZL21D3B004",
+              "E": "A",
+              "R": "B-ZBR-ED-1GH-01-21D3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "21D3",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 86,
+              "A": "18185WCDZL25D3S001",
+              "E": "A",
+              "R": "S-WCD-BA-1HJ-01-25E5-25D3",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "25D3",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 130,
+              "A": "18185ACZL25C3S002",
+              "E": "A",
+              "R": "S-AC---1JT-01-25C3-25E6",
+              "excel_I": "河北分公司-核工程研究设计所-通信室",
+              "sql_I": "25C3",
+              "excel_codes": "25E6",
+              "sql_codes": ""
+            },
+            {
+              "row": 141,
+              "A": "18185WSRZL25A6B603",
+              "E": "B",
+              "R": "B-WSR-BA-1GH-02-25A6-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "河北分公司-核电工艺所-工艺系统室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 158,
+              "A": "18185TKZL25C1S007",
+              "E": "A",
+              "R": "S-TK---1TJ-01-25E6-25C1",
+              "excel_I": "河北分公司-核工程研究设计所-通信室",
+              "sql_I": "25C1",
+              "excel_codes": "25E6",
+              "sql_codes": ""
+            },
+            {
+              "row": 191,
+              "A": "18185RVDZL25A6S601",
+              "E": "A",
+              "R": "S-RVD-PS-1GH-01-25A6-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "河北分公司-核电工艺所-工艺系统室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 195,
+              "A": "18185RBMZL25A1S607",
+              "E": "A",
+              "R": "S-RBM-BA-1HB-01-25E5-25A1",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "25A1",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 197,
+              "A": "18185ZLTZL25B3B614",
+              "E": "A",
+              "R": "B-ZLT-BA-1GH-05-25B3-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "河北分公司-电气自动化所-仪控二室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 202,
+              "A": "18185NXZL25A1S008",
+              "E": "A",
+              "R": "S-NX---1GH-01-25A1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "25A1",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 214,
+              "A": "18185CPVZL22Q7S002",
+              "E": "B",
+              "R": "S-CPV-BA-1GH-01-22Q7-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "22Q7",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 244,
+              "A": "18185TSAZL25A1S607",
+              "E": "A",
+              "R": "S-TSA-BA-1HB-01-25E5-25A1",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "25A1",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 255,
+              "A": "18185WNDZL25D3S002",
+              "E": "B",
+              "R": "S-WND-BA-1HJ-01-25E5-25D3",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "25D3",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 267,
+              "A": "18185BOPZL25A4S033",
+              "E": "B",
+              "R": "S-BOP-GT-1GT-05-25A4-25E6",
+              "excel_I": "河北分公司-核工程研究设计所-通信室",
+              "sql_I": "25A4",
+              "excel_codes": "25E6",
+              "sql_codes": ""
+            },
+            {
+              "row": 274,
+              "A": "18185WSDZL25A1S600",
+              "E": "A",
+              "R": "S-WSD-BA-1BH-01-25A1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "河北分公司-核电工艺所-工艺布置一室",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 291,
+              "A": "18185WNDZL25D3S001",
+              "E": "A",
+              "R": "S-WND-BA-1HJ-01-25E5-25D3",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "25D3",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 309,
+              "A": "18185BOPZL25D1S003",
+              "E": "A",
+              "R": "S-BOP-AS-1BH-01-25D1-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "25D1",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 311,
+              "A": "18185RVDZL25A2S064",
+              "E": "B",
+              "R": "S-RVD---1GH-01-25A2-25E5",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "25A2",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 364,
+              "A": "18185GTZL25A4S019",
+              "E": "B",
+              "R": "S-GT---1PT-02-25A4-25E6",
+              "excel_I": "河北分公司-核工程研究设计所-通信室",
+              "sql_I": "25A4",
+              "excel_codes": "25E6",
+              "sql_codes": ""
+            },
+            {
+              "row": 374,
+              "A": "18185ZLTZL25A1S623",
+              "E": "B",
+              "R": "S-ZLT-ZE-1HB-01-25E5-25A1",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "25A1",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 391,
+              "A": "18185ZSTZL25A1S620",
+              "E": "A",
+              "R": "S-ZST-BA-1HB-05-25E5-25A1",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "25A1",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            },
+            {
+              "row": 395,
+              "A": "18185PEZL25C1S006",
+              "E": "A",
+              "R": "S-PE---1JH-01-25C1-25E6",
+              "excel_I": "河北分公司-核工程研究设计所-通信室",
+              "sql_I": "25C1",
+              "excel_codes": "25E6",
+              "sql_codes": ""
+            },
+            {
+              "row": 399,
+              "A": "18185ZBRZL25A1S651",
+              "E": "A",
+              "R": "S-ZBR-RF-1HB-01-25E5-25A1",
+              "excel_I": "河北分公司-核工程研究设计所-设备室",
+              "sql_I": "25A1",
+              "excel_codes": "25E5",
+              "sql_codes": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "profile_name": "电力工程研究设计所",
+      "organization_filter": "河北分公司-电力工程研究设计所",
+      "code_to_full": {
+        "25D1": "河北分公司-电力工程研究设计所-机务室",
+        "25D2": "河北分公司-电力工程研究设计所-电气室",
+        "25D3": "河北分公司-电力工程研究设计所-土建室",
+        "25D4": "河北分公司-电力工程研究设计所-仪控室"
+      },
+      "rows_in_excel_scope": 111,
+      "best_candidate": "INT.RECEIVE_DEPT",
+      "best_match_rate": 1.0,
+      "best_is_100_percent": true,
+      "candidates": [
+        {
+          "candidate": "INT.RECEIVE_DEPT",
+          "rows": 111,
+          "match_rows": 111,
+          "match_rate": 1.0,
+          "is_100_percent": true,
+          "code_rows": 111,
+          "code_equiv_rate": 1.0,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 0,
+            "sql_code_conflict": 0,
+            "excel_no_code_text_mismatch": 0
+          },
+          "mismatch_samples": []
+        },
+        {
+          "candidate": "CHAIN.RECEIVE_OR_PROPOSED",
+          "rows": 111,
+          "match_rows": 111,
+          "match_rate": 1.0,
+          "is_100_percent": true,
+          "code_rows": 111,
+          "code_equiv_rate": 1.0,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 0,
+            "sql_code_conflict": 0,
+            "excel_no_code_text_mismatch": 0
+          },
+          "mismatch_samples": []
+        },
+        {
+          "candidate": "CHAIN.RECEIVE_OR_RELEASE",
+          "rows": 111,
+          "match_rows": 111,
+          "match_rate": 1.0,
+          "is_100_percent": true,
+          "code_rows": 111,
+          "code_equiv_rate": 1.0,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 0,
+            "sql_code_conflict": 0,
+            "excel_no_code_text_mismatch": 0
+          },
+          "mismatch_samples": []
+        },
+        {
+          "candidate": "INT.PROPOSED_DEPT",
+          "rows": 111,
+          "match_rows": 0,
+          "match_rate": 0.0,
+          "is_100_percent": false,
+          "code_rows": 111,
+          "code_equiv_rate": 0.0,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 73,
+            "sql_code_conflict": 38,
+            "excel_no_code_text_mismatch": 0
+          },
+          "mismatch_samples": [
+            {
+              "row": 118,
+              "A": "18185BOPZL25A4S013",
+              "E": "A",
+              "R": "S-BOP-AS-1BS-02-25D1-25A4",
+              "excel_I": "河北分公司-电力工程研究设计所-机务室",
+              "sql_I": "25A4",
+              "excel_codes": "25D1",
+              "sql_codes": ""
+            },
+            {
+              "row": 178,
+              "A": "18185BOPZL25C3S014",
+              "E": "A",
+              "R": "S-BOP-AS-1YJ-01-25D4-25C3",
+              "excel_I": "河北分公司-电力工程研究设计所-仪控室",
+              "sql_I": "25C3",
+              "excel_codes": "25D4",
+              "sql_codes": ""
+            },
+            {
+              "row": 238,
+              "A": "1818ASBOPZL25A3S001",
+              "E": "A",
+              "R": "S-BOP-AS-1NJ-04-25A3-25D3",
+              "excel_I": "河北分公司-电力工程研究设计所-土建室",
+              "sql_I": "25A3",
+              "excel_codes": "25D3",
+              "sql_codes": ""
+            },
+            {
+              "row": 382,
+              "A": "18185WCDZL25E5S602",
+              "E": "A",
+              "R": "S-WCD-BA-1HB-01-25E5-25D1",
+              "excel_I": "河北分公司-电力工程研究设计所-机务室",
+              "sql_I": "25E5",
+              "excel_codes": "25D1",
+              "sql_codes": ""
+            },
+            {
+              "row": 404,
+              "A": "18185BOPZL25D2S011",
+              "E": "A",
+              "R": "S-BOP-AS-1JD-02-25D3-25D2",
+              "excel_I": "河北分公司-电力工程研究设计所-土建室",
+              "sql_I": "25D2",
+              "excel_codes": "25D3",
+              "sql_codes": "25D2"
+            },
+            {
+              "row": 440,
+              "A": "18185BOPZL25D3S006",
+              "E": "A",
+              "R": "S-BOP-AS-1DJ-01-25D2-25D3",
+              "excel_I": "河北分公司-电力工程研究设计所-电气室",
+              "sql_I": "25D3",
+              "excel_codes": "25D2",
+              "sql_codes": "25D3"
+            },
+            {
+              "row": 505,
+              "A": "18185BOPZL25E6S012",
+              "E": "A",
+              "R": "S-BOP-AS-1TJ-01-25E6-25D3",
+              "excel_I": "河北分公司-电力工程研究设计所-土建室",
+              "sql_I": "25E6",
+              "excel_codes": "25D3",
+              "sql_codes": ""
+            },
+            {
+              "row": 729,
+              "A": "18185BOPZL25C3S013",
+              "E": "A",
+              "R": "S-BOP-AS-1BJ-01-25D1-25C3",
+              "excel_I": "河北分公司-电力工程研究设计所-机务室",
+              "sql_I": "25C3",
+              "excel_codes": "25D1",
+              "sql_codes": ""
+            },
+            {
+              "row": 746,
+              "A": "18185BOPZL25D3S019",
+              "E": "C",
+              "R": "S-BOP-AS-1BJ-05-25D1-25D3",
+              "excel_I": "河北分公司-电力工程研究设计所-机务室",
+              "sql_I": "25D3",
+              "excel_codes": "25D1",
+              "sql_codes": "25D3"
+            },
+            {
+              "row": 776,
+              "A": "18185WCDZL25E5S606",
+              "E": "B",
+              "R": "S-WCD-BA-1HB-01-25E5-25D1",
+              "excel_I": "河北分公司-电力工程研究设计所-机务室",
+              "sql_I": "25E5",
+              "excel_codes": "25D1",
+              "sql_codes": ""
+            },
+            {
+              "row": 1014,
+              "A": "18185BOPZL25E6S027",
+              "E": "A",
+              "R": "S-BOP-AS-1TJ-04-25E6-25D3",
+              "excel_I": "河北分公司-电力工程研究设计所-土建室",
+              "sql_I": "25E6",
+              "excel_codes": "25D3",
+              "sql_codes": ""
+            },
+            {
+              "row": 1132,
+              "A": "18185BOPZL25E5S003",
+              "E": "A",
+              "R": "S-BOP-AS-1BH-01-25D1-25E5",
+              "excel_I": "河北分公司-电力工程研究设计所-机务室",
+              "sql_I": "25E5",
+              "excel_codes": "25D1",
+              "sql_codes": ""
+            },
+            {
+              "row": 1333,
+              "A": "18185WNDZL25E5S602",
+              "E": "A",
+              "R": "S-WND-BA-1HB-01-25E5-25D1",
+              "excel_I": "河北分公司-电力工程研究设计所-机务室",
+              "sql_I": "25E5",
+              "excel_codes": "25D1",
+              "sql_codes": ""
+            },
+            {
+              "row": 1362,
+              "A": "18185WNDZL25E5S605",
+              "E": "A",
+              "R": "S-WND-BA-1HB-01-25E5-25D1",
+              "excel_I": "河北分公司-电力工程研究设计所-机务室",
+              "sql_I": "25E5",
+              "excel_codes": "25D1",
+              "sql_codes": ""
+            },
+            {
+              "row": 1476,
+              "A": "18185BOPZL25C3S020",
+              "E": "A",
+              "R": "S-BOP-AS-1DJ-02-25D2-25C3",
+              "excel_I": "河北分公司-电力工程研究设计所-电气室",
+              "sql_I": "25C3",
+              "excel_codes": "25D2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1532,
+              "A": "18185BOPZL25D4S015",
+              "E": "B",
+              "R": "S-BOP-AS-1YJ-02-25D4-25D3",
+              "excel_I": "河北分公司-电力工程研究设计所-土建室",
+              "sql_I": "25D4",
+              "excel_codes": "25D3",
+              "sql_codes": "25D4"
+            },
+            {
+              "row": 1790,
+              "A": "18185WNDZL25E5S608",
+              "E": "C",
+              "R": "S-WND-BA-1HB-01-25E5-25D1",
+              "excel_I": "河北分公司-电力工程研究设计所-机务室",
+              "sql_I": "25E5",
+              "excel_codes": "25D1",
+              "sql_codes": ""
+            },
+            {
+              "row": 1864,
+              "A": "18185BOPZL25C3S046",
+              "E": "B",
+              "R": "S-BOP-AS-1YJ-02-25D4-25C3",
+              "excel_I": "河北分公司-电力工程研究设计所-仪控室",
+              "sql_I": "25C3",
+              "excel_codes": "25D4",
+              "sql_codes": ""
+            },
+            {
+              "row": 1879,
+              "A": "18185BOPZL25E6S013",
+              "E": "A",
+              "R": "S-BOP-AS-1TD-01-25E6-25D2",
+              "excel_I": "河北分公司-电力工程研究设计所-电气室",
+              "sql_I": "25E6",
+              "excel_codes": "25D2",
+              "sql_codes": ""
+            },
+            {
+              "row": 2131,
+              "A": "18185BOPZL25A4S034",
+              "E": "A",
+              "R": "S-BOP-AS-1JS-02-25D3-25A4",
+              "excel_I": "河北分公司-电力工程研究设计所-土建室",
+              "sql_I": "25A4",
+              "excel_codes": "25D3",
+              "sql_codes": ""
+            },
+            {
+              "row": 2135,
+              "A": "18185BOPZL25A3S015",
+              "E": "A",
+              "R": "S-BOP-AS-1ND-01-25A3-25D2",
+              "excel_I": "河北分公司-电力工程研究设计所-电气室",
+              "sql_I": "25A3",
+              "excel_codes": "25D2",
+              "sql_codes": ""
+            },
+            {
+              "row": 2216,
+              "A": "18185BOPZL25A4S036",
+              "E": "A",
+              "R": "S-BOP-AS-1SJ-04-25A4-25D3",
+              "excel_I": "河北分公司-电力工程研究设计所-土建室",
+              "sql_I": "25A4",
+              "excel_codes": "25D3",
+              "sql_codes": ""
+            },
+            {
+              "row": 2272,
+              "A": "18185BOPZL25E6S015",
+              "E": "A",
+              "R": "S-BOP-AS-1DT-01-25D2-25E6",
+              "excel_I": "河北分公司-电力工程研究设计所-电气室",
+              "sql_I": "25E6",
+              "excel_codes": "25D2",
+              "sql_codes": ""
+            },
+            {
+              "row": 2424,
+              "A": "18185WNDZL25A6S010",
+              "E": "A",
+              "R": "S-WND-WDP-1GG-02-25A6-25D1",
+              "excel_I": "河北分公司-电力工程研究设计所-机务室",
+              "sql_I": "25A6",
+              "excel_codes": "25D1",
+              "sql_codes": ""
+            },
+            {
+              "row": 2457,
+              "A": "18185WCDZL25E5S607",
+              "E": "C",
+              "R": "S-WCD-BA-1HB-01-25E5-25D1",
+              "excel_I": "河北分公司-电力工程研究设计所-机务室",
+              "sql_I": "25E5",
+              "excel_codes": "25D1",
+              "sql_codes": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "profile_name": "电气自动化所",
+      "organization_filter": "河北分公司-电气自动化所",
+      "code_to_full": {
+        "25B1": "河北分公司-电气自动化所-电气室",
+        "25B2": "河北分公司-电气自动化所-仪控一室",
+        "25B3": "河北分公司-电气自动化所-仪控二室"
+      },
+      "rows_in_excel_scope": 1928,
+      "best_candidate": "INT.RECEIVE_DEPT",
+      "best_match_rate": 0.993776,
+      "best_is_100_percent": false,
+      "candidates": [
+        {
+          "candidate": "INT.RECEIVE_DEPT",
+          "rows": 1928,
+          "match_rows": 1916,
+          "match_rate": 0.993776,
+          "is_100_percent": false,
+          "code_rows": 1924,
+          "code_equiv_rate": 0.993763,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 9,
+            "sql_code_conflict": 3,
+            "excel_no_code_text_mismatch": 0
+          },
+          "mismatch_samples": [
+            {
+              "row": 1029,
+              "A": "18185ZSTZL25A6B601",
+              "E": "A",
+              "R": "B-ZST-BA-1GH-02-25A6-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-核工程研究设计所-设备室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1723,
+              "A": "18185RNSZL22C1C606",
+              "E": "A",
+              "R": "C-RNS---1GD-01-22C4-25B1",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "电气设计所-电气二室",
+              "excel_codes": "25B1",
+              "sql_codes": ""
+            },
+            {
+              "row": 2379,
+              "A": "18185NIZL22C7S600",
+              "E": "B",
+              "R": "C-WPW(NI)---2LT-02-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-电气自动化所-仪控室,系统与布置设计所-布置一室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 2969,
+              "A": "18185NIZL22C7C627",
+              "E": "B",
+              "R": "C-WPW(NI)---1SY-01-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-电气自动化所-仪控室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 4773,
+              "A": "18185ZSTZL25A6B603",
+              "E": "B",
+              "R": "B-ZST-BA-1GH-02-25A6-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-核工程研究设计所-设备室,河北分公司-电气自动化所-仪控二室",
+              "excel_codes": "25B2",
+              "sql_codes": "25B3"
+            },
+            {
+              "row": 7958,
+              "A": "18185WPWZL22C7C601",
+              "E": "A",
+              "R": "C-WPW(NI)---1SY-01-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "仪控设计所-仪控三室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 14076,
+              "A": "18185WPWZL22C7C600",
+              "E": "A",
+              "R": "C-WPW(NI)---2LT-02-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "系统与布置设计所-布置一室,仪控设计所-仪控三室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 14269,
+              "A": "18185ZSTZL25A6B604",
+              "E": "C",
+              "R": "B-ZST-BA-1GH-02-25A6-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "25B3,25E5",
+              "excel_codes": "25B2",
+              "sql_codes": "25B3"
+            },
+            {
+              "row": 14278,
+              "A": "18185FDPZL22C7C602",
+              "E": "A",
+              "R": "B-FDP---1SS-03-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-核电工艺所-水工室,河北分公司-电气自动化所-仪控室,河北分公司-电气自动化所-电气室",
+              "excel_codes": "25B2",
+              "sql_codes": "25B1"
+            },
+            {
+              "row": 14374,
+              "A": "18185FDPZL22C7B600",
+              "E": "A",
+              "R": "B-FDP---1GD-03-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "仪控设计所-仪控三室,河北分公司-电气自动化所-仪控室,电气设计所-电气二室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 14646,
+              "A": "18185NIZL22C7C619",
+              "E": "A",
+              "R": "B-WSS-NI-2FQ-04-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-核电工艺所-工艺布置一室,河北分公司-电气自动化所-仪控室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 15033,
+              "A": "18185WSSZL22C7B601",
+              "E": "B",
+              "R": "B-WSS-NI-2GQ-01-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "仪控设计所-仪控三室,河北分公司-核电工艺所-工艺布置一室,河北分公司-电气自动化所-仪控室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            }
+          ]
+        },
+        {
+          "candidate": "CHAIN.RECEIVE_OR_PROPOSED",
+          "rows": 1928,
+          "match_rows": 1916,
+          "match_rate": 0.993776,
+          "is_100_percent": false,
+          "code_rows": 1924,
+          "code_equiv_rate": 0.993763,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 9,
+            "sql_code_conflict": 3,
+            "excel_no_code_text_mismatch": 0
+          },
+          "mismatch_samples": [
+            {
+              "row": 1029,
+              "A": "18185ZSTZL25A6B601",
+              "E": "A",
+              "R": "B-ZST-BA-1GH-02-25A6-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-核工程研究设计所-设备室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1723,
+              "A": "18185RNSZL22C1C606",
+              "E": "A",
+              "R": "C-RNS---1GD-01-22C4-25B1",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "电气设计所-电气二室",
+              "excel_codes": "25B1",
+              "sql_codes": ""
+            },
+            {
+              "row": 2379,
+              "A": "18185NIZL22C7S600",
+              "E": "B",
+              "R": "C-WPW(NI)---2LT-02-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-电气自动化所-仪控室,系统与布置设计所-布置一室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 2969,
+              "A": "18185NIZL22C7C627",
+              "E": "B",
+              "R": "C-WPW(NI)---1SY-01-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-电气自动化所-仪控室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 4773,
+              "A": "18185ZSTZL25A6B603",
+              "E": "B",
+              "R": "B-ZST-BA-1GH-02-25A6-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-核工程研究设计所-设备室,河北分公司-电气自动化所-仪控二室",
+              "excel_codes": "25B2",
+              "sql_codes": "25B3"
+            },
+            {
+              "row": 7958,
+              "A": "18185WPWZL22C7C601",
+              "E": "A",
+              "R": "C-WPW(NI)---1SY-01-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "仪控设计所-仪控三室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 14076,
+              "A": "18185WPWZL22C7C600",
+              "E": "A",
+              "R": "C-WPW(NI)---2LT-02-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "系统与布置设计所-布置一室,仪控设计所-仪控三室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 14269,
+              "A": "18185ZSTZL25A6B604",
+              "E": "C",
+              "R": "B-ZST-BA-1GH-02-25A6-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "25B3,25E5",
+              "excel_codes": "25B2",
+              "sql_codes": "25B3"
+            },
+            {
+              "row": 14278,
+              "A": "18185FDPZL22C7C602",
+              "E": "A",
+              "R": "B-FDP---1SS-03-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-核电工艺所-水工室,河北分公司-电气自动化所-仪控室,河北分公司-电气自动化所-电气室",
+              "excel_codes": "25B2",
+              "sql_codes": "25B1"
+            },
+            {
+              "row": 14374,
+              "A": "18185FDPZL22C7B600",
+              "E": "A",
+              "R": "B-FDP---1GD-03-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "仪控设计所-仪控三室,河北分公司-电气自动化所-仪控室,电气设计所-电气二室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 14646,
+              "A": "18185NIZL22C7C619",
+              "E": "A",
+              "R": "B-WSS-NI-2FQ-04-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-核电工艺所-工艺布置一室,河北分公司-电气自动化所-仪控室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 15033,
+              "A": "18185WSSZL22C7B601",
+              "E": "B",
+              "R": "B-WSS-NI-2GQ-01-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "仪控设计所-仪控三室,河北分公司-核电工艺所-工艺布置一室,河北分公司-电气自动化所-仪控室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            }
+          ]
+        },
+        {
+          "candidate": "CHAIN.RECEIVE_OR_RELEASE",
+          "rows": 1928,
+          "match_rows": 1916,
+          "match_rate": 0.993776,
+          "is_100_percent": false,
+          "code_rows": 1924,
+          "code_equiv_rate": 0.993763,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 9,
+            "sql_code_conflict": 3,
+            "excel_no_code_text_mismatch": 0
+          },
+          "mismatch_samples": [
+            {
+              "row": 1029,
+              "A": "18185ZSTZL25A6B601",
+              "E": "A",
+              "R": "B-ZST-BA-1GH-02-25A6-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-核工程研究设计所-设备室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 1723,
+              "A": "18185RNSZL22C1C606",
+              "E": "A",
+              "R": "C-RNS---1GD-01-22C4-25B1",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "电气设计所-电气二室",
+              "excel_codes": "25B1",
+              "sql_codes": ""
+            },
+            {
+              "row": 2379,
+              "A": "18185NIZL22C7S600",
+              "E": "B",
+              "R": "C-WPW(NI)---2LT-02-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-电气自动化所-仪控室,系统与布置设计所-布置一室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 2969,
+              "A": "18185NIZL22C7C627",
+              "E": "B",
+              "R": "C-WPW(NI)---1SY-01-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-电气自动化所-仪控室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 4773,
+              "A": "18185ZSTZL25A6B603",
+              "E": "B",
+              "R": "B-ZST-BA-1GH-02-25A6-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-核工程研究设计所-设备室,河北分公司-电气自动化所-仪控二室",
+              "excel_codes": "25B2",
+              "sql_codes": "25B3"
+            },
+            {
+              "row": 7958,
+              "A": "18185WPWZL22C7C601",
+              "E": "A",
+              "R": "C-WPW(NI)---1SY-01-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "仪控设计所-仪控三室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 14076,
+              "A": "18185WPWZL22C7C600",
+              "E": "A",
+              "R": "C-WPW(NI)---2LT-02-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "系统与布置设计所-布置一室,仪控设计所-仪控三室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 14269,
+              "A": "18185ZSTZL25A6B604",
+              "E": "C",
+              "R": "B-ZST-BA-1GH-02-25A6-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "25B3,25E5",
+              "excel_codes": "25B2",
+              "sql_codes": "25B3"
+            },
+            {
+              "row": 14278,
+              "A": "18185FDPZL22C7C602",
+              "E": "A",
+              "R": "B-FDP---1SS-03-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-核电工艺所-水工室,河北分公司-电气自动化所-仪控室,河北分公司-电气自动化所-电气室",
+              "excel_codes": "25B2",
+              "sql_codes": "25B1"
+            },
+            {
+              "row": 14374,
+              "A": "18185FDPZL22C7B600",
+              "E": "A",
+              "R": "B-FDP---1GD-03-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "仪控设计所-仪控三室,河北分公司-电气自动化所-仪控室,电气设计所-电气二室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 14646,
+              "A": "18185NIZL22C7C619",
+              "E": "A",
+              "R": "B-WSS-NI-2FQ-04-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "河北分公司-核电工艺所-工艺布置一室,河北分公司-电气自动化所-仪控室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 15033,
+              "A": "18185WSSZL22C7B601",
+              "E": "B",
+              "R": "B-WSS-NI-2GQ-01-22Q8-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "仪控设计所-仪控三室,河北分公司-核电工艺所-工艺布置一室,河北分公司-电气自动化所-仪控室",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            }
+          ]
+        },
+        {
+          "candidate": "INT.PROPOSED_DEPT",
+          "rows": 1928,
+          "match_rows": 0,
+          "match_rate": 0.0,
+          "is_100_percent": false,
+          "code_rows": 1924,
+          "code_equiv_rate": 0.0,
+          "mismatch_reason_counter": {
+            "sql_no_profile_code": 1658,
+            "sql_code_conflict": 266,
+            "excel_no_code_text_mismatch": 4
+          },
+          "mismatch_samples": [
+            {
+              "row": 3,
+              "A": "18185NVZL25E6S001",
+              "E": "A",
+              "R": "S-NV---1TD-01-25E6-25B1",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "25E6",
+              "excel_codes": "25B1",
+              "sql_codes": ""
+            },
+            {
+              "row": 9,
+              "A": "18185CUPZL25E6S007",
+              "E": "B",
+              "R": "S-CUP---1TY-01-25E6-25B3",
+              "excel_I": "河北分公司-电气自动化所-仪控二室",
+              "sql_I": "25E6",
+              "excel_codes": "25B3",
+              "sql_codes": ""
+            },
+            {
+              "row": 17,
+              "A": "18185ZLTZL25A6S670",
+              "E": "C",
+              "R": "S-ZLT---1GY-01-25A6-25B3",
+              "excel_I": "河北分公司-电气自动化所-仪控二室",
+              "sql_I": "25A6",
+              "excel_codes": "25B3",
+              "sql_codes": ""
+            },
+            {
+              "row": 29,
+              "A": "18185VECZL25A6S011",
+              "E": "B",
+              "R": "S-VEC---1ND-01-25A3-25B1",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "25A6",
+              "excel_codes": "25B1",
+              "sql_codes": ""
+            },
+            {
+              "row": 39,
+              "A": "18185BLZL25B3S004",
+              "E": "A",
+              "R": "S-BL---1YD-02-25B3-25B1",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "25B3",
+              "excel_codes": "25B1",
+              "sql_codes": "25B3"
+            },
+            {
+              "row": 47,
+              "A": "18185WNCZL25A1S618",
+              "E": "B",
+              "R": "S-WNC-IIC-1GY-01-25A1-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "25A1",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 79,
+              "A": "18185VABZL25A3S010",
+              "E": "C",
+              "R": "S-VAB---1NY-01-25A3-25B3",
+              "excel_I": "河北分公司-电气自动化所-仪控二室",
+              "sql_I": "25A3",
+              "excel_codes": "25B3",
+              "sql_codes": ""
+            },
+            {
+              "row": 89,
+              "A": "18185LSCZL25E6S003",
+              "E": "B",
+              "R": "S-LSC---1TD-01-25E6-25B1",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "25E6",
+              "excel_codes": "25B1",
+              "sql_codes": ""
+            },
+            {
+              "row": 97,
+              "A": "18185ZLTZL25A6S665",
+              "E": "B",
+              "R": "S-ZLT-BA-1GH-01-25A6-25B3",
+              "excel_I": "河北分公司-电气自动化所-仪控二室",
+              "sql_I": "25A6",
+              "excel_codes": "25B3",
+              "sql_codes": ""
+            },
+            {
+              "row": 100,
+              "A": "18185FNPZL25E6S003",
+              "E": "A",
+              "R": "S-FNP---1TY-01-25E6-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "25E6",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 102,
+              "A": "18185VCLZL25A6S006",
+              "E": "A",
+              "R": "S-VCL---1NY-02-25A3-25B3",
+              "excel_I": "河北分公司-电气自动化所-仪控二室",
+              "sql_I": "25A6",
+              "excel_codes": "25B3",
+              "sql_codes": ""
+            },
+            {
+              "row": 104,
+              "A": "18185EESZL25B2S002",
+              "E": "A",
+              "R": "S-EES-IIC-1DY-02-25B1-25B2",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "25B2",
+              "excel_codes": "25B1",
+              "sql_codes": "25B2"
+            },
+            {
+              "row": 122,
+              "A": "18185NFZL25E5S008",
+              "E": "A",
+              "R": "S-NF---1YH-01-25B2-25E5",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "25E5",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 140,
+              "A": "18185CCVZL25B3S004",
+              "E": "A",
+              "R": "S-CCV-ZZZ-1YD-01-25B3-25B1",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "25B3",
+              "excel_codes": "25B1",
+              "sql_codes": "25B3"
+            },
+            {
+              "row": 145,
+              "A": "18185ESHZL25B1S002",
+              "E": "A",
+              "R": "S-ESH-IIC-1DY-02-25B1-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "25B1",
+              "excel_codes": "25B2",
+              "sql_codes": "25B1"
+            },
+            {
+              "row": 152,
+              "A": "18185GTZL25B3S009",
+              "E": "A",
+              "R": "S-GT---1YD-04-25B3-25B1",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "25B3",
+              "excel_codes": "25B1",
+              "sql_codes": "25B3"
+            },
+            {
+              "row": 153,
+              "A": "18185PFZL25C3S020",
+              "E": "B",
+              "R": "S-PF---1DJ-05-25B1-25C3",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "25C3",
+              "excel_codes": "25B1",
+              "sql_codes": ""
+            },
+            {
+              "row": 155,
+              "A": "18185VMOZL25A6S009",
+              "E": "A",
+              "R": "S-VMO---1NY-01-25A3-25B3",
+              "excel_I": "河北分公司-电气自动化所-仪控二室",
+              "sql_I": "25A6",
+              "excel_codes": "25B3",
+              "sql_codes": ""
+            },
+            {
+              "row": 160,
+              "A": "18185EMAZL25B1S002",
+              "E": "A",
+              "R": "S-EMA-IIC-1DY-01-25B1-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "25B1",
+              "excel_codes": "25B2",
+              "sql_codes": "25B1"
+            },
+            {
+              "row": 168,
+              "A": "18185CAMZL25B1S002",
+              "E": "A",
+              "R": "S-CAM-ZZZ-1YD-01-25B2-25B1",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "25B1",
+              "excel_codes": "25B2",
+              "sql_codes": "25B1"
+            },
+            {
+              "row": 222,
+              "A": "18185TFMZL25A6S013",
+              "E": "A",
+              "R": "S-TFM---1GD-01-25A6-25B1",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "25A6",
+              "excel_codes": "25B1",
+              "sql_codes": ""
+            },
+            {
+              "row": 234,
+              "A": "18185BTZL25C3S020",
+              "E": "C",
+              "R": "S-BT---1YZ-01-25B2-25C3",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "25C3",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 239,
+              "A": "18185WWLZL25A1S005",
+              "E": "A",
+              "R": "S-WWL---2LT-01-25A1-25B3",
+              "excel_I": "河北分公司-电气自动化所-仪控二室",
+              "sql_I": "25A1",
+              "excel_codes": "25B3",
+              "sql_codes": ""
+            },
+            {
+              "row": 240,
+              "A": "18185WESZL25A4S012",
+              "E": "A",
+              "R": "S-WES---2FQ-01-25A4-25B2",
+              "excel_I": "河北分公司-电气自动化所-仪控一室",
+              "sql_I": "25A4",
+              "excel_codes": "25B2",
+              "sql_codes": ""
+            },
+            {
+              "row": 243,
+              "A": "18185WSZL25B3S009",
+              "E": "A",
+              "R": "S-WS---1YD-01-25B3-25B1",
+              "excel_I": "河北分公司-电气自动化所-电气室",
+              "sql_I": "25B3",
+              "excel_codes": "25B1",
+              "sql_codes": "25B3"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

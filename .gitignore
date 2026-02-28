@@ -31,6 +31,7 @@ dist/
 # Temporary files
 *.log
 *.tmp
+.tmp_*
 test_cache.json
 
 # User data
@@ -54,3 +55,12 @@ result_cache/write_tasks_state.json
 # Local SQL dump snapshots (do not sync)
 example/CIMS-sql/
 CIMS-sql/
+
+# Generated analysis artifacts
+document/*_probe.json
+
+# Local roster variants
+excel_bin/姓名角色表-*.xlsx
+
+# Local binary artifact
+/update.exe

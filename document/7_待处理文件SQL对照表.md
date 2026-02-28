@@ -96,15 +96,175 @@
 
 ## 4. 文件2（内部需回复接口）
 
-| 程序字段 | Excel列 | SQL主映射 | SQL回退/补充 |
+> 以下按“先优化映射、再做离线全量验证”执行。  
+> 数据源：`example/CIMS-sql/INTINTERFACEDOC.sql`（配套 `USER.sql`、`DEPARTMENT.sql`）。  
+> 统计口径：`IS_CURRENT in ('1', '')`，并同时输出 `current全量` 与 `1818项目` 结果。  
+> 验证产物：`document/file2_sql_mapping_metrics_v3.json`、`document/file2_owner_metrics_v2.json`。
+
+| 程序字段 | Excel列 | SQL主映射（优化后） | SQL回退/补充 |
 |---|---|---|---|
 | 项目号 | 文件名4位 | `INTINTERFACEDOC.PROJ_NUM` (`28`) | 文件名项目号兜底 |
-| 接口号 | `R(17)` | `INTINTERFACEDOC.ITEM_NUMBER` (`27`) | - |
-| 科室 | `I(8)` | `INTINTERFACEDOC.RECEIVE_DEPT` (`39`) | `PROPOSED_DEPT` (`38`) + 责任人部门映射 |
-| 接口时间 | `M(12)` | `INTINTERFACEDOC.REPLY_DEADLINE` (`57`) | `ANSWER_DATE` (`58`), `START_DATE` (`47`) |
+| 接口号（程序口径） | `R(17)` | `IDIACP1000.ITEM_NUMBER`（经 `INTINTERFACEDOCIDIACP1000` 关联） | `INTINTERFACEDOC.ITEM_NUMBER` 仅对应 A 列信息单编号，不作为程序 interface_id |
+| 科室 | `I(8)` | `INTINTERFACEDOC.PROPOSED_DEPT` (`38`) | `RECEIVE_DEPT` (`39`) + 责任人部门映射 |
+| 接口时间 | `M(12)` | `INTINTERFACEDOC.START_DATE` (`47`) | `ANSWER_DATE` (`58`), `REPLY_DEADLINE` (`57`) |
 | 完成标记 | `N(13)` | `INTINTERFACEDOC.ANSWER_DATE` (`58`) | `ANSWER_TYPE` (`59`) |
 | 版次 | `E(4)` | `INTINTERFACEDOC.REV` (`56`) | - |
-| 责任人 | `AM(38)` | `INTINTERFACEDOC.RESP_SHEZONG` (`55`) | `RE_OPEN_RESP_SHEZONG` (`61`), `RELEVANT_PERSON` (`62`) |
+| 责任人（完成人口径） | （Excel无原生列，程序人工补充） | `INTINTERFACEDOC.MODIFIED_BY_ID` (`9`) -> `USER` | `IDIACP1000.DEPART_USER` (`39`) -> `USER`, `IDIACP1000.MODIFIED_BY_ID` (`9`), `INTINTERFACEDOC.CREATED_BY_ID` (`5`) |
+| 责任角色（设总口径，非完成人） | `AM(38)` | `INTINTERFACEDOC.RESP_SHEZONG` (`55`) | `RE_OPEN_RESP_SHEZONG` (`61`), `RELEVANT_PERSON` (`62`) |
+
+### 4.1 文件2逐项对照结果（优化后）
+
+- 项目号 `PROJ_NUM`：非空率 `100%`（`current全量` 与 `1818项目` 均为 `100%`）。
+- 接口号 `ITEM_NUMBER`：非空率 `100%`（`current全量` 与 `1818项目` 均为 `100%`）。
+- 科室候选：
+  - `PROPOSED_DEPT` 命中组织/科室编码率：`8.9336%`（全量）、`13.5853%`（1818）
+  - `RECEIVE_DEPT` 命中组织/科室编码率：`8.4492%`（全量）、`13.1451%`（1818）
+  - 结论：`PROPOSED_DEPT` 略优，作为主映射。
+- 接口时间候选：
+  - `START_DATE` 可解析率：`31.8189%`（全量）、`41.0470%`（1818）
+  - `ANSWER_DATE` 可解析率：`27.3145%`（全量）、`29.5476%`（1818）
+  - `REPLY_DEADLINE` 可解析率：`0.5345%`（全量）、`0.1016%`（1818）
+  - 结论：`START_DATE` 显著优于 `REPLY_DEADLINE`，调整为主映射。
+- 完成标记 `ANSWER_DATE`：可解析率 `27.3145%`（全量）、`29.5476%`（1818），可作为“已回文完成时间”主口径。
+- 版次 `REV`：非空率 `99.9568%`（全量）、`99.4514%`（1818），稳定可用。
+- 责任人（完成人）候选（按 `ANSWER_DATE` 非空“已完成接口”复测）：
+  - `INTINTERFACEDOC.MODIFIED_BY_ID`：`100%`（`4377/4377`）可解析到 `USER`
+  - `INTINTERFACEDOC.CREATED_BY_ID`：`100%`（`4377/4377`）可解析到 `USER`，但语义偏“创建人”
+  - `IDIACP1000.MODIFIED_BY_ID`：`99.6801%`
+  - `IDIACP1000.DEPART_USER`：`97.6925%`
+  - `INTINTERFACEDOC.RESP_SHEZONG`：`96.7101%`（设总角色，不作为“完成人”主口径）
+  - 结论：文件2责任人主映射应采用 `INTINTERFACEDOC.MODIFIED_BY_ID -> USER`（不是设总列）。
+
+### 4.2 文件2当前风险提示（仅记录，不改变映射结论）
+
+- 在“科室命中且未完成（`ANSWER_DATE` 为空）”子集中：
+  - `START_DATE` 可解析率：`5.1419%`（全量）、`4.1357%`（1818）
+  - `REPLY_DEADLINE` 可解析率：`0.0551%`（全量）、`0.0530%`（1818）
+- 说明：文件2的“待办记录”本身日期字段填充较低，后续进入在线库联调时建议增加“空日期兜底策略”（允许无日期记录按其他条件进入待处理池）。
+
+### 4.3 文件2（1818模板）多表联动实测（仅按模块说明 69 行业务列）
+
+> 本节仅针对 `document/2_模块功能说明.md:69` 的业务列：`A/F/I/M/N/AB`。  
+> 样本：`example/内部接口信息单报表181820260128.xlsx`（15776 行）。  
+> 联动链路：`INTINTERFACEDOC` -> `INTINTERFACEDOCIDIACP1000` -> `IDIACP1000` + `DEPARTMENT`。  
+> 验证产物：`document/file2_multitable_alignment_1818_v6.json`、`document/file2_final_mismatch_8rows.json`。
+
+| 业务列 | Excel含义 | SQL联动映射（1818） | 实测一致率 |
+|---|---|---|---|
+| A | 信息单编号 | `INTINTERFACEDOC.ITEM_NUMBER`（去横杠） | `99.9937%` |
+| F | 传递/回复标记 | `INTINTERFACEDOC.RECEIVE_SEND_FLAG`（`1->传递`, `2->回复`） | `99.9937%` |
+| I | 收文部门 | `INTINTERFACEDOC.RECEIVE_DEPT` -> `DEPARTMENT` 父子链拼接全路径 | `73.3646%`（文本逐字） |
+| M | 回文期限 | `INTINTERFACEDOC.REPLY_DEADLINE` | `0.0317%`（文本逐字） |
+| N | 回文日期 | `INTINTERFACEDOC.ANSWER_DATE` | `79.5322%`（文本逐字） |
+| AB | 交换关闭时间 | `IDIACP1000.SWAP_CLOSE_DATE`（经桥表关联） | `96.5200%` |
+
+说明：
+
+- `I/M/N` 的“逐字一致率”受模板报表的派生展示影响明显（尤其 `M`），不能直接代表业务规则可对齐度。
+- `A+E` 在 `INTINTERFACEDOC` 非唯一（同信息单可拆到多接收对象），需用 `R`（IDI 编号）经桥表辅助消歧，`R` 辅助匹配率 `88.4381%`。
+- 本节表中 `A -> INTINTERFACEDOC.ITEM_NUMBER` 指“信息单编号口径”；程序内 `interface_id`（Registry / 版次筛选口径）仍是 `R` 列。
+
+### 4.4 1818 业务规则一致率（按 69 行逻辑）
+
+按 `P1/P2/P3/P4` 逐项对齐（日期窗口按模板日期 `2026-01-28` 校验）：
+
+- `P1`（I 列科室条件）一致率：`96.9004%`
+- `P2`（M 列日期范围）一致率：`96.8940%`
+- `P3`（AB 以 4444 开头且 F=传递）一致率：`99.9810%`
+- `P4`（N 空且 A 非空）全量一致率：`88.7931%`
+- `P4` 在 `P1&P2` 业务作用域内一致率：`91.1504%`（>90%）
+
+最终组合逻辑（1818 扩展逻辑）整体一致率：`99.9493%`。  
+当前剩余未对齐 `8` 行（见 `document/file2_final_mismatch_8rows.json`），共性是：
+
+- Excel 显示：`F=传递`、`N为空`、`M有期限`
+- SQL 显示：`ANSWER_DATE` 已写入时间戳、`REPLY_DEADLINE` 为空（该 8 行在离线库中未找到可直接还原 Excel `M` 的稳定字段）
+
+若要求该模板达到 `100%` 对齐，需增加一层“1818-文件2特例对照表”（8 条）作为最终兜底。  
+已生成兜底样例：`document/file2_1818_special_overrides.json`。
+
+### 4.5 文件2（1818）全量逐行复测（本轮：接口号 + 业务列 + 责任人）
+
+> 验证产物：`document/file2_1818_full_validation_latest.json`。  
+> 样本：`example/内部接口信息单报表181820260128.xlsx`（15776 行）。
+
+- 接口号（程序口径，`R` 列）在数据库存在性：`15776/15776 = 100%`（`IDIACP1000.ITEM_NUMBER`）。
+- `R` 经桥表联动到 `INTINTERFACEDOC`：`15775/15776 = 99.9937%`（唯一未联动样本：`A=18185CSPZL25A2S648, E=A, R=S-CSP-NLS-2LX-01-25A2-25A5`）。
+- 业务列“逐字一致率”（含兜底后）：
+  - `A=99.9937%`，`F=99.9937%`，`R=99.9937%`
+  - `AB=96.5137%`，`N=79.5766%`
+  - `I=11.2513%`，`M=0.2028%`
+- 说明：`I/M` 在模板中存在明显“展示派生/人工加工”痕迹，按“逐字完全一致”口径难以达到 100%；业务筛选一致性仍以 `4.4`（`99.9493%`）作为判定口径。
+- 责任人（已完成接口）复测结论（排除设总）：
+  - 主列：`INTINTERFACEDOC.MODIFIED_BY_ID -> USER`，覆盖率 `100%`（`4377/4377`）
+  - 证据：在已完成样本中，`CREATED_BY_ID` 与 `MODIFIED_BY_ID` 差异率 `4362/4363 = 99.9771%`，二者语义不可混用。
+  - 推荐回退链：`INT.MODIFIED_BY_ID -> IDI.DEPART_USER -> IDI.MODIFIED_BY_ID -> INT.CREATED_BY_ID`（不使用 `RESP_SHEZONG` 作为完成人主口径）。
+
+### 4.6 文件2/4“责任人分发链路”补充探针（备份版）
+
+> 验证产物：`document/file2_4_distribution_chain_probe.json`。
+
+本轮按你的思路，重点验证“文件2 D列（对方文号）/文件4 E列（接口单号）是否可作为分发记录主键”。
+
+- 文件2（`D` 列）：
+  - `D` 唯一键 `5415`，与 `INTINTERFACEDOC.ITEM_NUMBER` 唯一集合命中率 `100%`。
+  - 与 `INTINTERFACEDOC.REF_ITEM_NUMBER` 唯一集合命中率也为 `100%`。
+  - 行级 `(A,D)` 对在 `INT (ITEM_NUMBER, REF_ITEM_NUMBER)` 复核命中 `7238/7238 = 100%`。
+  - 结论：`D` 可稳定作为 INT 侧“对方文号”键参与后续链路。
+
+- 文件4（`E` 列）：
+  - `E` 唯一键 `17822`，与 `SENDRECEIVEDATA.LETTER_SEND_NO` 命中率 `100%`。
+  - 与 `CORRESP_LETTER_REC_NO` 命中率 `48.21%`（可作为辅键，不可替代主键）。
+  - 结论：文件4责任人若走“分发链路”，`E -> SENDRECEIVEDATA.LETTER_SEND_NO` 是最稳定入口。
+
+- 当前备份缺口（关键）：
+  - 在 `innovator.sql` 结构中可见分发表：`DISTRIBUTERECORD`、`OBJECTREPLYLINK`、`FILETRANSMISSION`、`CRREPLY/DCRREPLY/FCRREPLY/NCRREPLY/TCRREPLY/TAREPLY` 等。
+  - 但这些表在当前离线包中仅有 schema，无独立数据导出；可直接用的数据表仅 `INTINTERFACEDOC / SENDRECEIVEDATA / TA` 等 10 张。
+  - 例如文件4 `E -> SEND.id` 后，落到 `TA.SEND_RECEIVE_DATA` 的覆盖率在该样本为 `0%`，说明责任人分发信息很可能落在尚未导出的其它业务表（而非 TA）。
+
+- 建议的后续联表路径（待补数后验证）：
+  1. 文件2：`(A,D)` -> `INTINTERFACEDOC(ITEM_NUMBER, REF_ITEM_NUMBER)` -> `INT.id`
+     -> `DISTRIBUTERECORD.SOURCE_OBJECT_ID` / `OBJECTREPLYLINK.SOURCE_OBJECT_NUMBER`
+     -> 分发操作人字段（如 `OPERATOR/SENDER`） -> `USER`。
+  2. 文件4：`E` -> `SENDRECEIVEDATA.LETTER_SEND_NO` -> `SEND.id`
+     -> `*_REPLY / FILETRANSMISSION / ...`（`SEND_RECEIVE_DATA`）
+     -> `DISTRIBUTERECORD/OBJECTREPLYLINK`
+     -> 分发责任人 -> `USER`。
+
+### 4.7 文件2 I列（4所）专项结论 + 冲突样本独立清单
+
+> 4所配置来源：`config.json`。  
+> 全量复核报告：`document/file2_i_4profiles_check_latest.json`。  
+> 冲突样本独立文件：`document/file2_i_conflict_samples.json`（仅保留 `sql_code_conflict` 全量行并追加原因诊断字段）。
+
+| 所（profile） | Excel作用域行数 | `INT.RECEIVE_DEPT` 匹配率 | 结论 |
+|---|---:|---:|---|
+| 建筑结构所 | 1474 | 95.5902% | 非100%，主要受跨所代码/冲突编码影响 |
+| 核工程研究设计所 | 1211 | 98.1833% | 非100%，主要为 SQL 未出现该所代码 |
+| 电力工程研究设计所 | 111 | 100.0000% | 已达到100% |
+| 电气自动化所 | 1928 | 99.3776% | 接近100%，存在少量冲突编码 |
+
+对应未命中原因计数（`INT.RECEIVE_DEPT`）：
+
+- 建筑结构所：`sql_no_profile_code=31`，`sql_code_conflict=21`，`excel_no_code_text_mismatch=13`
+- 核工程研究设计所：`sql_no_profile_code=11`，`sql_code_conflict=0`，`excel_no_code_text_mismatch=11`
+- 电力工程研究设计所：全部为 `0`
+- 电气自动化所：`sql_no_profile_code=9`，`sql_code_conflict=3`，`excel_no_code_text_mismatch=0`
+
+“冲突样本独立清单”（`document/file2_i_conflict_samples.json`）结论：
+
+- 全量冲突样本数：`24`（建筑结构所 `21`，电气自动化所 `3`）。
+- 冲突成因诊断：
+  - `21` 条：库内当前收文代码与Excel目标科室不同，需业务确认（`库内已变更为其他所/其他代码`）。
+  - `2` 条：SQL收文字段未出现该所可识别代码（`SQL收文部门未出现该所代码`）。
+  - `1` 条：同 `R` 链路存在可命中记录，疑似桥表关联行选择差异（样本：`row=10348`，`A=18185CSPZL25E5S008`）。
+
+关于“是否存在接口版本不一致”专项检查（已做）：
+
+- 在上述 `24` 条冲突样本中：
+  - `same_item_other_rev_has_excel_code = 0/24`
+  - `same_item_same_rev_has_excel_code = 0/24`
+- 结论：当前冲突样本**未发现“同接口其他版次可直接命中目标科室”的证据**；主因更偏向“当前库科室编码与模板显示口径不一致”而非版次切换。
 
 ## 5. 文件3（外部需打开接口）
 

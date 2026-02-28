@@ -1,0 +1,67 @@
+{
+  "rows": {
+    "excel_rows": 15776,
+    "intdoc_match_rows": 15775,
+    "intdoc_match_rate": 0.999937,
+    "idi_item_match_rows": 13952,
+    "idi_item_match_rate": 0.884381
+  },
+  "column_match": {
+    "A": 0.999937,
+    "F": 0.999937,
+    "I": 0.733646,
+    "M": 0.000317,
+    "N_base": 0.795322,
+    "N_reply_only": 0.559394,
+    "AB": 0.9652,
+    "R_aux": 0.884381
+  },
+  "2026-01-28_base": {
+    "P1": 0.969004,
+    "P2": 0.96894,
+    "P3": 0.99981,
+    "P4": 0.887868,
+    "P4_on_P1P2_scope": 0.911504,
+    "FINAL": 0.999493,
+    "excel_final_true": 8,
+    "sql_final_true": 0,
+    "final_disagree": 8,
+    "p12_scope_rows": 113
+  },
+  "2026-01-28_reply_only": {
+    "P1": 0.969004,
+    "P2": 0.96894,
+    "P3": 0.99981,
+    "P4": 0.559774,
+    "P4_on_P1P2_scope": 0.168142,
+    "FINAL": 0.999493,
+    "excel_final_true": 8,
+    "sql_final_true": 0,
+    "final_disagree": 8,
+    "p12_scope_rows": 113
+  },
+  "2026-02-13_base": {
+    "P1": 0.969004,
+    "P2": 0.96894,
+    "P3": 0.99981,
+    "P4": 0.887868,
+    "P4_on_P1P2_scope": 0.911504,
+    "FINAL": 0.999493,
+    "excel_final_true": 8,
+    "sql_final_true": 0,
+    "final_disagree": 8,
+    "p12_scope_rows": 113
+  },
+  "2026-02-13_reply_only": {
+    "P1": 0.969004,
+    "P2": 0.96894,
+    "P3": 0.99981,
+    "P4": 0.559774,
+    "P4_on_P1P2_scope": 0.168142,
+    "FINAL": 0.999493,
+    "excel_final_true": 8,
+    "sql_final_true": 0,
+    "final_disagree": 8,
+    "p12_scope_rows": 113
+  }
+}

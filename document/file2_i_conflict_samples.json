@@ -1,0 +1,925 @@
+{
+  "generated_at": "2026-02-28 21:26:39",
+  "input": {
+    "config": "e:\\program\\PythonProject3\\config.json",
+    "excel": "e:\\program\\PythonProject3\\example\\内部接口信息单报表181820260128.xlsx",
+    "excel_rows": 15776,
+    "matched_rows": 15775,
+    "unmatched_rows": 1,
+    "unmatched_samples": [
+      {
+        "row": 3528,
+        "A": "18185CSPZL25A2S648",
+        "E": "A",
+        "R": "S-CSP-NLS-2LX-01-25A2-25A5"
+      }
+    ],
+    "profiles_count": 4
+  },
+  "conflict_count": 24,
+  "profile_conflict_counter": {
+    "建筑结构所": 21,
+    "电气自动化所": 3
+  },
+  "reason_summary": {
+    "库内已变更为其他所/其他代码，需业务确认": 21,
+    "同R链路存在可命中科室，疑似桥表关联行选择差异": 1,
+    "SQL收文部门未出现该所代码（可能外所代码或历史编码）": 2
+  },
+  "items": [
+    {
+      "profile_name": "建筑结构所",
+      "row": 6462,
+      "A": "18185ZSTZL25E5S024",
+      "E": "B",
+      "R": "S-ZST-BA-1HJ-05-25E5-25C2",
+      "excel_I": "河北分公司-建筑结构所-结构二室",
+      "sql_receive_dept": "25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "6EF2CD1A2F0F435AAA076FBBC33FBBCF",
+        "matched_int_rev": "B",
+        "matched_proposed_dept": "25E5",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "B"
+        ],
+        "same_r_link_row_count": 4,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 7019,
+      "A": "18185ZSTZL25E5S023",
+      "E": "A",
+      "R": "S-ZST-BA-1HJ-04-25E5-25C2",
+      "excel_I": "河北分公司-建筑结构所-结构二室",
+      "sql_receive_dept": "25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "8FDD2708CE8D4B10ACA285464AC9197F",
+        "matched_int_rev": "A",
+        "matched_proposed_dept": "25E5",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "A"
+        ],
+        "same_r_link_row_count": 2,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 7293,
+      "A": "18185RCZL25C1S001",
+      "E": "A",
+      "R": "S-RC-RS-2D2-01-25C1-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "B3E2D3F5DB1D4050850F76A67E901D9B",
+        "matched_int_rev": "A",
+        "matched_proposed_dept": "25C1",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "A"
+        ],
+        "same_r_link_row_count": 3,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 7496,
+      "A": "18185NKZL25A2S001",
+      "E": "B",
+      "R": "S-5NK-NI-2D2-01-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "34225E6FE2FC45579128C5FFF7416FF8",
+        "matched_int_rev": "B",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "B"
+        ],
+        "same_r_link_row_count": 8,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 8476,
+      "A": "18185ZSTZL25E5S022",
+      "E": "A",
+      "R": "S-ZST-BA-1HJ-05-25E5-25C2",
+      "excel_I": "河北分公司-建筑结构所-结构二室",
+      "sql_receive_dept": "25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "CB3434B187504EC18D471EE9E8BF2D8D",
+        "matched_int_rev": "A",
+        "matched_proposed_dept": "25E5",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "A"
+        ],
+        "same_r_link_row_count": 4,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 9432,
+      "A": "18185NKZL25A2S002",
+      "E": "C",
+      "R": "S-5NK-NI-2D2-01-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "20DA389C88DB46E3A88984F1D7945041",
+        "matched_int_rev": "C",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "C"
+        ],
+        "same_r_link_row_count": 8,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 10348,
+      "A": "18185CSPZL25E5S008",
+      "E": "A",
+      "R": "S-CSP-BA-1HJ-01-25E5-25C2",
+      "excel_I": "河北分公司-建筑结构所-结构二室",
+      "sql_receive_dept": "25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "02B3220EBADE41068B59E01F4768920F",
+        "matched_int_rev": "A",
+        "matched_proposed_dept": "25E5",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "A"
+        ],
+        "same_r_link_row_count": 4,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": true,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "同R链路存在可命中科室，疑似桥表关联行选择差异",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": [
+          {
+            "row_id": "F6ED08CA167549F0BD3DB8BC837F6556",
+            "rev": "B",
+            "receive_dept": "25C2"
+          }
+        ]
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 11290,
+      "A": "181855NKZL25A2S001",
+      "E": "A",
+      "R": "S-5NK-NI-2D2-01-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "BDFBB21ADC7744208649FB229E5DC59B",
+        "matched_int_rev": "A",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "A"
+        ],
+        "same_r_link_row_count": 8,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14005,
+      "A": "18185NKZL25A2S007",
+      "E": "A",
+      "R": "S-5NK-NI-2D2-03-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "C5AA95FD55AD4EABB006DAAF81CF4689",
+        "matched_int_rev": "A",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "A"
+        ],
+        "same_r_link_row_count": 6,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14061,
+      "A": "18185NKZL25A2S012",
+      "E": "D",
+      "R": "S-5NK-NI-2D2-02-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "E2B3169D8E57466B91FE46E79099061F",
+        "matched_int_rev": "D",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "D"
+        ],
+        "same_r_link_row_count": 10,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14328,
+      "A": "18185NKZL25A2S019",
+      "E": "D",
+      "R": "S-5NK-NI-2D2-05-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "B04AFFE372024602893DA87C23A39389",
+        "matched_int_rev": "D",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "D"
+        ],
+        "same_r_link_row_count": 8,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14369,
+      "A": "18185NKZL25A2S017",
+      "E": "B",
+      "R": "S-5NK-NI-2D2-04-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "EA3A0FE9F6984F30AA40AC5F6E74DA3C",
+        "matched_int_rev": "B",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "B"
+        ],
+        "same_r_link_row_count": 4,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14406,
+      "A": "18185NKZL25A2S016",
+      "E": "B",
+      "R": "S-5NK-NI-2D2-05-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "7007A0E39E1747579FC50C65F7FEE7F8",
+        "matched_int_rev": "B",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "B"
+        ],
+        "same_r_link_row_count": 8,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14572,
+      "A": "18185NKZL25A2S011",
+      "E": "A",
+      "R": "S-5NK-NI-2D2-04-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "F4284E2375DB4A4E8C6C2C91794207BE",
+        "matched_int_rev": "A",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 2,
+        "same_item_same_rev_row_count": 2,
+        "same_item_revs": [
+          "A"
+        ],
+        "same_r_link_row_count": 4,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14590,
+      "A": "181855NKZL25A2S005",
+      "E": "A",
+      "R": "S-5NK-NI-2D2-05-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "E7C6362D8E0D48CB8A4ADB0759732E89",
+        "matched_int_rev": "A",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "A"
+        ],
+        "same_r_link_row_count": 8,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14605,
+      "A": "18185NKZL25A2S018",
+      "E": "C",
+      "R": "S-5NK-NI-2D2-05-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "A7E00F56DD0046FD89B90F3394BC5963",
+        "matched_int_rev": "C",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "C"
+        ],
+        "same_r_link_row_count": 8,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14612,
+      "A": "18185NKZL25A2S004",
+      "E": "B",
+      "R": "S-5NK-NI-2D2-02-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "4394DBB3C4024D08A64E2E0B5BFA8512",
+        "matched_int_rev": "B",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "B"
+        ],
+        "same_r_link_row_count": 10,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14661,
+      "A": "18185NKZL25A2S009",
+      "E": "C",
+      "R": "S-5NK-NI-2D2-02-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "62DA0A50C22440CCB7347133C5A6CF53",
+        "matched_int_rev": "C",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "C"
+        ],
+        "same_r_link_row_count": 10,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14709,
+      "A": "18185NKZL25A2S014",
+      "E": "C",
+      "R": "S-5NK-NI-2D2-03-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "15A797244F4A49EAB6D164CDB46AA8C5",
+        "matched_int_rev": "C",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "C"
+        ],
+        "same_r_link_row_count": 6,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14802,
+      "A": "18185NKZL25A2S010",
+      "E": "B",
+      "R": "S-5NK-NI-2D2-03-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "3E157B83FF5B4ADE8AAC73C9DE496CED",
+        "matched_int_rev": "B",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "B"
+        ],
+        "same_r_link_row_count": 6,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "建筑结构所",
+      "row": 14987,
+      "A": "18185NKZL25A2S003",
+      "E": "A",
+      "R": "S-5NK-NI-2D2-02-25A2-22P4",
+      "excel_I": "建筑结构所-结构二室",
+      "sql_receive_dept": "22P3,22P4,25C1",
+      "excel_codes": [
+        "25C2"
+      ],
+      "sql_codes": [
+        "25C1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "FBB3D652ECED48558E06EF34120E0DF3",
+        "matched_int_rev": "A",
+        "matched_proposed_dept": "25A2",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "A"
+        ],
+        "same_r_link_row_count": 10,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "电气自动化所",
+      "row": 4773,
+      "A": "18185ZSTZL25A6B603",
+      "E": "B",
+      "R": "B-ZST-BA-1GH-02-25A6-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "河北分公司-核工程研究设计所-设备室,河北分公司-电气自动化所-仪控二室",
+      "excel_codes": [
+        "25B2"
+      ],
+      "sql_codes": [
+        "25B3"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "C2C9E90B503A4E21B91FB7D3DC803E2A",
+        "matched_int_rev": "B",
+        "matched_proposed_dept": "河北分公司-核电工艺所-工艺系统室",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "B"
+        ],
+        "same_r_link_row_count": 6,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": true
+        },
+        "reason": "SQL收文部门未出现该所代码（可能外所代码或历史编码）",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "电气自动化所",
+      "row": 14269,
+      "A": "18185ZSTZL25A6B604",
+      "E": "C",
+      "R": "B-ZST-BA-1GH-02-25A6-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "25B3,25E5",
+      "excel_codes": [
+        "25B2"
+      ],
+      "sql_codes": [
+        "25B3"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "4E4023E0885C4A76B647CD53FC692207",
+        "matched_int_rev": "C",
+        "matched_proposed_dept": "25A6",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "C"
+        ],
+        "same_r_link_row_count": 6,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": false
+        },
+        "reason": "库内已变更为其他所/其他代码，需业务确认",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    },
+    {
+      "profile_name": "电气自动化所",
+      "row": 14278,
+      "A": "18185FDPZL22C7C602",
+      "E": "A",
+      "R": "B-FDP---1SS-03-22Q8-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "河北分公司-核电工艺所-水工室,河北分公司-电气自动化所-仪控室,河北分公司-电气自动化所-电气室",
+      "excel_codes": [
+        "25B2"
+      ],
+      "sql_codes": [
+        "25B1"
+      ],
+      "diagnosis": {
+        "matched_int_row_id": "86663FD6E6404AFCA7376465149B8E94",
+        "matched_int_rev": "A",
+        "matched_proposed_dept": "系统与布置设计所-公用二室",
+        "same_item_row_count": 1,
+        "same_item_same_rev_row_count": 1,
+        "same_item_revs": [
+          "A"
+        ],
+        "same_r_link_row_count": 2,
+        "flags": {
+          "same_item_same_rev_has_excel_code": false,
+          "same_item_other_rev_has_excel_code": false,
+          "same_r_link_has_excel_code": false,
+          "matched_row_proposed_has_excel_code": false,
+          "matched_row_no_profile_code": true
+        },
+        "reason": "SQL收文部门未出现该所代码（可能外所代码或历史编码）",
+        "same_item_same_rev_hit_samples": [],
+        "same_item_any_rev_hit_samples": [],
+        "same_r_link_hit_samples": []
+      }
+    }
+  ]
+}

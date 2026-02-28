@@ -1,0 +1,122 @@
+{
+  "generated_at": "2026-02-28 00:10:44",
+  "rows": {
+    "all": 421914,
+    "current": 191971,
+    "current_1818": 14766
+  },
+  "indices": {
+    "PROJ_NUM": 28,
+    "ITEM_NUMBER": 27,
+    "RECEIVE_DEPT": 39,
+    "PROPOSED_DEPT": 38,
+    "REPLY_DEADLINE": 57,
+    "ANSWER_DATE": 58,
+    "START_DATE": 47,
+    "REV": 56,
+    "RESP_SHEZONG": 55,
+    "RE_OPEN_RESP_SHEZONG": 61,
+    "RELEVANT_PERSON": 62,
+    "IS_CURRENT": 13,
+    "CONFIG_ID": 21,
+    "MODIFIED_ON": 8
+  },
+  "metrics_current_all": {
+    "total_rows": 191971,
+    "proj_non_empty_rate": 1.0,
+    "item_non_empty_rate": 1.0,
+    "receive_non_empty_rate": 0.993905,
+    "proposed_non_empty_rate": 0.994739,
+    "receive_org_or_code_rate": 0.084492,
+    "proposed_org_or_code_rate": 0.089336,
+    "reply_deadline_parseable_rate": 0.005345,
+    "answer_date_parseable_rate": 0.273145,
+    "start_date_parseable_rate": 0.318189,
+    "rev_non_empty_rate": 0.999568,
+    "owner": {
+      "RESP_SHEZONG": {
+        "total": 191971,
+        "non_empty_rate": 0.70818,
+        "hex32_rate": 0.0,
+        "resolved_user_rate": 0.0,
+        "resolved_dept_rate": 0.0
+      },
+      "RE_OPEN_RESP_SHEZONG": {
+        "total": 191971,
+        "non_empty_rate": 0.001901,
+        "hex32_rate": 0.0,
+        "resolved_user_rate": 0.0,
+        "resolved_dept_rate": 0.0
+      },
+      "RELEVANT_PERSON": {
+        "total": 191971,
+        "non_empty_rate": 0.000979,
+        "hex32_rate": 0.0,
+        "resolved_user_rate": 0.0,
+        "resolved_dept_rate": 0.0
+      },
+      "FALLBACK_RESP_REOPEN_RELEVANT": {
+        "total": 191971,
+        "non_empty_rate": 0.708227,
+        "hex32_rate": 0.0,
+        "resolved_user_rate": 0.0,
+        "resolved_dept_rate": 0.0
+      }
+    },
+    "dept_filtered_subset": {
+      "rows": 30969,
+      "reply_deadline_parseable_rate": 0.000969,
+      "answer_date_parseable_rate": 0.296651,
+      "start_date_parseable_rate": 0.288611
+    }
+  },
+  "metrics_current_1818": {
+    "total_rows": 14766,
+    "proj_non_empty_rate": 1.0,
+    "item_non_empty_rate": 1.0,
+    "receive_non_empty_rate": 0.994514,
+    "proposed_non_empty_rate": 0.994514,
+    "receive_org_or_code_rate": 0.131451,
+    "proposed_org_or_code_rate": 0.135853,
+    "reply_deadline_parseable_rate": 0.001016,
+    "answer_date_parseable_rate": 0.295476,
+    "start_date_parseable_rate": 0.41047,
+    "rev_non_empty_rate": 0.994514,
+    "owner": {
+      "RESP_SHEZONG": {
+        "total": 14766,
+        "non_empty_rate": 0.819653,
+        "hex32_rate": 0.0,
+        "resolved_user_rate": 0.0,
+        "resolved_dept_rate": 0.0
+      },
+      "RE_OPEN_RESP_SHEZONG": {
+        "total": 14766,
+        "non_empty_rate": 0.002235,
+        "hex32_rate": 0.0,
+        "resolved_user_rate": 0.0,
+        "resolved_dept_rate": 0.0
+      },
+      "RELEVANT_PERSON": {
+        "total": 14766,
+        "non_empty_rate": 0.00088,
+        "hex32_rate": 0.0,
+        "resolved_user_rate": 0.0,
+        "resolved_dept_rate": 0.0
+      },
+      "FALLBACK_RESP_REOPEN_RELEVANT": {
+        "total": 14766,
+        "non_empty_rate": 0.819653,
+        "hex32_rate": 0.0,
+        "resolved_user_rate": 0.0,
+        "resolved_dept_rate": 0.0
+      }
+    },
+    "dept_filtered_subset": {
+      "rows": 3676,
+      "reply_deadline_parseable_rate": 0.000544,
+      "answer_date_parseable_rate": 0.486942,
+      "start_date_parseable_rate": 0.431719
+    }
+  }
+}

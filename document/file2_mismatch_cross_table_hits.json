@@ -1,0 +1,362 @@
+[
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "0DDBB0D533C3475EBD077C8E0A4C91A3",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-GT---1PJ-05-25A4-25C2"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-GT---1PJ-05-25A4-25C2"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-04-15"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "0DE4111DA750419E92396DCC62B214D8",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-BOP-AS-1JJ-02-25C3-25C3"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-BOP-AS-1JJ-02-25C3-25C3"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-06-30"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "0F783494934E423592A7C8CC03E35B05",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-EI---1JZ-01-25C3-25C3"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-EI---1JZ-01-25C3-25C3"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-12-30"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "10AE7A8307534BC28A16772A208F6044",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-BOP-AS-1JJ-02-25C3-25C3"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-BOP-AS-1JJ-02-25C3-25C3"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-06-30"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "1266ABC76C7C46E090C817B1E7BB3B2C",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-GT---1TJ-04-25E6-25C2"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-GT---1TJ-04-25E6-25C2"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-02-28"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "12EB8FE132D142FD8038B15909B294C7",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-BL---1DJ-01-25B1-25C3"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-BL---1DJ-01-25B1-25C3"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-12-30"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "21291D472F6D48409E6C087AAF86C868",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-GT---1TJ-04-25E6-25C2"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-GT---1TJ-04-25E6-25C2"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-02-28"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "2773F31148234AFFBF9AF39F831E521F",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-BOP-AS-1BJ-04-25D1-25C3"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-BOP-AS-1BJ-04-25D1-25C3"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-06-30"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "2982EC2681EA4A96B14BA4C8C5139D6D",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-GT---1PJ-07-25A4-25C2"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-GT---1PJ-07-25A4-25C2"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-04-15"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "2E54B1656E464210B8F8F3F4898BAEC7",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-EI---1JZ-01-25C3-25C3"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-EI---1JZ-01-25C3-25C3"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-12-30"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "2EEDC4C6F7C0461B8E7869E531661E24",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-GT---1PJ-05-25A4-25C2"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-GT---1PJ-05-25A4-25C2"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-04-15"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "32B14B9392CF4188B569ACA9C16D8322",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-GT---1PJ-07-25A4-25C2"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-GT---1PJ-07-25A4-25C2"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-04-15"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "33070AD191D340479C3787DE6B2E46CE",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-ZT---1GJ-01-25A4-25C2"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-ZT---1GJ-01-25A4-25C2"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-12-30"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "3C8F7E23D8FB4CE8962110823DDD5D00",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-BOP-AS-1JJ-02-25C3-25C3"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-BOP-AS-1JJ-02-25C3-25C3"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-06-30"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "456D75EA29C548B1A29B4634E14EE1B4",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-BOP-AS-1BJ-04-25D1-25C3"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-BOP-AS-1BJ-04-25D1-25C3"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-06-30"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "4E82606475BA4B9AA58FDFFC367EF803",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-ZT---1GJ-01-25A4-25C2"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-ZT---1GJ-01-25A4-25C2"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-12-30"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "56860AAAC5AB469A83D567822880AB9C",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-ZT---1GJ-01-25A4-25C2"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-ZT---1GJ-01-25A4-25C2"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-12-30"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "5892F560D992451195D57BCE13D5F353",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-EI---1JZ-01-25C3-25C3"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-EI---1JZ-01-25C3-25C3"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-12-30"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "5A7F065A81914C0CAF0B5ABC1C4B2A32",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-GT---1TJ-04-25E6-25C2"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-GT---1TJ-04-25E6-25C2"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-02-28"
+  },
+  {
+    "table": "IDIACP1000.sql",
+    "row_id": "5A9B254D48FB434E99FF3B799E6E5C92",
+    "proj": "1818",
+    "hits": [
+      [
+        "CSS",
+        "S-BL---1DJ-01-25B1-25C3"
+      ],
+      [
+        "ITEM_NUMBER",
+        "S-BL---1DJ-01-25B1-25C3"
+      ]
+    ],
+    "M_like": "",
+    "N_like": "",
+    "close_like": "2026-12-30"
+  }
+]

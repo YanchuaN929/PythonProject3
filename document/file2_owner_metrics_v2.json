@@ -1,0 +1,56 @@
+{
+  "current_all": {
+    "rows": 191971,
+    "RESP_SHEZONG": {
+      "non_empty_rate": 0.70818,
+      "hex32_rate": 0.70818,
+      "resolved_user_rate": 0.70818,
+      "resolved_dept_rate": 0.70818
+    },
+    "RE_OPEN_RESP_SHEZONG": {
+      "non_empty_rate": 0.001901,
+      "hex32_rate": 0.001901,
+      "resolved_user_rate": 0.001901,
+      "resolved_dept_rate": 0.001901
+    },
+    "RELEVANT_PERSON": {
+      "non_empty_rate": 0.000979,
+      "hex32_rate": 0.000979,
+      "resolved_user_rate": 0.000979,
+      "resolved_dept_rate": 0.000979
+    },
+    "FALLBACK": {
+      "non_empty_rate": 0.708227,
+      "hex32_rate": 0.708227,
+      "resolved_user_rate": 0.708227,
+      "resolved_dept_rate": 0.708227
+    }
+  },
+  "current_1818": {
+    "rows": 14766,
+    "RESP_SHEZONG": {
+      "non_empty_rate": 0.819653,
+      "hex32_rate": 0.819653,
+      "resolved_user_rate": 0.819653,
+      "resolved_dept_rate": 0.819653
+    },
+    "RE_OPEN_RESP_SHEZONG": {
+      "non_empty_rate": 0.002235,
+      "hex32_rate": 0.002235,
+      "resolved_user_rate": 0.002235,
+      "resolved_dept_rate": 0.002235
+    },
+    "RELEVANT_PERSON": {
+      "non_empty_rate": 0.00088,
+      "hex32_rate": 0.00088,
+      "resolved_user_rate": 0.00088,
+      "resolved_dept_rate": 0.00088
+    },
+    "FALLBACK": {
+      "non_empty_rate": 0.819653,
+      "hex32_rate": 0.819653,
+      "resolved_user_rate": 0.819653,
+      "resolved_dept_rate": 0.819653
+    }
+  }
+}

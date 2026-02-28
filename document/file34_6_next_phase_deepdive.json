@@ -1,0 +1,1359 @@
+{
+  "file6_int_coverage_deepdive": {
+    "file6_total_rows": 1696,
+    "file6_key_type_counts": {
+      "letter_key": 1248,
+      "int_key": 385,
+      "other_key": 59,
+      "empty_key": 4
+    },
+    "int_exact_current_hits": 325,
+    "int_drop_current_hits": 366,
+    "int_exact_allver_hits": 325,
+    "int_drop_allver_hits": 366,
+    "unresolved_after_int_current_drop_count": 1330,
+    "unresolved_after_int_current_drop_by_type": {
+      "int_key": 21,
+      "empty_key": 4,
+      "other_key": 57,
+      "letter_key": 1248
+    },
+    "unresolved_samples": [
+      {
+        "row_idx": 2,
+        "raw_key": "1818-5-AC-ZL-22Q8-C-004",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 3,
+        "raw_key": "1818-5-BN-ZL-25B3-S-001",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 4,
+        "raw_key": "1818-5-BOP-ZL-22P6-S-001",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 5,
+        "raw_key": "1818-5-BOP-ZL-25A5-S-001",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 6,
+        "raw_key": "1818-5-DO-ZL-25A4-S-001",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 7,
+        "raw_key": "1818-5-GA-ZL-25A4-S-006",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 13,
+        "raw_key": "1818-5-HH-ZL-25B3-S-008",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 14,
+        "raw_key": "1818-5-LEL-ZL-25B2-S-001",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 15,
+        "raw_key": "1818-5-MCR-ZL-22E5-S-001",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 16,
+        "raw_key": "1818-5-NA-ZL-25B2-S-001",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 17,
+        "raw_key": "1818-5-NA-ZL-25B2-S-002",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 20,
+        "raw_key": "1818-5-NE-ZL-22E5-S-004",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 22,
+        "raw_key": "1818-5-NF-ZL-22D4-S-006",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 23,
+        "raw_key": "1818-5-NI-ZL-22A6-S-001",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 24,
+        "raw_key": "1818-5-NI-ZL-22A7-S-003",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 29,
+        "raw_key": "1818-5-NI-ZL-22E2-B-037",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 30,
+        "raw_key": "1818-5-NI-ZL-22N1-S-038",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 31,
+        "raw_key": "1818-5-NI-ZL-22N1-S-039",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 32,
+        "raw_key": "1818-5-NI-ZL-22N1-S-040",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 33,
+        "raw_key": "1818-5-NI-ZL-22N1-S-041",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 56,
+        "raw_key": "1818-5-ZH-ZL-22A0-S-001",
+        "key_type": "int_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 64,
+        "raw_key": "",
+        "key_type": "empty_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 65,
+        "raw_key": "",
+        "key_type": "empty_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 66,
+        "raw_key": "",
+        "key_type": "empty_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 67,
+        "raw_key": "",
+        "key_type": "empty_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 68,
+        "raw_key": "001",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 69,
+        "raw_key": "1818BW20260002",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 70,
+        "raw_key": "1818BW22C520260001",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 71,
+        "raw_key": "1818BW22D320260002",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 72,
+        "raw_key": "1818BW22E02026",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 73,
+        "raw_key": "1818BW22E12026",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 74,
+        "raw_key": "1818BW22K020260004",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 75,
+        "raw_key": "1818BW22K020260005",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 76,
+        "raw_key": "1818BW22K020260006",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 77,
+        "raw_key": "1818BW22K020260007",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 78,
+        "raw_key": "1818BW22K020260008",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 79,
+        "raw_key": "1818BW22P420260001",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 80,
+        "raw_key": "1818BW22Q22026",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 81,
+        "raw_key": "1818BW252020260002",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 82,
+        "raw_key": "1818BW252020260003",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 83,
+        "raw_key": "1818BW252020260004",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 84,
+        "raw_key": "1818BW252020260005",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 85,
+        "raw_key": "1818BW252020260006",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 86,
+        "raw_key": "1818BW252020260007",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 87,
+        "raw_key": "1818BW25A020260001",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 88,
+        "raw_key": "1818BW25A020260002",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 89,
+        "raw_key": "1818BW25A020260003",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 90,
+        "raw_key": "1818BW25A120260002",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 91,
+        "raw_key": "1818BW25A220260001",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 92,
+        "raw_key": "1818BW25A32026",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 93,
+        "raw_key": "1818BW25A32026",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 94,
+        "raw_key": "1818BW25A42026",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 95,
+        "raw_key": "1818BW25A420260002",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 96,
+        "raw_key": "1818BW25A620260001",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 97,
+        "raw_key": "1818BW25B120260003",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 98,
+        "raw_key": "1818BW25B120260004",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 99,
+        "raw_key": "1818BW25B120260005",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 100,
+        "raw_key": "1818BW25B22026",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 101,
+        "raw_key": "1818BW25B320260001",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      },
+      {
+        "row_idx": 102,
+        "raw_key": "1818BW25B320260002",
+        "key_type": "other_key",
+        "in_int_allver_exact": false,
+        "in_int_allver_drop": false
+      }
+    ]
+  },
+  "file4_p_v_gap_deepdive": {
+    "file4_rows_with_sql_match": 17830,
+    "P_condition_match_rate_release_model": 0.690017,
+    "P_condition_match_rate_receive_model": 0.418845,
+    "V_empty_match_rate_final_close_model": 0.709815,
+    "V_empty_match_rate_close_model": 0.624734,
+    "sample_mismatch_P_release_model": [
+      {
+        "row_idx": 2,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "EHTJ",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 3,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "N",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 5,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "ZJJD",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 8,
+        "excel_P": "EHZZ",
+        "excel_AC": "EHZZ",
+        "excel_P_cond": false,
+        "sql_release_party": "B",
+        "sql_receive_party": "EHZZ",
+        "sql_release_cond": true
+      },
+      {
+        "row_idx": 12,
+        "excel_P": "EFCS",
+        "excel_AC": "EFCS",
+        "excel_P_cond": false,
+        "sql_release_party": "B",
+        "sql_receive_party": "EFCS",
+        "sql_release_cond": true
+      },
+      {
+        "row_idx": 14,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "ZJJD",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 16,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "XCHZ",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 17,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "GLDQ",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 19,
+        "excel_P": "EFCS",
+        "excel_AC": "EFCS",
+        "excel_P_cond": false,
+        "sql_release_party": "B",
+        "sql_receive_party": "EFCS",
+        "sql_release_cond": true
+      },
+      {
+        "row_idx": 20,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "EHHG",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 21,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "N",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 22,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "ZN23",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 25,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "SYIP",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 29,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "SNPC",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 30,
+        "excel_P": "N",
+        "excel_AC": "N",
+        "excel_P_cond": false,
+        "sql_release_party": "B",
+        "sql_receive_party": "N",
+        "sql_release_cond": true
+      },
+      {
+        "row_idx": 34,
+        "excel_P": "EFCK",
+        "excel_AC": "EFCK",
+        "excel_P_cond": false,
+        "sql_release_party": "B",
+        "sql_receive_party": "EFCK",
+        "sql_release_cond": true
+      },
+      {
+        "row_idx": 35,
+        "excel_P": "N",
+        "excel_AC": "N",
+        "excel_P_cond": false,
+        "sql_release_party": "B",
+        "sql_receive_party": "N",
+        "sql_release_cond": true
+      },
+      {
+        "row_idx": 36,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "ZJJD",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 40,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "N",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 41,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "XCHZ",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 46,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "ZN23",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 48,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "ZN23",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 53,
+        "excel_P": "nan",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "EFZK",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 55,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "N",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 56,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "N",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      },
+      {
+        "row_idx": 57,
+        "excel_P": "E",
+        "excel_AC": "E",
+        "excel_P_cond": false,
+        "sql_release_party": "B",
+        "sql_receive_party": "E",
+        "sql_release_cond": true
+      },
+      {
+        "row_idx": 60,
+        "excel_P": "N",
+        "excel_AC": "N",
+        "excel_P_cond": false,
+        "sql_release_party": "B",
+        "sql_receive_party": "N",
+        "sql_release_cond": true
+      },
+      {
+        "row_idx": 61,
+        "excel_P": "N",
+        "excel_AC": "N",
+        "excel_P_cond": false,
+        "sql_release_party": "B",
+        "sql_receive_party": "N",
+        "sql_release_cond": true
+      },
+      {
+        "row_idx": 62,
+        "excel_P": "EHHG",
+        "excel_AC": "EHHG",
+        "excel_P_cond": false,
+        "sql_release_party": "B",
+        "sql_receive_party": "EHHG",
+        "sql_release_cond": true
+      },
+      {
+        "row_idx": 63,
+        "excel_P": "B",
+        "excel_AC": "B",
+        "excel_P_cond": true,
+        "sql_release_party": "SYIP-01",
+        "sql_receive_party": "B",
+        "sql_release_cond": false
+      }
+    ],
+    "sample_mismatch_P_receive_model": [
+      {
+        "row_idx": 6,
+        "excel_P": "ZDHS",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "ZDHS",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 11,
+        "excel_P": "GLDQ",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "GLDQ",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 13,
+        "excel_P": "EHYZ",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "EHYZ",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 15,
+        "excel_P": "TJAB",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "TJAB",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 23,
+        "excel_P": "TJHW",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "TJHW",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 24,
+        "excel_P": "SXZH",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "SXZH",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 27,
+        "excel_P": "EHLS",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "EHLS",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 32,
+        "excel_P": "SYIP-01",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "SYIP-01",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 33,
+        "excel_P": "SYIP-01",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "SYIP-01",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 37,
+        "excel_P": "TJAB",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "TJAB",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 38,
+        "excel_P": "GLDQ",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "GLDQ",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 39,
+        "excel_P": "ZJJD",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "ZJJD",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 42,
+        "excel_P": "NTKL",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "NTKL",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 44,
+        "excel_P": "HNHJ",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "HNHJ",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 47,
+        "excel_P": "EHHW",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "EHHW",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 49,
+        "excel_P": "SYIP-02",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "SYIP-02",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 50,
+        "excel_P": "EHYZ",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "EHYZ",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 52,
+        "excel_P": "EHYZ",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "EHYZ",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 54,
+        "excel_P": "EHHQ",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "EHHQ",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 58,
+        "excel_P": "XNIC",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "XNIC",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 64,
+        "excel_P": "TJHW",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "TJHW",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 65,
+        "excel_P": "EHAH",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "EHAH",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 68,
+        "excel_P": "EHPC",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "EHPC",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 70,
+        "excel_P": "NTKL",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "NTKL",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 71,
+        "excel_P": "SYIP-01",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "SYIP-01",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 76,
+        "excel_P": "SYIP-01",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "SYIP-01",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 78,
+        "excel_P": "SNPC",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "SNPC",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 84,
+        "excel_P": "ZJJD",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "ZJJD",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 86,
+        "excel_P": "ZDHS",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "ZDHS",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      },
+      {
+        "row_idx": 87,
+        "excel_P": "STH",
+        "excel_AC": "B",
+        "excel_P_cond": false,
+        "sql_release_party": "STH",
+        "sql_receive_party": "B",
+        "sql_receive_cond": true
+      }
+    ],
+    "sample_mismatch_V_final_model": [
+      {
+        "row_idx": 5,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 19,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2025-09-30"
+      },
+      {
+        "row_idx": 30,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 34,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2025-09-08"
+      },
+      {
+        "row_idx": 39,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 54,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 62,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2025-11-19"
+      },
+      {
+        "row_idx": 67,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2025-09-10"
+      },
+      {
+        "row_idx": 82,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2025-08-31"
+      },
+      {
+        "row_idx": 89,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 98,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 101,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 106,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2026-01-19"
+      },
+      {
+        "row_idx": 112,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2026-02-10"
+      },
+      {
+        "row_idx": 113,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2025-04-18"
+      },
+      {
+        "row_idx": 115,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 120,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 129,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2025-07-14"
+      },
+      {
+        "row_idx": 134,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 143,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2025-10-29"
+      },
+      {
+        "row_idx": 145,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2025-09-30"
+      },
+      {
+        "row_idx": 151,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2026-02-10"
+      },
+      {
+        "row_idx": 152,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 159,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 164,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 190,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2025-08-18"
+      },
+      {
+        "row_idx": 199,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 206,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      },
+      {
+        "row_idx": 210,
+        "excel_V_empty": true,
+        "sql_final_close_empty": false,
+        "sql_final_close_date": "2025-12-18"
+      },
+      {
+        "row_idx": 212,
+        "excel_V_empty": false,
+        "sql_final_close_empty": true,
+        "sql_final_close_date": ""
+      }
+    ],
+    "sample_mismatch_V_close_model": [
+      {
+        "row_idx": 7,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "9998-12-31 16:00:00.000"
+      },
+      {
+        "row_idx": 9,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "9998-12-31 16:00:00.000"
+      },
+      {
+        "row_idx": 18,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2025-12-30 16:00:00.000"
+      },
+      {
+        "row_idx": 19,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2026-07-30 16:00:00.000"
+      },
+      {
+        "row_idx": 25,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2025-10-29 16:00:00.000"
+      },
+      {
+        "row_idx": 26,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2026-03-30 16:00:00.000"
+      },
+      {
+        "row_idx": 28,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "9998-12-31 16:00:00.000"
+      },
+      {
+        "row_idx": 31,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2025-12-11 16:00:00.000"
+      },
+      {
+        "row_idx": 34,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2026-06-29 16:00:00.000"
+      },
+      {
+        "row_idx": 35,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      },
+      {
+        "row_idx": 36,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2026-09-14 16:00:00.000"
+      },
+      {
+        "row_idx": 40,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      },
+      {
+        "row_idx": 43,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2025-10-29 16:00:00.000"
+      },
+      {
+        "row_idx": 51,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2025-12-29 16:00:00.000"
+      },
+      {
+        "row_idx": 55,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      },
+      {
+        "row_idx": 56,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      },
+      {
+        "row_idx": 57,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      },
+      {
+        "row_idx": 60,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      },
+      {
+        "row_idx": 61,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      },
+      {
+        "row_idx": 62,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2025-12-29 16:00:00.000"
+      },
+      {
+        "row_idx": 67,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2026-07-30 16:00:00.000"
+      },
+      {
+        "row_idx": 69,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2026-06-29 16:00:00.000"
+      },
+      {
+        "row_idx": 74,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      },
+      {
+        "row_idx": 75,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      },
+      {
+        "row_idx": 81,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      },
+      {
+        "row_idx": 82,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2025-09-29 16:00:00.000"
+      },
+      {
+        "row_idx": 83,
+        "excel_V_empty": true,
+        "sql_close_empty": false,
+        "sql_close_date": "2025-12-29 16:00:00.000"
+      },
+      {
+        "row_idx": 88,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      },
+      {
+        "row_idx": 89,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      },
+      {
+        "row_idx": 90,
+        "excel_V_empty": false,
+        "sql_close_empty": true,
+        "sql_close_date": ""
+      }
+    ]
+  }
+}

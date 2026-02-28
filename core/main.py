@@ -560,7 +560,7 @@ def process_target_file(file_path, current_datetime):
             Monitor.log_error("文件为空，无法处理")
         except Exception:
             pass
-            return pd.DataFrame()
+        return pd.DataFrame()
         
     print(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
     try:

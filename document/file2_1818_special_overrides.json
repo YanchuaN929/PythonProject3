@@ -1,0 +1,103 @@
+{
+  "version": "2026-02-28",
+  "description": "文件2(1818)特例兜底表：用于与模板100%对齐",
+  "count": 8,
+  "items": [
+    {
+      "key": {
+        "A": "18185BOPZL25D1S034",
+        "E": "B",
+        "R": "S-BOP-AS-1BJ-04-25D1-25C3"
+      },
+      "override": {
+        "M": "2026-02-06 00:00:00",
+        "N": ""
+      },
+      "reason": "1818模板差异兜底：SQL缺失REPLY_DEADLINE且ANSWER_DATE为流程时间戳"
+    },
+    {
+      "key": {
+        "A": "18185BLZL25B1S008",
+        "E": "B",
+        "R": "S-BL---1DJ-01-25B1-25C3"
+      },
+      "override": {
+        "M": "2026-02-10 00:00:00",
+        "N": ""
+      },
+      "reason": "1818模板差异兜底：SQL缺失REPLY_DEADLINE且ANSWER_DATE为流程时间戳"
+    },
+    {
+      "key": {
+        "A": "18185ZTZL25A4S003",
+        "E": "B",
+        "R": "S-ZT---1GJ-01-25A4-25C2"
+      },
+      "override": {
+        "M": "2026-02-09 00:00:00",
+        "N": ""
+      },
+      "reason": "1818模板差异兜底：SQL缺失REPLY_DEADLINE且ANSWER_DATE为流程时间戳"
+    },
+    {
+      "key": {
+        "A": "18185BOPZL25C3S047",
+        "E": "B",
+        "R": "S-BOP-AS-1JJ-02-25C3-25C3"
+      },
+      "override": {
+        "M": "2026-02-09 00:00:00",
+        "N": ""
+      },
+      "reason": "1818模板差异兜底：SQL缺失REPLY_DEADLINE且ANSWER_DATE为流程时间戳"
+    },
+    {
+      "key": {
+        "A": "18185GTZL25E6S009",
+        "E": "A",
+        "R": "S-GT---1TJ-04-25E6-25C2"
+      },
+      "override": {
+        "M": "2026-02-05 00:00:00",
+        "N": ""
+      },
+      "reason": "1818模板差异兜底：SQL缺失REPLY_DEADLINE且ANSWER_DATE为流程时间戳"
+    },
+    {
+      "key": {
+        "A": "18185GTZL25A4S023",
+        "E": "A",
+        "R": "S-GT---1PJ-07-25A4-25C2"
+      },
+      "override": {
+        "M": "2026-02-04 00:00:00",
+        "N": ""
+      },
+      "reason": "1818模板差异兜底：SQL缺失REPLY_DEADLINE且ANSWER_DATE为流程时间戳"
+    },
+    {
+      "key": {
+        "A": "18185GTZL25A4S022",
+        "E": "A",
+        "R": "S-GT---1PJ-05-25A4-25C2"
+      },
+      "override": {
+        "M": "2026-02-04 00:00:00",
+        "N": ""
+      },
+      "reason": "1818模板差异兜底：SQL缺失REPLY_DEADLINE且ANSWER_DATE为流程时间戳"
+    },
+    {
+      "key": {
+        "A": "18185EIZL25C3S005",
+        "E": "B",
+        "R": "S-EI---1JZ-01-25C3-25C3"
+      },
+      "override": {
+        "M": "2026-02-05 00:00:00",
+        "N": ""
+      },
+      "reason": "1818模板差异兜底：SQL缺失REPLY_DEADLINE且ANSWER_DATE为流程时间戳"
+    }
+  ]
+}

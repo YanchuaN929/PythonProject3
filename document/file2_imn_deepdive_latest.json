@@ -1,0 +1,628 @@
+{
+  "input": {
+    "excel": "e:\\program\\PythonProject3\\example\\内部接口信息单报表181820260128.xlsx",
+    "project_id": "1818",
+    "excel_rows": 15776,
+    "matched_rows": 15775,
+    "unmatched_rows": 1,
+    "p1_scope_rows": 1928,
+    "p1_scope_25c_rows": 1391
+  },
+  "unmatched_samples": [
+    {
+      "row": 3528,
+      "A": "18185CSPZL25A2S648",
+      "E": "A",
+      "R": "S-CSP-NLS-2LX-01-25A2-25A5"
+    }
+  ],
+  "I_column_candidates": [
+    {
+      "candidate": "INT.RECEIVE_DEPT",
+      "exact_match_rate_all": 0.11252,
+      "semantic_match_rate_all": 0.973946,
+      "exact_match_rate_p1_scope": 0.016598,
+      "semantic_match_rate_p1_scope": 0.998444,
+      "scope_code_equiv_rate_p1": 0.993763,
+      "scope_code_equiv_rows": 1924,
+      "scope_25c_code_equiv_rate": 0.996405,
+      "scope_25c_rows": 1391
+    },
+    {
+      "candidate": "CHAIN.RECEIVE_OR_PROPOSED",
+      "exact_match_rate_all": 0.11252,
+      "semantic_match_rate_all": 0.973946,
+      "exact_match_rate_p1_scope": 0.016598,
+      "semantic_match_rate_p1_scope": 0.998444,
+      "scope_code_equiv_rate_p1": 0.993763,
+      "scope_code_equiv_rows": 1924,
+      "scope_25c_code_equiv_rate": 0.996405,
+      "scope_25c_rows": 1391
+    },
+    {
+      "candidate": "CHAIN.SCOPE_CODE_PREFERRED",
+      "exact_match_rate_all": 0.102948,
+      "semantic_match_rate_all": 0.964564,
+      "exact_match_rate_p1_scope": 0.014523,
+      "semantic_match_rate_p1_scope": 0.998444,
+      "scope_code_equiv_rate_p1": 0.993763,
+      "scope_code_equiv_rows": 1924,
+      "scope_25c_code_equiv_rate": 0.840403,
+      "scope_25c_rows": 1391
+    },
+    {
+      "candidate": "IDI.RELEASE_PARTY",
+      "exact_match_rate_all": 6.3e-05,
+      "semantic_match_rate_all": 0.842979,
+      "exact_match_rate_p1_scope": 0.0,
+      "semantic_match_rate_p1_scope": 0.969917,
+      "scope_code_equiv_rate_p1": 0.201143,
+      "scope_code_equiv_rows": 1924,
+      "scope_25c_code_equiv_rate": 0.273185,
+      "scope_25c_rows": 1391
+    },
+    {
+      "candidate": "INT.PROPOSED_DEPT",
+      "exact_match_rate_all": 0.001585,
+      "semantic_match_rate_all": 0.754802,
+      "exact_match_rate_p1_scope": 0.0,
+      "semantic_match_rate_p1_scope": 0.974066,
+      "scope_code_equiv_rate_p1": 0.0,
+      "scope_code_equiv_rows": 1924,
+      "scope_25c_code_equiv_rate": 0.036664,
+      "scope_25c_rows": 1391
+    },
+    {
+      "candidate": "INT.RELEASE_PARTY",
+      "exact_match_rate_all": 0.0,
+      "semantic_match_rate_all": 0.751632,
+      "exact_match_rate_p1_scope": 0.0,
+      "semantic_match_rate_p1_scope": 0.974066,
+      "scope_code_equiv_rate_p1": 0.0,
+      "scope_code_equiv_rows": 1924,
+      "scope_25c_code_equiv_rate": 0.036664,
+      "scope_25c_rows": 1391
+    },
+    {
+      "candidate": "INT.RECEIVE_PARTY",
+      "exact_match_rate_all": 0.0,
+      "semantic_match_rate_all": 0.0,
+      "exact_match_rate_p1_scope": 0.0,
+      "semantic_match_rate_p1_scope": 0.0,
+      "scope_code_equiv_rate_p1": 0.0,
+      "scope_code_equiv_rows": 1924,
+      "scope_25c_code_equiv_rate": 0.0,
+      "scope_25c_rows": 1391
+    },
+    {
+      "candidate": "INT.READ_DEPT",
+      "exact_match_rate_all": 0.0,
+      "semantic_match_rate_all": 0.0,
+      "exact_match_rate_p1_scope": 0.0,
+      "semantic_match_rate_p1_scope": 0.0,
+      "scope_code_equiv_rate_p1": 0.0,
+      "scope_code_equiv_rows": 1924,
+      "scope_25c_code_equiv_rate": 0.0,
+      "scope_25c_rows": 1391
+    }
+  ],
+  "I_scope_code_mismatch_examples_receive_dept": [
+    {
+      "row": 1029,
+      "A": "18185ZSTZL25A6B601",
+      "E": "A",
+      "R": "B-ZST-BA-1GH-02-25A6-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "河北分公司-核工程研究设计所-设备室",
+      "excel_code": "25B2",
+      "sql_code": ""
+    },
+    {
+      "row": 1723,
+      "A": "18185RNSZL22C1C606",
+      "E": "A",
+      "R": "C-RNS---1GD-01-22C4-25B1",
+      "excel_I": "河北分公司-电气自动化所-电气室",
+      "sql_receive_dept": "电气设计所-电气二室",
+      "excel_code": "25B1",
+      "sql_code": ""
+    },
+    {
+      "row": 2379,
+      "A": "18185NIZL22C7S600",
+      "E": "B",
+      "R": "C-WPW(NI)---2LT-02-22Q8-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "河北分公司-电气自动化所-仪控室,系统与布置设计所-布置一室",
+      "excel_code": "25B2",
+      "sql_code": ""
+    },
+    {
+      "row": 2969,
+      "A": "18185NIZL22C7C627",
+      "E": "B",
+      "R": "C-WPW(NI)---1SY-01-22Q8-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "河北分公司-电气自动化所-仪控室",
+      "excel_code": "25B2",
+      "sql_code": ""
+    },
+    {
+      "row": 4773,
+      "A": "18185ZSTZL25A6B603",
+      "E": "B",
+      "R": "B-ZST-BA-1GH-02-25A6-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "河北分公司-核工程研究设计所-设备室,河北分公司-电气自动化所-仪控二室",
+      "excel_code": "25B2",
+      "sql_code": "25B3"
+    },
+    {
+      "row": 7958,
+      "A": "18185WPWZL22C7C601",
+      "E": "A",
+      "R": "C-WPW(NI)---1SY-01-22Q8-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "仪控设计所-仪控三室",
+      "excel_code": "25B2",
+      "sql_code": ""
+    },
+    {
+      "row": 14076,
+      "A": "18185WPWZL22C7C600",
+      "E": "A",
+      "R": "C-WPW(NI)---2LT-02-22Q8-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "系统与布置设计所-布置一室,仪控设计所-仪控三室",
+      "excel_code": "25B2",
+      "sql_code": ""
+    },
+    {
+      "row": 14269,
+      "A": "18185ZSTZL25A6B604",
+      "E": "C",
+      "R": "B-ZST-BA-1GH-02-25A6-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "25B3,25E5",
+      "excel_code": "25B2",
+      "sql_code": "25B3"
+    },
+    {
+      "row": 14278,
+      "A": "18185FDPZL22C7C602",
+      "E": "A",
+      "R": "B-FDP---1SS-03-22Q8-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "河北分公司-核电工艺所-水工室,河北分公司-电气自动化所-仪控室,河北分公司-电气自动化所-电气室",
+      "excel_code": "25B2",
+      "sql_code": "25B1"
+    },
+    {
+      "row": 14374,
+      "A": "18185FDPZL22C7B600",
+      "E": "A",
+      "R": "B-FDP---1GD-03-22Q8-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "仪控设计所-仪控三室,河北分公司-电气自动化所-仪控室,电气设计所-电气二室",
+      "excel_code": "25B2",
+      "sql_code": ""
+    },
+    {
+      "row": 14646,
+      "A": "18185NIZL22C7C619",
+      "E": "A",
+      "R": "B-WSS-NI-2FQ-04-22Q8-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "河北分公司-核电工艺所-工艺布置一室,河北分公司-电气自动化所-仪控室",
+      "excel_code": "25B2",
+      "sql_code": ""
+    },
+    {
+      "row": 15033,
+      "A": "18185WSSZL22C7B601",
+      "E": "B",
+      "R": "B-WSS-NI-2GQ-01-22Q8-25B2",
+      "excel_I": "河北分公司-电气自动化所-仪控一室",
+      "sql_receive_dept": "仪控设计所-仪控三室,河北分公司-核电工艺所-工艺布置一室,河北分公司-电气自动化所-仪控室",
+      "excel_code": "25B2",
+      "sql_code": ""
+    }
+  ],
+  "I_scope_25c_code_mismatch_examples_receive_dept": [
+    {
+      "row": 6462,
+      "A": "18185ZSTZL25E5S024",
+      "E": "B",
+      "R": "S-ZST-BA-1HJ-05-25E5-25C2",
+      "excel_I": "河北分公司-建筑结构所-结构二室",
+      "sql_receive_dept": "25C1",
+      "excel_code": "25C2",
+      "sql_code": "25C1"
+    },
+    {
+      "row": 7019,
+      "A": "18185ZSTZL25E5S023",
+      "E": "A",
+      "R": "S-ZST-BA-1HJ-04-25E5-25C2",
+      "excel_I": "河北分公司-建筑结构所-结构二室",
+      "sql_receive_dept": "25C1",
+      "excel_code": "25C2",
+      "sql_code": "25C1"
+    },
+    {
+      "row": 8476,
+      "A": "18185ZSTZL25E5S022",
+      "E": "A",
+      "R": "S-ZST-BA-1HJ-05-25E5-25C2",
+      "excel_I": "河北分公司-建筑结构所-结构二室",
+      "sql_receive_dept": "25C1",
+      "excel_code": "25C2",
+      "sql_code": "25C1"
+    },
+    {
+      "row": 10348,
+      "A": "18185CSPZL25E5S008",
+      "E": "A",
+      "R": "S-CSP-BA-1HJ-01-25E5-25C2",
+      "excel_I": "河北分公司-建筑结构所-结构二室",
+      "sql_receive_dept": "25C1",
+      "excel_code": "25C2",
+      "sql_code": "25C1"
+    },
+    {
+      "row": 13186,
+      "A": "18185KXZL22D4B001",
+      "E": "A",
+      "R": "B-KX-KX-1HJ-01-22D4-25C2",
+      "excel_I": "河北分公司-建筑结构所-结构二室",
+      "sql_receive_dept": "22P5",
+      "excel_code": "25C2",
+      "sql_code": ""
+    }
+  ],
+  "M_column_formula_candidates": [
+    {
+      "candidate": "INT.START_DATE",
+      "shift_days": 15,
+      "exact_rate_all": 0.522282,
+      "tol1_rate_all": 0.583391,
+      "tol3_rate_all": 0.646719,
+      "exact_rate_non_empty_excel": 0.144738
+    },
+    {
+      "candidate": "INT.ANSWER_DATE",
+      "shift_days": 7,
+      "exact_rate_all": 0.470111,
+      "tol1_rate_all": 0.528558,
+      "tol3_rate_all": 0.626498,
+      "exact_rate_non_empty_excel": 0.063571
+    },
+    {
+      "candidate": "INT.CLOSE_DATE",
+      "shift_days": -14,
+      "exact_rate_all": 0.444057,
+      "tol1_rate_all": 0.445008,
+      "tol3_rate_all": 0.449952,
+      "exact_rate_non_empty_excel": 0.004654
+    },
+    {
+      "candidate": "INT.REPLY_DEADLINE",
+      "shift_days": 0,
+      "exact_rate_all": 0.441902,
+      "tol1_rate_all": 0.441902,
+      "tol3_rate_all": 0.441965,
+      "exact_rate_non_empty_excel": 0.000568
+    },
+    {
+      "candidate": "INT.SUBMIT_DATE",
+      "shift_days": -20,
+      "exact_rate_all": 0.441585,
+      "tol1_rate_all": 0.441585,
+      "tol3_rate_all": 0.441585,
+      "exact_rate_non_empty_excel": 0.0
+    },
+    {
+      "candidate": "INT.DEMAND_DATE",
+      "shift_days": -20,
+      "exact_rate_all": 0.441585,
+      "tol1_rate_all": 0.441585,
+      "tol3_rate_all": 0.441585,
+      "exact_rate_non_empty_excel": 0.0
+    },
+    {
+      "candidate": "INT.RELEASE_DATE",
+      "shift_days": -20,
+      "exact_rate_all": 0.441585,
+      "tol1_rate_all": 0.441585,
+      "tol3_rate_all": 0.441585,
+      "exact_rate_non_empty_excel": 0.0
+    },
+    {
+      "candidate": "INT.EFFECTIVE_DATE",
+      "shift_days": -20,
+      "exact_rate_all": 0.441585,
+      "tol1_rate_all": 0.441585,
+      "tol3_rate_all": 0.441585,
+      "exact_rate_non_empty_excel": 0.0
+    },
+    {
+      "candidate": "INT.REF_REPLY_DEADLINE",
+      "shift_days": 0,
+      "exact_rate_all": 0.441521,
+      "tol1_rate_all": 0.441521,
+      "tol3_rate_all": 0.441521,
+      "exact_rate_non_empty_excel": 0.000114
+    },
+    {
+      "candidate": "IDI.ACTUAL_OPEN_DATE",
+      "shift_days": 14,
+      "exact_rate_all": 0.289255,
+      "tol1_rate_all": 0.291601,
+      "tol3_rate_all": 0.296672,
+      "exact_rate_non_empty_excel": 0.502554
+    },
+    {
+      "candidate": "IDI.FIRST_ACTUAL_CLOSE_DATE",
+      "shift_days": 7,
+      "exact_rate_all": 0.135784,
+      "tol1_rate_all": 0.165769,
+      "tol3_rate_all": 0.219144,
+      "exact_rate_non_empty_excel": 0.035759
+    },
+    {
+      "candidate": "IDI.SWAP_START_DATE",
+      "shift_days": 14,
+      "exact_rate_all": 0.078986,
+      "tol1_rate_all": 0.141553,
+      "tol3_rate_all": 0.204691,
+      "exact_rate_non_empty_excel": 0.141446
+    },
+    {
+      "candidate": "IDI.ACTUAL_CLOSE_DATE",
+      "shift_days": 7,
+      "exact_rate_all": 0.033344,
+      "tol1_rate_all": 0.062377,
+      "tol3_rate_all": 0.11683,
+      "exact_rate_non_empty_excel": 0.031672
+    },
+    {
+      "candidate": "IDI.SWAP_CLOSE_DATE",
+      "shift_days": -15,
+      "exact_rate_all": 0.025864,
+      "tol1_rate_all": 0.027956,
+      "tol3_rate_all": 0.03252,
+      "exact_rate_non_empty_excel": 0.006698
+    }
+  ],
+  "M_column_formula_candidates_by_F": {
+    "传递": [
+      {
+        "candidate": "IDI.ACTUAL_OPEN_DATE",
+        "shift_days": 14,
+        "exact_rate_all": 0.488152,
+        "tol1_rate_all": 0.491568,
+        "tol3_rate_all": 0.497189,
+        "exact_rate_non_empty_excel": 0.555054
+      },
+      {
+        "candidate": "INT.START_DATE",
+        "shift_days": 15,
+        "exact_rate_all": 0.261435,
+        "tol1_rate_all": 0.367684,
+        "tol3_rate_all": 0.477791,
+        "exact_rate_non_empty_excel": 0.159895
+      },
+      {
+        "candidate": "INT.ANSWER_DATE",
+        "shift_days": 7,
+        "exact_rate_all": 0.16775,
+        "tol1_rate_all": 0.263199,
+        "tol3_rate_all": 0.422572,
+        "exact_rate_non_empty_excel": 0.064961
+      },
+      {
+        "candidate": "IDI.SWAP_START_DATE",
+        "shift_days": 14,
+        "exact_rate_all": 0.135788,
+        "tol1_rate_all": 0.243249,
+        "tol3_rate_all": 0.347515,
+        "exact_rate_non_empty_excel": 0.154502
+      },
+      {
+        "candidate": "IDI.FIRST_ACTUAL_CLOSE_DATE",
+        "shift_days": 7,
+        "exact_rate_all": 0.12675,
+        "tol1_rate_all": 0.175355,
+        "tol3_rate_all": 0.262978,
+        "exact_rate_non_empty_excel": 0.037121
+      },
+      {
+        "candidate": "INT.CLOSE_DATE",
+        "shift_days": -14,
+        "exact_rate_all": 0.125427,
+        "tol1_rate_all": 0.12708,
+        "tol3_rate_all": 0.135677,
+        "exact_rate_non_empty_excel": 0.005142
+      },
+      {
+        "candidate": "INT.REPLY_DEADLINE",
+        "shift_days": 0,
+        "exact_rate_all": 0.12168,
+        "tol1_rate_all": 0.12168,
+        "tol3_rate_all": 0.12168,
+        "exact_rate_non_empty_excel": 0.000627
+      },
+      {
+        "candidate": "INT.SUBMIT_DATE",
+        "shift_days": -20,
+        "exact_rate_all": 0.121129,
+        "tol1_rate_all": 0.121129,
+        "tol3_rate_all": 0.121129,
+        "exact_rate_non_empty_excel": 0.0
+      },
+      {
+        "candidate": "INT.DEMAND_DATE",
+        "shift_days": -20,
+        "exact_rate_all": 0.121129,
+        "tol1_rate_all": 0.121129,
+        "tol3_rate_all": 0.121129,
+        "exact_rate_non_empty_excel": 0.0
+      },
+      {
+        "candidate": "INT.RELEASE_DATE",
+        "shift_days": -20,
+        "exact_rate_all": 0.121129,
+        "tol1_rate_all": 0.121129,
+        "tol3_rate_all": 0.121129,
+        "exact_rate_non_empty_excel": 0.0
+      }
+    ],
+    "回复": [
+      {
+        "candidate": "INT.ANSWER_DATE",
+        "shift_days": 0,
+        "exact_rate_all": 0.881379,
+        "tol1_rate_all": 0.888093,
+        "tol3_rate_all": 0.896001,
+        "exact_rate_non_empty_excel": 0.065868
+      },
+      {
+        "candidate": "INT.REPLY_DEADLINE",
+        "shift_days": 2,
+        "exact_rate_all": 0.87556,
+        "tol1_rate_all": 0.87556,
+        "tol3_rate_all": 0.87556,
+        "exact_rate_non_empty_excel": 0.001198
+      },
+      {
+        "candidate": "INT.START_DATE",
+        "shift_days": -20,
+        "exact_rate_all": 0.87541,
+        "tol1_rate_all": 0.87541,
+        "tol3_rate_all": 0.87541,
+        "exact_rate_non_empty_excel": 0.0
+      },
+      {
+        "candidate": "INT.SUBMIT_DATE",
+        "shift_days": -20,
+        "exact_rate_all": 0.87541,
+        "tol1_rate_all": 0.87541,
+        "tol3_rate_all": 0.87541,
+        "exact_rate_non_empty_excel": 0.0
+      },
+      {
+        "candidate": "INT.DEMAND_DATE",
+        "shift_days": -20,
+        "exact_rate_all": 0.87541,
+        "tol1_rate_all": 0.87541,
+        "tol3_rate_all": 0.87541,
+        "exact_rate_non_empty_excel": 0.0
+      },
+      {
+        "candidate": "INT.RELEASE_DATE",
+        "shift_days": -20,
+        "exact_rate_all": 0.87541,
+        "tol1_rate_all": 0.87541,
+        "tol3_rate_all": 0.87541,
+        "exact_rate_non_empty_excel": 0.0
+      },
+      {
+        "candidate": "INT.EFFECTIVE_DATE",
+        "shift_days": -20,
+        "exact_rate_all": 0.87541,
+        "tol1_rate_all": 0.87541,
+        "tol3_rate_all": 0.87541,
+        "exact_rate_non_empty_excel": 0.0
+      },
+      {
+        "candidate": "INT.CLOSE_DATE",
+        "shift_days": -20,
+        "exact_rate_all": 0.87541,
+        "tol1_rate_all": 0.87541,
+        "tol3_rate_all": 0.87541,
+        "exact_rate_non_empty_excel": 0.0
+      },
+      {
+        "candidate": "INT.REF_REPLY_DEADLINE",
+        "shift_days": -20,
+        "exact_rate_all": 0.875261,
+        "tol1_rate_all": 0.875261,
+        "tol3_rate_all": 0.875261,
+        "exact_rate_non_empty_excel": 0.0
+      },
+      {
+        "candidate": "IDI.FIRST_ACTUAL_CLOSE_DATE",
+        "shift_days": -2,
+        "exact_rate_all": 0.150701,
+        "tol1_rate_all": 0.158908,
+        "tol3_rate_all": 0.174127,
+        "exact_rate_non_empty_excel": 0.044311
+      }
+    ]
+  },
+  "N_column_candidates": [
+    {
+      "candidate": "INT.ANSWER_DATE",
+      "exact_rate_all_empty_equal": 0.795309,
+      "tol1_rate_all_empty_equal": 0.807734,
+      "tol3_rate_all_empty_equal": 0.825927,
+      "exact_rate_non_empty_excel": 0.579616,
+      "tol1_rate_non_empty_excel": 0.60611,
+      "tol3_rate_non_empty_excel": 0.644904
+    },
+    {
+      "candidate": "INT.ANSWER_DATE_IF_REPLY",
+      "exact_rate_all_empty_equal": 0.559366,
+      "tol1_rate_all_empty_equal": 0.55962,
+      "tol3_rate_all_empty_equal": 0.55962,
+      "exact_rate_non_empty_excel": 0.061638,
+      "tol1_rate_non_empty_excel": 0.062179,
+      "tol3_rate_non_empty_excel": 0.062179
+    },
+    {
+      "candidate": "INT.REPLY_DEADLINE",
+      "exact_rate_all_empty_equal": 0.530903,
+      "tol1_rate_all_empty_equal": 0.530967,
+      "tol3_rate_all_empty_equal": 0.531157,
+      "exact_rate_non_empty_excel": 0.0,
+      "tol1_rate_non_empty_excel": 0.000135,
+      "tol3_rate_non_empty_excel": 0.000541
+    },
+    {
+      "candidate": "INT.START_DATE",
+      "exact_rate_all_empty_equal": 0.378257,
+      "tol1_rate_all_empty_equal": 0.393978,
+      "tol3_rate_all_empty_equal": 0.409889,
+      "exact_rate_non_empty_excel": 0.013517,
+      "tol1_rate_non_empty_excel": 0.04704,
+      "tol3_rate_non_empty_excel": 0.080968
+    },
+    {
+      "candidate": "IDI.ACTUAL_CLOSE_DATE",
+      "exact_rate_all_empty_equal": 0.307322,
+      "tol1_rate_all_empty_equal": 0.316577,
+      "tol3_rate_all_empty_equal": 0.336672,
+      "exact_rate_non_empty_excel": 0.297378,
+      "tol1_rate_non_empty_excel": 0.317113,
+      "tol3_rate_non_empty_excel": 0.359962
+    },
+    {
+      "candidate": "IDI.SWAP_CLOSE_DATE",
+      "exact_rate_all_empty_equal": 0.17832,
+      "tol1_rate_all_empty_equal": 0.181109,
+      "tol3_rate_all_empty_equal": 0.185864,
+      "exact_rate_non_empty_excel": 0.004731,
+      "tol1_rate_non_empty_excel": 0.010679,
+      "tol3_rate_non_empty_excel": 0.020816
+    },
+    {
+      "candidate": "IDI.ACTUAL_OPEN_DATE",
+      "exact_rate_all_empty_equal": 0.009509,
+      "tol1_rate_all_empty_equal": 0.013946,
+      "tol3_rate_all_empty_equal": 0.038415,
+      "exact_rate_non_empty_excel": 0.000811,
+      "tol1_rate_non_empty_excel": 0.010273,
+      "tol3_rate_non_empty_excel": 0.062449
+    }
+  ]
+}
