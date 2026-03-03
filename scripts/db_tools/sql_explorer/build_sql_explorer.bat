@@ -15,6 +15,11 @@ echo [INFO] Trying onefile build first...
 python -m PyInstaller --noconfirm --clean --onefile --name sql_explorer_onefile ^
   --paths "scripts\db_tools" ^
   --add-data "example\template_spec.json;example" ^
+  --add-data "example\1818按项目导出IDI手册2026-01-28-15_11_50.xlsx;example" ^
+  --add-data "example\内部接口信息单报表181820260128.xlsx;example" ^
+  --add-data "example\外部接口ICM报表181820260128.xlsx;example" ^
+  --add-data "example\外部接口单报表181820260128.xlsx;example" ^
+  --add-data "example\收发文清单1818.xlsx;example" ^
   --add-data "excel_bin\姓名角色表.xlsx;excel_bin" ^
   --add-data "excel_bin\姓名角色表-电力工程研究设计所.xlsx;excel_bin" ^
   --add-data "excel_bin\姓名角色表——核工程所通信专业+设备专业.xlsx;excel_bin" ^

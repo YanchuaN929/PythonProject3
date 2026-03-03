@@ -14,6 +14,11 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(repo_root / 'example' / 'template_spec.json'), 'example'),
+        (str(repo_root / 'example' / '1818按项目导出IDI手册2026-01-28-15_11_50.xlsx'), 'example'),
+        (str(repo_root / 'example' / '内部接口信息单报表181820260128.xlsx'), 'example'),
+        (str(repo_root / 'example' / '外部接口ICM报表181820260128.xlsx'), 'example'),
+        (str(repo_root / 'example' / '外部接口单报表181820260128.xlsx'), 'example'),
+        (str(repo_root / 'example' / '收发文清单1818.xlsx'), 'example'),
         (str(repo_root / 'excel_bin' / '姓名角色表.xlsx'), 'excel_bin'),
         (str(repo_root / 'excel_bin' / '姓名角色表-电力工程研究设计所.xlsx'), 'excel_bin'),
         (

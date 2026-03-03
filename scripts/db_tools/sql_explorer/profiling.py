@@ -23,6 +23,23 @@ def _to_series(values: Iterable[Any]) -> pd.Series:
     return pd.Series(list(values), dtype="object")
 
 
+def _safe_text(value: Any) -> str:
+    """Convert arbitrary value to safe text without decoding errors."""
+
+    if value is None:
+        return ""
+    if isinstance(value, memoryview):
+        value = value.tobytes()
+    if isinstance(value, (bytes, bytearray)):
+        payload = bytes(value)
+        preview = payload[:8].hex().upper()
+        return f"<BINARY:{len(payload)}:{preview}>"
+    try:
+        return str(value)
+    except Exception:
+        return repr(value)
+
+
 def profile_series(values: Iterable[Any]) -> Dict[str, Any]:
     """Profile a single column values iterable."""
 
@@ -33,7 +50,7 @@ def profile_series(values: Iterable[Any]) -> Dict[str, Any]:
     null_count = total - non_null
     null_rate = float(null_count / total) if total else 1.0
 
-    as_text = non_null_series.astype(str).str.strip()
+    as_text = non_null_series.map(_safe_text).str.strip()
     text_non_empty = as_text[as_text != ""]
     non_empty_count = int(text_non_empty.shape[0])
 
