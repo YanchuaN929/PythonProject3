@@ -55,6 +55,11 @@ result_cache/write_tasks_state.json
 # Local SQL dump snapshots (do not sync)
 example/CIMS-sql/
 CIMS-sql/
+example/CIMS-SQL-*/*.sql
+example/CIMS-sql-*/*.sql
+example/CIMS-sql-*.rar
+tmp/
+~$*.docx
 
 # Generated analysis artifacts
 document/*_probe.json

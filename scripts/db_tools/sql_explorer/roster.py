@@ -49,17 +49,7 @@ def resolve_default_roster_file() -> Optional[Path]:
     return None
 
 
-def load_roster_names(roster_file: Optional[str] = None) -> Set[str]:
-    """Load roster names from excel file first column."""
-
-    if roster_file:
-        path = Path(roster_file)
-    else:
-        default_path = resolve_default_roster_file()
-        if not default_path:
-            return set()
-        path = default_path
-
+def _load_names_from_excel(path: Path) -> Set[str]:
     if not path.exists():
         return set()
 
@@ -76,6 +66,37 @@ def load_roster_names(roster_file: Optional[str] = None) -> Set[str]:
         name = value.strip()
         if name and name.lower() not in INVALID_OWNER_VALUES:
             names.add(name)
+    return names
+
+
+def load_roster_names(roster_file: Optional[str] = None) -> Set[str]:
+    """Load roster names from excel file first column."""
+
+    if roster_file:
+        path = Path(roster_file)
+    else:
+        default_path = resolve_default_roster_file()
+        if not default_path:
+            return set()
+        path = default_path
+
+    return _load_names_from_excel(path)
+
+
+def load_all_roster_names(roster_dir: Optional[str] = None) -> Set[str]:
+    """Load and merge all roster names from the roster directory."""
+
+    if roster_dir:
+        root = Path(roster_dir)
+    else:
+        root = get_resource_path("excel_bin")
+
+    if not root.exists():
+        return set()
+
+    names = set()
+    for path in sorted(root.glob("*.xlsx")):
+        names.update(_load_names_from_excel(path))
     return names
 
 

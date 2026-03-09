@@ -194,7 +194,38 @@ def parse_create_columns(path: Path) -> List[str]:
             match = re.match(r"^\[([^\]]+)\]\s+", raw)
             if match:
                 columns.append(match.group(1))
-    return columns
+    if columns:
+        return columns
+
+    buffer = ""
+    collecting = False
+    with path.open("r", encoding="utf-8", errors="ignore") as stream:
+        for line in stream:
+            stripped = line.lstrip()
+            upper = stripped.upper()
+            if not collecting:
+                if upper.startswith("INSERT INTO"):
+                    buffer = stripped
+                    collecting = True
+                else:
+                    continue
+            else:
+                buffer += line
+
+            values_pos = buffer.upper().find("VALUES")
+            if values_pos < 0:
+                continue
+            start = buffer.find("(")
+            if start < 0 or start >= values_pos:
+                continue
+            end = buffer.rfind(")", start, values_pos)
+            if end < 0:
+                continue
+            insert_cols = re.findall(r"\[([^\]]+)\]", buffer[start:end])
+            if insert_cols:
+                return insert_cols
+            break
+    return []
 
 
 def _best_name(first_name: Any, last_name: Any, keyed_name: Any, login_name: Any) -> str:
