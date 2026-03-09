@@ -8,11 +8,11 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import pandas as pd
-from openpyxl import load_workbook
 import os
 import sys
 
 from write_tasks import get_write_task_manager, get_pending_cache
+from utils.excel_io import atomic_save_workbook, open_workbook_for_edit
 
 try:
     from utils.dept_config import (
@@ -433,48 +433,55 @@ def save_assignments_batch(assignments):
                     })
                 continue
             
-            # 3. 打开Excel文件（只打开一次）
-            wb = load_workbook(file_path)
-            ws = wb.active
-            
-            # 4. 读取DataFrame用于Registry（只读一次，可失败；Registry 将优先使用 payload 兜底）
             df = None
+            wb = None
             try:
-                df = pd.read_excel(file_path, sheet_name=0)
-            except Exception as e:
-                print(f"[指派] 读取DataFrame失败: {e}")
-            
-            # 5. 批量写入责任人
-            for assignment in file_assignments:
+                # 3. 打开Excel文件（只打开一次）
+                wb = open_workbook_for_edit(file_path)
+                ws = wb.active
+
+                # 4. 读取DataFrame用于Registry（只读一次，可失败；Registry 将优先使用 payload 兜底）
                 try:
-                    file_type = assignment['file_type']
-                    row_index = assignment['row_index']
-                    assigned_name = assignment['assigned_name']
-                    
-                    # 获取责任人列名
-                    col_name = get_responsible_column(file_type)
-                    if not col_name:
-                        print(f"[指派] 无法确定责任人列: file_type={file_type}")
+                    df = pd.read_excel(file_path, sheet_name=0)
+                except Exception as e:
+                    print(f"[指派] 读取DataFrame失败: {e}")
+
+                # 5. 批量写入责任人
+                for assignment in file_assignments:
+                    try:
+                        file_type = assignment['file_type']
+                        row_index = assignment['row_index']
+                        assigned_name = assignment['assigned_name']
+
+                        # 获取责任人列名
+                        col_name = get_responsible_column(file_type)
+                        if not col_name:
+                            print(f"[指派] 无法确定责任人列: file_type={file_type}")
+                            failed_tasks.append({
+                                'interface_id': assignment.get('interface_id', '未知'),
+                                'reason': '无法确定责任人列'
+                            })
+                            continue
+
+                        # 写入责任人
+                        ws[f"{col_name}{row_index}"] = assigned_name
+                        success_count += 1
+
+                    except Exception as e:
+                        print(f"[指派] 单个任务失败: {e}")
                         failed_tasks.append({
                             'interface_id': assignment.get('interface_id', '未知'),
-                            'reason': '无法确定责任人列'
+                            'reason': str(e)
                         })
-                        continue
-                    
-                    # 写入责任人
-                    ws[f"{col_name}{row_index}"] = assigned_name
-                    success_count += 1
-                    
-                except Exception as e:
-                    print(f"[指派] 单个任务失败: {e}")
-                    failed_tasks.append({
-                        'interface_id': assignment.get('interface_id', '未知'),
-                        'reason': str(e)
-                    })
-            
-            # 6. 保存Excel（只保存一次）
-            wb.save(file_path)
-            wb.close()
+
+                # 6. 保存Excel（只保存一次）
+                atomic_save_workbook(wb, file_path)
+            finally:
+                if wb is not None:
+                    try:
+                        wb.close()
+                    except Exception:
+                        pass
             
             # 7. 批量调用Registry钩子（不依赖 DataFrame 一定成功；优先使用 assignment payload 的接口号/项目号兜底）
             try:

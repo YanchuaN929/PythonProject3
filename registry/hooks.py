@@ -30,20 +30,46 @@ from .util import (
 )
 
 
-def _retry_on_lock(operation_name: str, func, max_retries: int = 5):
+def _is_lock_error(error: Exception) -> bool:
+    """判断是否为数据库锁/忙相关错误。"""
+    text = str(error).lower()
+    keywords = (
+        "locked",
+        "busy",
+        "database is locked",
+        "database table is locked",
+        "database schema is locked",
+    )
+    return any(k in text for k in keywords)
+
+
+def _retry_on_lock(operation_name: str, func, max_retries: int = 8):
     """
     带重试的数据库操作包装器（专门应对网络盘锁定问题）
     """
     last_error = None
-    
+
     for attempt in range(max_retries + 1):
         try:
-            return func()
+            result = func()
+            # 若曾发生锁等待但最终成功，恢复状态栏为“已连接”。
+            if attempt > 0:
+                try:
+                    from services.db_status import notify_connected
+                    cfg = _cfg()
+                    notify_connected(db_path=cfg.get("registry_db_path"))
+                except Exception:
+                    pass
+            return result
         except sqlite3.OperationalError as e:
-            error_msg = str(e).lower()
-            if "locked" in error_msg or "busy" in error_msg:
+            if _is_lock_error(e):
                 last_error = e
                 if attempt < max_retries:
+                    try:
+                        from services.db_status import notify_waiting
+                        notify_waiting()
+                    except Exception:
+                        pass
                     # 指数退避 + 随机抖动
                     delay = min(1.0 * (2 ** attempt) + random.uniform(0, 1), 15.0)
                     print(f"[Registry] {operation_name}锁定中，{delay:.1f}秒后重试 ({attempt + 1}/{max_retries})")
@@ -365,8 +391,9 @@ def on_process_done(
         # 通知数据库状态显示器
         try:
             from services.db_status import notify_error
-            if "database is locked" in str(e).lower() or "busy" in str(e).lower():
-                notify_error("数据库被其他用户锁定，请稍后重试", show_dialog=True)
+            if _is_lock_error(e):
+                # 锁冲突属于可恢复问题，避免频繁打断用户操作。
+                notify_error("数据库被其他用户锁定，系统已自动重试，请稍后再试", show_dialog=False)
             else:
                 notify_error(str(e), show_dialog=True)
         except ImportError:
@@ -403,12 +430,21 @@ def on_export_done(
         db_path = cfg['registry_db_path']
         wal = bool(cfg.get('registry_wal', False))
         
-        write_event(db_path, wal, EventType.EXPORT_DONE, {
-            'file_type': file_type,
-            'project_id': normalize_project_id(project_id, file_type),
-            'source_file': get_source_basename(export_path),
-            'extra': {'count': int(count), 'path': export_path}
-        }, now)
+        _retry_on_lock(
+            "导出事件写入",
+            lambda: write_event(
+                db_path,
+                wal,
+                EventType.EXPORT_DONE,
+                {
+                    'file_type': file_type,
+                    'project_id': normalize_project_id(project_id, file_type),
+                    'source_file': get_source_basename(export_path),
+                    'extra': {'count': int(count), 'path': export_path}
+                },
+                now
+            )
+        )
         
         # 控制台输出优化：已验证逻辑，默认不输出
         
@@ -473,21 +509,25 @@ def on_assigned(
             '_force_display_status': True,
         }
         
-        from .service import upsert_task
-        upsert_task(db_path, wal, key, fields, now)
-        
-        # 写入ASSIGNED事件
-        write_event(db_path, wal, EventType.ASSIGNED, {
-            'file_type': file_type,
-            'project_id': key['project_id'],
-            'interface_id': key['interface_id'],
-            'source_file': key['source_file'],
-            'row_index': key['row_index'],
-            'extra': {
-                'assigned_by': assigned_by,
-                'assigned_to': assigned_to
-            }
-        }, now)
+        def _do_assigned_write():
+            from .service import upsert_task
+
+            upsert_task(db_path, wal, key, fields, now)
+
+            # 写入ASSIGNED事件
+            write_event(db_path, wal, EventType.ASSIGNED, {
+                'file_type': file_type,
+                'project_id': key['project_id'],
+                'interface_id': key['interface_id'],
+                'source_file': key['source_file'],
+                'row_index': key['row_index'],
+                'extra': {
+                    'assigned_by': assigned_by,
+                    'assigned_to': assigned_to
+                }
+            }, now)
+
+        _retry_on_lock("指派写入", _do_assigned_write)
         
         # 控制台输出优化：已验证逻辑，默认不输出
         
@@ -550,101 +590,107 @@ def on_response_written(
             'row_index': int(row_index or 0),
         }
         
-        # 【状态提醒】查询任务是否有指派人
-        from .util import make_task_id
-        from .db import get_connection
-        
-        tid = make_task_id(
-            key['file_type'],
-            key['project_id'],
-            key['interface_id'],
-            key['source_file'],
-            key['row_index']
-        )
-        
-        # 连接数据库查询（后续复用同一连接，避免重复打开/维护模式误触发）
-        conn = get_connection(db_path, wal)
-        try:
-            cursor = conn.execute("SELECT assigned_by FROM tasks WHERE id=?", (tid,))
-            task_row = cursor.fetchone()
-            has_assignor = task_row and task_row[0]  # 是否有指派人
-        except Exception as e:
-            # 如果表结构不存在或查询失败，假设没有指派人
-            print(f"[Registry] 查询指派人失败（可能是旧数据库）: {e}")
-            has_assignor = False
-        
-        # 确定display_status
-        if has_assignor:
-            display_status = '待指派人审查'
-        else:
-            display_status = '待审查'
-        
-        print(f"[Registry] 回文单号写入 - 设置display_status={display_status}, has_assignor={has_assignor}")
-        
-        # 【修复】查询旧任务的interface_time，避免误判为时间变化
-        # 使用business_id查询，确保能找到同一接口的历史任务（即使row_index变化）
-        old_interface_time = ''
-        try:
-            from .util import make_business_id
-            business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
-            cursor = conn.execute("SELECT interface_time FROM tasks WHERE business_id=? ORDER BY last_seen_at DESC LIMIT 1", (business_id,))
-            row = cursor.fetchone()
-            if row and row[0]:
-                old_interface_time = row[0]
-        except Exception as e:
-            print(f"[Registry] 查询旧interface_time失败: {e}")
-        
-        # 【关键】判断是否为上级角色（自动确认逻辑）
-        superior_roles = get_superior_keywords()
-        is_superior = role and any(sup_role in role for sup_role in superior_roles)
-        
-        # 【修复】如果是上级角色填写，直接设置display_status为"已审查"
-        if is_superior:
-            display_status = '已审查'  # 上级自己填写，已完成审查
-            print(f"[Registry] 上级角色{role}填写回文单号，自动完成确认，设置状态为'已审查'")
-        
-        # 更新任务字段（包含completed_by和response_number）
-        fields_to_update = {
-            'display_status': display_status,  # 保持"待审查"或"待指派人审查"
-            'interface_time': old_interface_time,  # 保持时间不变，避免误判为时间变化
-            '_completed_col_value': '有值',  # 标记完成列已填充
-            'response_number': response_number,  # 记录回文单号
-            'completed_by': user_name  # 【新增】记录完成人姓名
-        }
-        if role:
-            fields_to_update['role'] = role
-        
-        # 如果是上级自动确认，设置confirmed_by和confirmed_at
-        if is_superior:
-            fields_to_update['confirmed_by'] = user_name
-            fields_to_update['confirmed_at'] = now.isoformat()  # 【新增】明确设置确认时间
-        
-        from .service import upsert_task
-        upsert_task(db_path, wal, key, fields_to_update, now, conn=conn)
-        
-        print(f"[Registry] upsert_task完成，display_status={display_status}, completed_by={user_name}")
-        
-        # 更新状态为completed
-        mark_completed(db_path, wal, key, now, conn=conn)
-        
-        # 如果是上级角色，同时更新状态为confirmed
-        if is_superior:
-            mark_confirmed(db_path, wal, key, now, confirmed_by=user_name, conn=conn)
-            print(f"[Registry] 上级角色{role}自动确认完成")
-        
-        # 写入response_written事件
-        write_event(db_path, wal, EventType.RESPONSE_WRITTEN, {
-            'file_type': file_type,
-            'project_id': key['project_id'],
-            'interface_id': key['interface_id'],
-            'source_file': key['source_file'],
-            'row_index': key['row_index'],
-            'extra': {
-                'response_number': response_number,
-                'user_name': user_name,
-                'source_column': source_column
-            }
-        }, now, conn=conn)
+        def _do_response_write():
+            from .util import make_business_id, make_task_id
+            from .db import get_connection
+            from .service import upsert_task
+
+            conn = get_connection(db_path, wal)
+            try:
+                # 【状态提醒】查询任务是否有指派人
+                tid = make_task_id(
+                    key['file_type'],
+                    key['project_id'],
+                    key['interface_id'],
+                    key['source_file'],
+                    key['row_index']
+                )
+                try:
+                    cursor = conn.execute("SELECT assigned_by FROM tasks WHERE id=?", (tid,))
+                    task_row = cursor.fetchone()
+                    has_assignor = task_row and task_row[0]  # 是否有指派人
+                except Exception as e:
+                    # 如果表结构不存在或查询失败，假设没有指派人
+                    print(f"[Registry] 查询指派人失败（可能是旧数据库）: {e}")
+                    has_assignor = False
+
+                # 确定display_status
+                if has_assignor:
+                    display_status = '待指派人审查'
+                else:
+                    display_status = '待审查'
+
+                print(f"[Registry] 回文单号写入 - 设置display_status={display_status}, has_assignor={has_assignor}")
+
+                # 【修复】查询旧任务的interface_time，避免误判为时间变化
+                # 使用business_id查询，确保能找到同一接口的历史任务（即使row_index变化）
+                old_interface_time = ''
+                try:
+                    business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
+                    cursor = conn.execute(
+                        "SELECT interface_time FROM tasks WHERE business_id=? ORDER BY last_seen_at DESC LIMIT 1",
+                        (business_id,)
+                    )
+                    row = cursor.fetchone()
+                    if row and row[0]:
+                        old_interface_time = row[0]
+                except Exception as e:
+                    print(f"[Registry] 查询旧interface_time失败: {e}")
+
+                # 【关键】判断是否为上级角色（自动确认逻辑）
+                superior_roles = get_superior_keywords()
+                is_superior = role and any(sup_role in role for sup_role in superior_roles)
+
+                # 【修复】如果是上级角色填写，直接设置display_status为"已审查"
+                if is_superior:
+                    display_status = '已审查'  # 上级自己填写，已完成审查
+                    print(f"[Registry] 上级角色{role}填写回文单号，自动完成确认，设置状态为'已审查'")
+
+                # 更新任务字段（包含completed_by和response_number）
+                fields_to_update = {
+                    'display_status': display_status,  # 保持"待审查"或"待指派人审查"
+                    'interface_time': old_interface_time,  # 保持时间不变，避免误判为时间变化
+                    '_completed_col_value': '有值',  # 标记完成列已填充
+                    'response_number': response_number,  # 记录回文单号
+                    'completed_by': user_name  # 【新增】记录完成人姓名
+                }
+                if role:
+                    fields_to_update['role'] = role
+
+                # 如果是上级自动确认，设置confirmed_by和confirmed_at
+                if is_superior:
+                    fields_to_update['confirmed_by'] = user_name
+                    fields_to_update['confirmed_at'] = now.isoformat()  # 【新增】明确设置确认时间
+
+                upsert_task(db_path, wal, key, fields_to_update, now, conn=conn)
+
+                print(f"[Registry] upsert_task完成，display_status={display_status}, completed_by={user_name}")
+
+                # 更新状态为completed
+                mark_completed(db_path, wal, key, now, conn=conn)
+
+                # 如果是上级角色，同时更新状态为confirmed
+                if is_superior:
+                    mark_confirmed(db_path, wal, key, now, confirmed_by=user_name, conn=conn)
+                    print(f"[Registry] 上级角色{role}自动确认完成")
+
+                # 写入response_written事件
+                write_event(db_path, wal, EventType.RESPONSE_WRITTEN, {
+                    'file_type': file_type,
+                    'project_id': key['project_id'],
+                    'interface_id': key['interface_id'],
+                    'source_file': key['source_file'],
+                    'row_index': key['row_index'],
+                    'extra': {
+                        'response_number': response_number,
+                        'user_name': user_name,
+                        'source_column': source_column
+                    }
+                }, now, conn=conn)
+            finally:
+                close_connection_after_use()
+
+        _retry_on_lock("回文单号写入", _do_response_write)
         
         # 控制台输出优化：已验证逻辑，默认不输出
         
@@ -701,18 +747,21 @@ def on_confirmed_by_superior(
             'row_index': int(row_index or 0),
         }
         
-        # 【修复】更新状态为confirmed，传递确认人姓名
-        mark_confirmed(db_path, wal, key, now, confirmed_by=user_name)
-        
-        # 写入confirmed事件
-        write_event(db_path, wal, EventType.CONFIRMED, {
-            'file_type': file_type,
-            'project_id': key['project_id'],
-            'interface_id': key['interface_id'],
-            'source_file': key['source_file'],
-            'row_index': key['row_index'],
-            'extra': {'user_name': user_name}
-        }, now)
+        def _do_confirm_write():
+            # 【修复】更新状态为confirmed，传递确认人姓名
+            mark_confirmed(db_path, wal, key, now, confirmed_by=user_name)
+
+            # 写入confirmed事件
+            write_event(db_path, wal, EventType.CONFIRMED, {
+                'file_type': file_type,
+                'project_id': key['project_id'],
+                'interface_id': key['interface_id'],
+                'source_file': key['source_file'],
+                'row_index': key['row_index'],
+                'extra': {'user_name': user_name}
+            }, now)
+
+        _retry_on_lock("上级确认写入", _do_confirm_write)
         
         # 控制台输出优化：已验证逻辑，默认不输出
         
@@ -753,7 +802,7 @@ def on_unconfirmed_by_superior(
         
         print(f"[Registry] 上级取消确认: 文件类型={key['file_type']}, 项目={key['project_id']}, 接口={key['interface_id']}, 用户={user_name}")
         
-        mark_unconfirmed(db_path, wal, key, now)
+        _retry_on_lock("上级取消确认写入", lambda: mark_unconfirmed(db_path, wal, key, now))
         
     except MaintenanceModeError as e:
         _handle_maintenance_mode(e)
@@ -827,7 +876,7 @@ def write_event_only(event: str, payload: dict) -> None:
         db_path = cfg['registry_db_path']
         wal = bool(cfg.get('registry_wal', False))
         
-        write_event(db_path, wal, event, payload, now)
+        _retry_on_lock("事件写入", lambda: write_event(db_path, wal, event, payload, now))
         
     except MaintenanceModeError as e:
         _handle_maintenance_mode(e)

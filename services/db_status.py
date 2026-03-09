@@ -12,6 +12,7 @@ from tkinter import ttk, messagebox
 from typing import Optional
 from datetime import datetime
 import threading
+import time
 
 
 class DatabaseStatus:
@@ -60,6 +61,9 @@ class DatabaseStatusIndicator:
         self._detail_info = {}
         self._last_sync_time: Optional[datetime] = None
         self._error_message: Optional[str] = None
+        self._last_dialog_message: Optional[str] = None
+        self._last_dialog_ts: float = 0.0
+        self._dialog_cooldown_seconds: float = 20.0
         self._lock = threading.Lock()
         
         # 创建UI组件
@@ -300,6 +304,16 @@ class DatabaseStatusIndicator:
     
     def _show_error_dialog(self, message: str):
         """显示错误弹窗"""
+        now_ts = time.time()
+        with self._lock:
+            if (
+                self._last_dialog_message == message
+                and (now_ts - self._last_dialog_ts) < self._dialog_cooldown_seconds
+            ):
+                return
+            self._last_dialog_message = message
+            self._last_dialog_ts = now_ts
+
         def show():
             messagebox.showerror(
                 "数据库连接失败",

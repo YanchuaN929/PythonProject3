@@ -6,11 +6,11 @@
 
 import tkinter as tk
 from tkinter import ttk, messagebox
-from openpyxl import load_workbook
 from datetime import date
 import os
 
 from write_tasks import get_write_task_manager, get_pending_cache
+from utils.excel_io import atomic_save_workbook, open_workbook_for_edit
 
 # 导入Registry模块
 try:
@@ -398,6 +398,8 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
     返回:
         bool: 成功返回True，失败返回False
     """
+    wb = None
+    verify_wb = None
     try:
         # 检查文件是否存在
         if not os.path.exists(file_path):
@@ -419,7 +421,7 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
             return False
         
         # 使用openpyxl打开
-        wb = load_workbook(file_path)
+        wb = open_workbook_for_edit(file_path)
         ws = wb.active
         
         # 获取写入列位置
@@ -487,12 +489,13 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
         
         # 保存
         try:
-            wb.save(file_path)
+            atomic_save_workbook(wb, file_path)
             wb.close()
+            wb = None
             
             # 【关键】验证写入是否成功：重新打开文件检查
             print("[验证] 开始验证Excel写入...")
-            verify_wb = load_workbook(file_path, read_only=True)
+            verify_wb = open_workbook_for_edit(file_path)
             verify_ws = verify_wb.active
             
             # 验证回文单号列
@@ -502,6 +505,7 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
                 raise Exception(f"验证失败：回文单号列写入不匹配。期望:{response_number}, 实际:{verify_response}")
             
             verify_wb.close()
+            verify_wb = None
             print("[验证] ✓ Excel写入验证成功")
             print(f"成功写入: {file_path}, 行{row_index}, 回文单号={response_number}")
             return True
@@ -521,6 +525,17 @@ def write_response_to_excel(file_path, file_type, row_index, response_number,
         traceback.print_exc()
         messagebox.showerror("写入失败", f"无法写入回文单号到Excel文件\n\n错误：{str(e)}")
         return False
+    finally:
+        try:
+            if wb is not None:
+                wb.close()
+        except Exception:
+            pass
+        try:
+            if verify_wb is not None:
+                verify_wb.close()
+        except Exception:
+            pass
 
 
 def get_write_columns(file_type, row_index, worksheet, source_column=None):

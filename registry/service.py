@@ -6,7 +6,7 @@
 import json
 from datetime import datetime
 from typing import Dict, Any, Optional, List
-from .db import get_connection, close_connection_after_use
+from .db import get_connection, get_read_connection, close_connection_after_use
 from .models import Status, EventType
 from .util import make_task_id, make_business_id
 
@@ -76,6 +76,19 @@ def find_task_by_business_id(
     finally:
         if owns_conn:
             close_connection_after_use()
+
+
+def _is_lock_error(error: Exception) -> bool:
+    """判断是否为数据库锁/忙相关错误。"""
+    text = str(error).lower()
+    keywords = (
+        "locked",
+        "busy",
+        "database is locked",
+        "database table is locked",
+        "database schema is locked",
+    )
+    return any(k in text for k in keywords)
 
 def should_reset_task_status(old_interface_time: str, new_interface_time: str, 
                              old_completed_val: str, new_completed_val: str) -> bool:
@@ -838,7 +851,8 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
     if not task_keys:
         return {}
     
-    conn = get_connection(db_path, wal)
+    # 显示状态查询属于只读场景，优先走本地缓存读，避免开始处理时与批量写共享库互相打架。
+    conn = get_read_connection(db_path)
     result = {}
     
     # 判断用户角色类型
@@ -1503,10 +1517,11 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
         # 通知数据库状态显示器
         try:
             from services.db_status import notify_error
-            if "database is locked" in str(e).lower():
-                notify_error("数据库被锁定，请稍后重试", show_dialog=True)
+            if _is_lock_error(e):
+                # 锁冲突由上层重试逻辑处理，这里不要把状态打成“连接失败”。
+                pass
             else:
-                notify_error(f"数据写入失败: {str(e)[:50]}", show_dialog=True)
+                notify_error(f"数据写入失败: {str(e)[:50]}", show_dialog=False)
         except ImportError:
             pass
         

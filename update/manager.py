@@ -174,6 +174,12 @@ class UpdateManager:
         if context.auto_mode:
             cmd.append("--auto-mode")
 
+        # 传递当前主程序 PID，更新器可精准等待该进程退出，避免同名进程误判导致长时间等待。
+        try:
+            cmd += ["--main-pid", str(os.getpid())]
+        except Exception:
+            pass
+
         self._log(f"启动update进程: {' '.join(cmd)}")
 
         try:

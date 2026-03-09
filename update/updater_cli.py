@@ -12,7 +12,6 @@ import os
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 import traceback
 from datetime import datetime
@@ -57,6 +56,7 @@ def parse_args(argv: Optional[Iterable[str]] = None):
     parser.add_argument("--version", required=True, help="目标版本号")
     parser.add_argument("--resume", default="", help="重启后需要恢复的动作")
     parser.add_argument("--main-exe", default="", help="主程序可执行文件名")
+    parser.add_argument("--main-pid", type=int, default=0, help="主程序进程ID（优先用于等待退出）")
     parser.add_argument("--auto-mode", action="store_true", help="重启时附加 --auto")
     return parser.parse_args(list(argv) if argv is not None else None)
 
@@ -86,6 +86,26 @@ def _is_process_running(process_name: str) -> bool:
         return False  # 检测失败时假设进程已退出
 
 
+def _is_pid_running(pid: int) -> bool:
+    """根据 PID 检测进程是否存在。"""
+    if not pid or pid <= 0:
+        return False
+    try:
+        result = subprocess.run(
+            ["tasklist", "/FI", f"PID eq {pid}", "/NH"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0,
+        )
+        output = (result.stdout or "").lower()
+        # 兼容中英文系统：输出里包含 PID 号即视为进程仍存在
+        return str(pid) in output
+    except Exception as e:
+        log(f"PID检测失败(pid={pid}): {e}", "WARNING")
+        return False
+
+
 def _is_file_locked(filepath: str) -> bool:
     """检测文件是否被锁定（正在被使用）"""
     try:
@@ -98,34 +118,49 @@ def _is_file_locked(filepath: str) -> bool:
 
 def wait_for_main_exit(
     main_executable: Optional[str],
-    timeout: int = DEFAULT_MAIN_EXIT_TIMEOUT_SECONDS
+    timeout: int = DEFAULT_MAIN_EXIT_TIMEOUT_SECONDS,
+    main_pid: Optional[int] = None,
 ) -> bool:
     """
     等待主程序退出
     
     优先使用进程检测（更可靠），备用文件锁检测
     """
+    deadline = time.time() + timeout
+    wait_count = 0
+
+    # 优先按 PID 等待（更精准，避免同名进程误判）。
+    if main_pid and int(main_pid) > 0:
+        log(f"等待主程序退出: pid={main_pid}")
+        time.sleep(0.3)
+        while time.time() <= deadline:
+            if not _is_pid_running(int(main_pid)):
+                log(f"主程序已退出（PID检测），等待了 {wait_count} 秒")
+                time.sleep(0.3)
+                return True
+            wait_count += 1
+            if wait_count % 5 == 0:
+                log(f"仍在等待主程序退出... ({wait_count}秒)")
+            time.sleep(1)
+        log(f"等待主程序退出超时 ({timeout}秒, pid={main_pid})", "WARNING")
+        return False
+
     if not main_executable or not os.path.exists(main_executable):
         log("主程序文件不存在或未指定，跳过等待")
         return True
 
     exe_name = os.path.basename(main_executable)
     log(f"等待主程序退出: {exe_name}")
-    
-    deadline = time.time() + timeout
-    wait_count = 0
-    
+
     # 先等待一小段时间，让主程序有机会开始退出流程
     time.sleep(0.5)
-    
+
     while time.time() <= deadline:
-        # 方法1：进程检测（最可靠）
         if not _is_process_running(exe_name):
             log(f"主程序已退出（进程检测），等待了 {wait_count} 秒")
-            # 额外等待一小段时间，确保文件句柄完全释放
             time.sleep(0.5)
             return True
-        
+
         wait_count += 1
         if wait_count % 5 == 0:
             log(f"仍在等待主程序退出... ({wait_count}秒)")
@@ -156,7 +191,7 @@ def get_current_executable() -> Optional[str]:
 
 def copy_directory_atomic(remote_dir: str, local_dir: str, skip_files: Optional[set] = None) -> list:
     """
-    先复制到临时目录，再同步到目标目录，避免半成品。
+    同步远程目录到本地目录（增量复制）。
     
     Args:
         remote_dir: 源目录
@@ -167,70 +202,29 @@ def copy_directory_atomic(remote_dir: str, local_dir: str, skip_files: Optional[
         被占用而跳过的文件列表
     """
     skip_files = skip_files or set()
-    locked_files = []
-    
-    # 确保父目录存在
-    parent_dir = os.path.dirname(local_dir.rstrip("\\/"))
-    if not parent_dir or parent_dir == local_dir:
-        parent_dir = local_dir
-    
+
     log(f"开始复制: {remote_dir} -> {local_dir}")
-    log(f"临时目录父路径: {parent_dir}")
-    
     if skip_files:
         log(f"跳过文件: {skip_files}")
-    
-    # 在父目录创建临时目录
-    try:
-        tmp_dir = tempfile.mkdtemp(prefix="update_tmp_", dir=parent_dir)
-        log(f"创建临时目录: {tmp_dir}")
-    except Exception as e:
-        log(f"创建临时目录失败: {e}", "ERROR")
-        raise
 
-    try:
-        # 复制到临时目录（跳过指定文件）
-        log("复制文件到临时目录...")
-        copy_tree_with_skip(remote_dir, tmp_dir, skip_files)
-        
-        # 同步到目标目录
-        log("同步到目标目录...")
-        locked_files = sync_directory(tmp_dir, local_dir, skip_files)
-        
-        log("文件复制完成")
-    finally:
-        # 清理临时目录
-        try:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-            log(f"清理临时目录: {tmp_dir}")
-        except Exception as e:
-            log(f"清理临时目录失败: {e}", "WARNING")
-    
+    # 直接做增量同步，避免“远程->临时->本地”双倍复制导致更新过慢。
+    locked_files = sync_directory(remote_dir, local_dir, skip_files)
+    log("文件复制完成")
     return locked_files
 
 
-def copy_tree_with_skip(source: str, target: str, skip_files: set) -> None:
-    """复制目录树，跳过指定文件"""
-    os.makedirs(target, exist_ok=True)
-    
-    for root, dirs, files in os.walk(source):
-        rel_root = os.path.relpath(root, source)
-        target_root = target if rel_root == "." else os.path.join(target, rel_root)
-        os.makedirs(target_root, exist_ok=True)
-        
-        for file_name in files:
-            # 检查是否需要跳过
-            if file_name.lower() in {f.lower() for f in skip_files}:
-                log(f"  跳过文件: {file_name}")
-                continue
-            
-            src_file = os.path.join(root, file_name)
-            dst_file = os.path.join(target_root, file_name)
-            
-            try:
-                shutil.copy2(src_file, dst_file)
-            except Exception as e:
-                log(f"  复制文件失败: {file_name} - {e}", "WARNING")
+def _should_copy_file(src_file: str, dst_file: str) -> bool:
+    """判断文件是否需要复制（按大小+修改时间做快速比较）。"""
+    if not os.path.exists(dst_file):
+        return True
+    try:
+        src_stat = os.stat(src_file)
+        dst_stat = os.stat(dst_file)
+        if src_stat.st_size != dst_stat.st_size:
+            return True
+        return int(src_stat.st_mtime) != int(dst_stat.st_mtime)
+    except Exception:
+        return True
 
 
 def sync_directory(source: str, target: str, skip_files: Optional[set] = None) -> list:
@@ -247,6 +241,7 @@ def sync_directory(source: str, target: str, skip_files: Optional[set] = None) -
     
     file_count = 0
     skip_count = 0
+    unchanged_count = 0
     error_count = 0
     locked_files = []  # 记录被占用的文件
     
@@ -264,7 +259,12 @@ def sync_directory(source: str, target: str, skip_files: Optional[set] = None) -
             src_file = os.path.join(root, file_name)
             dst_file = os.path.join(target_root, file_name)
             rel_path = os.path.join(rel_root, file_name) if rel_root != "." else file_name
-            
+
+            # 增量复制：未变化文件直接跳过
+            if not _should_copy_file(src_file, dst_file):
+                unchanged_count += 1
+                continue
+
             try:
                 os.makedirs(os.path.dirname(dst_file), exist_ok=True)
                 shutil.copy2(src_file, dst_file)
@@ -278,7 +278,10 @@ def sync_directory(source: str, target: str, skip_files: Optional[set] = None) -
                 log(f"  同步文件失败: {file_name} - {e}", "ERROR")
                 error_count += 1
     
-    log(f"同步完成: 成功 {file_count} 个, 跳过 {skip_count} 个, 失败 {error_count} 个")
+    log(
+        f"同步完成: 更新 {file_count} 个, 未变化 {unchanged_count} 个, "
+        f"跳过 {skip_count} 个, 失败 {error_count} 个"
+    )
     return locked_files
 
 
@@ -393,6 +396,7 @@ def perform_update(args) -> bool:
     log(f"远程目录: {remote_dir}")
     log(f"本地目录: {local_dir}")
     log(f"主程序: {args.main_exe or '(未指定)'}")
+    log(f"主程序PID: {args.main_pid or '(未指定)'}")
     log(f"自动模式: {args.auto_mode}")
     log("=" * 60)
 
@@ -415,7 +419,7 @@ def perform_update(args) -> bool:
         )
         
         log("步骤 1/3: 等待主程序退出...")
-        if not wait_for_main_exit(main_exe_path):
+        if not wait_for_main_exit(main_exe_path, main_pid=args.main_pid or None):
             log("主程序未能正常退出，继续尝试更新", "WARNING")
         
         # 复制文件

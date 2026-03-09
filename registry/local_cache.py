@@ -50,7 +50,8 @@ class LocalCacheManager:
         self.local_db_path = os.path.join(local_cache_dir, 'registry_local.db')
         self.last_sync_time = None
         self._local_conn = None
-        self._lock = threading.Lock()
+        # get_read_connection() 内部会继续调用 ensure_local_cache()，需要可重入锁避免自锁死。
+        self._lock = threading.RLock()
         self._enabled = True
     
     def is_enabled(self) -> bool:
