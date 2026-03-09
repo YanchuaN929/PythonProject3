@@ -234,8 +234,6 @@ def get_display_status(task_keys: List[Dict[str, Any]], current_user_roles_str: 
         import traceback
         traceback.print_exc()
         return {}
-    finally:
-        close_connection_after_use()
 
 def _cfg():
     """加载配置（内部辅助函数）"""

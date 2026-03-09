@@ -13,7 +13,6 @@
 """
 
 import os
-import shutil
 import sqlite3
 import time
 import threading
@@ -53,6 +52,51 @@ class LocalCacheManager:
         # get_read_connection() 内部会继续调用 ensure_local_cache()，需要可重入锁避免自锁死。
         self._lock = threading.RLock()
         self._enabled = True
+
+    def _remove_local_cache_file(self):
+        """删除损坏或过期的本地缓存文件。"""
+        self._close_local_conn_internal()
+        if os.path.exists(self.local_db_path):
+            try:
+                os.remove(self.local_db_path)
+            except OSError as e:
+                print(f"[LocalCache] 删除本地缓存失败: {e}")
+
+    def _is_malformed_error(self, error: Exception) -> bool:
+        text = str(error).lower()
+        return (
+            "database disk image is malformed" in text
+            or "malformed" in text
+            or "file is not a database" in text
+        )
+
+    def _backup_network_db_to_local(self) -> bool:
+        """
+        使用 SQLite backup API 进行一致性复制，避免直接 copy2 在写入期间复制出半个数据库。
+        """
+        source_conn = None
+        target_conn = None
+        try:
+            source_conn = sqlite3.connect(self.network_db_path, timeout=30.0)
+            target_conn = sqlite3.connect(self.local_db_path, timeout=30.0)
+            source_conn.backup(target_conn)
+            target_conn.commit()
+            return True
+        except Exception as e:
+            print(f"[LocalCache] SQLite 备份失败: {e}")
+            self._remove_local_cache_file()
+            return False
+        finally:
+            if target_conn is not None:
+                try:
+                    target_conn.close()
+                except Exception:
+                    pass
+            if source_conn is not None:
+                try:
+                    source_conn.close()
+                except Exception:
+                    pass
     
     def is_enabled(self) -> bool:
         """检查本地缓存是否启用"""
@@ -100,18 +144,16 @@ class LocalCacheManager:
             
             # 关闭现有连接
             self._close_local_conn_internal()
-            
-            # 复制文件（带重试）
+
+            # 一致性复制（带重试）
             max_retries = 3
             for attempt in range(max_retries):
-                try:
-                    shutil.copy2(self.network_db_path, self.local_db_path)
+                if self._backup_network_db_to_local():
                     break
-                except (IOError, OSError) as e:
-                    if attempt < max_retries - 1:
-                        time.sleep(0.5)
-                    else:
-                        raise e
+                if attempt < max_retries - 1:
+                    time.sleep(0.5)
+                else:
+                    return False
             
             self.last_sync_time = datetime.now()
             print(f"[LocalCache] 同步完成: {self.local_db_path}")
@@ -165,9 +207,29 @@ class LocalCacheManager:
                     )
                     # 设置为只读模式
                     self._local_conn.execute("PRAGMA query_only = ON")
+                    # 主动做一次轻量查询，若本地缓存已损坏，立即丢弃并尝试重建。
+                    self._local_conn.execute("SELECT name FROM sqlite_master LIMIT 1").fetchone()
                     print("[LocalCache] 本地缓存连接已建立")
                 except Exception as e:
                     print(f"[LocalCache] 创建本地连接失败: {e}")
+                    self._close_local_conn_internal()
+                    if self._is_malformed_error(e):
+                        print("[LocalCache] 检测到本地缓存损坏，正在删除并重建...")
+                        self._remove_local_cache_file()
+                        if self.ensure_local_cache():
+                            try:
+                                self._local_conn = sqlite3.connect(
+                                    self.local_db_path,
+                                    check_same_thread=False,
+                                    timeout=5.0
+                                )
+                                self._local_conn.execute("PRAGMA query_only = ON")
+                                self._local_conn.execute("SELECT name FROM sqlite_master LIMIT 1").fetchone()
+                                print("[LocalCache] 本地缓存重建成功")
+                                return self._local_conn
+                            except Exception as retry_error:
+                                print(f"[LocalCache] 本地缓存重建后仍失败: {retry_error}")
+                                self._close_local_conn_internal()
                     return None
                     
             return self._local_conn

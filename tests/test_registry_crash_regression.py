@@ -115,6 +115,82 @@ def test_get_connection_returns_different_instances_per_thread(tmp_path):
     assert worker_result["conn_id"] != main_conn_id
 
 
+def test_close_connection_does_not_touch_stale_global_alias():
+    from registry import db as registry_db
+
+    class FakeConn:
+        def __init__(self):
+            self.close_calls = 0
+
+        def close(self):
+            self.close_calls += 1
+
+    fake_conn = FakeConn()
+    old_conn = registry_db._CONN
+    old_db_path = registry_db._DB_PATH
+    old_conn_by_thread = dict(registry_db._CONN_BY_THREAD)
+    old_db_path_by_thread = dict(registry_db._DB_PATH_BY_THREAD)
+
+    registry_db._CONN = fake_conn
+    registry_db._DB_PATH = "stale.db"
+    registry_db._CONN_BY_THREAD.clear()
+    registry_db._DB_PATH_BY_THREAD.clear()
+
+    try:
+        registry_db.close_connection()
+        assert fake_conn.close_calls == 0
+        assert registry_db._CONN is fake_conn
+        assert registry_db._DB_PATH == "stale.db"
+    finally:
+        registry_db._CONN = old_conn
+        registry_db._DB_PATH = old_db_path
+        registry_db._CONN_BY_THREAD.clear()
+        registry_db._CONN_BY_THREAD.update(old_conn_by_thread)
+        registry_db._DB_PATH_BY_THREAD.clear()
+        registry_db._DB_PATH_BY_THREAD.update(old_db_path_by_thread)
+
+
+def test_service_get_display_status_does_not_force_close_read_connection(monkeypatch):
+    from registry import service as registry_service
+
+    class FakeCursor:
+        @staticmethod
+        def fetchone():
+            return None
+
+    class FakeConn:
+        @staticmethod
+        def execute(*_args, **_kwargs):
+            return FakeCursor()
+
+    close_calls = []
+    monkeypatch.setattr(registry_service, "get_read_connection", lambda _db_path: FakeConn())
+    monkeypatch.setattr(
+        registry_service,
+        "close_connection_after_use",
+        lambda: close_calls.append("closed"),
+    )
+
+    result = registry_service.get_display_status(
+        db_path="dummy.db",
+        wal=False,
+        task_keys=[
+            {
+                "file_type": 1,
+                "project_id": "2016",
+                "interface_id": "S-TEST",
+                "source_file": "source.xlsx",
+                "row_index": 1,
+                "interface_time": "",
+            }
+        ],
+        current_user_roles=[],
+    )
+
+    assert result == {}
+    assert close_calls == []
+
+
 def test_on_assigned_no_maintenance_not_exit(registry_runtime):
     from registry import hooks as registry_hooks
 

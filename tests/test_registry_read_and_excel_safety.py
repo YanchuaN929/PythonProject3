@@ -54,6 +54,39 @@ def test_local_cache_get_read_connection_does_not_deadlock(tmp_path):
         manager.cleanup()
 
 
+def test_local_cache_rebuilds_when_local_db_is_malformed(tmp_path):
+    from registry.local_cache import LocalCacheManager
+
+    network_db_path = tmp_path / "network" / "registry.db"
+    network_db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    conn = sqlite3.connect(str(network_db_path))
+    try:
+        conn.execute("CREATE TABLE demo (id INTEGER PRIMARY KEY, name TEXT)")
+        conn.execute("INSERT INTO demo(name) VALUES ('healthy')")
+        conn.commit()
+    finally:
+        conn.close()
+
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    local_db_path = cache_dir / "registry_local.db"
+    local_db_path.write_bytes(b"not-a-real-sqlite-db")
+
+    manager = LocalCacheManager(
+        str(network_db_path),
+        local_cache_dir=str(cache_dir),
+        sync_interval=300,
+    )
+
+    try:
+        local_conn = manager.get_read_connection()
+        assert local_conn is not None
+        assert local_conn.execute("SELECT name FROM demo").fetchone()[0] == "healthy"
+    finally:
+        manager.cleanup()
+
+
 def test_get_display_status_uses_read_connection(monkeypatch):
     from registry import service as registry_service
 

@@ -971,12 +971,10 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
                 else:
                     result[tid] = display_text
         
-        close_connection_after_use()
         return result
         
     except Exception as e:
         print(f"[Registry] get_display_status内部错误: {e}")
-        close_connection_after_use()
         return {}
 
 def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int) -> None:

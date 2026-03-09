@@ -625,20 +625,10 @@ def close_connection():
             if _CONN is conn:
                 _CONN = None
                 _DB_PATH = None
-        elif _CONN is not None and not _CONN_BY_THREAD:
-            # 兼容旧逻辑：仅当没有线程缓存时，回收遗留的全局连接
-            try:
-                _CONN.close()
-            except Exception:
-                pass
-            _diag_log(
-                "conn_close",
-                thread_id=thread_id,
-                thread_name=thread_name,
-                db_path=_DB_PATH or "",
-            )
-            _CONN = None
-            _DB_PATH = None
+        # 不再尝试关闭“无所属线程”的 _CONN 兼容引用。
+        # 这个全局变量仅保留给旧调试代码观察使用，若在当前线程无连接时
+        # 仍强行回收它，可能误伤其他线程最后一次打开/重建过的连接对象，
+        # 在 sqlite3 的 C 扩展层触发原生崩溃。
 
 
 def is_network_database() -> bool:
