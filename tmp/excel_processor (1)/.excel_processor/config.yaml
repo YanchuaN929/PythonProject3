@@ -1,6 +1,6 @@
 general:
   folder_path: ""
-  export_folder_path: "F:/jilu"
+  export_folder_path: "D:/jilu"
   user_name: "王丹丹"
   auto_startup: true
   minimize_to_tray: true

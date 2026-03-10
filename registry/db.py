@@ -48,6 +48,10 @@ def _diag_log(event: str, **fields: Any) -> None:
         "conn_recreate_closed",
         "maintenance_handle_start",
         "maintenance_exit",
+        "read_conn_cache_reset",
+        "read_conn_local_cache",
+        "read_conn_fallback",
+        "process_done_error",
     }:
         return
     try:
@@ -692,6 +696,11 @@ def get_read_connection(db_path: str) -> sqlite3.Connection:
                 except Exception:
                     pass
                 _local_cache_manager = None
+                _diag_log(
+                    "read_conn_cache_reset",
+                    old_db_path=current_path,
+                    new_db_path=db_path,
+                )
     except Exception:
         pass
     
@@ -713,10 +722,22 @@ def get_read_connection(db_path: str) -> sqlite3.Connection:
             # 尝试获取本地缓存连接
             local_conn = _local_cache_manager.get_read_connection()
             if local_conn:
+                _diag_log("read_conn_local_cache", db_path=db_path)
                 return local_conn
+            _diag_log(
+                "read_conn_fallback",
+                db_path=db_path,
+                reason="cache_returned_none",
+            )
                 
         except Exception as e:
             print(f"[Registry] 本地缓存初始化失败，降级为直连: {e}")
+            _diag_log(
+                "read_conn_fallback",
+                db_path=db_path,
+                reason="local_cache_init_failed",
+                error=str(e),
+            )
     
     # 降级：直接连接（本地路径或缓存不可用）
     return get_connection(db_path, wal=not _is_network_path(db_path))

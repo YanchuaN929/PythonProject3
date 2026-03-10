@@ -384,7 +384,16 @@ def on_process_done(
     except Exception as e:
         print(f"[Registry] on_process_done 失败: {e}")
         import traceback
-        traceback.print_exc()
+        tb_text = traceback.format_exc()
+        print(tb_text)
+        _diag_log(
+            "process_done_error",
+            file_type=file_type,
+            project_id=normalize_project_id(project_id, file_type),
+            source_file=get_source_basename(source_file),
+            error=str(e),
+            traceback=tb_text,
+        )
         
         # 通知数据库状态显示器
         try:

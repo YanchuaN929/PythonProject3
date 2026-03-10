@@ -8,6 +8,7 @@ update.exe 的入口脚本：
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -51,14 +52,116 @@ def log(message: str, level: str = "INFO") -> None:
 
 def parse_args(argv: Optional[Iterable[str]] = None):
     parser = argparse.ArgumentParser(description="接口筛选程序自动更新器")
-    parser.add_argument("--remote", required=True, help="最新版本所在的 EXE 目录")
-    parser.add_argument("--local", required=True, help="当前程序所在目录")
-    parser.add_argument("--version", required=True, help="目标版本号")
+    parser.add_argument("--remote", default="", help="最新版本所在的 EXE 目录")
+    parser.add_argument("--local", default="", help="当前程序所在目录")
+    parser.add_argument("--version", default="", help="目标版本号")
     parser.add_argument("--resume", default="", help="重启后需要恢复的动作")
     parser.add_argument("--main-exe", default="", help="主程序可执行文件名")
     parser.add_argument("--main-pid", type=int, default=0, help="主程序进程ID（优先用于等待退出）")
     parser.add_argument("--auto-mode", action="store_true", help="重启时附加 --auto")
     return parser.parse_args(list(argv) if argv is not None else None)
+
+
+def _read_json_file(file_path: str) -> dict:
+    try:
+        if not file_path or not os.path.exists(file_path):
+            return {}
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _read_version_from_candidates(*candidates: str) -> str:
+    for file_path in candidates:
+        try:
+            if not file_path or not os.path.exists(file_path):
+                continue
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                value = str(data.get("version", "")).strip()
+                if value:
+                    return value
+            elif isinstance(data, str) and data.strip():
+                return data.strip()
+        except Exception:
+            continue
+    return ""
+
+
+def _detect_local_root() -> str:
+    try:
+        if getattr(sys, "frozen", False):
+            return os.path.dirname(os.path.abspath(sys.executable))
+    except Exception:
+        pass
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _load_folder_path_from_config(local_dir: str) -> str:
+    candidate_configs = [
+        os.path.join(os.path.expanduser("~"), ".excel_processor", "config.json"),
+        os.path.join(local_dir, "_internal", "config.json"),
+        os.path.join(local_dir, "config.json"),
+    ]
+    for config_path in candidate_configs:
+        config = _read_json_file(config_path)
+        if not config:
+            continue
+        folder_path = str(config.get("folder_path", "")).strip()
+        if folder_path:
+            return folder_path
+        defaults = config.get("defaults", {})
+        if isinstance(defaults, dict):
+            folder_path = str(defaults.get("folder_path", "")).strip()
+            if folder_path:
+                return folder_path
+    return ""
+
+
+def _detect_main_executable(local_dir: str) -> str:
+    preferred = os.path.join(local_dir, "接口筛选.exe")
+    if os.path.exists(preferred):
+        return os.path.basename(preferred)
+
+    try:
+        for file_name in os.listdir(local_dir):
+            lower = file_name.lower()
+            if lower.endswith(".exe") and lower != "update.exe":
+                return file_name
+    except Exception:
+        pass
+    return ""
+
+
+def fill_missing_args(args):
+    """补全缺失参数，支持双击 update.exe 时自动推断上下文。"""
+    local_dir = os.path.abspath(args.local or _detect_local_root())
+    args.local = local_dir
+
+    if not args.main_exe:
+        args.main_exe = _detect_main_executable(local_dir)
+
+    if not args.remote:
+        folder_path = _load_folder_path_from_config(local_dir)
+        if folder_path:
+            args.remote = os.path.join(folder_path, "EXE")
+
+    if not args.version and args.remote:
+        args.version = _read_version_from_candidates(
+            os.path.join(args.remote, "version.json"),
+            os.path.join(args.remote, "_internal", "version.json"),
+        )
+
+    if not args.version:
+        args.version = _read_version_from_candidates(
+            os.path.join(local_dir, "version.json"),
+            os.path.join(local_dir, "_internal", "version.json"),
+        )
+
+    return args
 
 
 def _is_process_running(process_name: str) -> bool:
@@ -470,6 +573,25 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     """主入口"""
     try:
         args = parse_args(argv)
+        args = fill_missing_args(args)
+        init_log_file(args.local or _detect_local_root())
+
+        missing_args = []
+        if not args.remote:
+            missing_args.append("--remote")
+        if not args.local:
+            missing_args.append("--local")
+        if not args.version:
+            missing_args.append("--version")
+        if missing_args:
+            log(f"缺少必要参数，且自动推断失败: {', '.join(missing_args)}", "ERROR")
+            print("提示：可由主程序自动触发更新，或在配置中补齐 folder_path/defaults.folder_path。")
+            print("当前推断结果：")
+            print(f"  local={args.local or '(空)'}")
+            print(f"  remote={args.remote or '(空)'}")
+            print(f"  version={args.version or '(空)'}")
+            return 1
+
         success = perform_update(args)
         
         if not success:

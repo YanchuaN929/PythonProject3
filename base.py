@@ -779,25 +779,53 @@ class ExcelProcessorApp:
         elif action == UpdateReason.AUTO_FLOW:
             self._run_auto_flow()
 
+    def _resolve_update_folder_path(self, include_runtime_selection: bool = True) -> str:
+        """统一解析更新检查使用的数据目录。"""
+        candidates = []
+
+        if include_runtime_selection:
+            try:
+                if hasattr(self, 'path_var'):
+                    candidates.append(self.path_var.get())
+            except Exception:
+                pass
+
+        config = getattr(self, "config", {}) or {}
+        candidates.append(config.get("folder_path", ""))
+
+        defaults = config.get("defaults", {})
+        if isinstance(defaults, dict):
+            candidates.append(defaults.get("folder_path", ""))
+
+        try:
+            candidates.append(self._get_default_folder_path())
+        except Exception:
+            pass
+
+        for candidate in candidates:
+            text = str(candidate or "").strip()
+            if text:
+                return text
+        return ""
+
     def _ensure_up_to_date(self, reason: str, resume_action: Optional[str] = None) -> bool:
         """
         调用更新管理器进行版本校验；返回True代表可继续后续流程。
         """
-        # 已改为启动时自动检测更新，避免在“开始处理/导出”时触发退出
-        if getattr(self, "_startup_update_check_scheduled", False):
+        if getattr(self, "_update_shutdown_scheduled", False):
+            return False
+
+        # 启动检查进行中时不重复触发；检查结束后允许手动操作再次补查更新。
+        if (
+            getattr(self, "_startup_update_check_scheduled", False)
+            and not getattr(self, "_startup_update_check_finished", False)
+        ):
             return True
         manager = getattr(self, 'update_manager', None)
         if not manager:
             return True
 
-        folder_path = ""
-        try:
-            if hasattr(self, 'path_var'):
-                folder_path = self.path_var.get().strip()
-            if not folder_path:
-                folder_path = self.config.get('folder_path', '').strip()
-        except Exception:
-            folder_path = ""
+        folder_path = self._resolve_update_folder_path(include_runtime_selection=True)
 
         try:
             should_continue = manager.check_and_update(
@@ -822,9 +850,11 @@ class ExcelProcessorApp:
         if getattr(self, "_startup_update_check_scheduled", False):
             return
         self._startup_update_check_scheduled = True
+        self._startup_update_check_finished = False
 
         # 测试环境/显式跳过：避免pytest运行时触发外部路径检查或退出
         if getattr(self, "_skip_auto_startup_bootstrap", False):
+            self._startup_update_check_finished = True
             return
 
         def _kickoff():
@@ -847,26 +877,22 @@ class ExcelProcessorApp:
         """后台线程：检查远程版本，必要时在主线程触发更新并退出。"""
         manager = getattr(self, "update_manager", None)
         if not manager:
+            self._startup_update_check_finished = True
             return
 
         # 启动阶段不读取 Tk 变量，避免线程不安全；优先用配置中的路径
-        folder_path = ""
         try:
-            folder_path = (getattr(self, "config", {}) or {}).get("folder_path", "") or ""
-            folder_path = str(folder_path).strip()
-        except Exception:
-            folder_path = ""
+            folder_path = self._resolve_update_folder_path(include_runtime_selection=False)
 
-        # 先同步 update.exe（保持原更新逻辑：update.exe 由主程序负责自更新）
-        try:
-            manager.sync_update_executable(folder_path)
-        except Exception as e:
+            # 先同步 update.exe（保持原更新逻辑：update.exe 由主程序负责自更新）
             try:
-                self._log_update_message(f"sync_update_executable 失败: {e}")
-            except Exception:
-                pass
+                manager.sync_update_executable(folder_path)
+            except Exception as e:
+                try:
+                    self._log_update_message(f"sync_update_executable 失败: {e}")
+                except Exception:
+                    pass
 
-        try:
             # 复用 UpdateManager 的内部方法，避免改动更新判定逻辑
             remote_root = manager._resolve_remote_dir(folder_path)  # type: ignore[attr-defined]
             if not remote_root:
@@ -904,16 +930,23 @@ class ExcelProcessorApp:
             )
 
             def _trigger():
+                launched = False
                 try:
                     manager._notify_user(context)  # type: ignore[attr-defined]
-                    manager._launch_update_exe(context)  # type: ignore[attr-defined]
+                    launched = bool(manager._launch_update_exe(context))  # type: ignore[attr-defined]
+                    if not launched:
+                        try:
+                            self._log_update_message("更新器未成功启动，本次不退出主程序")
+                        except Exception:
+                            pass
                 except Exception as e:
                     try:
                         self._log_update_message(f"启动更新失败: {e}")
                     except Exception:
                         pass
                 finally:
-                    self._schedule_exit_for_update()
+                    if launched:
+                        self._schedule_exit_for_update()
 
             try:
                 self.root.after(0, _trigger)
@@ -924,6 +957,8 @@ class ExcelProcessorApp:
                 self._log_update_message(f"启动版本检查失败: {e}")
             except Exception:
                 pass
+        finally:
+            self._startup_update_check_finished = True
 
     def _load_current_version(self) -> str:
         candidate_paths = []

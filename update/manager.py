@@ -8,6 +8,7 @@ import os
 import ctypes
 import subprocess
 import sys
+from datetime import datetime
 from dataclasses import dataclass
 from typing import Callable, Optional
 
@@ -152,7 +153,7 @@ class UpdateManager:
     def _launch_update_exe(self, context: UpdateContext) -> bool:
         update_runner = self._resolve_update_runner()
         if not update_runner:
-            self._log("未找到 update.exe 或 updater_cli.py，无法执行更新")
+            self._log("未找到可用的 update.exe，无法执行更新")
             return False
 
         cmd = list(update_runner)
@@ -183,6 +184,8 @@ class UpdateManager:
         self._log(f"启动update进程: {' '.join(cmd)}")
 
         try:
+            if os.path.basename(cmd[0]).lower() == self.update_executable.lower():
+                return self._launch_update_executable(cmd[0], cmd[1:])
             subprocess.Popen(cmd, close_fds=False)
             return True
         except Exception as exc:
@@ -190,21 +193,57 @@ class UpdateManager:
             return False
 
     def _resolve_update_runner(self):
-        # 优先使用 CLI 更新（使用打包内置的 Python 解释器运行脚本）
-        # 用普通 Python 进程（非 PyInstaller EXE）运行更新，避免 python38.dll 被自身锁住
+        exe_path = os.path.join(self.app_root, self.update_executable)
+        is_frozen = bool(getattr(sys, "_MEIPASS", None) or getattr(sys, "frozen", False))
+
+        # 打包环境只允许使用 update.exe，禁止回退到 CLI 链路。
+        if is_frozen and os.path.exists(exe_path):
+            self._log(f"更新器入口: {exe_path}")
+            return [exe_path]
+        if is_frozen:
+            self._log(f"打包环境未找到 {self.update_executable}，跳过更新")
+            return None
+
+        # 开发模式下保留 CLI，便于本地直接调试更新逻辑。
         script_path = self._resolve_updater_script()
         python_path = self._resolve_cli_python()
         if python_path and script_path and os.path.exists(script_path):
+            self._log(f"更新器入口: {python_path} {script_path}")
             return [python_path, script_path]
 
-        # 兜底：使用 update.exe（若可用）
-        exe_path = os.path.join(self.app_root, self.update_executable)
+        # 开发模式兜底一次使用 update.exe
         if os.path.exists(exe_path):
-            if self._can_run_update_exe(exe_path):
-                return [exe_path]
-            self._log("update.exe 依赖缺失或不可用，跳过更新")
+            self._log(f"更新器入口: {exe_path}")
+            return [exe_path]
 
         return None
+
+    def _launch_update_executable(self, exe_path: str, arguments: list[str]) -> bool:
+        """用 ShellExecute 独立拉起 update.exe，避免主程序退出时连带终止子进程。"""
+        params = subprocess.list2cmdline(arguments)
+        self._write_update_launch_trace(f"shell_execute start exe={exe_path} params={params}")
+        result = ctypes.windll.shell32.ShellExecuteW(
+            None,
+            "open",
+            exe_path,
+            params,
+            self.app_root,
+            1,
+        )
+        if result <= 32:
+            self._write_update_launch_trace(f"shell_execute failed code={result}")
+            raise OSError(f"ShellExecuteW failed: {result}")
+        self._write_update_launch_trace(f"shell_execute success code={result}")
+        return True
+
+    def _write_update_launch_trace(self, message: str) -> None:
+        try:
+            log_path = os.path.join(self.app_root, "update_launch.log")
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(log_path, "a", encoding="utf-8") as file_obj:
+                file_obj.write(f"[{timestamp}] {message}\n")
+        except Exception:
+            pass
 
     def _resolve_updater_script(self) -> Optional[str]:
         """定位 updater_cli.py 的实际路径（兼容打包版和开发模式）。"""
@@ -250,19 +289,6 @@ class UpdateManager:
             pass
 
         return None
-
-    def _can_run_update_exe(self, exe_path: str) -> bool:
-        """检测 update.exe 是否可用（缺少系统 DLL 时跳过）。"""
-        if os.name != "nt":
-            return False
-        if not os.path.exists(exe_path):
-            return False
-        try:
-            ctypes.WinDLL("api-ms-win-core-sysinfo-l1-2-0.dll")
-            return True
-        except Exception as exc:
-            self._log(f"update.exe 依赖缺失，跳过: {exc}")
-            return False
 
     def _log(self, message: str) -> None:
         try:

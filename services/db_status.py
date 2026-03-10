@@ -11,8 +11,27 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from typing import Optional
 from datetime import datetime
+import os
 import threading
 import time
+
+
+def _append_registry_error_log(message: str, *, show_dialog: bool, db_path: str = "") -> None:
+    """将原始 registry 异常写入用户目录，便于实机定位弹窗来源。"""
+    try:
+        log_dir = os.path.expanduser("~/.excel_processor")
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, "registry_error.log")
+        ts = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
+        safe_message = str(message).replace("\n", "\\n")
+        safe_db_path = str(db_path or "").replace("\n", "\\n")
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(
+                f"{ts} show_dialog={show_dialog} "
+                f"db_path={safe_db_path} message={safe_message}\n"
+            )
+    except Exception:
+        pass
 
 
 class DatabaseStatus:
@@ -286,6 +305,11 @@ class DatabaseStatusIndicator:
         self._error_message = message
         self.progress_label.config(text="")
         self._update_display()
+        _append_registry_error_log(
+            message,
+            show_dialog=show_dialog,
+            db_path=self._detail_info.get("db_path", ""),
+        )
         
         # 弹窗提醒
         if show_dialog:

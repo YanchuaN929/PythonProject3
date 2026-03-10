@@ -87,6 +87,45 @@ def test_local_cache_rebuilds_when_local_db_is_malformed(tmp_path):
         manager.cleanup()
 
 
+def test_get_read_connection_logs_fallback_reason(monkeypatch):
+    from registry import db as registry_db
+
+    captured = []
+    sentinel = object()
+
+    class BrokenCache:
+        network_db_path = "//server/share/.registry/registry.db"
+
+        @staticmethod
+        def get_read_connection():
+            raise RuntimeError("cache init failed")
+
+    original_cache = registry_db._local_cache_manager
+    original_enabled = registry_db._local_cache_enabled
+    try:
+        registry_db._local_cache_enabled = True
+        registry_db._local_cache_manager = BrokenCache()
+        monkeypatch.setattr(registry_db, "_is_network_path", lambda _path: True)
+        monkeypatch.setattr(registry_db, "get_connection", lambda *_args, **_kwargs: sentinel)
+        monkeypatch.setattr(
+            registry_db,
+            "_diag_log",
+            lambda event, **fields: captured.append((event, fields)),
+        )
+
+        result = registry_db.get_read_connection("//server/share/.registry/registry.db")
+
+        assert result is sentinel
+        assert any(
+            event == "read_conn_fallback"
+            and fields.get("reason") == "local_cache_init_failed"
+            for event, fields in captured
+        )
+    finally:
+        registry_db._local_cache_manager = original_cache
+        registry_db._local_cache_enabled = original_enabled
+
+
 def test_get_display_status_uses_read_connection(monkeypatch):
     from registry import service as registry_service
 
