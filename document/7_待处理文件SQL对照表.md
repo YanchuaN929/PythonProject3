@@ -6,7 +6,9 @@
 - 依据来源：
   - `core/main.py`（现网筛选逻辑与Excel列位）
   - `example/template_spec.json`（文件1/2/3/4/6模板基线）
-  - `example/CIMS-sql/*.sql`（离线快照）
+  - `example/CIMS-SQL-3.5/*.sql`（基础业务快照）
+  - `example/CIMS-sql-3.7/*.sql`（流程增量快照）
+  - `example/CIMS-SQL-3.5/EXCEL导出数据/*.xlsx`（整合版模板样本）
 - 说明：
   - `col_idx` 为 SQL 表内 0-based 列序号。
   - 人员字段多为 32 位 ID，需经 `USER/DEPARTMENT` 解析成“姓名@login”。
@@ -97,17 +99,18 @@
 ## 4. 文件2（内部需回复接口）
 
 > 当前以 `example/CIMS-SQL-3.5/EXCEL导出数据` 7 个项目复合样本、`example/CIMS-SQL-3.5` SQL，以及 Word 权威路径说明为准。  
-> 最新收口结论见 `document/15_CIMS-SQL-3.5_多项目复合样本复核_20260309.md` 与 `document/16_CIMS-SQL-3.5_文件2_4深挖复核_20260309.md`。
+> 最新收口结论见 `document/12_CIMS-SQL-3.5_3.7_SQL运行链统一汇总_20260311.md`。
 
 | 程序字段 | Excel列 | SQL主映射（当前口径） | SQL回退/补充 |
 |---|---|---|---|
 | 项目号 | 文件名4位 | `INTINTERFACEDOC.PROJ_NUM` | 文件名项目号兜底 |
 | 信息单编号 | `A(0)` | `INTINTERFACEDOC.ITEM_NUMBER` | - |
+| 日期 | `B(1)` | `current INTINTERFACEDOC.SUBMIT_DATE` | `RELEASE_DATE`, `MODIFIED_ON` |
 | 对方文号 | `D(3)` | `INTINTERFACEDOC.REF_ITEM_NUMBER` | - |
 | 接口号（程序口径） | `R(17)` | `IDIACP1000.ITEM_NUMBER`（经 `INTINTERFACEDOCIDIACP1000` 关联） | `A` 仅对应信息单页编号，不作为程序 `interface_id` |
 | 回复页编号 | `P(15)` | `reply INTINTERFACEDOC.ITEM_NUMBER` | - |
 | 科室 | `I(8)` | `INTINTERFACEDOC.PROPOSED_DEPT` | `RECEIVE_DEPT` |
-| 回文期限 | `M(12)` | 待确认 | 当前不能定为 `REPLY_DEADLINE` |
+| 回文期限 | `M(12)` | 报表派生 `B + 14天` | 不再使用 `REPLY_DEADLINE` |
 | 回文日期 / 完成标记 | `N(13)` | `reply INTINTERFACEDOC.RELEASE_DATE` | `reply MODIFIED_ON`, `reply SUBMIT_DATE` |
 | 版次 | `E(4)` | `INTINTERFACEDOC.REV` | - |
 | 责任人 | （Excel无稳定原生列） | 流程/分发链方向成立，但当前 dump 未闭环 | 工程回退 `INTINTERFACEDOC.MODIFIED_BY_ID -> USER` |
@@ -119,8 +122,14 @@
   - `A -> INTINTERFACEDOC.ITEM_NUMBER = 90169 / 90177 = 99.9911%`
   - `(A,D) -> INTINTERFACEDOC.(ITEM_NUMBER, REF_ITEM_NUMBER) = 90169 / 90177 = 99.9911%`
   - `R -> INTINTERFACEDOCIDIACP1000 -> IDIACP1000.ITEM_NUMBER = 89979 / 90177 = 99.7804%`
+- `B` 列：
+  - Word 示例 `1915-X-CSP-ZL-22D1-B-006` 的“提出日期 2025-10-23 09:14:04”与 `current INTINTERFACEDOC.SUBMIT_DATE` 精确对齐
+  - 跨项目抽样也稳定落在当前传递页时间字段，不再走回复页
 - 回复页路径：
   - `P -> reply INTINTERFACEDOC.ITEM_NUMBER = 43028 / 43031 = 99.9930%`
+- `M` 列：
+  - `M = B + 14天 = 54539 / 54544 = 99.9908%`
+  - 已确认是 Excel 派生列，不再继续直连 SQL 日期字段
 - `N` 列：
   - `reply RELEASE_DATE = 42742 / 43031 = 99.3284%`
   - `reply MODIFIED_ON = 42597 / 43031 = 98.9914%`
@@ -128,9 +137,6 @@
 
 ### 4.2 当前未定稿部分
 
-- `M` 列仍未闭环：
-  - 最优当前页候选 `ANSWER_DATE = 2370 / 54544 = 4.3451%`
-  - 最优回复页候选 `MODIFIED_ON = 1992 / 54544 = 3.6521%`
 - 责任人链：
   - `INT -> WORKFLOWPROCESSESBIND = 76313 / 80382 = 94.9379%`
   - `INT -> USERVOTERECORD = 39796 / 80382 = 49.5086%`
@@ -142,8 +148,9 @@
 - 程序内主对象仍以 `R -> IDIACP1000` 为 `interface_id` 口径。
 - 文件2时间判断需拆成“传递页对象 + 回复页对象”两层。
 - 若当前必须落代码：
+  - `B` 用 `current INTINTERFACEDOC.SUBMIT_DATE`
+  - `M` 直接按 `B + 14天` 派生
   - `N` 先用 `reply INTINTERFACEDOC.RELEASE_DATE`
-  - `M` 保持未定，不要再写成 `REPLY_DEADLINE`
   - 责任人先保留 `INTINTERFACEDOC.MODIFIED_BY_ID -> USER` 回退口径
 
 ## 5. 文件3（外部需打开接口）
@@ -152,16 +159,26 @@
 |---|---|---|---|
 | 项目号 | 文件名4位 | `ICMACP1000.PROJ_NUM` (`28`) | 文件名项目号兜底 |
 | 接口号 | `C(2)` | `ICMACP1000.ITEM_NUMBER` (`27`) | `INTERFACE_IDENT` (`38`) |
-| 科室 | `AO(40)` | `ICMACP1000.RESP_DEPART` (`40`) | `RESP_SHEZONG` (`43`) -> `USER/DEPARTMENT` |
-| 接口时间 | `M(12)` 或 `L(11)` | `ICMACP1000.PRE_OPEN_DATE` (`57`) | `FINAL_OPEN_DATE` (`60`) |
-| 完成标记 | `Q(16)` 或 `T(19)` | `ICMACP1000.FINAL_OPEN_DATE` (`60`) | `PRE_OPEN_DATE` (`57`) |
+| 发布方 | `I(8)` | `ICMACP1000.RELEASE_PARTY` (`35`) | - |
+| 主办所 | `AL(37)` | `ICMACP1000.RESP_DEPART` (`40`) | 前缀比对优先 |
+| 预报日期 | `L(11)` / `M(12)` | `ICMACP1000.PRE_FORECAST_DATE` (`44`) / `FINAL_FORECAST_DATE` (`45`) | - |
+| 实际打开日期 | `Q(16)` / `T(19)` | `ICMACP1000.PRE_OPEN_DATE` (`57`) / `FINAL_OPEN_DATE` (`60`) | - |
 | 版次 | `AC(28)` | `ICMACP1000.LATEST_IITF_REV` (`78`) | 需与业务确认最终版次口径 |
-| 责任人 | `AP(41)` | `ICMACP1000.RESP_SHEZONG` (`43`) | `DELAY_OPEN_PERSON` (`91`) |
+| 责任人 | `AP(41)` | 页面语义为所内编制人；空值时走管理员提醒逻辑 | 当前库内最近字段 `RESP_SHEZONG` (`43`)，但不作全量定稿 |
+
+### 5.1 当前结论
+
+- `C -> ICMACP1000.ITEM_NUMBER = 23638 / 23641 = 99.9873%`
+- `I -> RELEASE_PARTY = 23622 / 23641 = 99.9196%`
+- Word 与样本表头已确认：
+  - `L/M` 是初版/终版预报日期
+  - `Q/T` 是初版/终版实际打开日期
+- 文件3主对象路径已清晰，但 `AP` 因存在“空值时管理员提醒逻辑在 CIMS 外”的情况，仍不能宣称已 100% SQL 闭环
 
 ## 6. 文件4（外部需回复接口）
 
 > 当前以 `example/CIMS-SQL-3.5/EXCEL导出数据` 7 个项目复合样本、`example/CIMS-SQL-3.5` SQL，以及 Word 权威路径说明为准。  
-> 最新收口结论见 `document/15_CIMS-SQL-3.5_多项目复合样本复核_20260309.md` 与 `document/16_CIMS-SQL-3.5_文件2_4深挖复核_20260309.md`。
+> 最新收口结论见 `document/12_CIMS-SQL-3.5_3.7_SQL运行链统一汇总_20260311.md`。
 
 | 程序字段 | Excel列 | SQL主映射（当前口径） | SQL回退/补充 |
 |---|---|---|---|
@@ -173,7 +190,7 @@
 | 回文期限 | `S(18)` | 报表派生：`F + 20天` | 不是 `SENDRECEIVEDATA.REPLY_DEADLINE` |
 | 回文日期 | `V(21)` | `SENDRECEIVEDATA.ANSWER_DATE` | `SENDRECEIVEDATA.MODIFIED_ON` |
 | 科室 | `AG(32)` | 待进一步核实 | 旧 `ICMACP1000.RESP_DEPART` 口径不再作为主结论 |
-| 责任人 | `AH(33)` | `DISTRIBUTERECORD` 分发表最末级办理人（按 `项目号 + 接口编码` 路由码匹配） | 当前工程回退 `分发表未命中 -> 按 A 分支取 IICS/IITF.CREATED_BY_ID` |
+| 责任人 | `AH(33)` | `DISTRIBUTERECORD` 分发表最末级办理人（按 `项目号 + 接口编码` 路由码匹配） | 当前工程回退 `IITF无路由 -> IICS leaf；IITF/IICS都无路由 -> IICS.CREATED_BY_ID` |
 | 版次 | `I(8)` | 待与业务确认最终显示口径 | `IICS/IITF.REV` 待核实 |
 
 ### 6.1 当前已定稿部分
@@ -193,7 +210,7 @@
 
 ### 6.2 当前未定稿部分
 
-- 基于 Word 版业务规则与 `document/17_CIMS-SQL-3.7_文件4_AH责任人链复核_20260310.md`、`document/18_CIMS-SQL-3.5_文件4_AH分发表路由码复核_20260310.md`，`AH` 的真实业务口径已修正为：
+- 基于 Word 版业务规则与当前统一运行链，`AH` 的真实业务口径已修正为：
   - 先用 Excel `W(22)` `接口编码` 作为路由码
   - 再按 `项目号 + 路由码` 去 `DISTRIBUTERECORD.BO_TITLE`
   - 在 `IITF/IICS` 分发表里取“办理人继续分发则下沉，否则停留为叶子”的最末级办理人
@@ -209,6 +226,12 @@
   - 文件4责任人更接近 `IITF` 分发表，而不是当前对象创建人或最后投票人
   - 但 `DISTRIBUTERECORD` 只覆盖了 `3790` 个 `项目号 + 类型 + 路由码` 键，而 Excel 中有 `17033` 个 `项目号 + A类型 + 路由码` 组合，因此大部分缺口来自“分发表本身无对应路由”，不是叶子匹配规则错误
   - `1915` 项目在当前 `DISTRIBUTERECORD` 中 `externalInterface.ExtIITF/IICS` 行数为 `0`，因此该项目责任人命中必然为 `0`
+- 缺失路由子集再次确认：
+  - `无 IITF 路由 -> IICS.CREATED_BY_ID = 19273 / 29509 = 65.3123%`
+  - `IITF/IICS 都无路由 -> IICS.CREATED_BY_ID = 18232 / 25241 = 72.2317%`
+- 因此可推导的工程综合规则为：
+  - `IITF leaf -> 否则 IICS.CREATED_BY_ID = 26241 / 41814 = 62.7565%`
+  - `IITF leaf -> 否则 IICS leaf -> 否则 IICS.CREATED_BY_ID = 27948 / 41814 = 66.8389%`
 - 因此，`AH` 的业务真值方向已经定稿，但现有 SQL 快照仍未覆盖全部待处理文件4责任人链路
 
 ### 6.3 当前工程口径
@@ -220,7 +243,9 @@
   - `V` 优先落 `SENDRECEIVEDATA.ANSWER_DATE`
   - `P` 按 `A = IICS -> AB`、`A = IITF -> AC` 复原
   - `AH` 先尝试 `项目号 + 接口编码 -> IITF 分发表 -> 最末级办理人(多人任一命中)`
-  - 若分发表无路由记录，再回退 `按 A 分支取 IICS/IITF.CREATED_BY_ID`
+  - 若 `IITF` 无路由记录，再尝试 `IICS 分发表 -> 最末级办理人`
+  - 若 `IITF/IICS` 都无路由记录，再回退 `IICS.CREATED_BY_ID`
+  - 当前这条三段式工程规则的派生命中为 `27948 / 41814 = 66.8389%`
   - 对外说明时不得宣称文件4 `AH` 已全量闭环
 
 ## 7. 文件5（三维提资接口）
