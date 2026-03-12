@@ -22,7 +22,7 @@
 | 3 | `外部接口ICM报表xxxx*.xlsx` | 外部需打开接口 | `innovator.ICMACP1000` | 已验证 |
 | 4 | `外部接口单报表xxxx*.xlsx` | 外部需回复接口 | `innovator.SENDRECEIVEDATA` + `innovator.IICS/IITF` | 部分已定稿 |
 | 5 | `xxxx接口提资清单*.xlsx` | 三维提资接口 | 暂无稳定SQL映射 | 待确认 |
-| 6 | `收发文清单*.xlsx` | 收发文函 | `innovator.SENDRECEIVEDATA` + `innovator.TA`（兼容 `INTINTERFACEDOC` 导出版） | 部分已验证 |
+| 6 | `收发文清单*.xlsx` | 收发文函 | `innovator.INTINTERFACEDOC` + `innovator.SENDRECEIVEDATA`（对象层含 `FILETRANSMISSION / TA / CR / NCR ...`） | 部分已定稿 |
 
 ## 3. 文件1（内部需打开接口）
 
@@ -262,29 +262,109 @@
 
 ## 8. 文件6（收发文函）
 
-### 8.1 主映射（文函口径）
+> 最新统一口径以 `document/12_CIMS-SQL-3.5_3.7_SQL运行链统一汇总_20260311.md`、`document/13_CIMS-SQL-3.5_文件6_SQL深挖复核_20260311.md` 为准。
 
-| 程序字段 | Excel列 | SQL主映射 | SQL回退/补充 |
+### 8.1 总路由
+
+| 程序字段 | Excel列 | 当前SQL口径 | 状态 |
 |---|---|---|---|
-| 项目号 | 文件名4位 | `TA.PROJ_NUM` (`23`) | 文件名项目号兜底 |
-| 收发文编号/接口号 | `E(4)` | `SENDRECEIVEDATA.CORRESP_LETTER_REC_NO` (`27`) | `LETTER_SEND_NO` (`35`), `TA.ITEM_NUMBER` (`28`) |
-| 接口时间（要求回文期限） | `I(8)` | `SENDRECEIVEDATA.REPLY_DEADLINE` (`30`) | `TA.NEED_REPLY_DATE` (`47`) |
-| 完成时间（我方回文日期） | `J(9)` | `SENDRECEIVEDATA.ANSWER_DATE` (`32`) | `SEND_DATE` (`36`) / `RECEIVE_DATE` (`37`) |
-| 回文状态 | `M(12)` | `SENDRECEIVEDATA.IS_ANSWERED` (`31`) | `NEED_REPLY` (`29`) + 日期规则推导 |
-| 主办部门（所） | `V(21)` | `SENDRECEIVEDATA.AUTHOR_UNIT` (`23`) / `RECEIVE_UNIT` (`24`) | 需按组织映射字典归一化 |
-| 主办室 | `W(22)` | （通常由组织映射衍生） | - |
-| 责任人 | `X(23)` | `SENDRECEIVEDATA.CREATED_BY_ID` (`4`) -> `USER/DEPARTMENT` | `MODIFIED_BY_ID` (`8`) |
-| 版次 | `AC(28)` | 文函主表无稳定版次字段 | 需业务定义 |
+| 收发文编号 | `E(4)` | `-ZL-` 样式走 `INTINTERFACEDOC.ITEM_NUMBER`；其余文函号走 `SENDRECEIVEDATA.(CORRESP_LETTER_REC_NO / LETTER_SEND_NO)` | 已定稿 |
+| 接口时间 / 要求回文期限 | `I(8)` | `INT -> REPLY_DEADLINE`；`SEND -> REPLY_DEADLINE` | 部分已定稿 |
+| 我方回文日期 | `J(9)` | `INT -> ANSWER_DATE`；`SEND -> ANSWER_DATE` | 已定稿 |
+| 回文状态 | `M(12)` | `INT -> ANSWER_DATE / REPLY_DEADLINE` 派生；`SEND -> ANSWER_DATE / REPLY_DEADLINE / IS_ANSWERED` 派生 | 已定稿 |
+| 主办部门（所） | `V(21)` | 业务真值应取“分发全过程办理人对应单位并集”；当前 SQL 仅能做弱恢复 | 未闭环 |
+| 主办室 | `W(22)` | 业务真值应取“分发全过程办理人对应科室并集”；当前 SQL 仅能做弱恢复 | 未闭环 |
+| 主办人 | `X(23)` | 业务真值应取“分发全过程办理人并集”；Excel/SQL 多值任一交集命中即算命中 | 业务真值已定，SQL未闭环 |
+| 版次 | `AC(28)` | `INT` 分支可弱映射 `REV`；`SEND` 分支暂无稳定字段 | 未闭环 |
+| 是否回文 | `H(7)` | 本轮按用户要求暂不继续追，保留旧结论 | 暂缓 |
 
-### 8.2 兼容映射（接口单口径“收发文清单”导出版）
+### 8.2 当前命中率
 
-在 `example/收发文清单1818.xlsx` 中，`E` 列值形态与 `INTINTERFACEDOC.ITEM_NUMBER` 一致（如 `1818-5-...`），需保留兼容方案：
+- 总体路由：`4001 / 4178 = 95.7635%`
+- `INT` 分支：`1056`
+  - `E -> ITEM_NUMBER = 100.0000%`
+  - `I -> REPLY_DEADLINE = 100.0000%`
+  - `J -> ANSWER_DATE = 81.9129%`
+  - `M` 派生 = `92.7083%`
+  - `AC -> REV = 60.8902%`
+- `SEND` 分支：`2945`
+  - `E -> CORRESP/LETTER_SEND = 100.0000%`
+  - `I -> REPLY_DEADLINE = 58.6078%`
+  - `J -> ANSWER_DATE = 94.3633%`
+  - `M` 派生：
+    - 按 `2026-03-04` 复算 = `75.1783%`
+    - 按 `2026-03-11` 复算 = `71.3413%`
+- 对象族信号：
+  - `FILETRANSMISSION` 直连信号 `635` 行
+  - `TA = 81` 行
+  - `CR = 50` 行
+  - `NCR = 6` 行
 
-- 接口号：`INTINTERFACEDOC.ITEM_NUMBER` (`27`)
-- 项目号：`INTINTERFACEDOC.PROJ_NUM` (`28`)
-- 期限：`INTINTERFACEDOC.REPLY_DEADLINE` (`57`)
-- 回文日期：`INTINTERFACEDOC.ANSWER_DATE` (`58`)
-- 责任人：`INTINTERFACEDOC.RESP_SHEZONG` (`55`) / `RE_OPEN_RESP_SHEZONG` (`61`)
+### 8.3 分发表、主办人、单位、科室结论
+
+- 本轮已按用户修正规则重算：
+  - `X` 看分发全过程办理人并集
+  - `V/W` 看这些办理人对应的单位/科室并集
+  - Excel 多值与 SQL 多值只要任一交集命中，即算命中
+- 新增探针：`scripts/db_tools/sql_explorer/file6_distribution_chain_probe.py`
+- 结果文件：`tmp/file6_distribution_chain_probe_20260312.json`
+- 本轮 `DISTRIBUTERECORD` 全表扫描结果：
+  - `statement_count = 2372886`
+  - `matched_count = 582`
+  - `matched_by_title_count = 582`
+  - `group_count = 116`
+- 这说明旧的“文件6分发表整体 0 命中”结论已经失效；至少 `INT` 分支存在真实分发表链，之前漏掉了：
+  - `INTINTERFACEDOC` 同链扩展
+  - 紧凑内部接口号标题码提取
+  - `SOURCE_OBJECT_ID + BO_TITLE` 双桥反查
+- 但当前命中仍然很低，且几乎全部集中在 `INT` 分支：
+  - `INT X_all = 2 / 1055 = 0.1896%`
+  - `INT V_all = 14 / 1055 = 1.3270%`
+  - `INT W_all = 3 / 999 = 0.3003%`
+  - `SEND X_all = 0 / 911 = 0.0000%`
+  - `SEND V_all = 0 / 911 = 0.0000%`
+  - `SEND W_all = 0 / 459 = 0.0000%`
+- 版本最佳样本总体命中同样很低：
+  - `X_all = 2 / 1966 = 0.1017%`
+  - `V_all = 14 / 1966 = 0.7121%`
+  - `W_all = 3 / 1458 = 0.2058%`
+- 但这不是文件6发送侧“完全无链”，而是主链类型判断错了。新增流程探针：
+  - 脚本：`scripts/db_tools/sql_explorer/file6_send_workflow_probe.py`
+  - 结果：`tmp/file6_send_workflow_probe_20260312.json`
+  - 对 `SEND` 版本最佳样本 `2958` 行，已有 `1413` 行能落到 `WORKFLOWPROCESSESBIND / USERVOTERECORD`
+  - workflow/vote 并集命中：
+    - `X_all = 409 / 2958 = 13.8310%`
+    - `V_all = 1098 / 2958 = 37.1021%`
+    - `W_all = 560 / 2958 = 18.9542%`
+- 分类型看，文件6 `A` 列确实对应不同存储逻辑：
+  - `备忘录 / 图文传真`：当前主桥是 `OBJECTREPLYLINK -> WORKFLOWPROCESSESBIND / USERVOTERECORD`
+  - `文件传递单 / TA / CR / NCR`：当前主桥是 `主对象(FILETRANSMISSION / TA / CR / NCR) -> WORKFLOWPROCESSESBIND / USERVOTERECORD`
+  - `DISTRIBUTERECORD` 对文件6发送侧只保留为补充链，不再作为主链
+- 这轮还确认了两个反证样本：
+  - `TA: EHMC-420045-ECZS-0077`
+  - `文件传递单: ECZB-770687-EDMB`
+  - 两者都能在主对象表和 workflow/vote 中找到，但在当前 `DISTRIBUTERECORD` 中找不到对应文号和对象 ID
+- 已命中的代表性样本证明规则方向正确，但覆盖不足：
+  - `2016-X-RVD-ZL-25A6-S-092`：`X` 可由分发表全链命中 `于婷`，`W` 可命中 `工艺系统室`
+  - `2016-X-FNP-ZL-25A5-S-137`：`V` 可命中 `河北分公司.核电工艺所`
+- 当前主矛盾已经收口为：
+  - `INT` 分支存在真实 `DISTRIBUTERECORD` 链，但覆盖极低
+  - `SEND` 分支的主链应转到 workflow/vote，而不是继续强压 `DISTRIBUTERECORD`
+  - 仍为 `0` 的发送侧类型，本质上是主对象表还没导出齐
+    - `EXTERNALMINUTES`
+    - `FUNOTIFY`
+    - `CANCELNOTIFY`
+    - `DESIGNREVIEWOPNION`
+    - `DESIGNREVIEWREPLY`
+- 因此当前不能把 `X/V/W` 写成任何单一 SQL 直字段，但已经可以按类型拆成稳定主链，而不是继续写成“整体未闭环”。
+
+### 8.4 现阶段工程判断
+
+- 文件6已定稿的部分：`路由 / I / J / M`
+- 文件6当前重点未闭环的部分：`X / V / W / AC`
+- 文件6发送侧 `X/V/W` 的最终实现必须纳入 `WORKFLOWPROCESSESBIND / USERVOTERECORD`
+- `H` 本轮按要求暂不继续追
+- `core/main.py` 当前文件6最终筛选结果，用 SQL 规则回放后的最终集合一致率约 `99.5751%`，但这不等于字段已经全部闭环，只能说明当前筛选逻辑可近似复算
 
 ## 9. 责任人ID统一解析（通用）
 

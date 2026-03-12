@@ -131,17 +131,63 @@
 
 ### 3.6 文件6：收发文函
 
-当前保留双分支口径：
+文件6当前统一按 Word 版说明、7 项目整合样本、`CIMS-SQL-3.5 / 3.7` SQL 快照，以及已合并后的 `document/13_CIMS-SQL-3.5_文件6_SQL深挖复核_20260311.md` 收口：
 
-1. 接口单型键：
-   - `E` 为 `1818-5-...` 类时，走 `INTINTERFACEDOC`
-2. 文函型键：
-   - `E` 为 `EDMB/ECZB/EFZX/...` 类时，走 `SENDRECEIVEDATA`
-
-说明：
-
-- 文件6不在本轮主攻范围内
-- 但其双分支路径与 `7` 号文件现口径一致，可继续保留
+1. 总路由：
+   - `E` 含 `-ZL-` 的接口单样式，走 `INTINTERFACEDOC`
+   - 常规文函号与 `BW` 特殊号，走 `SENDRECEIVEDATA`
+   - 当前总覆盖 `4001 / 4178 = 95.7635%`
+2. `INT` 分支：
+   - `E -> INTINTERFACEDOC.ITEM_NUMBER`
+   - `I -> INTINTERFACEDOC.REPLY_DEADLINE`
+   - `J -> INTINTERFACEDOC.ANSWER_DATE`
+   - `M -> ANSWER_DATE / REPLY_DEADLINE` 派生状态
+3. `SEND` 分支：
+   - `E -> SENDRECEIVEDATA.(CORRESP_LETTER_REC_NO / LETTER_SEND_NO)`
+   - `I -> SENDRECEIVEDATA.REPLY_DEADLINE`
+   - `J -> SENDRECEIVEDATA.ANSWER_DATE`
+   - `M -> ANSWER_DATE / REPLY_DEADLINE / IS_ANSWERED` 派生状态
+4. 本轮修正后的分发表语义：
+   - `X` 不是“最末级单人责任人”，而是 Excel 中记录的“分发全过程办理人并集”
+   - `V/W` 也不是单点落位值，而是这些办理人对应的单位/科室并集
+   - 命中规则统一为：Excel 多值与 SQL 分发表全链多值之间，只要任一交集命中即算命中
+5. 分发表与流程表探针结论：
+   - `DISTRIBUTERECORD` 侧：
+     - 已新增 `INTINTERFACEDOC` 全链展开、紧凑标题码提取、`SOURCE_OBJECT_ID + BO_TITLE` 双桥探测
+     - `DISTRIBUTERECORD.statement_count = 2372886`
+     - `matched_count = 582`
+     - `group_count = 116`
+     - 旧的“文件6分发表完全 0 命中”已经被推翻，但命中仍几乎只落在 `INT` 分支：
+       - `INT X = 2 / 1055 = 0.1896%`
+       - `INT V = 14 / 1055 = 1.3270%`
+       - `INT W = 3 / 999 = 0.3003%`
+       - `SEND X/V/W = 0`
+   - `WORKFLOWPROCESSESBIND / USERVOTERECORD` 侧：
+     - 已确认 `SEND` 分支不能再只追 `DISTRIBUTERECORD`
+     - 对版本最佳 `SEND` 样本 `2958` 行，已有 `1413` 行能落到 workflow/vote
+     - 基于 workflow/vote 的并集命中：
+       - `X = 409 / 2958 = 13.8310%`
+       - `V = 1098 / 2958 = 37.1021%`
+       - `W = 560 / 2958 = 18.9542%`
+6. 类型级主链：
+   - `备忘录 / 图文传真`：`OBJECTREPLYLINK -> WORKFLOWPROCESSESBIND / USERVOTERECORD`
+   - `文件传递单 / TA / CR / NCR`：`主对象(FILETRANSMISSION / TA / CR / NCR) -> WORKFLOWPROCESSESBIND / USERVOTERECORD`
+   - `DISTRIBUTERECORD` 对文件6发送侧只保留为补充链，不再作为主链
+7. 当前收口：
+   - 文件6 `A` 列确实是对象族信号，不同文函类型存在不同存储逻辑
+   - 当前主缺口已经收窄到尚未导出的主表类型：
+     - `MEMORANDUM`
+     - `TELEFAX`
+     - `INTERNALMINUTES`
+     - `EXTERNALMINUTES`
+     - `FUNOTIFY`
+     - `CANCELNOTIFY`
+     - `DESIGNREVIEWOPNION`
+     - `DESIGNREVIEWREPLY`
+     - `FCR`
+   - `H` 本轮暂不继续追
+8. 最新专题见：
+   - `document/13_CIMS-SQL-3.5_文件6_SQL深挖复核_20260311.md`
 
 ## 4. 与我当前完整运行链的自检结果
 
@@ -167,3 +213,4 @@
   - 文件2责任人最终链
   - 文件3 `AP` 的库内完全闭环
   - 文件4缺失路由样本的真实下游对象
+  - 文件6 `X/V/W/AC/H` 的剩余未闭环项
