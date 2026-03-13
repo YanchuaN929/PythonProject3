@@ -14,6 +14,7 @@ import pandas as pd
 
 from .file4_ah_owner_chain_probe import _owner_match
 from .file4_dist_route_probe import DIST_COLS, DIST_IDX, _extract_values_blob, _iter_insert_statements, _split_sql_values
+from .file6_distribution_chain_probe import _build_relation_map, _expand_relation_ids
 from .real_distribution_chain_probe import _clean_text, _norm_key, _safe_get
 from .roster import load_all_roster_names
 from .validate_cims_sql_dump import iter_insert_rows, normalize_hex32, parse_create_columns, parse_department_map, parse_user_map
@@ -27,7 +28,29 @@ SEP_RE = re.compile(r"[,，;；/、]+")
 INVALID_TEXT = {"", "nan", "none", "null", "nat"}
 NOT_REPLIED = {"尚未回复", "超期未回复"}
 INT_ITEM_TABLES = ("TA", "CR", "DCR", "NCR", "TCR")
-SEND_SIDE_TABLES = ("TA", "CR", "DCR", "NCR", "TCR", "TAREPLY", "CRREPLY", "DCRREPLY", "FCRREPLY", "NCRREPLY", "TCRREPLY", "FILETRANSMISSION")
+SEND_SIDE_TABLES = (
+    "TA",
+    "CR",
+    "DCR",
+    "FCR",
+    "NCR",
+    "TCR",
+    "TAREPLY",
+    "CRREPLY",
+    "DCRREPLY",
+    "FCRREPLY",
+    "NCRREPLY",
+    "TCRREPLY",
+    "FILETRANSMISSION",
+    "MEMORANDUM",
+    "TELEFAX",
+    "INTERNALMINUTES",
+    "EXTERNALMINUTES",
+    "FUNOTIFY",
+    "CANCELNOTIFY",
+    "DESIGNREVIEWOPNION",
+    "DESIGNREVIEWREPLY",
+)
 
 
 def _rate(hit: int, total: int) -> float:
@@ -147,6 +170,17 @@ def _derive_offices_from_orgs(values: Sequence[Any]) -> List[str]:
             if office and office not in offices:
                 offices.append(office)
     return offices
+
+
+def _resolve_sql35_table_path(sql35_dir: Path, table_name: str) -> Path:
+    candidates = [
+        sql35_dir / f"{table_name}_20260305.sql",
+        sql35_dir / f"{table_name}.sql",
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    return candidates[0]
 
 
 def _org_match(excel_value: Any, sql_values: Sequence[Any]) -> bool:
@@ -414,10 +448,18 @@ def scan_child_table(path: Path, table_name: str, needed_send_ids: Set[str], nee
         "MODIFIED_ON",
         "CREATED_ON",
         "CR",
+        "DCR",
+        "FCR",
         "TA",
         "NCR",
+        "TCR",
         "MASTER_SEND",
+        "FILE_TRANSMISSION",
         "REF_FILE_TRANSMISSION",
+        "REF_MEMO",
+        "REF_FAX",
+        "DESIGN_REVIEW_OPNION",
+        "DESIGN_REVIEW_REPLY",
         "OPPOSITE_DOCUMENT_NUMBER",
         "DISPATCH_NUM",
     ]
@@ -455,10 +497,18 @@ def scan_child_table(path: Path, table_name: str, needed_send_ids: Set[str], nee
                 normalize_hex32(payload.get("ID")),
                 normalize_hex32(payload.get("CONFIG_ID")),
                 normalize_hex32(payload.get("CR")),
+                normalize_hex32(payload.get("DCR")),
+                normalize_hex32(payload.get("FCR")),
                 normalize_hex32(payload.get("TA")),
                 normalize_hex32(payload.get("NCR")),
+                normalize_hex32(payload.get("TCR")),
                 normalize_hex32(payload.get("MASTER_SEND")),
+                normalize_hex32(payload.get("FILE_TRANSMISSION")),
                 normalize_hex32(payload.get("REF_FILE_TRANSMISSION")),
+                normalize_hex32(payload.get("REF_MEMO")),
+                normalize_hex32(payload.get("REF_FAX")),
+                normalize_hex32(payload.get("DESIGN_REVIEW_OPNION")),
+                normalize_hex32(payload.get("DESIGN_REVIEW_REPLY")),
             )
             if rel_id
         }
@@ -650,15 +700,15 @@ def _derive_runtime_rule(row: Dict[str, Any], *, reference_date: date) -> Dict[s
 def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path) -> Dict[str, Any]:
     rows = load_file6_rows(excel_dir)
     version_best = _filter_highest_version(rows)
-    dept_map = parse_department_map(sql35_dir / "DEPARTMENT_20260305.sql")
-    user_map = parse_user_map(sql35_dir / "USER_20260305.sql", dept_map)
+    dept_map = parse_department_map(_resolve_sql35_table_path(sql35_dir, "DEPARTMENT"))
+    user_map = parse_user_map(_resolve_sql35_table_path(sql35_dir, "USER"), dept_map)
     roster_names = load_all_roster_names()
 
     int_rows = [row for row in rows if row["key_type"] == "int_key" and row["e_key"]]
     send_rows = [row for row in rows if row["key_type"] != "empty_key" and row["key_type"] != "int_key" and row["e_key"]]
 
-    int_scan = scan_int_table(sql35_dir / "INTINTERFACEDOC_20260305.sql", {row["e_key"] for row in int_rows})
-    send_scan = scan_send_table(sql35_dir / "SENDRECEIVEDATA_20260305.sql", {row["e_key"] for row in send_rows})
+    int_scan = scan_int_table(_resolve_sql35_table_path(sql35_dir, "INTINTERFACEDOC"), {row["e_key"] for row in int_rows})
+    send_scan = scan_send_table(_resolve_sql35_table_path(sql35_dir, "SENDRECEIVEDATA"), {row["e_key"] for row in send_rows})
 
     needed_send_ids: Set[str] = set()
     for mapping_name in ("rec_to_ids", "send_to_ids"):
@@ -668,11 +718,11 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path) ->
     child_tables: Dict[str, Dict[str, Any]] = {}
     child_item_keys = {row["e_key"] for row in send_rows}
     for table_name in SEND_SIDE_TABLES:
-        sql_path = sql35_dir / f"{table_name}_20260305.sql"
+        sql_path = _resolve_sql35_table_path(sql35_dir, table_name)
         if not sql_path.exists():
             continue
         child_tables[table_name] = scan_child_table(sql_path, table_name, needed_send_ids, child_item_keys)
-    ft_direct = scan_filetransmission_route(sql35_dir / "FILETRANSMISSION_20260305.sql", {row["e_key"] for row in send_rows})
+    ft_direct = scan_filetransmission_route(_resolve_sql35_table_path(sql35_dir, "FILETRANSMISSION"), {row["e_key"] for row in send_rows})
 
     for table_name in INT_ITEM_TABLES:
         scan = child_tables.get(table_name)
@@ -683,6 +733,7 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path) ->
             send_ids = {item for item in send_ids if item}
             if send_ids:
                 send_scan["send_to_ids"][item_key].update(send_ids)
+    relation_map = _build_relation_map(int_scan, send_scan, ft_direct, *child_tables.values())
 
     object_ids_for_dist: Set[str] = set(int_scan["by_id"].keys()) | set(send_scan["by_id"].keys()) | set(ft_direct["by_id"].keys())
     for payload in int_scan["by_key"].values():
@@ -695,7 +746,8 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path) ->
         object_ids_for_dist.update(scan["by_id"].keys())
         for payload in scan["by_id"].values():
             object_ids_for_dist.update(payload.get("relation_ids", set()))
-    dist_scan = scan_distribution(sql35_dir / "DISTRIBUTERECORD_20260305.sql", object_ids_for_dist)
+    object_ids_for_dist = _expand_relation_ids(object_ids_for_dist, relation_map)
+    dist_scan = scan_distribution(_resolve_sql35_table_path(sql35_dir, "DISTRIBUTERECORD"), object_ids_for_dist)
 
     route_counter = Counter()
     route_by_project: DefaultDict[str, Counter] = defaultdict(Counter)
@@ -741,7 +793,14 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path) ->
                 linked_send = normalize_hex32(ft_direct["by_id"].get(ft_id, {}).get("SEND_RECEIVE_DATA"))
                 if linked_send:
                     send_id = linked_send
-            if send_id or ft_id:
+            matched_child_tables: List[Tuple[str, Set[str]]] = []
+            for table_name, scan in child_tables.items():
+                child_ids: Set[str] = set(scan["item_to_ids"].get(row["e_key"], set()))
+                if send_id:
+                    child_ids.update(scan["send_to_ids"].get(send_id, set()))
+                if child_ids:
+                    matched_child_tables.append((table_name, child_ids))
+            if send_id or ft_id or matched_child_tables:
                 payload = send_scan["by_id"].get(send_id, {})
                 row["branch"] = "SEND"
                 row["send_id"] = send_id
@@ -756,12 +815,12 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path) ->
                 if ft_id:
                     doc_tables.append("FILETRANSMISSION_ROUTE")
                     doc_ids.extend(sorted(ft_direct["by_id"].get(ft_id, {}).get("relation_ids", {ft_id})))
-                for table_name, scan in child_tables.items():
-                    child_ids = list(scan["send_to_ids"].get(send_id, set()))
-                    if child_ids:
-                        doc_tables.append(table_name)
-                        for child_id in child_ids:
-                            doc_ids.extend(sorted(scan["by_id"].get(child_id, {}).get("relation_ids", {child_id})))
+                for table_name, child_ids in matched_child_tables:
+                    doc_tables.append(table_name)
+                    scan = child_tables[table_name]
+                    for child_id in child_ids:
+                        doc_ids.extend(sorted(scan["by_id"].get(child_id, {}).get("relation_ids", {child_id})))
+                doc_ids = sorted(_expand_relation_ids(doc_ids, relation_map))
                 row["doc_tables"] = sorted(set(doc_tables))
                 for obj_id in doc_ids:
                     for operator in dist_scan["leaves_by_id"].get(obj_id, []):

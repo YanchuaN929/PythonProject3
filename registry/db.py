@@ -79,12 +79,12 @@ def _get_data_folder_from_db_path(db_path: str) -> str:
 
 
 def get_maintenance_flag_path(db_path: Optional[str] = None, data_folder: Optional[str] = None) -> str:
-    """获取维护标志路径：<data_folder>/.registry/maintenance.lock"""
+    """获取维护标志路径：<data_folder>/registry-sql/maintenance.lock"""
     base_folder = data_folder or (_get_data_folder_from_db_path(db_path) if db_path else None)
     if not base_folder:
         raise ValueError("data_folder 和 db_path 不能同时为空")
     base_folder = os.path.normpath(str(base_folder))
-    return os.path.join(base_folder, ".registry", "maintenance.lock")
+    return os.path.join(base_folder, "registry-sql", "maintenance.lock")
 
 
 def is_maintenance_mode(db_path: Optional[str] = None, data_folder: Optional[str] = None) -> bool:

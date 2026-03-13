@@ -1,0 +1,2667 @@
+{
+  "inputs": {
+    "excel_dir": "example\\CIMS-SQL-3.5\\EXCEL导出数据",
+    "sql35_dir": "example\\CIMS-SQL-3.5",
+    "sql37_dir": "example\\CIMS-sql-3.7",
+    "doc_types": [
+      "审查意见单"
+    ]
+  },
+  "row_counts": {
+    "all_send_rows": 398,
+    "version_best_send_rows": 398,
+    "rows_with_candidate_objects": 398,
+    "rows_with_workflow_hits": 398,
+    "version_best_rows_with_workflow_hits": 398
+  },
+  "table_scans": {
+    "SENDRECEIVEDATA": {
+      "rows_scanned": 1109324,
+      "rows_matched": 400
+    },
+    "FILETRANSMISSION_ROUTE": {
+      "rows_scanned": 242998,
+      "rows_matched": 0
+    },
+    "OBJECTREPLYLINK": {
+      "rows_scanned": 48961,
+      "rows_matched": 0
+    },
+    "send_aux_tables": {
+      "CANCELNOTIFY": {
+        "rows_scanned": 3237,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "CR": {
+        "rows_scanned": 86442,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "CRREPLY": {
+        "rows_scanned": 25341,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "DCR": {
+        "rows_scanned": 1431,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "DCRREPLY": {
+        "rows_scanned": 0,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "DESIGNREVIEWOPNION": {
+        "rows_scanned": 158845,
+        "rows_matched": 396,
+        "send_link_rows": 396
+      },
+      "DESIGNREVIEWREPLY": {
+        "rows_scanned": 19930,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "EXTERNALMINUTES": {
+        "rows_scanned": 9589,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "FCR": {
+        "rows_scanned": 106881,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "FCRREPLY": {
+        "rows_scanned": 302,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "FILETRANSMISSION": {
+        "rows_scanned": 242998,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "FUNOTIFY": {
+        "rows_scanned": 10766,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "INTERNALMINUTES": {
+        "rows_scanned": 9207,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "MEMORANDUM": {
+        "rows_scanned": 141257,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "NCR": {
+        "rows_scanned": 4576,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "NCRREPLY": {
+        "rows_scanned": 4165,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "TA": {
+        "rows_scanned": 16867,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "TAREPLY": {
+        "rows_scanned": 20092,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "TCR": {
+        "rows_scanned": 222,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "TCRREPLY": {
+        "rows_scanned": 0,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "TELEFAX": {
+        "rows_scanned": 120600,
+        "rows_matched": 2,
+        "send_link_rows": 2
+      }
+    },
+    "WORKFLOWPROCESSESBIND": {
+      "rows_scanned": 803,
+      "rows_matched": 803,
+      "matched_source_ids": 791
+    },
+    "USERVOTERECORD": {
+      "rows_scanned": 3128,
+      "rows_matched": 3128,
+      "matched_source_ids": 786,
+      "activity_counter": {
+        "编制": 798,
+        "批准": 798,
+        "校对": 408,
+        "发送": 400,
+        "审核": 382,
+        "绑签": 251,
+        "修改": 91
+      }
+    }
+  },
+  "workflow_metrics": {
+    "version_best": {
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667,
+        "by_project": {
+          "1915": {
+            "total": 20,
+            "hit": 2,
+            "rate": 0.1
+          },
+          "1916": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2016": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "审查意见单": {
+            "total": 30,
+            "hit": 2,
+            "rate": 0.066667
+          }
+        }
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 5,
+        "rate": 0.166667,
+        "by_project": {
+          "1915": {
+            "total": 20,
+            "hit": 5,
+            "rate": 0.25
+          },
+          "1916": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2016": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "审查意见单": {
+            "total": 30,
+            "hit": 5,
+            "rate": 0.166667
+          }
+        }
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "1915": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1916": {
+            "total": 1,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2016": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "审查意见单": {
+            "total": 14,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      }
+    },
+    "by_type": {
+      "审查意见单": {
+        "row_count": 398,
+        "rows_with_workflow_hits": 398,
+        "X_all": {
+          "total": 30,
+          "hit": 2,
+          "rate": 0.066667,
+          "by_project": {
+            "1915": {
+              "total": 20,
+              "hit": 2,
+              "rate": 0.1
+            },
+            "1916": {
+              "total": 4,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2016": {
+              "total": 6,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "审查意见单": {
+              "total": 30,
+              "hit": 2,
+              "rate": 0.066667
+            }
+          }
+        },
+        "V_all": {
+          "total": 30,
+          "hit": 5,
+          "rate": 0.166667,
+          "by_project": {
+            "1915": {
+              "total": 20,
+              "hit": 5,
+              "rate": 0.25
+            },
+            "1916": {
+              "total": 4,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2016": {
+              "total": 6,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "审查意见单": {
+              "total": 30,
+              "hit": 5,
+              "rate": 0.166667
+            }
+          }
+        },
+        "W_all": {
+          "total": 14,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {
+            "1915": {
+              "total": 9,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1916": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2016": {
+              "total": 4,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "审查意见单": {
+              "total": 14,
+              "hit": 0,
+              "rate": 0.0
+            }
+          }
+        }
+      }
+    }
+  },
+  "source_counters": {
+    "workflow_source_types": {
+      "[unknown]": 398,
+      "extra.cnpe.entity.designReview.ExtDesignReviewOpnion": 396,
+      "extra.cnpe.entity.designOutput.ExtFileTransmission": 385,
+      "extra.cnpe.entity.designReview.ExtDesignReviewReply": 11,
+      "extra.cnpe.entity.communication.ExtTeleFax": 2
+    },
+    "row_table_sources": {
+      "DESIGNREVIEWOPNION": 396,
+      "TELEFAX": 2
+    }
+  },
+  "samples": {
+    "matched_examples": [
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 466,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-600002-EDNT",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "52821C59E8B54CF99C21B409ABCA6C0C",
+          "8813C8A96C17491FBAC3DD0A05AFDF79",
+          "EE13CDDD99EC4C67987DEB7F97824894"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "王晓奇",
+          "设计文档",
+          "彭博",
+          "王海龙",
+          "王冠通",
+          "1818设计文档",
+          "赵泾雄"
+        ],
+        "workflow_org_values": [
+          "结构四室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "建筑结构所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.建筑结构所",
+          "建筑结构所.结构四室",
+          "中核工程.北京核工程研究设计院.建筑结构所",
+          "北京核工程研究设计院.建筑结构所.结构四室",
+          "结构二室",
+          "建筑结构所.结构二室",
+          "北京核工程研究设计院.建筑结构所.结构二室",
+          "设计管理科",
+          "工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部"
+        ],
+        "workflow_office_values": [
+          "结构四室",
+          "北京核工程研究设计院",
+          "结构二室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 467,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-600266-ECZB",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "15033374B7C741EC94EA0C6ADFA1CCFE",
+          "3B34B604A1404313A100F0B3DBE7EA98",
+          "8E43416F63074F7EB6BA7D817EC2C422",
+          "C327199743374C78A3ECEB933E5D7157"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "刘媛媛",
+          "李鹏",
+          "吕风杰",
+          "设计文档",
+          "姜佳音",
+          "张晓云",
+          "潘后荣",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "电气室",
+          "中核工程",
+          "河北分公司",
+          "电气自动化所",
+          "中核工程.河北分公司",
+          "河北分公司.电气自动化所",
+          "电气自动化所.电气室",
+          "中核工程.河北分公司.电气自动化所",
+          "河北分公司.电气自动化所.电气室",
+          "仪控二室",
+          "电气自动化所.仪控二室",
+          "河北分公司.电气自动化所.仪控二室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "水工工艺二室"
+        ],
+        "workflow_office_values": [
+          "电气室",
+          "仪控二室",
+          "北京核工程研究设计院",
+          "水工工艺二室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 468,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-600453-ECZB",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "756828CB76ED4CA79FC99AFFB92E0BA4",
+          "8DFCCBB76C5044A6ABED2CA6A4C11319",
+          "B7AE1572145848D8B0EC4CDFE747B08B"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "林芳",
+          "杨嘉",
+          "设计文档",
+          "王芳",
+          "李久振",
+          "1818设计文档"
+        ],
+        "workflow_org_values": [
+          "水工工艺二室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "公用系统所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.公用系统所",
+          "公用系统所.水工工艺二室",
+          "中核工程.北京核工程研究设计院.公用系统所",
+          "北京核工程研究设计院.公用系统所.水工工艺二室",
+          "设计管理科",
+          "工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科",
+          "中核工程.北京核工程研究设计院.工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工工艺二室",
+          "北京核工程研究设计院",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 469,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-600466-EDES",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "5A69C6FAE49449E4BE21125D267C52EA",
+          "6382C402C7A84702919C873C351C33AE",
+          "6AFE2FF278554579BC5C0A62903FC604"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "设计文档",
+          "1818设计文档",
+          "池云莉",
+          "贾晓旭",
+          "张庆亮",
+          "黄彦坤"
+        ],
+        "workflow_org_values": [
+          "北京核工程研究设计院",
+          "中核工程",
+          "中核工程.北京核工程研究设计院",
+          "电力工程研究设计所",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.电力工程研究设计所",
+          "中核工程.河北分公司.电力工程研究设计所",
+          "土建室",
+          "电力工程研究设计所.土建室",
+          "河北分公司.电力工程研究设计所.土建室"
+        ],
+        "workflow_office_values": [
+          "北京核工程研究设计院",
+          "土建室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 470,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-600467-EDES",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "1B492E79E2774438A053377FD06215B3",
+          "B67E295BC3CB4979A44BAD35ABC13CE5",
+          "C723DC5628C74D7795FA504A26BDA1B3"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "刘恒畅",
+          "李伟瑞",
+          "池云莉",
+          "设计文档",
+          "李金芳",
+          "1818设计文档"
+        ],
+        "workflow_org_values": [
+          "电气室",
+          "中核工程",
+          "河北分公司",
+          "电力工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.电力工程研究设计所",
+          "电力工程研究设计所.电气室",
+          "中核工程.河北分公司.电力工程研究设计所",
+          "河北分公司.电力工程研究设计所.电气室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院"
+        ],
+        "workflow_office_values": [
+          "电气室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 471,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-600468-EDES",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "1A3C00A281B84509AD6726A286F0A7C1",
+          "8C742912FCA543679B37BA5A5461A543",
+          "99A84AF3F3074552BDCAC12DA5CDF584",
+          "E83761BD36424FF084BE87052C00D2D6"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]"
+        ],
+        "workflow_people_all": [
+          "设计文档",
+          "1818设计文档",
+          "池云莉",
+          "张思傲",
+          "李金芳",
+          "张近",
+          "王晓晨"
+        ],
+        "workflow_org_values": [
+          "北京核工程研究设计院",
+          "中核工程",
+          "中核工程.北京核工程研究设计院",
+          "电力工程研究设计所",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.电力工程研究设计所",
+          "中核工程.河北分公司.电力工程研究设计所",
+          "电气室",
+          "电力工程研究设计所.电气室",
+          "河北分公司.电力工程研究设计所.电气室"
+        ],
+        "workflow_office_values": [
+          "北京核工程研究设计院",
+          "电气室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 472,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-600469-EDES",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "02DBEE7CA5B34B7BB400FAE993D08321",
+          "2389FC3C14C747FF9B75EF39B29C5822",
+          "492879146CD04C5DA3361D0E9FD90950"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "设计文档",
+          "1818设计文档",
+          "池云莉",
+          "刘卫隆",
+          "邓星星",
+          "赵华伟"
+        ],
+        "workflow_org_values": [
+          "北京核工程研究设计院",
+          "中核工程",
+          "中核工程.北京核工程研究设计院",
+          "电力工程研究设计所",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.电力工程研究设计所",
+          "中核工程.河北分公司.电力工程研究设计所",
+          "水工室",
+          "核电工艺所",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "北京核工程研究设计院",
+          "水工室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 473,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-600470-EDES",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "0498E0C361854922B25B9C8446FACDAC",
+          "07B5C2DD72D64C2196A1D1EB3A77FEBD",
+          "D12781080CB3446A8DEDCCF8663542E6"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]"
+        ],
+        "workflow_people_all": [
+          "设计文档",
+          "1818设计文档",
+          "池云莉",
+          "贾晓旭",
+          "张庆亮",
+          "黄彦坤"
+        ],
+        "workflow_org_values": [
+          "北京核工程研究设计院",
+          "中核工程",
+          "中核工程.北京核工程研究设计院",
+          "电力工程研究设计所",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.电力工程研究设计所",
+          "中核工程.河北分公司.电力工程研究设计所",
+          "土建室",
+          "电力工程研究设计所.土建室",
+          "河北分公司.电力工程研究设计所.土建室"
+        ],
+        "workflow_office_values": [
+          "北京核工程研究设计院",
+          "土建室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 474,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-600471-EDES",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "01431203EA22472C9ED7D1618FAA8E81",
+          "280E023D48EC489383415A22D3F0A93E",
+          "EE75F120CF804410876C8B733582A659"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "贾晓旭",
+          "设计文档",
+          "池云莉",
+          "张庆亮",
+          "黄彦坤",
+          "1818设计文档"
+        ],
+        "workflow_org_values": [
+          "土建室",
+          "中核工程",
+          "河北分公司",
+          "电力工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.电力工程研究设计所",
+          "电力工程研究设计所.土建室",
+          "中核工程.河北分公司.电力工程研究设计所",
+          "河北分公司.电力工程研究设计所.土建室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院"
+        ],
+        "workflow_office_values": [
+          "土建室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 475,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-600472-EDES",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "13092258D4EA453BB6C31FBA9983C7B6",
+          "28D6E1071A1D4497B268CD308AAC6F5E",
+          "677AE9EB1E1A41208AC1AC6FC495FBF6"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "设计文档",
+          "1818设计文档",
+          "池云莉",
+          "贾晓旭",
+          "黄彦坤",
+          "张庆亮"
+        ],
+        "workflow_org_values": [
+          "北京核工程研究设计院",
+          "中核工程",
+          "中核工程.北京核工程研究设计院",
+          "电力工程研究设计所",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.电力工程研究设计所",
+          "中核工程.河北分公司.电力工程研究设计所",
+          "土建室",
+          "电力工程研究设计所.土建室",
+          "河北分公司.电力工程研究设计所.土建室"
+        ],
+        "workflow_office_values": [
+          "北京核工程研究设计院",
+          "土建室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 476,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-601657-ECZB",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "30D8690D0102424FB2DD456F6352DF5A",
+          "488C1E3E43DA46DDB872D55611707DEC",
+          "CA7E8B8230454937AD5765912E5D29DE",
+          "F179A6CD88164C06AEDF720B83760E96"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "设计文档",
+          "1818设计文档",
+          "李久振",
+          "王志远",
+          "王志远f",
+          "赵书宇",
+          "杜广",
+          "许克凤",
+          "李涛",
+          "赵嘉明"
+        ],
+        "workflow_org_values": [
+          "北京核工程研究设计院",
+          "中核工程",
+          "中核工程.北京核工程研究设计院",
+          "设计管理科",
+          "工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科",
+          "中核工程.北京核工程研究设计院.工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部.设计管理科",
+          "总体布置室",
+          "工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.总体布置室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.总体布置室"
+        ],
+        "workflow_office_values": [
+          "北京核工程研究设计院",
+          "设计管理科",
+          "总体布置室",
+          "工艺布置一室",
+          "工艺布置二室",
+          "辅助系统室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 477,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602315-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "1D6A5D88A43D48A2ABD324C7B8FA18A7",
+          "20FD9A30568D4867BA8B4B929BD1B795",
+          "BBF7F7AF00B2472489AC3E731A750895",
+          "E3A82D8D84994A158906DCA5DFFB4D8C"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "庄超",
+          "李鹏",
+          "王智勇",
+          "曹骞",
+          "设计文档",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "仪控一室",
+          "中核工程",
+          "河北分公司",
+          "电气自动化所",
+          "中核工程.河北分公司",
+          "河北分公司.电气自动化所",
+          "电气自动化所.仪控一室",
+          "中核工程.河北分公司.电气自动化所",
+          "河北分公司.电气自动化所.仪控一室",
+          "仪控二室",
+          "电气自动化所.仪控二室",
+          "河北分公司.电气自动化所.仪控二室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "水工室"
+        ],
+        "workflow_office_values": [
+          "仪控一室",
+          "仪控二室",
+          "北京核工程研究设计院",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 478,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602320-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "063443CFA6CC435DA6FBF9FAFEAC7852",
+          "22CEF7C81A3D441B9222C213252DDF8A",
+          "9242972CF35744DB820ADDC75DB2133A",
+          "A65822E6CBFA4BEFA9F604017CBE4D30"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "设计文档",
+          "李久振",
+          "范欣欣",
+          "李昌磊",
+          "廖圣勇",
+          "李颖",
+          "刘怡柔",
+          "何庆镭"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理科",
+          "工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "北京核工程研究设计院",
+          "设计管理科",
+          "仪控一室",
+          "仪控二室",
+          "主控及信息监控系统设计室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 479,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602321-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "3FFE4929633A4EA8862D02F67C88EF14",
+          "521B79F0AA91445CAB1F268FD359D56F",
+          "975A804AAFC045959768402D041AD55E",
+          "FC30D0DD03704C3390EC681FFF40B22F"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "设计文档",
+          "李久振",
+          "范欣欣",
+          "何庆镭",
+          "李昌磊",
+          "刘怡柔",
+          "廖圣勇",
+          "李颖"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理科",
+          "工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "北京核工程研究设计院",
+          "设计管理科",
+          "仪控一室",
+          "仪控二室",
+          "主控及信息监控系统设计室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 480,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602322-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "074629D278AF42BF90F4162FBEAA3029",
+          "6F5602DCE9E641E5B770F73878AF8DE5",
+          "DCD92EC556014B31B3C7F3E2C922C447"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "樊彦芳",
+          "高文迦",
+          "许克凤",
+          "设计文档",
+          "赵嘉明",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "总体布置室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.总体布置室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.总体布置室",
+          "辅助系统室",
+          "工艺系统研究设计所.辅助系统室",
+          "北京核工程研究设计院.工艺系统研究设计所.辅助系统室",
+          "水工室",
+          "河北分公司",
+          "核电工艺所"
+        ],
+        "workflow_office_values": [
+          "总体布置室",
+          "北京核工程研究设计院",
+          "辅助系统室",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 481,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602323-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "9F1866545C614C5A98244A89FB6C221E",
+          "A4363B5D676344E29DDB3FF7459F9AF1",
+          "AA39C279721C41F08D6CDD12AE38BFCF",
+          "AF2CFA047B504540B2757BE8085DFCDD"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "设计文档",
+          "李久振",
+          "樊彦芳",
+          "高文迦",
+          "许克凤",
+          "赵嘉明"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理科",
+          "工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "北京核工程研究设计院",
+          "设计管理科",
+          "总体布置室",
+          "辅助系统室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 482,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602324-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "279A07A2A3534A61986ECBA82B625335",
+          "5057DBA784454295BD31E57E9A555482",
+          "B57EB93E2C1542458ACAC83F83FFF8DA",
+          "D3A040E4E3DB40B585FBF0383AE2E332"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "李久振",
+          "设计文档",
+          "韩双",
+          "李铮铮",
+          "白兰",
+          "刘建栋",
+          "高文迦",
+          "赵嘉明",
+          "杜广"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "工程设计管理部",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "总体布置室",
+          "工艺布置二室",
+          "工艺系统室",
+          "辅助系统室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 483,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602325-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "4E39B0CF582B45A9AC99E5915DB9DA4D",
+          "8495C768373B40419FD003975856920E",
+          "C23AA4719B9D4257B552158E01CDD9D2"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "设计文档",
+          "李久振",
+          "纪立军",
+          "刘康利",
+          "赵嘉明",
+          "高文迦",
+          "牛艳颖"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理科",
+          "工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "北京核工程研究设计院",
+          "设计管理科",
+          "总体布置室",
+          "工艺布置二室",
+          "辅助系统室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 484,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602326-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "3EA8F34A211442B3AB22B4D033362F2B",
+          "46FBB4ACFD104FFBAE16BFF8C82F7998",
+          "CF42E319EAF342C4919B0DAC4BC8371E"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "孙超杰",
+          "设计文档",
+          "李铮铮",
+          "刘江",
+          "赵嘉明",
+          "郭晨楠",
+          "杨理烽",
+          "刘亚光",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "安全系统室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.安全系统室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.安全系统室",
+          "工艺布置二室",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.工艺布置二室"
+        ],
+        "workflow_office_values": [
+          "安全系统室",
+          "北京核工程研究设计院",
+          "工艺布置二室",
+          "未找到单位",
+          "辅助系统室",
+          "工艺系统室",
+          "工艺设备室",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 485,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602327-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "4E51D681F50348F18A9FB15AF49D44B1",
+          "A0B541296BE94557B19F3BF7D1498142",
+          "B576552E8DC747C19D69D28D8E2C7E4F"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "韩双",
+          "设计文档",
+          "高文迦",
+          "杜广",
+          "赵嘉明",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "总体布置室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.总体布置室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.总体布置室",
+          "辅助系统室",
+          "工艺系统研究设计所.辅助系统室",
+          "北京核工程研究设计院.工艺系统研究设计所.辅助系统室",
+          "水工室",
+          "河北分公司",
+          "核电工艺所"
+        ],
+        "workflow_office_values": [
+          "总体布置室",
+          "北京核工程研究设计院",
+          "辅助系统室",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 486,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602328-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "54E768FD338E4192BCC647E2B760DF2C",
+          "8FE0FC917F0745FB848FC2CD7CC62486",
+          "CD9F4BE56DF44B5BAB943EF3F15936AA"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "李久振",
+          "设计文档",
+          "孙超杰",
+          "刘江",
+          "杨理烽",
+          "赵嘉明",
+          "郭晨楠",
+          "刘亚光",
+          "李铮铮"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "工程设计管理部",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "安全系统室",
+          "未找到单位",
+          "工艺设备室",
+          "辅助系统室",
+          "工艺系统室",
+          "工艺布置二室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 487,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602329-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "11ADE564F3F24DC188CA7AAFECAD5854",
+          "80DEC4D92A9C4ADC8EC13DAD167C82C1",
+          "B96050522FCA42979D57FC8C2BEF3CCA"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "设计文档",
+          "李久振",
+          "孙超杰",
+          "杨理烽",
+          "赵嘉明",
+          "李铮铮",
+          "刘亚光",
+          "郭晨楠",
+          "刘江"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理科",
+          "工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "北京核工程研究设计院",
+          "设计管理科",
+          "安全系统室",
+          "工艺设备室",
+          "辅助系统室",
+          "工艺布置二室",
+          "工艺系统室",
+          "未找到单位"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 488,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602330-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "1BFB03FD18204BBFBF79E2FFF43375EB",
+          "C7FB1941C7374EF5BFAA7AB7316043EA",
+          "CA4E9269E76547FDBFC16CD17AFE0A08"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "李久振",
+          "设计文档",
+          "杨洋",
+          "赵嘉明",
+          "刘康利",
+          "黄若琳",
+          "龚钊",
+          "张卫"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "工程设计管理部",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "工艺设备室",
+          "辅助系统室",
+          "工艺布置二室",
+          "未找到单位"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 489,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602331-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "0DA64D73D43746299E9A84C9860E5DDC",
+          "4D9DE36A473846FEA5A799C9A5878ACD",
+          "509165D421244B97ABB972865C42B75B"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "樊彦芳",
+          "赵嘉明",
+          "设计文档",
+          "许克凤",
+          "高文迦",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "总体布置室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.总体布置室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.总体布置室",
+          "辅助系统室",
+          "工艺系统研究设计所.辅助系统室",
+          "北京核工程研究设计院.工艺系统研究设计所.辅助系统室",
+          "水工室",
+          "河北分公司",
+          "核电工艺所"
+        ],
+        "workflow_office_values": [
+          "总体布置室",
+          "辅助系统室",
+          "北京核工程研究设计院",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 490,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602332-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "26417B309DBC4AA586FC8CA5DD670FFC",
+          "358B9DF6CEF043CA9A3B1FA08FFC212A",
+          "61C3B22968F64705A3944D58C6BD7928"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "韩双",
+          "邓峰",
+          "牛艳颖",
+          "王志远",
+          "赵嘉明",
+          "设计文档",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "总体布置室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.总体布置室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.总体布置室",
+          "工程焊接室",
+          "核设备所",
+          "北京核工程研究设计院.核设备所",
+          "核设备所.工程焊接室",
+          "中核工程.北京核工程研究设计院.核设备所",
+          "北京核工程研究设计院.核设备所.工程焊接室"
+        ],
+        "workflow_office_values": [
+          "总体布置室",
+          "工程焊接室",
+          "辅助系统室",
+          "北京核工程研究设计院",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 491,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602333-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "03F9E151A9C146049763A1C722A27470",
+          "31A23D6DEA9F49698376C4768F52E996",
+          "53576FF1A178404483ADFF5961701EAA",
+          "FF60CD3A505E42798E347F51F863A757"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "张念喆",
+          "设计文档",
+          "王鹤飞",
+          "邹文重",
+          "陈彦霖",
+          "赵嘉明",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "安全系统室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.安全系统室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.安全系统室",
+          "工艺系统室",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.工艺系统室"
+        ],
+        "workflow_office_values": [
+          "安全系统室",
+          "北京核工程研究设计院",
+          "工艺系统室",
+          "辅助系统室",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 492,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602334-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "0489818BBDE641EC9600F4363A75FCE6",
+          "5B01BA551C9F4B549ADD2BB8C41AB720",
+          "803B130B3139457594C9EB6C665A232D"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "设计文档",
+          "李久振",
+          "张念喆",
+          "赵嘉明",
+          "刘加志",
+          "陈彦霖"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理科",
+          "工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "北京核工程研究设计院",
+          "设计管理科",
+          "安全系统室",
+          "辅助系统室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 493,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602335-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "8BE6536A705E4EEEBB2AEBE1709D5CDE",
+          "9FB6CEBD796048DF931C7DAA29A6712F",
+          "B3523BABFC5E474391D6FE46E7DFD24B",
+          "F96F9CF7520A4E8AA1AB07200100919E"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "杨振国",
+          "杨焕起",
+          "张亮",
+          "闫征",
+          "韩旭亮",
+          "设计文档",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "暖通室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.暖通室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.暖通室",
+          "结构一室",
+          "建筑结构所",
+          "河北分公司.建筑结构所",
+          "建筑结构所.结构一室",
+          "中核工程.河北分公司.建筑结构所",
+          "河北分公司.建筑结构所.结构一室"
+        ],
+        "workflow_office_values": [
+          "暖通室",
+          "结构一室",
+          "暖通二室",
+          "北京核工程研究设计院",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 494,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602336-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "17E5155A5E074E7AA89BB65AF95C0CE4",
+          "3798DD000E1E4654A23837FB196683C7",
+          "888B9917D0E242488E76A89D65BB040C"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "黄若琳",
+          "杨理烽",
+          "设计文档",
+          "李云华",
+          "李栋梁",
+          "张卫",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "工艺设备室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.工艺设备室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.工艺设备室",
+          "核燃料运输与工艺室",
+          "核设备所",
+          "北京核工程研究设计院.核设备所",
+          "核设备所.核燃料运输与工艺室",
+          "中核工程.北京核工程研究设计院.核设备所",
+          "北京核工程研究设计院.核设备所.核燃料运输与工艺室"
+        ],
+        "workflow_office_values": [
+          "工艺设备室",
+          "北京核工程研究设计院",
+          "核燃料运输与工艺室",
+          "未找到单位",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 495,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602337-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "25AAFEAFED9245229097CED3AD92600C",
+          "4C79EC0C2B424BDB91FACF394BF61839",
+          "67955FDEDEA34E03A086DBFE42A24626",
+          "ED516007388F429ABE45D6CF15A60A69"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "设计文档",
+          "李久振",
+          "刘恺雯",
+          "张进学",
+          "李云华",
+          "王鹏",
+          "王玉莹"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理科",
+          "工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "北京核工程研究设计院",
+          "设计管理科",
+          "工艺及成套设备室",
+          "设备室",
+          "核燃料运输与工艺室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 496,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602338-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "2773DF0F8E6745B78ED7C64B335B348C",
+          "64B8EE2F70244E33851C55587354ECB3",
+          "91A65F1A49294C21AF7987949A902DEE",
+          "EDAB620A2A2446E887E7985A06471490"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "乔振铭",
+          "李云华",
+          "张洪军",
+          "设计文档",
+          "唐兴贵",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "核燃料运输与工艺室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "核设备所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.核设备所",
+          "核设备所.核燃料运输与工艺室",
+          "中核工程.北京核工程研究设计院.核设备所",
+          "北京核工程研究设计院.核设备所.核燃料运输与工艺室",
+          "水工室",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "核燃料运输与工艺室",
+          "北京核工程研究设计院",
+          "核设备所",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 497,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602339-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "404B055B2BDC4E69BE3D2DFC214182D9",
+          "408D8B43748C4E22921A7366F951BA44",
+          "7387A77A2F454C5EB6F331183B8F2A25",
+          "D07E3A01C3C14FCEBF92267236157DE5"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "设计文档",
+          "李久振",
+          "李晓萌",
+          "黄良",
+          "眭洪涛",
+          "张念喆",
+          "栗涛"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理科",
+          "工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "北京核工程研究设计院",
+          "设计管理科",
+          "工艺布置一室",
+          "安全系统室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 498,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602340-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "1110C917964A4AD7BE4C785ED6F9399D",
+          "44DDFA0D236E47B78F3A6CE5A83E84E6",
+          "5D85337113AC4FB495E0335670407174",
+          "B54E52EB55A04D2AACC54DC69CD70B6C"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "[unknown]"
+        ],
+        "workflow_people_all": [
+          "李晓萌",
+          "张晓云",
+          "设计文档",
+          "张念喆",
+          "栗涛",
+          "眭洪涛",
+          "李丕陆",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "工艺布置一室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.工艺布置一室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.工艺布置一室",
+          "电气室",
+          "电气自动化所",
+          "河北分公司.电气自动化所",
+          "电气自动化所.电气室",
+          "中核工程.河北分公司.电气自动化所",
+          "河北分公司.电气自动化所.电气室"
+        ],
+        "workflow_office_values": [
+          "工艺布置一室",
+          "电气室",
+          "北京核工程研究设计院",
+          "安全系统室",
+          "工艺系统室",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 499,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602341-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "2344F7D807AF426CA71EEE0A85D54277",
+          "554B8CF23DE046B09BC2D96311940E0F",
+          "DB013AAB0B654F1183FC73AC7D085288"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "[unknown]"
+        ],
+        "workflow_people_all": [
+          "李晓萌",
+          "栗涛",
+          "李铮铮",
+          "李丕陆",
+          "设计文档",
+          "张念喆",
+          "眭洪涛",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "工艺布置一室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.工艺布置一室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.工艺布置一室",
+          "工艺布置二室",
+          "核电工艺所.工艺布置二室",
+          "河北分公司.核电工艺所.工艺布置二室",
+          "工艺系统室",
+          "核电工艺所.工艺系统室",
+          "河北分公司.核电工艺所.工艺系统室"
+        ],
+        "workflow_office_values": [
+          "工艺布置一室",
+          "工艺布置二室",
+          "工艺系统室",
+          "北京核工程研究设计院",
+          "安全系统室",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 500,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602342-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "2B4C534D03EB43FE9DDEE105940C0C3F",
+          "5C8DB0733560400D910B187A6B0F4746",
+          "EFAC7B9FEBE447E196B0435EA03C7D6C",
+          "FAE49676281147CC92DEED93773F372E"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "蒋克涛",
+          "龚钊",
+          "孙佳丽",
+          "赵嘉明",
+          "张卫",
+          "王浩然",
+          "设计文档",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "工艺设备室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.工艺设备室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.工艺设备室",
+          "辅助系统室",
+          "工艺系统研究设计所.辅助系统室",
+          "北京核工程研究设计院.工艺系统研究设计所.辅助系统室",
+          "未找到单位",
+          "中核工程.未找到单位",
+          "材料研究与应用室"
+        ],
+        "workflow_office_values": [
+          "工艺设备室",
+          "辅助系统室",
+          "未找到单位",
+          "材料研究与应用室",
+          "北京核工程研究设计院",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 501,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602343-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "1E13B437C49A456EB3EAD77147845953",
+          "6EAF8D9F77654A9FBE983DAC633FD3FA",
+          "D9A41DB4D6124241B317C28A2648DFF3"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission"
+        ],
+        "workflow_people_all": [
+          "曹晓楠",
+          "设计文档",
+          "赵嘉明",
+          "张卫",
+          "薛卫光",
+          "刘康利",
+          "张志明",
+          "Super",
+          "1818设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "工艺设备室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.工艺设备室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.工艺设备室",
+          "辅助系统室",
+          "工艺系统研究设计所.辅助系统室",
+          "北京核工程研究设计院.工艺系统研究设计所.辅助系统室",
+          "未找到单位",
+          "中核工程.未找到单位",
+          "工艺布置二室"
+        ],
+        "workflow_office_values": [
+          "工艺设备室",
+          "北京核工程研究设计院",
+          "辅助系统室",
+          "未找到单位",
+          "工艺布置二室",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 502,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602344-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "49DBBB1495BF4D1DA5164121534F878E",
+          "A4FE6F6E0EA64AF1821483C77FB49689",
+          "A7349252DF2D41719DE389F24A27BC55"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "extra.cnpe.entity.designReview.ExtDesignReviewReply"
+        ],
+        "workflow_people_all": [
+          "韩双",
+          "赵嘉明",
+          "许克凤",
+          "高文迦",
+          "设计文档",
+          "Super",
+          "1818设计文档",
+          "赵泾雄"
+        ],
+        "workflow_org_values": [
+          "总体布置室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.总体布置室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.总体布置室",
+          "辅助系统室",
+          "工艺系统研究设计所.辅助系统室",
+          "北京核工程研究设计院.工艺系统研究设计所.辅助系统室",
+          "水工室",
+          "河北分公司",
+          "核电工艺所"
+        ],
+        "workflow_office_values": [
+          "总体布置室",
+          "辅助系统室",
+          "北京核工程研究设计院",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 503,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602345-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "192D709893EB40BEA086E35B62610264",
+          "ED928D9C0F57427695E57B4BE94561D5",
+          "FF05EBDEB6064048922550F88FAFAD4A"
+        ],
+        "workflow_source_types": [
+          "[unknown]",
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "李久振",
+          "设计文档",
+          "张晓云",
+          "李晓萌",
+          "师陆陆",
+          "潘后荣",
+          "李鹏"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "工程设计管理部",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "电气室",
+          "工艺布置一室",
+          "仪控二室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 504,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602346-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "0BE239FF852E45BC8D8F060FC4C8A56E",
+          "2442C8E4E8E44E268F2BD04D28A356CA",
+          "86C8DA5868814C2598E02B36837C64EF",
+          "EE1D121289B9436995E27364FD4C7909"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]",
+          "extra.cnpe.entity.designReview.ExtDesignReviewReply"
+        ],
+        "workflow_people_all": [
+          "范欣欣",
+          "李昌磊",
+          "李颖",
+          "设计文档",
+          "廖圣勇",
+          "何庆镭",
+          "Super",
+          "1818设计文档",
+          "赵泾雄"
+        ],
+        "workflow_org_values": [
+          "仪控一室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "仪控设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.仪控设计所",
+          "仪控设计所.仪控一室",
+          "中核工程.北京核工程研究设计院.仪控设计所",
+          "北京核工程研究设计院.仪控设计所.仪控一室",
+          "仪控二室",
+          "仪控设计所.仪控二室",
+          "北京核工程研究设计院.仪控设计所.仪控二室",
+          "主控及信息监控系统设计室",
+          "仪控设计所.主控及信息监控系统设计室",
+          "北京核工程研究设计院.仪控设计所.主控及信息监控系统设计室"
+        ],
+        "workflow_office_values": [
+          "仪控一室",
+          "仪控二室",
+          "主控及信息监控系统设计室",
+          "北京核工程研究设计院",
+          "水工室",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 505,
+        "a_raw": "审查意见单",
+        "e_raw": "EDMB-602347-ECZS",
+        "table_sources": [
+          "DESIGNREVIEWOPNION"
+        ],
+        "candidate_object_ids": [
+          "79D237625920431CA2980276F7E3B5CE",
+          "BB98CA23E77F462893BFB7F3DF1BBEC3",
+          "C7FE0E9CC12E432590AF2EC72D9B6B1B"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.designOutput.ExtFileTransmission",
+          "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+          "[unknown]"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "李久振",
+          "设计文档",
+          "李阳",
+          "李阳e",
+          "黄良",
+          "陈皓朋",
+          "米海霞",
+          "邓峰",
+          "宋长飞",
+          "董朝盼"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "工程设计管理部",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "设备室",
+          "工程焊接室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      }
+    ],
+    "unresolved_examples": []
+  }
+}

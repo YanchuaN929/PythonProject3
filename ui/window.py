@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 窗口管理模块 - 负责GUI界面的创建、布局和数据显示
@@ -26,6 +26,10 @@ try:
 except Exception:
     def is_file1_db_source_list(source_files):
         return bool(source_files) and all(str(item).startswith("db://file1/") for item in source_files)
+
+
+def is_db_source_list(source_files):
+    return bool(source_files) and all(str(item).startswith("db://") for item in source_files)
 
 # 导入数据库状态显示器
 try:
@@ -256,54 +260,36 @@ class WindowManager:
         path_frame = ttk.Frame(parent)
         path_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
         path_frame.columnconfigure(1, weight=1)
-        
-        # 文件夹路径
-        ttk.Label(path_frame, text="文件夹路径:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10))
-        
+
+        ttk.Label(path_frame, text="公共盘根路径:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10))
+
         self.path_var = tk.StringVar(value=config_data.get("folder_path", ""))
+        self.export_path_var = tk.StringVar(value=config_data.get("export_folder_path", ""))
         path_entry = ttk.Entry(path_frame, textvariable=self.path_var, width=60)
         path_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(0, 10))
-        
+
         browse_btn = ttk.Button(
-            path_frame, 
-            text="浏览", 
+            path_frame,
+            text="浏览",
             command=lambda: self._trigger_callback('on_browse_folder')
         )
         browse_btn.grid(row=0, column=2, sticky=tk.W)
-        
-        # 设置菜单按钮
+
         settings_btn = ttk.Button(
-            path_frame, 
-            text="⚙", 
+            path_frame,
+            text="⚿",
             command=lambda: self._trigger_callback('on_settings_menu')
         )
         settings_btn.grid(row=0, column=3, sticky=tk.E, padx=(20, 0))
-        
-        # 帮助按钮
+
         help_btn = ttk.Button(
-            path_frame, 
-            text="❓", 
+            path_frame,
+            text="❓",
             width=3,
             command=lambda: self._trigger_callback('on_show_help')
         )
         help_btn.grid(row=0, column=4, sticky=tk.E, padx=(5, 0))
-        
-        # 导出结果位置
-        ttk.Label(path_frame, text="导出结果位置:").grid(
-            row=1, column=0, sticky=tk.W, padx=(0, 10), pady=(8, 0)
-        )
-        
-        self.export_path_var = tk.StringVar(value=config_data.get("export_folder_path", ""))
-        export_entry = ttk.Entry(path_frame, textvariable=self.export_path_var, width=60)
-        export_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=(0, 10), pady=(8, 0))
-        
-        export_browse_btn = ttk.Button(
-            path_frame, 
-            text="浏览", 
-            command=lambda: self._trigger_callback('on_browse_export_folder')
-        )
-        export_browse_btn.grid(row=1, column=2, sticky=tk.W, pady=(8, 0))
-    
+
     def create_info_section(self, parent):
         """创建文件信息显示区域"""
         container = ttk.Frame(parent)
@@ -312,7 +298,7 @@ class WindowManager:
         container.columnconfigure(1, weight=2)
         container.rowconfigure(0, weight=1)
         
-        info_frame = ttk.LabelFrame(container, text="Excel文件信息", padding="5")
+        info_frame = ttk.LabelFrame(container, text="数据源信息", padding="5")
         info_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 6))
         info_frame.columnconfigure(0, weight=1)
         info_frame.rowconfigure(0, weight=1)
@@ -391,15 +377,19 @@ class WindowManager:
             # 添加勾选框
             if tab_id in self.process_vars:
                 check = ttk.Checkbutton(
-                    frame, 
-                    text=f"处理{tab_text}", 
+                    frame,
+                    text=f"处理{tab_text}",
                     variable=self.process_vars[tab_id]
                 )
+                if tab_id in {"tab5", "tab6"}:
+                    check.state(["disabled"])
                 check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
-            
+
             # 创建Excel预览控件
             self.create_excel_viewer(frame, tab_id, tab_text)
-            
+            if tab_id in {"tab5", "tab6"}:
+                self.show_empty_message(self.viewers[tab_id], "当前版本暂未启用")
+
             # 保存frame引用
             self.tab_frames[tab_id] = frame
         
@@ -449,8 +439,7 @@ class WindowManager:
         """创建按钮区域"""
         button_frame = ttk.Frame(parent)
         button_frame.grid(row=4, column=0, columnspan=3, pady=(10, 0))
-        
-        # 开始处理按钮
+
         process_btn = ttk.Button(
             button_frame,
             text="开始处理",
@@ -459,80 +448,55 @@ class WindowManager:
         )
         process_btn.pack(side=tk.LEFT, padx=(0, 20))
         self.buttons['process'] = process_btn
-        
-        # 导出结果按钮
-        export_btn = ttk.Button(
-            button_frame,
-            text="导出结果",
-            command=lambda: self._trigger_callback('on_export_results'),
-            state='disabled'
-        )
-        export_btn.pack(side=tk.LEFT)
-        self.buttons['export'] = export_btn
-        
-        # 打开文件位置按钮
-        open_folder_btn = ttk.Button(
-            button_frame,
-            text="打开文件位置",
-            command=lambda: self._trigger_callback('on_open_folder')
-        )
-        open_folder_btn.pack(side=tk.LEFT, padx=(10, 0))
-        self.buttons['open_folder'] = open_folder_btn
-        
-        # 刷新文件列表按钮
+
         refresh_btn = ttk.Button(
             button_frame,
             text="刷新文件列表",
             command=lambda: self._trigger_callback('on_refresh_files')
         )
-        refresh_btn.pack(side=tk.LEFT, padx=(20, 0))
+        refresh_btn.pack(side=tk.LEFT, padx=(0, 10))
         self.buttons['refresh'] = refresh_btn
 
-        # 测试数据库连接按钮（输出调试txt）
         test_db_btn = ttk.Button(
             button_frame,
-            text="🔌 测试数据库连接",
+            text="测试数据库连接",
             command=lambda: self._trigger_callback('on_test_db_connection')
         )
-        test_db_btn.pack(side=tk.LEFT, padx=(10, 0))
+        test_db_btn.pack(side=tk.LEFT, padx=(0, 10))
         self.buttons['test_db_connection'] = test_db_btn
-        
-        # 打开监控按钮
+
         monitor_btn = ttk.Button(
             button_frame,
             text="打开监控",
             command=lambda: self._trigger_callback('on_open_monitor')
         )
-        monitor_btn.pack(side=tk.LEFT, padx=(10, 0))
+        monitor_btn.pack(side=tk.LEFT, padx=(0, 10))
         self.buttons['monitor'] = monitor_btn
-        
-        # 【新增】指派任务按钮
+
         assignment_btn = ttk.Button(
             button_frame,
-            text="📋 指派任务",
+            text="指派任务",
             command=lambda: self._trigger_callback('on_assignment_click')
         )
-        assignment_btn.pack(side=tk.LEFT, padx=(10, 0))
+        assignment_btn.pack(side=tk.LEFT, padx=(0, 10))
         self.buttons['assignment'] = assignment_btn
-        
-        # 【新增】历史查询按钮
+
         history_btn = ttk.Button(
             button_frame,
-            text="🔍 历史查询",
+            text="历史查询",
             command=lambda: self._trigger_callback('on_history_query_click')
         )
-        history_btn.pack(side=tk.LEFT, padx=(10, 0))
+        history_btn.pack(side=tk.LEFT, padx=(0, 10))
         self.buttons['history_query'] = history_btn
-        
-        # 【新增】忽略延期项按钮（仅所领导可见）
+
         ignore_overdue_btn = ttk.Button(
             button_frame,
-            text="🚫 忽略延期项",
+            text="忽略延期项",
             command=lambda: self._trigger_callback('on_ignore_overdue_click')
         )
-        ignore_overdue_btn.pack(side=tk.LEFT, padx=(10, 0))
+        ignore_overdue_btn.pack(side=tk.LEFT, padx=(0, 10))
         self.buttons['ignore_overdue'] = ignore_overdue_btn
-    
+
     def show_empty_message(self, viewer, message):
         """在viewer中显示提示信息"""
         # 清空现有内容
@@ -617,12 +581,8 @@ class WindowManager:
         
         # 优化显示列（仅显示关键列）
         display_df = self._create_optimized_display(filtered_df, tab_name, completed_rows=completed_rows_set)
-        is_file1_db_tab = (
-            tab_name == "内部需打开接口"
-            and source_files
-            and is_file1_db_source_list(source_files)
-        )
-        if is_file1_db_tab and "是否已完成" in display_df.columns:
+        is_readonly_db_tab = bool(source_files and is_db_source_list(source_files))
+        if is_readonly_db_tab and "是否已完成" in display_df.columns:
             display_df = display_df.drop(columns=["是否已完成"])
         
         # 【Registry状态提醒】批量查询任务状态和确认状态
@@ -645,7 +605,7 @@ class WindowManager:
             }
             file_type = file_type_map.get(tab_name)
             
-            if file_type and source_files and not is_file1_db_tab:
+            if file_type and source_files and not is_readonly_db_tab:
                 # 构造task_keys
                 task_keys = []
                 for idx in range(len(display_df)):
@@ -979,13 +939,13 @@ class WindowManager:
                          values=["...（其他行已省略显示）"] + [""] * (len(columns) - 1))
         
         # 绑定点击事件处理勾选功能
-        if file_manager and source_files and "是否已完成" in columns and not is_file1_db_tab:
+        if file_manager and source_files and "是否已完成" in columns and not is_readonly_db_tab:
             self._bind_checkbox_click_event(viewer, df, display_df, columns, 
                                            original_row_numbers, source_files, 
                                            file_manager, tab_name)
         
         # 【新增】绑定接口号点击事件（用于回文单号输入）
-        if "接口号" in columns and not is_file1_db_tab:
+        if "接口号" in columns and not is_readonly_db_tab:
             self._bind_interface_click_event(viewer, df, display_df, columns,
                                             original_row_numbers, tab_name, file_manager)
         
@@ -1357,12 +1317,12 @@ class WindowManager:
                 
                 # 获取文件类型（根据选项卡名称）
                 file_type = self._get_file_type_from_tab(tab_name)
-                if file_type == 1:
+                if file_type in (1, 2, 3, 4):
                     from tkinter import messagebox
 
                     messagebox.showinfo(
                         "只读提示",
-                        "待处理文件1当前为数据库只读模式，不支持填写回文单号。",
+                        "待处理文件1~4当前为SQL只读模式，不支持在结果表中填写回文单号。",
                         parent=viewer,
                     )
                     return
@@ -1576,187 +1536,58 @@ class WindowManager:
         return column_widths
     
     def _create_optimized_display(self, df, tab_name, completed_rows=None):
-        """
-        创建优化的显示数据（显示项目号和接口号列，并附加角色标注）
-        
-        根据不同文件类型选择对应的接口号列：
-        - 内部需打开接口：A列
-        - 内部需回复接口：R列
-        - 外部需打开接口：C列
-        - 外部需回复接口：E列
-        - 三维提资接口：A列
-        - 收发文函：E列
-        
-        如果DataFrame中存在"角色来源"列，则在接口号后添加角色标注，如：INT-001(设计人员)
-        如果DataFrame中存在"项目号"列，则在第一列显示项目号
-        添加"是否已完成"列（复选框）在接口号后面
-        
-        参数:
-            df: pandas DataFrame
-            tab_name: 选项卡名称
-            completed_rows: 已完成行的集合（原始行号）
-        """
+        """创建优化后的显示数据，优先使用命名列。"""
         try:
-            # 定义接口号列映射（使用列索引）
             interface_column_index = {
-                "内部需打开接口": 0,   # A列 = 索引0
-                "内部需回复接口": 17,  # R列 = 索引17
-                "外部需打开接口": 2,   # C列 = 索引2
-                "外部需回复接口": 4,   # E列 = 索引4
-                "三维提资接口": 0,     # A列 = 索引0
-                "收发文函": 4          # E列 = 索引4
+                "内部需打开接口": 0,
+                "内部需回复接口": 17,
+                "外部需打开接口": 2,
+                "外部需回复接口": 4,
+                "三维提资接口": 0,
+                "收发文函": 4,
             }
-            
-            # 获取对应文件类型的接口号列索引
-            if tab_name in interface_column_index:
-                col_idx = interface_column_index[tab_name]
-                
-                # 检查列索引是否有效
-                if col_idx < len(df.columns):
-                    # 提取接口号列
-                    interface_values = df.iloc[:, col_idx].copy()
-                    
-                    # 如果存在"角色来源"列，则添加角色标注
-                    if "角色来源" in df.columns:
-                        role_values = df["角色来源"].astype(str)
-                        # 组合接口号和角色：INT-001(设计人员)
-                        combined_values = []
-                        for interface, role in zip(interface_values, role_values):
-                            interface_str = str(interface) if not pd.isna(interface) else ""
-                            role_str = str(role).strip() if not pd.isna(role) and str(role).strip() != "" else ""
-                            
-                            if interface_str and role_str and role_str.lower() != 'nan':
-                                combined_values.append(f"{interface_str}({role_str})")
-                            else:
-                                combined_values.append(interface_str)
-                        
-                        # 生成"是否已完成"列
-                        if completed_rows is None:
-                            completed_rows = set()
-                        
-                        # 获取原始行号（如果有）
-                        if "原始行号" in df.columns:
-                            original_rows = df["原始行号"].tolist()
-                            # 使用更大更清晰的符号：☑ (已完成) 和 ☐ (未完成)
-                            completed_status = ["☑" if row in completed_rows else "☐" for row in original_rows]
-                        else:
-                            # 没有原始行号，使用索引
-                            completed_status = ["☐"] * len(combined_values)
-                        
-                        # 创建新的DataFrame - 如果有项目号列，则项目号在前
-                        # 【新增】"接口时间"列在"接口号"和"是否已完成"之间显示
-                        # 列顺序: 状态 → 项目号 → 接口号 → 接口时间 → 责任人 → 是否已完成
-                        if "项目号" in df.columns and "接口时间" in df.columns:
-                            # 准备责任人数据
-                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(combined_values)
-                            result = pd.DataFrame({
-                                "状态": [""] * len(combined_values),  # 占位，稍后根据延期情况填充
-                                "项目号": df["项目号"],
-                                "接口号": combined_values,
-                                "接口时间": df["接口时间"],  # 在接口号之后显示
-                                "责任人": responsible_data,  # 新增责任人列
-                                "是否已完成": completed_status
-                            })
-                        elif "项目号" in df.columns:
-                            # 准备责任人数据
-                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(combined_values)
-                            result = pd.DataFrame({
-                                "状态": [""] * len(combined_values),
-                                "项目号": df["项目号"],
-                                "接口号": combined_values,
-                                "接口时间": ["-"] * len(combined_values),  # 没有时间数据时显示"-"
-                                "责任人": responsible_data,  # 新增责任人列
-                                "是否已完成": completed_status
-                            })
-                        elif "接口时间" in df.columns:
-                            # 准备责任人数据
-                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(combined_values)
-                            result = pd.DataFrame({
-                                "状态": [""] * len(combined_values),
-                                "接口号": combined_values,
-                                "接口时间": df["接口时间"],  # 在接口号之后显示
-                                "责任人": responsible_data,  # 新增责任人列
-                                "是否已完成": completed_status
-                            })
-                        else:
-                            # 准备责任人数据
-                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(combined_values)
-                            result = pd.DataFrame({
-                                "状态": [""] * len(combined_values),
-                                "接口号": combined_values,
-                                "接口时间": ["-"] * len(combined_values),  # 没有时间数据时显示"-"
-                                "责任人": responsible_data,  # 新增责任人列
-                                "是否已完成": completed_status
-                            })
-                        return result
+
+            if "接口号" in df.columns:
+                interface_values = df["接口号"].copy()
+            else:
+                col_idx = interface_column_index.get(tab_name)
+                if col_idx is None or col_idx >= len(df.columns):
+                    return df
+                interface_values = df.iloc[:, col_idx].copy()
+
+            if "角色来源" in df.columns:
+                role_values = df["角色来源"].astype(str)
+                combined_values = []
+                for interface, role in zip(interface_values, role_values):
+                    interface_str = str(interface) if not pd.isna(interface) else ""
+                    role_str = str(role).strip() if not pd.isna(role) and str(role).strip() else ""
+                    if interface_str and role_str and role_str.lower() != 'nan':
+                        combined_values.append(f"{interface_str}({role_str})")
                     else:
-                        # 没有角色来源列，直接返回接口号（和项目号）
-                        # 生成"是否已完成"列
-                        if completed_rows is None:
-                            completed_rows = set()
-                        
-                        # 获取原始行号（如果有）
-                        if "原始行号" in df.columns:
-                            original_rows = df["原始行号"].tolist()
-                            # 使用更大更清晰的符号：☑ (已完成) 和 ☐ (未完成)
-                            completed_status = ["☑" if row in completed_rows else "☐" for row in original_rows]
-                        else:
-                            # 没有原始行号，使用索引
-                            completed_status = ["☐"] * len(df)
-                        
-                        # 【重要】保留"接口时间"列用于延期判断（但不在GUI显示）
-                        # 【新增】添加"状态"列用于显示延期警告标记
-                        if "项目号" in df.columns and "接口时间" in df.columns:
-                            # 准备责任人数据
-                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(df)
-                            result = pd.DataFrame({
-                                "状态": [""] * len(df),
-                                "项目号": df["项目号"],
-                                "接口号": df.iloc[:, col_idx],
-                                "接口时间": df["接口时间"],  # 保留用于延期判断
-                                "责任人": responsible_data,  # 新增责任人列
-                                "是否已完成": completed_status
-                            })
-                        elif "项目号" in df.columns:
-                            # 准备责任人数据
-                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(df)
-                            result = pd.DataFrame({
-                                "状态": [""] * len(df),
-                                "项目号": df["项目号"],
-                                "接口号": df.iloc[:, col_idx],
-                                "接口时间": ["-"] * len(df),  # 没有时间数据时显示"-"
-                                "责任人": responsible_data,  # 新增责任人列
-                                "是否已完成": completed_status
-                            })
-                        elif "接口时间" in df.columns:
-                            # 准备责任人数据
-                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(df)
-                            result = pd.DataFrame({
-                                "状态": [""] * len(df),
-                                "接口号": df.iloc[:, col_idx],
-                                "接口时间": df["接口时间"],  # 保留用于延期判断
-                                "责任人": responsible_data,  # 新增责任人列
-                                "是否已完成": completed_status
-                            })
-                        else:
-                            # 准备责任人数据
-                            responsible_data = df["责任人"] if "责任人" in df.columns else [""] * len(df)
-                            result = pd.DataFrame({
-                                "状态": [""] * len(df),
-                                "接口号": df.iloc[:, col_idx],
-                                "接口时间": ["-"] * len(df),  # 没有时间数据时显示"-"
-                                "责任人": responsible_data,  # 新增责任人列
-                                "是否已完成": completed_status
-                            })
-                        return result
-            
-            # 如果没有匹配或出错，返回原始数据
-            return df
-            
+                        combined_values.append(interface_str)
+            else:
+                combined_values = [str(interface) if not pd.isna(interface) else "" for interface in interface_values]
+
+            if completed_rows is None:
+                completed_rows = set()
+            if "原始行号" in df.columns:
+                original_rows = df["原始行号"].tolist()
+            else:
+                original_rows = list(range(2, len(df) + 2))
+            completed_status = ["☑" if row in completed_rows else "☐" for row in original_rows]
+
+            result = pd.DataFrame({"状态": [""] * len(df)})
+            if "项目号" in df.columns:
+                result["项目号"] = df["项目号"]
+            result["接口号"] = combined_values
+            result["接口时间"] = df["接口时间"] if "接口时间" in df.columns else ["-"] * len(df)
+            result["责任人"] = df["责任人"] if "责任人" in df.columns else [""] * len(df)
+            result["是否已完成"] = completed_status
+            return result
         except Exception as e:
             print(f"创建优化显示数据失败: {e}")
             return df
-    
+
     def _extract_columns(self, df, indices):
         """提取指定索引的列"""
         try:
@@ -2030,3 +1861,4 @@ class WindowManager:
         except Exception as e:
             print(f"生成排序键失败 [{column_name}={sort_value}]: {e}")
             return str(sort_value) if sort_value is not None else ''
+

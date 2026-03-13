@@ -25,6 +25,7 @@ SEND_SIDE_TABLES = (
     "TA",
     "CR",
     "DCR",
+    "FCR",
     "NCR",
     "TCR",
     "TAREPLY",
@@ -34,14 +35,32 @@ SEND_SIDE_TABLES = (
     "NCRREPLY",
     "TCRREPLY",
     "FILETRANSMISSION",
+    "MEMORANDUM",
+    "TELEFAX",
+    "INTERNALMINUTES",
+    "EXTERNALMINUTES",
+    "FUNOTIFY",
+    "CANCELNOTIFY",
+    "DESIGNREVIEWOPNION",
+    "DESIGNREVIEWREPLY",
 )
 PARENT_TABLE_BY_REPLY = {
     "CRREPLY": "CR",
     "TAREPLY": "TA",
     "NCRREPLY": "NCR",
     "DCRREPLY": "DCR",
-    "FCRREPLY": "DCR",
+    "FCRREPLY": "FCR",
     "TCRREPLY": "TCR",
+    "DESIGNREVIEWREPLY": "DESIGNREVIEWOPNION",
+}
+PARENT_FIELD_BY_REPLY = {
+    "CRREPLY": "CR",
+    "TAREPLY": "TA",
+    "NCRREPLY": "NCR",
+    "DCRREPLY": "DCR",
+    "FCRREPLY": "FCR",
+    "TCRREPLY": "TCR",
+    "DESIGNREVIEWREPLY": "DESIGN_REVIEW_OPNION",
 }
 
 
@@ -176,6 +195,17 @@ def _best_id(ids: Iterable[str], by_id: Dict[str, Dict[str, Any]]) -> str:
             choice = obj_id
             best_score = score
     return choice
+
+
+def resolve_sql35_table_path(sql35_dir: Path, table_name: str) -> Path:
+    candidates = [
+        sql35_dir / f"{table_name}_20260305.sql",
+        sql35_dir / f"{table_name}.sql",
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    return candidates[0]
 
 
 def load_file6_rows(excel_dir: Path) -> List[Dict[str, Any]]:
@@ -495,10 +525,18 @@ def scan_child_table(
         "ITEM_NUMBER",
         "SEND_RECEIVE_DATA",
         "CR",
+        "DCR",
+        "FCR",
         "TA",
         "NCR",
+        "TCR",
         "MASTER_SEND",
+        "FILE_TRANSMISSION",
         "REF_FILE_TRANSMISSION",
+        "REF_MEMO",
+        "REF_FAX",
+        "DESIGN_REVIEW_OPNION",
+        "DESIGN_REVIEW_REPLY",
         "OPPOSITE_DOCUMENT_NUMBER",
         "DISPATCH_NUM",
         "CSS",
@@ -510,6 +548,7 @@ def scan_child_table(
     idx = {name: mapping.get(name.lower(), -1) for name in wanted}
     by_id: Dict[str, Dict[str, Any]] = {}
     send_to_ids: DefaultDict[str, Set[str]] = defaultdict(set)
+    item_to_ids: DefaultDict[str, Set[str]] = defaultdict(set)
     scanned = 0
     matched = 0
     for row in iter_insert_rows(path):
@@ -532,10 +571,18 @@ def scan_child_table(
                 normalize_hex32(payload.get("ID")),
                 normalize_hex32(payload.get("CONFIG_ID")),
                 normalize_hex32(payload.get("CR")),
+                normalize_hex32(payload.get("DCR")),
+                normalize_hex32(payload.get("FCR")),
                 normalize_hex32(payload.get("TA")),
                 normalize_hex32(payload.get("NCR")),
+                normalize_hex32(payload.get("TCR")),
                 normalize_hex32(payload.get("MASTER_SEND")),
+                normalize_hex32(payload.get("FILE_TRANSMISSION")),
                 normalize_hex32(payload.get("REF_FILE_TRANSMISSION")),
+                normalize_hex32(payload.get("REF_MEMO")),
+                normalize_hex32(payload.get("REF_FAX")),
+                normalize_hex32(payload.get("DESIGN_REVIEW_OPNION")),
+                normalize_hex32(payload.get("DESIGN_REVIEW_REPLY")),
             )
             if rel_id
         }
@@ -557,12 +604,15 @@ def scan_child_table(
         by_id[obj_id] = payload
         if send_id in needed_send_ids:
             send_to_ids[send_id].add(obj_id)
+        if item_key in needed_item_keys:
+            item_to_ids[item_key].add(obj_id)
     return {
         "table": table_name,
         "scanned": scanned,
         "matched": matched,
         "by_id": by_id,
         "send_to_ids": send_to_ids,
+        "item_to_ids": item_to_ids,
     }
 
 
@@ -574,7 +624,38 @@ def merge_child_scans(base: Dict[str, Any] | None, extra: Dict[str, Any]) -> Dic
     base["by_id"].update(extra.get("by_id", {}))
     for key, ids in extra.get("send_to_ids", {}).items():
         base["send_to_ids"][key].update(ids)
+    for key, ids in extra.get("item_to_ids", {}).items():
+        base["item_to_ids"][key].update(ids)
     return base
+
+
+def _build_relation_map(*scans: Dict[str, Any]) -> Dict[str, Set[str]]:
+    relation_map: DefaultDict[str, Set[str]] = defaultdict(set)
+    for scan in scans:
+        for obj_id, payload in scan.get("by_id", {}).items():
+            norm_id = normalize_hex32(obj_id)
+            if not norm_id:
+                continue
+            relation_map[norm_id].add(norm_id)
+            for rel_id in payload.get("relation_ids", set()) or set():
+                norm_rel = normalize_hex32(rel_id)
+                if norm_rel:
+                    relation_map[norm_id].add(norm_rel)
+    return relation_map
+
+
+def _expand_relation_ids(seed_ids: Iterable[str], relation_map: Dict[str, Set[str]]) -> Set[str]:
+    expanded: Set[str] = set()
+    stack = [normalize_hex32(obj_id) for obj_id in seed_ids]
+    while stack:
+        obj_id = stack.pop()
+        if not obj_id or obj_id in expanded:
+            continue
+        expanded.add(obj_id)
+        for rel_id in relation_map.get(obj_id, set()):
+            if rel_id and rel_id not in expanded:
+                stack.append(rel_id)
+    return expanded
 
 
 def scan_filetransmission_route(path: Path, needed_keys: Set[str]) -> Dict[str, Any]:
@@ -768,24 +849,24 @@ def _metric(rows: Sequence[Dict[str, Any]], excel_field: str, getter, matcher) -
 def run(excel_dir: Path, sql35_dir: Path, output_path: Path) -> Dict[str, Any]:
     rows = load_file6_rows(excel_dir)
     version_best = _filter_highest_version(rows)
-    department_map = parse_department_tree(sql35_dir / "DEPARTMENT_20260305.sql")
-    user_map = parse_user_map(sql35_dir / "USER_20260305.sql", department_map)
+    department_map = parse_department_tree(resolve_sql35_table_path(sql35_dir, "DEPARTMENT"))
+    user_map = parse_user_map(resolve_sql35_table_path(sql35_dir, "USER"), department_map)
     roster_names = load_all_roster_names()
 
     int_rows = [row for row in rows if row["key_type"] == "int_key" and row["e_key"]]
     send_rows = [row for row in rows if row["key_type"] not in {"empty_key", "int_key"} and row["e_key"]]
 
     int_needed_keys = {row["e_key"] for row in int_rows}
-    int_scan = scan_int_table(sql35_dir / "INTINTERFACEDOC_20260305.sql", int_needed_keys)
+    int_scan = scan_int_table(resolve_sql35_table_path(sql35_dir, "INTINTERFACEDOC"), int_needed_keys)
     needed_chain_ids = {
         payload.get("chain_id", "")
         for payload in int_scan["by_key"].values()
         if _clean_text(payload.get("chain_id"))
     }
     if needed_chain_ids:
-        int_rescan = scan_int_table(sql35_dir / "INTINTERFACEDOC_20260305.sql", set(), needed_chain_ids=needed_chain_ids)
+        int_rescan = scan_int_table(resolve_sql35_table_path(sql35_dir, "INTINTERFACEDOC"), set(), needed_chain_ids=needed_chain_ids)
         int_scan = merge_int_scans(int_scan, int_rescan)
-    send_scan = scan_send_table(sql35_dir / "SENDRECEIVEDATA_20260305.sql", {row["e_key"] for row in send_rows})
+    send_scan = scan_send_table(resolve_sql35_table_path(sql35_dir, "SENDRECEIVEDATA"), {row["e_key"] for row in send_rows})
 
     needed_send_ids: Set[str] = set()
     for mapping_name in ("rec_to_ids", "send_to_ids"):
@@ -795,7 +876,7 @@ def run(excel_dir: Path, sql35_dir: Path, output_path: Path) -> Dict[str, Any]:
     child_tables: Dict[str, Dict[str, Any]] = {}
     child_item_keys = {row["e_key"] for row in send_rows}
     for table_name in SEND_SIDE_TABLES:
-        sql_path = sql35_dir / f"{table_name}_20260305.sql"
+        sql_path = resolve_sql35_table_path(sql35_dir, table_name)
         if not sql_path.exists():
             continue
         child_tables[table_name] = scan_child_table(sql_path, table_name, needed_send_ids, child_item_keys)
@@ -804,22 +885,25 @@ def run(excel_dir: Path, sql35_dir: Path, output_path: Path) -> Dict[str, Any]:
         scan = child_tables.get(reply_table)
         if not scan:
             continue
+        parent_field = PARENT_FIELD_BY_REPLY.get(reply_table)
+        if not parent_field:
+            continue
         needed_parent_ids: Set[str] = set()
         for payload in scan["by_id"].values():
-            for field_name in ("CR", "TA", "NCR"):
-                rel_id = normalize_hex32(payload.get(field_name))
-                if rel_id:
-                    needed_parent_ids.add(rel_id)
+            rel_id = normalize_hex32(payload.get(parent_field))
+            if rel_id:
+                needed_parent_ids.add(rel_id)
         if not needed_parent_ids:
             continue
-        sql_path = sql35_dir / f"{parent_table}_20260305.sql"
+        sql_path = resolve_sql35_table_path(sql35_dir, parent_table)
         if not sql_path.exists():
             continue
         rescan = scan_child_table(sql_path, parent_table, needed_send_ids, child_item_keys, needed_ids=needed_parent_ids)
         child_tables[parent_table] = merge_child_scans(child_tables.get(parent_table), rescan)
 
-    ft_direct = scan_filetransmission_route(sql35_dir / "FILETRANSMISSION_20260305.sql", {row["e_key"] for row in send_rows})
-    obj_reply = scan_objectreplylink(sql35_dir / "OBJECTREPLYLINK_20260305.sql", {row["e_key"] for row in send_rows})
+    ft_direct = scan_filetransmission_route(resolve_sql35_table_path(sql35_dir, "FILETRANSMISSION"), {row["e_key"] for row in send_rows})
+    obj_reply = scan_objectreplylink(resolve_sql35_table_path(sql35_dir, "OBJECTREPLYLINK"), {row["e_key"] for row in send_rows})
+    relation_map = _build_relation_map(int_scan, send_scan, ft_direct, *child_tables.values())
 
     object_ids_for_dist: Set[str] = set(int_scan["by_id"].keys()) | set(send_scan["by_id"].keys()) | set(ft_direct["by_id"].keys())
     needed_title_keys: Set[str] = {row["e_key"] for row in rows if row["e_key"]}
@@ -840,8 +924,9 @@ def run(excel_dir: Path, sql35_dir: Path, output_path: Path) -> Dict[str, Any]:
         for payload in scan["by_id"].values():
             object_ids_for_dist.update(payload.get("relation_ids", set()))
             needed_title_keys.update(payload.get("candidate_keys", set()))
+    object_ids_for_dist = _expand_relation_ids(object_ids_for_dist, relation_map)
 
-    dist_scan = scan_distribution(sql35_dir / "DISTRIBUTERECORD_20260305.sql", object_ids_for_dist, needed_title_keys)
+    dist_scan = scan_distribution(resolve_sql35_table_path(sql35_dir, "DISTRIBUTERECORD"), object_ids_for_dist, needed_title_keys)
 
     branch_counter = Counter()
     type_counter = Counter()
@@ -884,11 +969,19 @@ def run(excel_dir: Path, sql35_dir: Path, output_path: Path) -> Dict[str, Any]:
             send_ids = set(send_scan["rec_to_ids"].get(row["e_key"], set())) | set(send_scan["send_to_ids"].get(row["e_key"], set()))
             send_id = _best_id(send_ids, send_scan["by_id"])
             ft_id = _best_id(ft_direct["key_to_ids"].get(row["e_key"], set()), ft_direct["by_id"])
+            obj_reply_payload = obj_reply["by_key"].get(row["e_key"], {})
             if not send_id and ft_id:
                 linked_send = normalize_hex32(ft_direct["by_id"].get(ft_id, {}).get("SEND_RECEIVE_DATA"))
                 if linked_send:
                     send_id = linked_send
-            if send_id or ft_id:
+            matched_child_tables: List[Tuple[str, Set[str]]] = []
+            for table_name, scan in child_tables.items():
+                child_ids: Set[str] = set(scan.get("item_to_ids", {}).get(row["e_key"], set()))
+                if send_id:
+                    child_ids.update(scan["send_to_ids"].get(send_id, set()))
+                if child_ids:
+                    matched_child_tables.append((table_name, child_ids))
+            if send_id or ft_id or obj_reply_payload or matched_child_tables:
                 row["branch"] = "SEND"
                 row["send_id"] = send_id
                 if send_id:
@@ -900,16 +993,14 @@ def run(excel_dir: Path, sql35_dir: Path, output_path: Path) -> Dict[str, Any]:
                     ft_payload = ft_direct["by_id"].get(ft_id, {})
                     direct_ids.update(ft_payload.get("relation_ids", set()))
                     title_keys.update(ft_payload.get("candidate_keys", set()))
-                obj_reply_payload = obj_reply["by_key"].get(row["e_key"], {})
                 if obj_reply_payload:
                     row["doc_tables"].append("OBJECTREPLYLINK")
                     direct_ids.update(obj_reply_payload.get("relation_ids", []))
                     title_keys.update(obj_reply_payload.get("candidate_keys", []))
-                for table_name, scan in child_tables.items():
-                    child_ids = list(scan["send_to_ids"].get(send_id, set())) if send_id else []
-                    if child_ids:
-                        row["doc_tables"].append(table_name)
+                for table_name, child_ids in matched_child_tables:
+                    row["doc_tables"].append(table_name)
                     for child_id in child_ids:
+                        scan = child_tables[table_name]
                         child_payload = scan["by_id"].get(child_id, {})
                         direct_ids.update(child_payload.get("relation_ids", set()))
                         title_keys.update(child_payload.get("candidate_keys", set()))
@@ -924,6 +1015,7 @@ def run(excel_dir: Path, sql35_dir: Path, output_path: Path) -> Dict[str, Any]:
                         "key_type": row["key_type"],
                     }
                 )
+        direct_ids = _expand_relation_ids(direct_ids, relation_map)
 
         group_ids: Set[str] = set()
         for obj_id in direct_ids:

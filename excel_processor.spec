@@ -14,9 +14,15 @@ a = Analysis(
         ('core/__init__.py', 'core'),
         ('core/sql/__init__.py', 'core/sql'),
         ('core/sql/file1_db_source.py', 'core/sql'),
+        ('core/sql/file2_db_source.py', 'core/sql'),
+        ('core/sql/file3_db_source.py', 'core/sql'),
+        ('core/sql/file4_db_source.py', 'core/sql'),
+        ('core/sql/provider.py', 'core/sql'),
+        ('core/sql/offline_dump_utils.py', 'core/sql'),
         ('scripts/db_tools/sql_explorer/__init__.py', 'scripts/db_tools/sql_explorer'),
         ('scripts/db_tools/sql_explorer/connect.py', 'scripts/db_tools/sql_explorer'),
         ('scripts/db_tools/sql_explorer/config_store.py', 'scripts/db_tools/sql_explorer'),
+        ('scripts/db_tools/sql_explorer/validate_cims_sql_dump.py', 'scripts/db_tools/sql_explorer'),
         # UI模块 (ui/)
         ('ui/window.py', 'ui'),
         ('ui/input_handler.py', 'ui'),
@@ -76,10 +82,16 @@ a = Analysis(
         # SQL数据源模块（文件1数据库驱动）
         'core.sql',
         'core.sql.file1_db_source',
+        'core.sql.file2_db_source',
+        'core.sql.file3_db_source',
+        'core.sql.file4_db_source',
+        'core.sql.provider',
+        'core.sql.offline_dump_utils',
         # 复用 sql_explorer 的连接配置/建连逻辑
         'scripts.db_tools.sql_explorer',
         'scripts.db_tools.sql_explorer.config_store',
         'scripts.db_tools.sql_explorer.connect',
+        'scripts.db_tools.sql_explorer.validate_cims_sql_dump',
         # write_tasks 模块（写入任务面板/回文提交等）
         'write_tasks',
         'write_tasks.manager',

@@ -19,6 +19,21 @@ try:
         fetch_file1_db_dataframe,
         is_file1_db_virtual_source,
     )
+    from core.sql.file2_db_source import (
+        extract_project_id_from_virtual_source as extract_file2_project_id_from_virtual_source,
+        fetch_file2_db_dataframe,
+        is_file2_db_virtual_source,
+    )
+    from core.sql.file3_db_source import (
+        extract_project_id_from_virtual_source as extract_file3_project_id_from_virtual_source,
+        fetch_file3_db_dataframe,
+        is_file3_db_virtual_source,
+    )
+    from core.sql.file4_db_source import (
+        extract_project_id_from_virtual_source as extract_file4_project_id_from_virtual_source,
+        fetch_file4_db_dataframe,
+        is_file4_db_virtual_source,
+    )
 except Exception:
     def is_file1_db_virtual_source(_path):
         return False
@@ -31,6 +46,33 @@ except Exception:
 
     def build_file1_export_dataframe(df):
         return df
+
+    def is_file2_db_virtual_source(_path):
+        return False
+
+    def extract_file2_project_id_from_virtual_source(_path):
+        return ""
+
+    def fetch_file2_db_dataframe(_project_id, _current_datetime):
+        return pd.DataFrame()
+
+    def is_file3_db_virtual_source(_path):
+        return False
+
+    def extract_file3_project_id_from_virtual_source(_path):
+        return ""
+
+    def fetch_file3_db_dataframe(_project_id, _current_datetime):
+        return pd.DataFrame()
+
+    def is_file4_db_virtual_source(_path):
+        return False
+
+    def extract_file4_project_id_from_virtual_source(_path):
+        return ""
+
+    def fetch_file4_db_dataframe(_project_id, _current_datetime):
+        return pd.DataFrame()
 
 # 忽略pandas警告
 warnings.filterwarnings('ignore')
@@ -1307,6 +1349,11 @@ def process_target_file2(file_path, current_datetime, project_id=None):
     except Exception:
         pass
 
+    if is_file2_db_virtual_source(file_path):
+        project = extract_file2_project_id_from_virtual_source(file_path) or str(project_id or '').strip()
+        result_df = fetch_file2_db_dataframe(project, current_datetime)
+        return apply_assignment_memory(result_df, file_type=2)
+
     # 读取Excel文件的第一个工作表（不强制Sheet1）
     if file_path.endswith('.xlsx'):
         df = pd.read_excel(file_path, sheet_name=0, engine='openpyxl')
@@ -1786,6 +1833,11 @@ def process_target_file3(file_path, current_datetime):
         Monitor.log_process(f"开始处理待处理文件3: {os.path.basename(file_path)}")
     except Exception:
         pass
+
+    if is_file3_db_virtual_source(file_path):
+        project = extract_file3_project_id_from_virtual_source(file_path)
+        result_df = fetch_file3_db_dataframe(project, current_datetime)
+        return apply_assignment_memory(result_df, file_type=3)
     
     # 读取Excel文件的第一个工作表（不强制Sheet1）
     if file_path.endswith('.xlsx'):
@@ -2674,6 +2726,11 @@ def process_target_file4(file_path, current_datetime):
         Monitor.log_process(f"开始处理待处理文件4: {os.path.basename(file_path)}")
     except Exception:
         pass
+
+    if is_file4_db_virtual_source(file_path):
+        project = extract_file4_project_id_from_virtual_source(file_path)
+        result_df = fetch_file4_db_dataframe(project, current_datetime)
+        return apply_assignment_memory(result_df, file_type=4)
     
     # 读取Excel文件的Sheet1
     if file_path.endswith('.xlsx'):

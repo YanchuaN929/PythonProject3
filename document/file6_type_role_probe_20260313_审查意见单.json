@@ -1,0 +1,2801 @@
+{
+  "input": "document\\file6_send_workflow_probe_20260313_审查意见单_detail_rows.json",
+  "sql35_dir": "example\\CIMS-SQL-3.5",
+  "row_count": 398,
+  "doc_types": [
+    "审查意见单"
+  ],
+  "activity_names": [
+    "修改",
+    "发送",
+    "审核",
+    "批准",
+    "校对",
+    "绑签",
+    "编制"
+  ],
+  "source_types": [
+    "extra.cnpe.entity.communication.ExtTeleFax",
+    "extra.cnpe.entity.designOutput.ExtFileTransmission",
+    "extra.cnpe.entity.designReview.ExtDesignReviewOpnion",
+    "extra.cnpe.entity.designReview.ExtDesignReviewReply"
+  ],
+  "top_candidates": [
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 5,
+        "rate": 0.166667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_all_operators"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 5,
+        "rate": 0.166667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_operators"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 4,
+        "rate": 0.133333
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_all_actors"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 4,
+        "rate": 0.133333
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_active_actors"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 4,
+        "rate": 0.133333
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 4,
+        "rate": 0.133333
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_source:extra.cnpe.entity.communication.ExtTeleFax"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_active_source:extra.cnpe.entity.communication.ExtTeleFax"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 5,
+        "rate": 0.166667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 5,
+        "rate": 0.166667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 3,
+        "rate": 0.1
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 3,
+        "rate": 0.1
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 3,
+        "rate": 0.1
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 3,
+        "rate": 0.1
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 3,
+        "rate": 0.1
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 3,
+        "rate": 0.1
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_source:extra.cnpe.entity.designOutput.ExtFileTransmission"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_active_source:extra.cnpe.entity.designOutput.ExtFileTransmission"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_active_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:修改"
+    }
+  ],
+  "all_candidates": [
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 5,
+        "rate": 0.166667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_all_operators"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 5,
+        "rate": 0.166667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_operators"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 4,
+        "rate": 0.133333
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_all_actors"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 4,
+        "rate": 0.133333
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_active_actors"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 4,
+        "rate": 0.133333
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 4,
+        "rate": 0.133333
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_source:extra.cnpe.entity.communication.ExtTeleFax"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_active_source:extra.cnpe.entity.communication.ExtTeleFax"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 5,
+        "rate": 0.166667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 5,
+        "rate": 0.166667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 3,
+        "rate": 0.1
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 3,
+        "rate": 0.1
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 3,
+        "rate": 0.1
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 3,
+        "rate": 0.1
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 3,
+        "rate": 0.1
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 3,
+        "rate": 0.1
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_source:extra.cnpe.entity.designOutput.ExtFileTransmission"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_active_source:extra.cnpe.entity.designOutput.ExtFileTransmission"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_active_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 2,
+        "rate": 0.066667
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.communication.ExtTeleFax|activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.communication.ExtTeleFax|activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designOutput.ExtFileTransmission|activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewOpnion|activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_source:extra.cnpe.entity.designReview.ExtDesignReviewReply"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "workflow_active_source:extra.cnpe.entity.designReview.ExtDesignReviewReply"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewReply"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:修改"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:发送"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:审核"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:批准"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:校对"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:绑签"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:编制"
+    },
+    {
+      "row_count": 398,
+      "X_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "V_all": {
+        "total": 30,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "W_all": {
+        "total": 14,
+        "hit": 0,
+        "rate": 0.0
+      },
+      "name": "vote_valid_source:extra.cnpe.entity.designReview.ExtDesignReviewReply|activity:编制"
+    }
+  ]
+}

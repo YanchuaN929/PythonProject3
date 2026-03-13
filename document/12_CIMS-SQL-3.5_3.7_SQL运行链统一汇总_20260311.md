@@ -164,30 +164,45 @@
        - `SEND X/V/W = 0`
    - `WORKFLOWPROCESSESBIND / USERVOTERECORD` 侧：
      - 已确认 `SEND` 分支不能再只追 `DISTRIBUTERECORD`
-     - 对版本最佳 `SEND` 样本 `2958` 行，已有 `1413` 行能落到 workflow/vote
-     - 基于 workflow/vote 的并集命中：
-       - `X = 409 / 2958 = 13.8310%`
-       - `V = 1098 / 2958 = 37.1021%`
-       - `W = 560 / 2958 = 18.9542%`
+      - 在补齐 `MEMORANDUM / TELEFAX / EXTERNALMINUTES / FUNOTIFY / CANCELNOTIFY / DESIGNREVIEWOPNION / DESIGNREVIEWREPLY` 等主表后，对版本最佳 `SEND` 样本 `2958` 行，已有 `2254` 行能落到 workflow/vote
+      - 按 Excel 非空字段计算交集命中：
+        - `X = 144 / 911 = 15.8068%`
+        - `V = 447 / 911 = 49.0670%`
+        - `W = 106 / 459 = 23.0937%`
 6. 类型级主链：
-   - `备忘录 / 图文传真`：`OBJECTREPLYLINK -> WORKFLOWPROCESSESBIND / USERVOTERECORD`
+   - `备忘录 / 图文传真`：`OBJECTREPLYLINK + 主对象(MEMORANDUM / TELEFAX) -> WORKFLOWPROCESSESBIND / USERVOTERECORD`
    - `文件传递单 / TA / CR / NCR`：`主对象(FILETRANSMISSION / TA / CR / NCR) -> WORKFLOWPROCESSESBIND / USERVOTERECORD`
+   - `审查意见单 / 审查意见答复单`：`DESIGNREVIEWOPNION / DESIGNREVIEWREPLY -> WORKFLOWPROCESSESBIND / USERVOTERECORD`
+   - `FU通知单 / 作废通知单 / 外发纪要`：`主对象(FUNOTIFY / CANCELNOTIFY / EXTERNALMINUTES) -> WORKFLOWPROCESSESBIND / USERVOTERECORD`
    - `DISTRIBUTERECORD` 对文件6发送侧只保留为补充链，不再作为主链
 7. 当前收口：
    - 文件6 `A` 列确实是对象族信号，不同文函类型存在不同存储逻辑
-   - 当前主缺口已经收窄到尚未导出的主表类型：
-     - `MEMORANDUM`
-     - `TELEFAX`
-     - `INTERNALMINUTES`
-     - `EXTERNALMINUTES`
-     - `FUNOTIFY`
-     - `CANCELNOTIFY`
-     - `DESIGNREVIEWOPNION`
-     - `DESIGNREVIEWREPLY`
-     - `FCR`
+   - 原缺主表已补齐，当前主缺口改为：
+     - `INTERNALMINUTES / FCR` 仍无有效 send link
+     - `FU通知单 / 作废通知单` 虽已打到 workflow/vote，但 `X/V/W` 仍无稳定交集
+     - `审查意见单 / 审查意见答复单 / 外发纪要` 已部分命中，但 `X/V/W` 仍未到可上线口径
    - `H` 本轮暂不继续追
 8. 最新专题见：
    - `document/13_CIMS-SQL-3.5_文件6_SQL深挖复核_20260311.md`
+
+### 3.7 2026-03-13 文件6补充
+
+- 在补齐主表之后，文件6发送侧又补上了“主对象内部 `relation_ids` 递归展开”这一步
+- 最新结果文件：
+  - `document/file6_send_workflow_probe_20260313_rel2.json`
+  - `document/file6_distribution_chain_probe_20260313_rel2.json`
+- `WORKFLOWPROCESSESBIND / USERVOTERECORD` 最新命中：
+  - `rows_with_workflow_hits = 2258 / 2958`
+  - `X = 165 / 911 = 18.1120%`
+  - `V = 463 / 911 = 50.8233%`
+  - `W = 123 / 459 = 26.7974%`
+- 本轮最大增量来自：
+  - `审查意见答复单 -> DESIGNREVIEWREPLY -> DESIGNREVIEWOPNION -> FILETRANSMISSION -> workflow/vote`
+  - 该类型已提升到 `X = 24 / 25`、`V = 25 / 25`、`W = 21 / 21`
+- `DISTRIBUTERECORD` 复跑后发送侧仍为 `SEND X/V/W = 0`
+- `SSC_RELATED_DATA` 已快筛排除：
+  - 发送侧抽出 `661` 个 `SSC_RELATED_DATA`
+  - 在 `WORKFLOWPROCESSESBIND / USERVOTERECORD` 中命中 `0`
 
 ## 4. 与我当前完整运行链的自检结果
 

@@ -366,208 +366,95 @@ def save_assignment(file_type, file_path, row_index, assigned_name):
 
 def save_assignments_batch(assignments):
     """
-    批量保存指派结果到Excel（优化版，按文件分组）
-    
-    参数:
-        assignments: 指派列表，每项包含:
-            {
-                'file_type': int,
-                'file_path': str,
-                'row_index': int,
-                'assigned_name': str,
-                'interface_id': str (可选，用于Registry)
-                'project_id': str (可选，用于Registry)
-            }
-    
-    返回:
-        dict: {
-            'success_count': int,  # 成功数量
-            'failed_tasks': list,  # 失败的任务信息
-            'registry_updates': int  # Registry更新数量
-        }
+    批量保存指派结果。
+
+    当前版本只更新 assignment memory 和 Registry，
+    不再写入 Excel 文件。
     """
-    import pandas as pd
-    from collections import defaultdict
-    
     success_count = 0
     failed_tasks = []
     registry_updates = 0
+    successful_assignments = []
 
-    # 按文件路径分组
-    file_groups = defaultdict(list)
-    for assignment in assignments:
-        if int(assignment.get("file_type", 0) or 0) == 1:
-            failed_tasks.append(
-                {
-                    "interface_id": assignment.get("interface_id", "未知"),
-                    "reason": "待处理文件1为数据库只读模式，不支持指派写入",
-                }
-            )
-            continue
-        file_path = assignment['file_path']
-        file_groups[file_path].append(assignment)
-    
-    # 按文件批量处理
-    for file_path, file_assignments in file_groups.items():
+    try:
+        from services.assignment_memory import batch_save_memories
+    except Exception:
+        batch_save_memories = None
+
+    try:
+        from registry import hooks as registry_hooks
+    except Exception:
+        registry_hooks = None
+
+    for assignment in assignments or []:
         try:
-            # 1. 检查文件是否存在
-            if not os.path.exists(file_path):
-                print(f"[指派] 文件不存在: {file_path}")
-                for assignment in file_assignments:
-                    failed_tasks.append({
-                        'interface_id': assignment.get('interface_id', '未知'),
-                        'reason': '文件不存在'
-                    })
-                continue
-            
-            # 2. 文件锁定检测
-            try:
-                with open(file_path, 'r+b'):
-                    pass
-            except PermissionError:
-                # 尝试获取占用者信息
-                lock_owner = ""
-                if get_excel_lock_owner:
-                    lock_owner = get_excel_lock_owner(file_path)
-                
-                if lock_owner:
-                    print(f"[指派] 文件被占用: {file_path} (占用者: {lock_owner})")
-                    reason = f'文件被 {lock_owner} 占用'
-                else:
-                    print(f"[指派] 文件被占用: {file_path}")
-                    reason = '文件被占用'
-                
-                for assignment in file_assignments:
-                    failed_tasks.append({
-                        'interface_id': assignment.get('interface_id', '未知'),
-                        'reason': reason
-                    })
-                continue
-            
-            # 3. 打开Excel文件（只打开一次）
-            wb = load_workbook(file_path)
-            ws = wb.active
-            
-            # 4. 读取DataFrame用于Registry（只读一次，可失败；Registry 将优先使用 payload 兜底）
-            df = None
-            try:
-                df = pd.read_excel(file_path, sheet_name=0)
-            except Exception as e:
-                print(f"[指派] 读取DataFrame失败: {e}")
-            
-            # 5. 批量写入责任人
-            for assignment in file_assignments:
-                try:
-                    file_type = assignment['file_type']
-                    row_index = assignment['row_index']
-                    assigned_name = assignment['assigned_name']
-                    
-                    # 获取责任人列名
-                    col_name = get_responsible_column(file_type)
-                    if not col_name:
-                        print(f"[指派] 无法确定责任人列: file_type={file_type}")
-                        failed_tasks.append({
-                            'interface_id': assignment.get('interface_id', '未知'),
-                            'reason': '无法确定责任人列'
-                        })
-                        continue
-                    
-                    # 写入责任人
-                    ws[f"{col_name}{row_index}"] = assigned_name
-                    success_count += 1
-                    
-                except Exception as e:
-                    print(f"[指派] 单个任务失败: {e}")
-                    failed_tasks.append({
-                        'interface_id': assignment.get('interface_id', '未知'),
-                        'reason': str(e)
-                    })
-            
-            # 6. 保存Excel（只保存一次）
-            wb.save(file_path)
-            wb.close()
-            
-            # 7. 批量调用Registry钩子（不依赖 DataFrame 一定成功；优先使用 assignment payload 的接口号/项目号兜底）
-            try:
-                from registry import hooks as registry_hooks
-                from registry.util import extract_interface_id, extract_project_id
+            file_type = int(assignment.get('file_type', 0) or 0)
+            interface_id = str(assignment.get('interface_id', '') or '').strip()
+            project_id = str(assignment.get('project_id', '') or '').strip()
+            assigned_name = str(assignment.get('assigned_name', '') or '').strip()
+            row_index = int(assignment.get('row_index', 0) or 0)
+            file_path = str(assignment.get('file_path', '') or '').strip()
+            assigned_by = assignment.get('assigned_by', '系统用户')
 
-                for assignment in file_assignments:
-                    try:
-                        row_index = assignment['row_index']
-
-                        # 兜底：先用 payload（更稳定，也避免行号映射不准导致“更新 0”）
-                        interface_id = str(assignment.get("interface_id", "") or "").strip()
-                        project_id = str(assignment.get("project_id", "") or "").strip()
-
-                        # 若 df 可用，且能正确映射到行，则以 df 提取结果为准（更贴近真实Excel内容）
-                        if df is not None:
-                            try:
-                                df_row_idx = row_index - 2  # Excel行号（含表头） -> df 行索引
-                                if 0 <= df_row_idx < len(df):
-                                    row_data = df.iloc[df_row_idx]
-                                    df_interface_id = extract_interface_id(row_data, assignment['file_type'])
-                                    df_project_id = extract_project_id(row_data, assignment['file_type'])
-                                    if df_interface_id and df_project_id:
-                                        interface_id = str(df_interface_id or "").strip()
-                                        project_id = str(df_project_id or "").strip()
-                            except Exception:
-                                pass
-
-                        if interface_id and project_id:
-                            assigned_by = assignment.get('assigned_by', '系统用户')
-                            registry_hooks.on_assigned(
-                                file_type=assignment['file_type'],
-                                file_path=file_path,
-                                row_index=row_index,
-                                interface_id=interface_id,
-                                project_id=project_id,
-                                assigned_by=assigned_by,
-                                assigned_to=assignment['assigned_name']
-                            )
-                            registry_updates += 1
-                    except Exception as e:
-                        print(f"[Registry] 单个任务钩子失败: {e}")
-
-                if registry_updates > 0:
-                    log_info(f"Registry: 已更新 {registry_updates} 个任务状态")
-            except Exception as e:
-                print(f"[Registry] 批量钩子失败: {e}")
-            
-        except Exception as e:
-            print(f"[指派] 文件处理失败: {file_path}, 错误: {e}")
-            import traceback
-            traceback.print_exc()
-            for assignment in file_assignments:
+            if file_type not in {1, 2, 3, 4}:
                 failed_tasks.append({
-                    'interface_id': assignment.get('interface_id', '未知'),
-                    'reason': str(e)
+                    'interface_id': interface_id or '未知',
+                    'reason': '当前版本仅支持待处理文件1~4的SQL主工作流指派'
                 })
+                continue
+            if not interface_id or not project_id or not assigned_name:
+                failed_tasks.append({
+                    'interface_id': interface_id or '未知',
+                    'reason': '缺少 interface_id / project_id / assigned_name'
+                })
+                continue
 
-    # 【新增】保存指派记忆（只记录成功的指派）
-    if success_count > 0:
+            successful_assignments.append({
+                'file_type': file_type,
+                'project_id': project_id,
+                'interface_id': interface_id,
+                'assigned_name': assigned_name,
+            })
+            success_count += 1
+
+            if registry_hooks:
+                try:
+                    registry_hooks.on_assigned(
+                        file_type=file_type,
+                        file_path=file_path,
+                        row_index=row_index,
+                        interface_id=interface_id,
+                        project_id=project_id,
+                        assigned_by=assigned_by,
+                        assigned_to=assigned_name,
+                    )
+                    registry_updates += 1
+                except Exception as exc:
+                    failed_tasks.append({
+                        'interface_id': interface_id or '未知',
+                        'reason': f'Registry更新失败: {exc}',
+                    })
+        except Exception as exc:
+            failed_tasks.append({
+                'interface_id': str((assignment or {}).get('interface_id', '') or '未知'),
+                'reason': str(exc),
+            })
+
+    if successful_assignments and batch_save_memories:
         try:
-            from services.assignment_memory import batch_save_memories
-            # 过滤出成功的指派（不在failed_tasks中的）
-            failed_interface_ids = {t.get('interface_id') for t in failed_tasks}
-            successful_assignments = [
-                a for a in assignments
-                if a.get('interface_id') not in failed_interface_ids
-            ]
             batch_save_memories(successful_assignments)
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[AssignmentMemory] 批量保存失败: {exc}")
 
-    # 输出到监控器
     if success_count > 0:
-        log_success(f"指派完成: 成功 {success_count} 条" + (f", 失败 {len(failed_tasks)} 条" if failed_tasks else ""))
+        log_success(f"指派完成: 成功 {success_count} 条" + (f", Registry更新 {registry_updates} 条" if registry_updates else ""))
     elif failed_tasks:
         log_error(f"指派失败: {len(failed_tasks)} 条")
 
     return {
         'success_count': success_count,
         'failed_tasks': failed_tasks,
-        'registry_updates': registry_updates
+        'registry_updates': registry_updates,
     }
 
 

@@ -55,6 +55,12 @@ except Exception:
         return df
 
 try:
+    from services.processing_diagnostics import write_processing_diagnostic_log
+except Exception:
+    def write_processing_diagnostic_log(_app, total_projects=None, error_message: str = ""):
+        return ""
+
+try:
     from utils.dept_config import (
         get_default_folder_path,
         get_director_role_mapping,
@@ -5740,6 +5746,14 @@ class ExcelProcessorApp:
 
                     # Step4：仅渲染 active_tab（避免 update_display 与 on_tab_changed 双重渲染）
                     self._post_processing_select_and_render_active_tab(active_tab)
+                    processing_log_path = ""
+                    try:
+                        processing_log_path = write_processing_diagnostic_log(self, total_projects=total_projects)
+                        if processing_log_path:
+                            print(f"[处理诊断] 日志已写入: {processing_log_path}")
+                    except Exception as e:
+                        print(f"[处理诊断] 写入失败: {e}")
+
                     
                     # 统一弹窗显示处理结果（批量处理版本）
                     # 只有手动操作时才显示"处理完成"弹窗
@@ -5756,6 +5770,8 @@ class ExcelProcessorApp:
                             combined_message += "\n\n💡 提示:\n"
                             combined_message += "• 导出结果将按项目号自动分文件夹存放\n"
                             combined_message += "• 主界面显示的是所有项目的合并数据"
+                        if processing_log_path:
+                            combined_message += f"\n\n🧾 处理诊断日志:\n{processing_log_path}"
                         messagebox.showinfo("批量处理完成", combined_message)
                         
                         # 【非自动模式】立即显示指派和忽略提示
@@ -5807,6 +5823,13 @@ class ExcelProcessorApp:
             except Exception as exc:
                 self.root.after(0, lambda: self.close_waiting_dialog(processing_dialog))
                 error_message = f"处理过程中发生错误: {exc}"
+                try:
+                    log_path = write_processing_diagnostic_log(self, error_message=error_message)
+                    if log_path:
+                        print(f"[处理诊断] 异常日志已写入: {log_path}")
+                except Exception as e:
+                    print(f"[处理诊断] 异常日志写入失败: {e}")
+
                 if self._should_show_popup() or not getattr(self, "_auto_context", True):
                     self.root.after(0, lambda msg=error_message: messagebox.showerror("错误", msg))
                     self.root.after(0, lambda: self.process_button.config(state="normal", text="开始处理"))

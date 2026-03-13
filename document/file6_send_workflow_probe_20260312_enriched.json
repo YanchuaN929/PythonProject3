@@ -1,0 +1,4274 @@
+{
+  "inputs": {
+    "excel_dir": "example\\CIMS-SQL-3.5\\EXCEL导出数据",
+    "sql35_dir": "example\\CIMS-SQL-3.5",
+    "sql37_dir": "example\\CIMS-sql-3.7"
+  },
+  "row_counts": {
+    "all_send_rows": 2958,
+    "version_best_send_rows": 2958,
+    "rows_with_candidate_objects": 2946,
+    "rows_with_workflow_hits": 2254,
+    "version_best_rows_with_workflow_hits": 2254
+  },
+  "table_scans": {
+    "SENDRECEIVEDATA": {
+      "rows_scanned": 1109324,
+      "rows_matched": 3714
+    },
+    "FILETRANSMISSION_ROUTE": {
+      "rows_scanned": 242998,
+      "rows_matched": 538
+    },
+    "OBJECTREPLYLINK": {
+      "rows_scanned": 48961,
+      "rows_matched": 323
+    },
+    "send_aux_tables": {
+      "CANCELNOTIFY": {
+        "rows_scanned": 3237,
+        "rows_matched": 20,
+        "send_link_rows": 20
+      },
+      "CR": {
+        "rows_scanned": 172884,
+        "rows_matched": 126,
+        "send_link_rows": 50
+      },
+      "CRREPLY": {
+        "rows_scanned": 25341,
+        "rows_matched": 50,
+        "send_link_rows": 50
+      },
+      "DCR": {
+        "rows_scanned": 1431,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "DCRREPLY": {
+        "rows_scanned": 0,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "DESIGNREVIEWOPNION": {
+        "rows_scanned": 317690,
+        "rows_matched": 1180,
+        "send_link_rows": 567
+      },
+      "DESIGNREVIEWREPLY": {
+        "rows_scanned": 19930,
+        "rows_matched": 55,
+        "send_link_rows": 55
+      },
+      "EXTERNALMINUTES": {
+        "rows_scanned": 9589,
+        "rows_matched": 16,
+        "send_link_rows": 16
+      },
+      "FCR": {
+        "rows_scanned": 106881,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "FCRREPLY": {
+        "rows_scanned": 302,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "FILETRANSMISSION": {
+        "rows_scanned": 242998,
+        "rows_matched": 919,
+        "send_link_rows": 919
+      },
+      "FUNOTIFY": {
+        "rows_scanned": 10766,
+        "rows_matched": 156,
+        "send_link_rows": 156
+      },
+      "INTERNALMINUTES": {
+        "rows_scanned": 9207,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "MEMORANDUM": {
+        "rows_scanned": 141257,
+        "rows_matched": 344,
+        "send_link_rows": 324
+      },
+      "NCR": {
+        "rows_scanned": 9152,
+        "rows_matched": 13,
+        "send_link_rows": 6
+      },
+      "NCRREPLY": {
+        "rows_scanned": 4165,
+        "rows_matched": 5,
+        "send_link_rows": 5
+      },
+      "TA": {
+        "rows_scanned": 33734,
+        "rows_matched": 193,
+        "send_link_rows": 81
+      },
+      "TAREPLY": {
+        "rows_scanned": 20092,
+        "rows_matched": 71,
+        "send_link_rows": 71
+      },
+      "TCR": {
+        "rows_scanned": 222,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "TCRREPLY": {
+        "rows_scanned": 0,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "TELEFAX": {
+        "rows_scanned": 120600,
+        "rows_matched": 408,
+        "send_link_rows": 408
+      }
+    },
+    "WORKFLOWPROCESSESBIND": {
+      "rows_scanned": 2571,
+      "rows_matched": 2564,
+      "matched_source_ids": 2517
+    },
+    "USERVOTERECORD": {
+      "rows_scanned": 9944,
+      "rows_matched": 9904,
+      "matched_source_ids": 2481,
+      "activity_counter": {
+        "编制": 2520,
+        "批准": 2505,
+        "发送": 1415,
+        "审核": 1056,
+        "校对": 1044,
+        "绑签": 496,
+        "修改": 443,
+        "设总审定": 148,
+        "所审定": 115,
+        "审定": 106,
+        "会签": 31,
+        "编制行动项": 13,
+        "修改文函": 6,
+        "外部退回": 6
+      }
+    }
+  },
+  "workflow_metrics": {
+    "version_best": {
+      "X_all": {
+        "total": 911,
+        "hit": 144,
+        "rate": 0.158068,
+        "by_project": {
+          "1818": {
+            "total": 187,
+            "hit": 19,
+            "rate": 0.101604
+          },
+          "1907": {
+            "total": 81,
+            "hit": 4,
+            "rate": 0.049383
+          },
+          "1915": {
+            "total": 53,
+            "hit": 14,
+            "rate": 0.264151
+          },
+          "1916": {
+            "total": 233,
+            "hit": 42,
+            "rate": 0.180258
+          },
+          "2016": {
+            "total": 181,
+            "hit": 38,
+            "rate": 0.209945
+          },
+          "2026": {
+            "total": 164,
+            "hit": 25,
+            "rate": 0.152439
+          },
+          "2306": {
+            "total": 12,
+            "hit": 2,
+            "rate": 0.166667
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 1,
+            "rate": 0.166667
+          },
+          "TA": {
+            "total": 80,
+            "hit": 1,
+            "rate": 0.0125
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 47,
+            "rate": 0.408696
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 68,
+            "rate": 0.404762
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 1,
+            "rate": 0.111111
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 2,
+            "rate": 0.066667
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 3,
+            "rate": 0.12
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 21,
+            "rate": 0.049412
+          }
+        }
+      },
+      "V_all": {
+        "total": 911,
+        "hit": 447,
+        "rate": 0.49067,
+        "by_project": {
+          "1818": {
+            "total": 187,
+            "hit": 82,
+            "rate": 0.438503
+          },
+          "1907": {
+            "total": 81,
+            "hit": 30,
+            "rate": 0.37037
+          },
+          "1915": {
+            "total": 53,
+            "hit": 26,
+            "rate": 0.490566
+          },
+          "1916": {
+            "total": 233,
+            "hit": 118,
+            "rate": 0.506438
+          },
+          "2016": {
+            "total": 181,
+            "hit": 98,
+            "rate": 0.541436
+          },
+          "2026": {
+            "total": 164,
+            "hit": 83,
+            "rate": 0.506098
+          },
+          "2306": {
+            "total": 12,
+            "hit": 10,
+            "rate": 0.833333
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 22,
+            "rate": 0.44898
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 2,
+            "rate": 0.333333
+          },
+          "TA": {
+            "total": 80,
+            "hit": 28,
+            "rate": 0.35
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 86,
+            "rate": 0.747826
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 116,
+            "rate": 0.690476
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 8,
+            "rate": 0.888889
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 5,
+            "rate": 0.166667
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 9,
+            "rate": 0.36
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 171,
+            "rate": 0.402353
+          }
+        }
+      },
+      "W_all": {
+        "total": 459,
+        "hit": 106,
+        "rate": 0.230937,
+        "by_project": {
+          "1818": {
+            "total": 112,
+            "hit": 12,
+            "rate": 0.107143
+          },
+          "1907": {
+            "total": 26,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1915": {
+            "total": 30,
+            "hit": 6,
+            "rate": 0.2
+          },
+          "1916": {
+            "total": 142,
+            "hit": 56,
+            "rate": 0.394366
+          },
+          "2016": {
+            "total": 72,
+            "hit": 17,
+            "rate": 0.236111
+          },
+          "2026": {
+            "total": 72,
+            "hit": 15,
+            "rate": 0.208333
+          },
+          "2306": {
+            "total": 5,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 17,
+            "hit": 1,
+            "rate": 0.058824
+          },
+          "FU通知单": {
+            "total": 3,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 2,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 24,
+            "hit": 2,
+            "rate": 0.083333
+          },
+          "图文传真": {
+            "total": 66,
+            "hit": 25,
+            "rate": 0.378788
+          },
+          "备忘录": {
+            "total": 69,
+            "hit": 35,
+            "rate": 0.507246
+          },
+          "外发纪要": {
+            "total": 5,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 14,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 21,
+            "hit": 4,
+            "rate": 0.190476
+          },
+          "文件传递单": {
+            "total": 238,
+            "hit": 39,
+            "rate": 0.163866
+          }
+        }
+      }
+    },
+    "by_type": {
+      "CR": {
+        "row_count": 50,
+        "rows_with_workflow_hits": 50,
+        "X_all": {
+          "total": 49,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {
+            "1818": {
+              "total": 23,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1907": {
+              "total": 3,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1916": {
+              "total": 7,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2016": {
+              "total": 5,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2026": {
+              "total": 10,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2306": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "CR": {
+              "total": 49,
+              "hit": 0,
+              "rate": 0.0
+            }
+          }
+        },
+        "V_all": {
+          "total": 49,
+          "hit": 22,
+          "rate": 0.44898,
+          "by_project": {
+            "1818": {
+              "total": 23,
+              "hit": 11,
+              "rate": 0.478261
+            },
+            "1907": {
+              "total": 3,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1916": {
+              "total": 7,
+              "hit": 2,
+              "rate": 0.285714
+            },
+            "2016": {
+              "total": 5,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2026": {
+              "total": 10,
+              "hit": 8,
+              "rate": 0.8
+            },
+            "2306": {
+              "total": 1,
+              "hit": 1,
+              "rate": 1.0
+            }
+          },
+          "by_type": {
+            "CR": {
+              "total": 49,
+              "hit": 22,
+              "rate": 0.44898
+            }
+          }
+        },
+        "W_all": {
+          "total": 17,
+          "hit": 1,
+          "rate": 0.058824,
+          "by_project": {
+            "1818": {
+              "total": 14,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1916": {
+              "total": 2,
+              "hit": 1,
+              "rate": 0.5
+            },
+            "2306": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "CR": {
+              "total": 17,
+              "hit": 1,
+              "rate": 0.058824
+            }
+          }
+        }
+      },
+      "CR答复单": {
+        "row_count": 42,
+        "rows_with_workflow_hits": 42,
+        "X_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        },
+        "V_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        },
+        "W_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        }
+      },
+      "FU通知单": {
+        "row_count": 98,
+        "rows_with_workflow_hits": 95,
+        "X_all": {
+          "total": 4,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {
+            "2026": {
+              "total": 4,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "FU通知单": {
+              "total": 4,
+              "hit": 0,
+              "rate": 0.0
+            }
+          }
+        },
+        "V_all": {
+          "total": 4,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {
+            "2026": {
+              "total": 4,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "FU通知单": {
+              "total": 4,
+              "hit": 0,
+              "rate": 0.0
+            }
+          }
+        },
+        "W_all": {
+          "total": 3,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {
+            "2026": {
+              "total": 3,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "FU通知单": {
+              "total": 3,
+              "hit": 0,
+              "rate": 0.0
+            }
+          }
+        }
+      },
+      "IICS": {
+        "row_count": 306,
+        "rows_with_workflow_hits": 0,
+        "X_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        },
+        "V_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        },
+        "W_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        }
+      },
+      "IITF": {
+        "row_count": 375,
+        "rows_with_workflow_hits": 0,
+        "X_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        },
+        "V_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        },
+        "W_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        }
+      },
+      "NCR": {
+        "row_count": 6,
+        "rows_with_workflow_hits": 6,
+        "X_all": {
+          "total": 6,
+          "hit": 1,
+          "rate": 0.166667,
+          "by_project": {
+            "1818": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1907": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1916": {
+              "total": 4,
+              "hit": 1,
+              "rate": 0.25
+            }
+          },
+          "by_type": {
+            "NCR": {
+              "total": 6,
+              "hit": 1,
+              "rate": 0.166667
+            }
+          }
+        },
+        "V_all": {
+          "total": 6,
+          "hit": 2,
+          "rate": 0.333333,
+          "by_project": {
+            "1818": {
+              "total": 1,
+              "hit": 1,
+              "rate": 1.0
+            },
+            "1907": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1916": {
+              "total": 4,
+              "hit": 1,
+              "rate": 0.25
+            }
+          },
+          "by_type": {
+            "NCR": {
+              "total": 6,
+              "hit": 2,
+              "rate": 0.333333
+            }
+          }
+        },
+        "W_all": {
+          "total": 2,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {
+            "1818": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1916": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "NCR": {
+              "total": 2,
+              "hit": 0,
+              "rate": 0.0
+            }
+          }
+        }
+      },
+      "NCR回复单": {
+        "row_count": 5,
+        "rows_with_workflow_hits": 5,
+        "X_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        },
+        "V_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        },
+        "W_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        }
+      },
+      "TA": {
+        "row_count": 81,
+        "rows_with_workflow_hits": 81,
+        "X_all": {
+          "total": 80,
+          "hit": 1,
+          "rate": 0.0125,
+          "by_project": {
+            "1818": {
+              "total": 22,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1907": {
+              "total": 7,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1916": {
+              "total": 17,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2016": {
+              "total": 16,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2026": {
+              "total": 18,
+              "hit": 1,
+              "rate": 0.055556
+            }
+          },
+          "by_type": {
+            "TA": {
+              "total": 80,
+              "hit": 1,
+              "rate": 0.0125
+            }
+          }
+        },
+        "V_all": {
+          "total": 80,
+          "hit": 28,
+          "rate": 0.35,
+          "by_project": {
+            "1818": {
+              "total": 22,
+              "hit": 9,
+              "rate": 0.409091
+            },
+            "1907": {
+              "total": 7,
+              "hit": 1,
+              "rate": 0.142857
+            },
+            "1916": {
+              "total": 17,
+              "hit": 8,
+              "rate": 0.470588
+            },
+            "2016": {
+              "total": 16,
+              "hit": 1,
+              "rate": 0.0625
+            },
+            "2026": {
+              "total": 18,
+              "hit": 9,
+              "rate": 0.5
+            }
+          },
+          "by_type": {
+            "TA": {
+              "total": 80,
+              "hit": 28,
+              "rate": 0.35
+            }
+          }
+        },
+        "W_all": {
+          "total": 24,
+          "hit": 2,
+          "rate": 0.083333,
+          "by_project": {
+            "1818": {
+              "total": 12,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1916": {
+              "total": 6,
+              "hit": 2,
+              "rate": 0.333333
+            },
+            "2016": {
+              "total": 2,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2026": {
+              "total": 4,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "TA": {
+              "total": 24,
+              "hit": 2,
+              "rate": 0.083333
+            }
+          }
+        }
+      },
+      "TA回复单": {
+        "row_count": 57,
+        "rows_with_workflow_hits": 57,
+        "X_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        },
+        "V_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        },
+        "W_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        }
+      },
+      "作废通知单": {
+        "row_count": 13,
+        "rows_with_workflow_hits": 13,
+        "X_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        },
+        "V_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        },
+        "W_all": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {},
+          "by_type": {}
+        }
+      },
+      "图文传真": {
+        "row_count": 274,
+        "rows_with_workflow_hits": 274,
+        "X_all": {
+          "total": 115,
+          "hit": 47,
+          "rate": 0.408696,
+          "by_project": {
+            "1818": {
+              "total": 32,
+              "hit": 12,
+              "rate": 0.375
+            },
+            "1907": {
+              "total": 3,
+              "hit": 1,
+              "rate": 0.333333
+            },
+            "1915": {
+              "total": 10,
+              "hit": 5,
+              "rate": 0.5
+            },
+            "1916": {
+              "total": 29,
+              "hit": 12,
+              "rate": 0.413793
+            },
+            "2016": {
+              "total": 16,
+              "hit": 9,
+              "rate": 0.5625
+            },
+            "2026": {
+              "total": 18,
+              "hit": 6,
+              "rate": 0.333333
+            },
+            "2306": {
+              "total": 7,
+              "hit": 2,
+              "rate": 0.285714
+            }
+          },
+          "by_type": {
+            "图文传真": {
+              "total": 115,
+              "hit": 47,
+              "rate": 0.408696
+            }
+          }
+        },
+        "V_all": {
+          "total": 115,
+          "hit": 86,
+          "rate": 0.747826,
+          "by_project": {
+            "1818": {
+              "total": 32,
+              "hit": 19,
+              "rate": 0.59375
+            },
+            "1907": {
+              "total": 3,
+              "hit": 3,
+              "rate": 1.0
+            },
+            "1915": {
+              "total": 10,
+              "hit": 9,
+              "rate": 0.9
+            },
+            "1916": {
+              "total": 29,
+              "hit": 27,
+              "rate": 0.931034
+            },
+            "2016": {
+              "total": 16,
+              "hit": 11,
+              "rate": 0.6875
+            },
+            "2026": {
+              "total": 18,
+              "hit": 12,
+              "rate": 0.666667
+            },
+            "2306": {
+              "total": 7,
+              "hit": 5,
+              "rate": 0.714286
+            }
+          },
+          "by_type": {
+            "图文传真": {
+              "total": 115,
+              "hit": 86,
+              "rate": 0.747826
+            }
+          }
+        },
+        "W_all": {
+          "total": 66,
+          "hit": 25,
+          "rate": 0.378788,
+          "by_project": {
+            "1818": {
+              "total": 13,
+              "hit": 6,
+              "rate": 0.461538
+            },
+            "1907": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1915": {
+              "total": 6,
+              "hit": 3,
+              "rate": 0.5
+            },
+            "1916": {
+              "total": 29,
+              "hit": 10,
+              "rate": 0.344828
+            },
+            "2016": {
+              "total": 6,
+              "hit": 3,
+              "rate": 0.5
+            },
+            "2026": {
+              "total": 9,
+              "hit": 3,
+              "rate": 0.333333
+            },
+            "2306": {
+              "total": 2,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "图文传真": {
+              "total": 66,
+              "hit": 25,
+              "rate": 0.378788
+            }
+          }
+        }
+      },
+      "备忘录": {
+        "row_count": 298,
+        "rows_with_workflow_hits": 279,
+        "X_all": {
+          "total": 168,
+          "hit": 68,
+          "rate": 0.404762,
+          "by_project": {
+            "1818": {
+              "total": 12,
+              "hit": 2,
+              "rate": 0.166667
+            },
+            "1907": {
+              "total": 16,
+              "hit": 3,
+              "rate": 0.1875
+            },
+            "1915": {
+              "total": 18,
+              "hit": 6,
+              "rate": 0.333333
+            },
+            "1916": {
+              "total": 29,
+              "hit": 13,
+              "rate": 0.448276
+            },
+            "2016": {
+              "total": 54,
+              "hit": 29,
+              "rate": 0.537037
+            },
+            "2026": {
+              "total": 37,
+              "hit": 15,
+              "rate": 0.405405
+            },
+            "2306": {
+              "total": 2,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "备忘录": {
+              "total": 168,
+              "hit": 68,
+              "rate": 0.404762
+            }
+          }
+        },
+        "V_all": {
+          "total": 168,
+          "hit": 116,
+          "rate": 0.690476,
+          "by_project": {
+            "1818": {
+              "total": 12,
+              "hit": 4,
+              "rate": 0.333333
+            },
+            "1907": {
+              "total": 16,
+              "hit": 10,
+              "rate": 0.625
+            },
+            "1915": {
+              "total": 18,
+              "hit": 11,
+              "rate": 0.611111
+            },
+            "1916": {
+              "total": 29,
+              "hit": 20,
+              "rate": 0.689655
+            },
+            "2016": {
+              "total": 54,
+              "hit": 47,
+              "rate": 0.87037
+            },
+            "2026": {
+              "total": 37,
+              "hit": 22,
+              "rate": 0.594595
+            },
+            "2306": {
+              "total": 2,
+              "hit": 2,
+              "rate": 1.0
+            }
+          },
+          "by_type": {
+            "备忘录": {
+              "total": 168,
+              "hit": 116,
+              "rate": 0.690476
+            }
+          }
+        },
+        "W_all": {
+          "total": 69,
+          "hit": 35,
+          "rate": 0.507246,
+          "by_project": {
+            "1818": {
+              "total": 10,
+              "hit": 3,
+              "rate": 0.3
+            },
+            "1907": {
+              "total": 5,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1915": {
+              "total": 10,
+              "hit": 2,
+              "rate": 0.2
+            },
+            "1916": {
+              "total": 15,
+              "hit": 10,
+              "rate": 0.666667
+            },
+            "2016": {
+              "total": 16,
+              "hit": 12,
+              "rate": 0.75
+            },
+            "2026": {
+              "total": 12,
+              "hit": 8,
+              "rate": 0.666667
+            },
+            "2306": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "备忘录": {
+              "total": 69,
+              "hit": 35,
+              "rate": 0.507246
+            }
+          }
+        }
+      },
+      "外发纪要": {
+        "row_count": 14,
+        "rows_with_workflow_hits": 14,
+        "X_all": {
+          "total": 9,
+          "hit": 1,
+          "rate": 0.111111,
+          "by_project": {
+            "1907": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1916": {
+              "total": 4,
+              "hit": 1,
+              "rate": 0.25
+            },
+            "2016": {
+              "total": 3,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2306": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "外发纪要": {
+              "total": 9,
+              "hit": 1,
+              "rate": 0.111111
+            }
+          }
+        },
+        "V_all": {
+          "total": 9,
+          "hit": 8,
+          "rate": 0.888889,
+          "by_project": {
+            "1907": {
+              "total": 1,
+              "hit": 1,
+              "rate": 1.0
+            },
+            "1916": {
+              "total": 4,
+              "hit": 4,
+              "rate": 1.0
+            },
+            "2016": {
+              "total": 3,
+              "hit": 2,
+              "rate": 0.666667
+            },
+            "2306": {
+              "total": 1,
+              "hit": 1,
+              "rate": 1.0
+            }
+          },
+          "by_type": {
+            "外发纪要": {
+              "total": 9,
+              "hit": 8,
+              "rate": 0.888889
+            }
+          }
+        },
+        "W_all": {
+          "total": 5,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {
+            "1907": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1916": {
+              "total": 2,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2016": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2306": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "外发纪要": {
+              "total": 5,
+              "hit": 0,
+              "rate": 0.0
+            }
+          }
+        }
+      },
+      "审查意见单": {
+        "row_count": 398,
+        "rows_with_workflow_hits": 398,
+        "X_all": {
+          "total": 30,
+          "hit": 2,
+          "rate": 0.066667,
+          "by_project": {
+            "1915": {
+              "total": 20,
+              "hit": 2,
+              "rate": 0.1
+            },
+            "1916": {
+              "total": 4,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2016": {
+              "total": 6,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "审查意见单": {
+              "total": 30,
+              "hit": 2,
+              "rate": 0.066667
+            }
+          }
+        },
+        "V_all": {
+          "total": 30,
+          "hit": 5,
+          "rate": 0.166667,
+          "by_project": {
+            "1915": {
+              "total": 20,
+              "hit": 5,
+              "rate": 0.25
+            },
+            "1916": {
+              "total": 4,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2016": {
+              "total": 6,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "审查意见单": {
+              "total": 30,
+              "hit": 5,
+              "rate": 0.166667
+            }
+          }
+        },
+        "W_all": {
+          "total": 14,
+          "hit": 0,
+          "rate": 0.0,
+          "by_project": {
+            "1915": {
+              "total": 9,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1916": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2016": {
+              "total": 4,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "审查意见单": {
+              "total": 14,
+              "hit": 0,
+              "rate": 0.0
+            }
+          }
+        }
+      },
+      "审查意见答复单": {
+        "row_count": 44,
+        "rows_with_workflow_hits": 44,
+        "X_all": {
+          "total": 25,
+          "hit": 3,
+          "rate": 0.12,
+          "by_project": {
+            "1818": {
+              "total": 9,
+              "hit": 3,
+              "rate": 0.333333
+            },
+            "1916": {
+              "total": 5,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2016": {
+              "total": 3,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2026": {
+              "total": 8,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "审查意见答复单": {
+              "total": 25,
+              "hit": 3,
+              "rate": 0.12
+            }
+          }
+        },
+        "V_all": {
+          "total": 25,
+          "hit": 9,
+          "rate": 0.36,
+          "by_project": {
+            "1818": {
+              "total": 9,
+              "hit": 5,
+              "rate": 0.555556
+            },
+            "1916": {
+              "total": 5,
+              "hit": 2,
+              "rate": 0.4
+            },
+            "2016": {
+              "total": 3,
+              "hit": 1,
+              "rate": 0.333333
+            },
+            "2026": {
+              "total": 8,
+              "hit": 1,
+              "rate": 0.125
+            }
+          },
+          "by_type": {
+            "审查意见答复单": {
+              "total": 25,
+              "hit": 9,
+              "rate": 0.36
+            }
+          }
+        },
+        "W_all": {
+          "total": 21,
+          "hit": 4,
+          "rate": 0.190476,
+          "by_project": {
+            "1818": {
+              "total": 6,
+              "hit": 2,
+              "rate": 0.333333
+            },
+            "1916": {
+              "total": 5,
+              "hit": 2,
+              "rate": 0.4
+            },
+            "2016": {
+              "total": 3,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2026": {
+              "total": 7,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "审查意见答复单": {
+              "total": 21,
+              "hit": 4,
+              "rate": 0.190476
+            }
+          }
+        }
+      },
+      "文件传递单": {
+        "row_count": 897,
+        "rows_with_workflow_hits": 896,
+        "X_all": {
+          "total": 425,
+          "hit": 21,
+          "rate": 0.049412,
+          "by_project": {
+            "1818": {
+              "total": 88,
+              "hit": 2,
+              "rate": 0.022727
+            },
+            "1907": {
+              "total": 50,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1915": {
+              "total": 5,
+              "hit": 1,
+              "rate": 0.2
+            },
+            "1916": {
+              "total": 134,
+              "hit": 15,
+              "rate": 0.11194
+            },
+            "2016": {
+              "total": 78,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "2026": {
+              "total": 69,
+              "hit": 3,
+              "rate": 0.043478
+            },
+            "2306": {
+              "total": 1,
+              "hit": 0,
+              "rate": 0.0
+            }
+          },
+          "by_type": {
+            "文件传递单": {
+              "total": 425,
+              "hit": 21,
+              "rate": 0.049412
+            }
+          }
+        },
+        "V_all": {
+          "total": 425,
+          "hit": 171,
+          "rate": 0.402353,
+          "by_project": {
+            "1818": {
+              "total": 88,
+              "hit": 33,
+              "rate": 0.375
+            },
+            "1907": {
+              "total": 50,
+              "hit": 15,
+              "rate": 0.3
+            },
+            "1915": {
+              "total": 5,
+              "hit": 1,
+              "rate": 0.2
+            },
+            "1916": {
+              "total": 134,
+              "hit": 54,
+              "rate": 0.402985
+            },
+            "2016": {
+              "total": 78,
+              "hit": 36,
+              "rate": 0.461538
+            },
+            "2026": {
+              "total": 69,
+              "hit": 31,
+              "rate": 0.449275
+            },
+            "2306": {
+              "total": 1,
+              "hit": 1,
+              "rate": 1.0
+            }
+          },
+          "by_type": {
+            "文件传递单": {
+              "total": 425,
+              "hit": 171,
+              "rate": 0.402353
+            }
+          }
+        },
+        "W_all": {
+          "total": 238,
+          "hit": 39,
+          "rate": 0.163866,
+          "by_project": {
+            "1818": {
+              "total": 56,
+              "hit": 1,
+              "rate": 0.017857
+            },
+            "1907": {
+              "total": 19,
+              "hit": 0,
+              "rate": 0.0
+            },
+            "1915": {
+              "total": 5,
+              "hit": 1,
+              "rate": 0.2
+            },
+            "1916": {
+              "total": 81,
+              "hit": 31,
+              "rate": 0.382716
+            },
+            "2016": {
+              "total": 40,
+              "hit": 2,
+              "rate": 0.05
+            },
+            "2026": {
+              "total": 37,
+              "hit": 4,
+              "rate": 0.108108
+            }
+          },
+          "by_type": {
+            "文件传递单": {
+              "total": 238,
+              "hit": 39,
+              "rate": 0.163866
+            }
+          }
+        }
+      }
+    }
+  },
+  "source_counters": {
+    "workflow_source_types": {
+      "extra.cnpe.entity.designOutput.ExtFileTransmission": 896,
+      "extra.cnpe.entity.designReview.ExtDesignReviewOpnion": 402,
+      "extra.cnpe.entity.communication.ExtTeleFax": 289,
+      "extra.cnpe.entity.communication.ExtMemorandum": 280,
+      "extra.cnpe.entity.designOutput.ExtFUNotify": 84,
+      "extra.cnpe.entity.change.ExtTA": 81,
+      "extra.cnpe.entity.change.ExtTAReply": 57,
+      "extra.cnpe.entity.change.ExtCR": 50,
+      "extra.cnpe.entity.change.ExtCRReply": 42,
+      "extra.cnpe.entity.designReview.ExtDesignReviewReply": 40,
+      "extra.cnpe.entity.communication.ExtExternalMinutes": 14,
+      "extra.cnpe.entity.designOutput.ExtCancelNotify": 13,
+      "extra.cnpe.entity.change.ExtNCR": 6,
+      "extra.cnpe.entity.change.ExtNCRReply": 5
+    },
+    "row_table_sources": {
+      "FILETRANSMISSION": 879,
+      "FILETRANSMISSION_ROUTE": 538,
+      "DESIGNREVIEWOPNION": 402,
+      "MEMORANDUM": 284,
+      "TELEFAX": 282,
+      "OBJECTREPLYLINK": 276,
+      "FUNOTIFY": 85,
+      "TA": 81,
+      "TAREPLY": 57,
+      "CR": 50,
+      "CRREPLY": 42,
+      "DESIGNREVIEWREPLY": 40,
+      "EXTERNALMINUTES": 14,
+      "CANCELNOTIFY": 13,
+      "NCR": 6,
+      "NCRREPLY": 5
+    }
+  },
+  "samples": {
+    "matched_examples": [
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 29,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW22K020260011",
+        "table_sources": [
+          "OBJECTREPLYLINK",
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "93CBBB84A1864DDD945362297FECB5DF",
+          "B7B2A52E31764ED1B610965915F755F9",
+          "D92A0E6BD88549B68E28242CDF98FF1D"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "梁晓曦",
+          "Super",
+          "王瑞",
+          "设计文档",
+          "张亮",
+          "许可宸",
+          "王少杰",
+          "陈焰",
+          "赵泾雄"
+        ],
+        "workflow_org_values": [
+          "水工工艺三室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "公用系统所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.公用系统所",
+          "公用系统所.水工工艺三室",
+          "中核工程.北京核工程研究设计院.公用系统所",
+          "北京核工程研究设计院.公用系统所.水工工艺三室",
+          "水工室",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "水工工艺三室",
+          "水工室",
+          "北京核工程研究设计院",
+          "结构一室",
+          "设计管理科"
+        ],
+        "x_raw": "焦迪,王瑞c,许可宸,梁晓曦,张杰,池云莉,河北电力工程设计所文档员,魏川铖,李娜娜,闫征,公用系统所文档,河北设计管理部文档员,李鸿翼,魏晰茹,武婕,马雪翠,王贝,潘亭",
+        "v_raw": "公用系统所.水工工艺二室,公用系统所.水工工艺三室,河北分公司.电力工程研究设计所,公用系统所.公用二室,公用系统所.暖通二室,河北分公司.设计管理部,公用系统所.水工工艺四室",
+        "w_raw": "仪控室,机务室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 30,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW22Q32026",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "2F582821023744D3998A40770D14443E",
+          "F1D6519182CE49F7A751B322538A3753"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "许可宸"
+        ],
+        "workflow_org_values": [
+          "水工工艺三室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "公用系统所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.公用系统所",
+          "公用系统所.水工工艺三室",
+          "中核工程.北京核工程研究设计院.公用系统所",
+          "北京核工程研究设计院.公用系统所.水工工艺三室"
+        ],
+        "workflow_office_values": [
+          "水工工艺三室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 31,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW252020260010",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "023B56DAFBE84CACB78E0AC136AB6A35",
+          "24D196C6E633457B8BB2D81ABA988691"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "魏晰茹",
+          "Super",
+          "河北设计管理部文",
+          "李鸿翼"
+        ],
+        "workflow_org_values": [
+          "设计管理部",
+          "中核工程",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部",
+          "水工室",
+          "核电工艺所",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "水工室"
+        ],
+        "x_raw": "王智勇,封昊伟,韩冰,王倩,周明鑫,周智昊,张学朔,王传悦,安康,余益,张志强,周鑫,肖占方,韩旭亮,耿林松,李炳宪,李钟扬,王子帆,闫红伟,赵若愚,郑少娟,明艳,田登港,田伟龙,王海波,张朋勇,张伟卓,张旭d,张艳刚,甄林棚,赵玉,刘星雨,麻晓帅,黄卓,卢艳超,张烨,杨振国,何海峰,杨焕起,白冬梅,张云峰,河北电气自动化所文档员,靳鹏,梁耀龙,宋欣,刘恒畅,王晓晨,王栋梁,张泽宇,河北电力工程设计所文档员,池云莉,侯晔凝,胡朝硕 ,焦子跃,刘峰b,彭程,王涛,黄楠,李江,柳文旭,闫占芳,杨佳鹤\n,徐佳丽,何正阳,张玉岐,李梦雨,张延景,白兰,高汉桥,郭晨楠,何毅,李姗,刘璐,刘朋飞,刘红坤,王鹤飞,王思佳,王勋,辛克,薛润格,杨亚伟,于婷,张五怡,张子杰,于嘉蕾,韩星星,李佩育,刘世龙,孙昊博,刘玉磊,李浓,房志刚,刘祖全,赵彩霞,闫伟,张静,张雄谦,河北建筑结构所文档员,于颖琪,河北核工程设计所文档员,孔敏娜,贾晓旭,王志从,于凤荣,冯国忠,于波,张海波a,王贝,马雪翠,宋晓兰,赵琛,潘亭,赵保增,杨熙,梁卿达,万忠义,胡建成,栗涛,马广辉,赵华立,眭洪涛,河北核电工艺所文档员,桂秋媛,康乐嘉,刘康利,赵银亮,张勇,郭淳杉,付煦,甄彩霞,李洋,蔺子尧,刘文,田新乐,廖涛,王威峰,董航,李铮铮,余云,蔡泽萍,任美贤,刘泽平,李涛,齐伦,董剑鑫,马晓喆,张文通,秦荣,崔华,刘挽平,王亚群,秦鹏,张嘉璐,侯锋,齐建华,武旭优,解景昭,张娅,赵华伟,宋江波,王亚辉,马骏,崔硕,李谦,刘建栋,刘晓萌,王彪,白智萌,马思嘉,董建华a,李宪祺,祁华标,张景钊,段泽萌,武晓楠,牛向阳,郭浩磊,张盘玉,贾京鑫,刘卫隆,刘宇晗,王益广,蒲红宇,檀博轩,张弘c,田梦晴,苑若彤,刘绪金,卢欣基,许春辉,张晓云,单锁兰,葛荣亮,贾双卓,李伟霞,王秀瑞,张剑冰,赵忠臣,朱佩晓,吕风杰,师陆陆,张伟超,默子涵,刘徙铎,薛冰,刘凯,尚文斌,刘媛媛,刘传,温馨,陆梦晗,董世傲,崔春雷,王鹏举",
+        "v_raw": "河北分公司.电气自动化所,未找到单位,河北分公司.核工程研究设计所,河北分公司.核电工艺所,河北分公司.建筑结构所,河北分公司.电力工程研究设计所",
+        "w_raw": "仪控一室,设备室,暖通室,建筑总图室,电气室,通信室,工艺系统室,仪控二室,工艺室,土建室,力学室,仪控室,机务室,结构一室,工艺布置一室,工艺布置二室,水工室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 32,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25A020260006",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "36F28605753C418E9CDA5FEA3FB4414F",
+          "AC6BDF324A7048B79ECE21D4CF053245"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "河北核电工艺所文",
+          "Super",
+          "河北核电工艺所文档员",
+          "孙传军",
+          "设计文档"
+        ],
+        "workflow_org_values": [
+          "核电工艺所",
+          "中核工程",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "中核工程.河北分公司.核电工艺所",
+          "水工室",
+          "核电工艺所.水工室",
+          "河北分公司.核电工艺所.水工室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 33,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25A220260007",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "32C190DAE7F742609ECB7A1FEE8C41A0",
+          "919FD467192D4AF6A4B8D2AB072ECCD1"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "蔡泽萍",
+          "Super",
+          "河北核电工艺所文",
+          "孙传军",
+          "桂秋媛",
+          "王亚群"
+        ],
+        "workflow_org_values": [
+          "工艺布置二室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.工艺布置二室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.工艺布置二室",
+          "水工室",
+          "核电工艺所.水工室",
+          "河北分公司.核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "工艺布置二室",
+          "水工室"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 34,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25A220260008",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "70790A5D7C6749B6BE6FFFB73CB67BEF",
+          "92F1298A2DFF4387B64DF60C34FFAD55"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "刘泽平",
+          "Super",
+          "王亚群",
+          "孙传军",
+          "设计文档",
+          "刘康利",
+          "万忠义"
+        ],
+        "workflow_org_values": [
+          "工艺布置二室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.工艺布置二室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.工艺布置二室",
+          "水工室",
+          "核电工艺所.水工室",
+          "河北分公司.核电工艺所.水工室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "工艺布置一室"
+        ],
+        "workflow_office_values": [
+          "工艺布置二室",
+          "水工室",
+          "北京核工程研究设计院",
+          "工艺布置一室"
+        ],
+        "x_raw": "赵泾雄",
+        "v_raw": "工程设计管理部.设计管理科",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 36,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25A320260009",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "4BEC84CD093E41F48942F14ECBC1638E",
+          "79D5BFC1ECF3454CA3B9A200A17F3FC1"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "张烨",
+          "Super",
+          "邢磊",
+          "河北核电工艺所文",
+          "韩旭亮",
+          "孙侨洋"
+        ],
+        "workflow_org_values": [
+          "暖通室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.暖通室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.暖通室",
+          "水工室",
+          "核电工艺所.水工室",
+          "河北分公司.核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "暖通室",
+          "水工室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 37,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25A420260009",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "4231F10F87D34E25A8E26BB62DFABF6E",
+          "DAC305F2040946448B4FCEF306367AFC"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "颜凡松",
+          "Super",
+          "董建华",
+          "河北核电工艺所文",
+          "徐志茹",
+          "李奇君"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "水工室"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 38,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25A420260010",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "1F323B1FE05D4BB4A4DB19085B90902D",
+          "A8F2195B954A47B8B0A0814409FBEB36"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "刘宇晗",
+          "Super",
+          "李奇君",
+          "董建华",
+          "齐建华",
+          "河北核电工艺所文"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "水工室"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,黄良,魏晰茹",
+        "v_raw": "河北分公司.设计管理部",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 39,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25B120260009",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "37A83624AFF54C14882556F73F3D2E88",
+          "492449B4083640B289904B87EE0F588E"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "苑若彤",
+          "Super",
+          "张云峰",
+          "李家贺",
+          "河北电气自动化所",
+          "赵彩霞",
+          "许春辉"
+        ],
+        "workflow_org_values": [
+          "电气室",
+          "中核工程",
+          "河北分公司",
+          "电气自动化所",
+          "中核工程.河北分公司",
+          "河北分公司.电气自动化所",
+          "电气自动化所.电气室",
+          "中核工程.河北分公司.电气自动化所",
+          "河北分公司.电气自动化所.电气室",
+          "水工室",
+          "核电工艺所",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "电气室",
+          "水工室",
+          "仪控二室"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 40,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25B320260008",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "2E6C0CB040354FE09E4A20AE7BA16E4E",
+          "60A4D0671C094C7A9E050A5361B57AA8"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "齐复兴",
+          "Super",
+          "刘祖全",
+          "房志刚",
+          "李浓",
+          "河北电气自动化所",
+          "李勇军"
+        ],
+        "workflow_org_values": [
+          "仪控二室",
+          "中核工程",
+          "河北分公司",
+          "电气自动化所",
+          "中核工程.河北分公司",
+          "河北分公司.电气自动化所",
+          "电气自动化所.仪控二室",
+          "中核工程.河北分公司.电气自动化所",
+          "河北分公司.电气自动化所.仪控二室",
+          "水工室",
+          "核电工艺所",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "仪控二室",
+          "水工室"
+        ],
+        "x_raw": "封昊伟,李浓,齐复兴,河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.设计管理部",
+        "w_raw": "仪控一室,仪控二室,电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 41,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25C220260011",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "96B793448CC84458ABC16219B72EA896",
+          "D045440AFC82404B927A34ACB4895FC2"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "许纪永",
+          "Super",
+          "刘峰",
+          "河北建筑结构所文",
+          "苏永涛",
+          "闫伟"
+        ],
+        "workflow_org_values": [
+          "结构二室",
+          "中核工程",
+          "河北分公司",
+          "建筑结构所",
+          "中核工程.河北分公司",
+          "河北分公司.建筑结构所",
+          "建筑结构所.结构二室",
+          "中核工程.河北分公司.建筑结构所",
+          "河北分公司.建筑结构所.结构二室",
+          "水工室",
+          "核电工艺所",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "结构二室",
+          "水工室"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 42,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25C220260012",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "5F44A2AD6BE74DD18B706B751C94832A",
+          "CE6D29A2A4854BD18B1D4079A27B69CC"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "许文龙",
+          "Super",
+          "闫伟",
+          "河北建筑结构所文"
+        ],
+        "workflow_org_values": [
+          "结构二室",
+          "中核工程",
+          "河北分公司",
+          "建筑结构所",
+          "中核工程.河北分公司",
+          "河北分公司.建筑结构所",
+          "建筑结构所.结构二室",
+          "中核工程.河北分公司.建筑结构所",
+          "河北分公司.建筑结构所.结构二室",
+          "水工室",
+          "核电工艺所",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "结构二室",
+          "水工室"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 43,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25E620260002",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "634DA0EEB3494D6D8243E8EECDAF4B21",
+          "D76D672169C84590964C690D78E140A1"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "侯晔凝",
+          "Super",
+          "刘峰",
+          "张延景",
+          "河北核工程设计所",
+          "尹增广"
+        ],
+        "workflow_org_values": [
+          "通信室",
+          "中核工程",
+          "河北分公司",
+          "核工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.核工程研究设计所",
+          "核工程研究设计所.通信室",
+          "中核工程.河北分公司.核工程研究设计所",
+          "河北分公司.核工程研究设计所.通信室",
+          "水工室",
+          "核电工艺所",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室"
+        ],
+        "workflow_office_values": [
+          "通信室",
+          "水工室"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 44,
+        "a_raw": "备忘录",
+        "e_raw": "BW22K02026030",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "6948FCD1179342A3B6B34FD5D52E2011",
+          "E83EF69A51384454A71AA4D512EA1AEA"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.communication.ExtMemorandum"
+        ],
+        "workflow_people_all": [
+          "设计文档",
+          "2016设计文档",
+          "张国翔"
+        ],
+        "workflow_org_values": [
+          "工程设计管理部",
+          "中核工程",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工程设计管理部",
+          "中核工程.北京核工程研究设计院.工程设计管理部",
+          "设计管理科",
+          "工程设计管理部.设计管理科",
+          "北京核工程研究设计院.工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "工程设计管理部",
+          "设计管理科"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 151,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400310-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "C38299D9D0C5417A83552BF37B631F4C",
+          "D48E813269E6476BAFF3370588A1B26F"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "乔振铭",
+          "沈艳祥",
+          "张洪军",
+          "唐兴贵",
+          "设计文档",
+          "李云华"
+        ],
+        "workflow_org_values": [
+          "核燃料运输与工艺室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "核设备所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.核设备所",
+          "核设备所.核燃料运输与工艺室",
+          "中核工程.北京核工程研究设计院.核设备所",
+          "北京核工程研究设计院.核设备所.核燃料运输与工艺室"
+        ],
+        "workflow_office_values": [
+          "核燃料运输与工艺室",
+          "核设备所",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 152,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400311-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "9F054E2D9AFA4B53B3BA0D70B1A8688F",
+          "F6855DCF31194A9D9B01DB940E082D70"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "侯继儒",
+          "设计文档",
+          "董朝盼",
+          "黄良",
+          "米海霞",
+          "武文广",
+          "刘世峰"
+        ],
+        "workflow_org_values": [
+          "设备室",
+          "中核工程",
+          "河北分公司",
+          "核工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.核工程研究设计所",
+          "核工程研究设计所.设备室",
+          "中核工程.河北分公司.核工程研究设计所",
+          "河北分公司.核工程研究设计所.设备室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部"
+        ],
+        "workflow_office_values": [
+          "设备室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 153,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400312-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "139F10F6BD3D407CA8E77E08435C914A",
+          "D2E551D22DD0478CB5430884103865FA"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "杨健",
+          "杨健d",
+          "冯乾",
+          "李勇军",
+          "段泽萌",
+          "崔春雷",
+          "张伟明",
+          "张亮",
+          "设计文档",
+          "孙晓红",
+          "李梦雨"
+        ],
+        "workflow_org_values": [
+          "仪控二室",
+          "中核工程",
+          "河北分公司",
+          "电气自动化所",
+          "中核工程.河北分公司",
+          "河北分公司.电气自动化所",
+          "电气自动化所.仪控二室",
+          "中核工程.河北分公司.电气自动化所",
+          "河北分公司.电气自动化所.仪控二室",
+          "暖通室",
+          "核电工艺所",
+          "河北分公司.核电工艺所",
+          "核电工艺所.暖通室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.暖通室"
+        ],
+        "workflow_office_values": [
+          "仪控二室",
+          "暖通室",
+          "水工室",
+          "电气室",
+          "结构一室",
+          "北京核工程研究设计院",
+          "通信室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 154,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400313-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "4076012BE6224E68B5CD56F00B4B6F65",
+          "77AD6BB1D94945A3A014F88E0CEA6258"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "葛亚涛",
+          "葛亚涛a",
+          "黄良",
+          "武文广",
+          "王浩然",
+          "逯晴",
+          "刘世峰",
+          "董朝盼",
+          "设计文档"
+        ],
+        "workflow_org_values": [
+          "设备室",
+          "中核工程",
+          "河北分公司",
+          "核工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.核工程研究设计所",
+          "核工程研究设计所.设备室",
+          "中核工程.河北分公司.核工程研究设计所",
+          "河北分公司.核工程研究设计所.设备室",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部",
+          "材料研究与应用室",
+          "北京核工程研究设计院",
+          "核设备所"
+        ],
+        "workflow_office_values": [
+          "设备室",
+          "材料研究与应用室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 155,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400314-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "3C22AB3EAC05447CAAE656C94B4C3571",
+          "BD12E19FD92C44D7AE04E93658A5DA01"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "宋长飞",
+          "刘世峰",
+          "设计文档",
+          "黄良",
+          "葛亚涛",
+          "武文广",
+          "段保亮"
+        ],
+        "workflow_org_values": [
+          "设备室",
+          "中核工程",
+          "河北分公司",
+          "核工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.核工程研究设计所",
+          "核工程研究设计所.设备室",
+          "中核工程.河北分公司.核工程研究设计所",
+          "河北分公司.核工程研究设计所.设备室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部"
+        ],
+        "workflow_office_values": [
+          "设备室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 156,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400315-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "BBEB07D4DCC04963B0341DC9A5AD1B11",
+          "CC149305812D45F5837875272A9F8F2A"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "李景星",
+          "武文广",
+          "黄良",
+          "刘智明",
+          "设计文档",
+          "宋长飞"
+        ],
+        "workflow_org_values": [
+          "设备室",
+          "中核工程",
+          "河北分公司",
+          "核工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.核工程研究设计所",
+          "核工程研究设计所.设备室",
+          "中核工程.河北分公司.核工程研究设计所",
+          "河北分公司.核工程研究设计所.设备室",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院"
+        ],
+        "workflow_office_values": [
+          "设备室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 157,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400316-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "4A49DD760F2D4186B6CB41F73EBF7062",
+          "81E38420DA484F9B87C003A25CE8F655"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "曹晓楠",
+          "赵嘉明",
+          "设计文档",
+          "张志明",
+          "曲昌明",
+          "薛卫光"
+        ],
+        "workflow_org_values": [
+          "工艺设备室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.工艺设备室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.工艺设备室",
+          "辅助系统室",
+          "工艺系统研究设计所.辅助系统室",
+          "北京核工程研究设计院.工艺系统研究设计所.辅助系统室",
+          "未找到单位",
+          "中核工程.未找到单位"
+        ],
+        "workflow_office_values": [
+          "工艺设备室",
+          "辅助系统室",
+          "北京核工程研究设计院",
+          "未找到单位"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 158,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400317-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "7F47E9C35DAA450989EDB06CB71966B1",
+          "B9D540C441114074AD261A83901C4B31"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "张念喆",
+          "赵嘉明",
+          "刘江",
+          "薛棋铭",
+          "设计文档",
+          "刘亚光",
+          "陈彦霖"
+        ],
+        "workflow_org_values": [
+          "安全系统室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.安全系统室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.安全系统室",
+          "辅助系统室",
+          "工艺系统研究设计所.辅助系统室",
+          "北京核工程研究设计院.工艺系统研究设计所.辅助系统室",
+          "未找到单位",
+          "中核工程.未找到单位"
+        ],
+        "workflow_office_values": [
+          "安全系统室",
+          "辅助系统室",
+          "未找到单位",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 159,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400318-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "3C9859124E2B4D05925314F1E7182F45",
+          "5233DA1B57344999A479DA06B53ED5DA"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "刘世峰",
+          "董朝盼",
+          "钤旭",
+          "设计文档",
+          "宋长飞",
+          "武文广",
+          "黄良"
+        ],
+        "workflow_org_values": [
+          "设备室",
+          "中核工程",
+          "河北分公司",
+          "核工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.核工程研究设计所",
+          "核工程研究设计所.设备室",
+          "中核工程.河北分公司.核工程研究设计所",
+          "河北分公司.核工程研究设计所.设备室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部"
+        ],
+        "workflow_office_values": [
+          "设备室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 160,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400319-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "13C2FA5345CC45E19F54840FD9545791",
+          "D6B82FFC35654E2EBFFBEA30830102DF"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "王思佳",
+          "李丕陆",
+          "刘朋飞",
+          "设计文档",
+          "孙传军"
+        ],
+        "workflow_org_values": [
+          "工艺系统室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.工艺系统室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.工艺系统室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院"
+        ],
+        "workflow_office_values": [
+          "工艺系统室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 161,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400320-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "18632CBF49F34D32953777DA0E967365",
+          "764B246494EB4E8C9569BBBA472B15F3"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "刘世峰",
+          "董朝盼",
+          "武文广",
+          "宋长飞",
+          "设计文档",
+          "黄良"
+        ],
+        "workflow_org_values": [
+          "设备室",
+          "中核工程",
+          "河北分公司",
+          "核工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.核工程研究设计所",
+          "核工程研究设计所.设备室",
+          "中核工程.河北分公司.核工程研究设计所",
+          "河北分公司.核工程研究设计所.设备室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部"
+        ],
+        "workflow_office_values": [
+          "设备室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 162,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400321-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "1FF832FA11A54894865120668995714C",
+          "419FE16547CD4ED2A5561242377B5F3D"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "王峰",
+          "王峰e",
+          "刘世峰",
+          "黄良",
+          "蔡敏",
+          "设计文档",
+          "武文广",
+          "董朝盼",
+          "米海霞"
+        ],
+        "workflow_org_values": [
+          "设备室",
+          "中核工程",
+          "河北分公司",
+          "核工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.核工程研究设计所",
+          "核工程研究设计所.设备室",
+          "中核工程.河北分公司.核工程研究设计所",
+          "河北分公司.核工程研究设计所.设备室",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部",
+          "材料研究与应用室",
+          "北京核工程研究设计院",
+          "核设备所"
+        ],
+        "workflow_office_values": [
+          "设备室",
+          "材料研究与应用室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 163,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400322-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "82D872E4F56F47A798F963E897FF332C",
+          "FF7155F98B794874B125BFED9565A07F"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "董朝盼",
+          "刘世峰",
+          "宋长飞",
+          "陈皓朋",
+          "黄良",
+          "设计文档",
+          "武文广"
+        ],
+        "workflow_org_values": [
+          "设备室",
+          "中核工程",
+          "河北分公司",
+          "核工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.核工程研究设计所",
+          "核工程研究设计所.设备室",
+          "中核工程.河北分公司.核工程研究设计所",
+          "河北分公司.核工程研究设计所.设备室",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院"
+        ],
+        "workflow_office_values": [
+          "设备室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 164,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400323-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "343E31F2303D4C45BA2C1E6B7BEE3BE9",
+          "8F18FEAE36574F83AD8029991A7FB669"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "杨洋",
+          "设计文档",
+          "黄若琳",
+          "赵嘉明",
+          "龚钊",
+          "张卫"
+        ],
+        "workflow_org_values": [
+          "工艺设备室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.工艺设备室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.工艺设备室",
+          "辅助系统室",
+          "工艺系统研究设计所.辅助系统室",
+          "北京核工程研究设计院.工艺系统研究设计所.辅助系统室",
+          "未找到单位",
+          "中核工程.未找到单位"
+        ],
+        "workflow_office_values": [
+          "工艺设备室",
+          "北京核工程研究设计院",
+          "辅助系统室",
+          "未找到单位"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 165,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400324-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "015980D2B9EC4D7B9E0DD202ED0B131F",
+          "49F44B6051104BCC8CC21CB7E7BEBB86"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "杨洋",
+          "黄若琳",
+          "白兰",
+          "设计文档",
+          "赵嘉明",
+          "张卫",
+          "龚钊"
+        ],
+        "workflow_org_values": [
+          "工艺设备室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.工艺设备室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.工艺设备室",
+          "工艺系统室",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.工艺系统室"
+        ],
+        "workflow_office_values": [
+          "工艺设备室",
+          "工艺系统室",
+          "北京核工程研究设计院",
+          "辅助系统室",
+          "未找到单位"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 166,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400325-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "2218429CB16C429884AD1F4681498DAF",
+          "D02932187C93483EAF4DCE33ED755EBF"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "周洋",
+          "路晓晖",
+          "叶阳春",
+          "唐兴贵",
+          "设计文档",
+          "李云华",
+          "张洪军"
+        ],
+        "workflow_org_values": [
+          "核燃料运输与工艺室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "核设备所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.核设备所",
+          "核设备所.核燃料运输与工艺室",
+          "中核工程.北京核工程研究设计院.核设备所",
+          "北京核工程研究设计院.核设备所.核燃料运输与工艺室",
+          "材料研究与应用室",
+          "核设备所.材料研究与应用室",
+          "北京核工程研究设计院.核设备所.材料研究与应用室"
+        ],
+        "workflow_office_values": [
+          "核燃料运输与工艺室",
+          "材料研究与应用室",
+          "核设备所",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 167,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400326-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "05A37584C7524AF19AB8E79C2F28A544",
+          "3775E2BAE8BB45CE92174BF61AE2643D"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "李媛",
+          "石兵",
+          "高明清",
+          "周洪琦",
+          "设计文档",
+          "李云华"
+        ],
+        "workflow_org_values": [
+          "工艺及成套设备室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "核设备所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.核设备所",
+          "核设备所.工艺及成套设备室",
+          "中核工程.北京核工程研究设计院.核设备所",
+          "北京核工程研究设计院.核设备所.工艺及成套设备室",
+          "核燃料运输与工艺室",
+          "核设备所.核燃料运输与工艺室",
+          "北京核工程研究设计院.核设备所.核燃料运输与工艺室"
+        ],
+        "workflow_office_values": [
+          "工艺及成套设备室",
+          "核设备所",
+          "北京核工程研究设计院",
+          "核燃料运输与工艺室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 168,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400327-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "14FD9A72720D4F7695B2F5C77F36D669",
+          "8722C3BB811843448E2E2CEF60C43604"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "侯智华",
+          "张卫",
+          "设计文档",
+          "孙佳丽",
+          "李栋梁",
+          "李云华",
+          "薛卫光"
+        ],
+        "workflow_org_values": [
+          "工艺设备室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.工艺设备室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.工艺设备室",
+          "未找到单位",
+          "中核工程.未找到单位",
+          "核燃料运输与工艺室",
+          "核设备所",
+          "北京核工程研究设计院.核设备所",
+          "核设备所.核燃料运输与工艺室"
+        ],
+        "workflow_office_values": [
+          "工艺设备室",
+          "未找到单位",
+          "北京核工程研究设计院",
+          "核燃料运输与工艺室"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 169,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400328-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "2EEB9D7AA0564922A4E0CFC6B09BDDDE",
+          "F50C42903E864CFB9F314C746088460E"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "杨理烽",
+          "郎瑞峰",
+          "张卫",
+          "薛卫光",
+          "李云华",
+          "设计文档"
+        ],
+        "workflow_org_values": [
+          "工艺设备室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.工艺设备室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.工艺设备室",
+          "未找到单位",
+          "中核工程.未找到单位",
+          "核燃料运输与工艺室",
+          "核设备所",
+          "北京核工程研究设计院.核设备所",
+          "核设备所.核燃料运输与工艺室"
+        ],
+        "workflow_office_values": [
+          "工艺设备室",
+          "未找到单位",
+          "核燃料运输与工艺室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 170,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400329-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "63082E2F79CA468EB72FA820E95BF0E0",
+          "9974DBB884114408B9A9DD38FAD98675"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "徐钰棋",
+          "李鹏",
+          "牛春刚",
+          "设计文档",
+          "李硕",
+          "王智勇",
+          "秦辰禹"
+        ],
+        "workflow_org_values": [
+          "仪控一室",
+          "中核工程",
+          "河北分公司",
+          "电气自动化所",
+          "中核工程.河北分公司",
+          "河北分公司.电气自动化所",
+          "电气自动化所.仪控一室",
+          "中核工程.河北分公司.电气自动化所",
+          "河北分公司.电气自动化所.仪控一室",
+          "仪控二室",
+          "电气自动化所.仪控二室",
+          "河北分公司.电气自动化所.仪控二室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院"
+        ],
+        "workflow_office_values": [
+          "仪控一室",
+          "仪控二室",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 171,
+        "a_raw": "CR答复单",
+        "e_raw": "EDMB-400330-ECZS",
+        "table_sources": [
+          "CRREPLY"
+        ],
+        "candidate_object_ids": [
+          "7C10E3F528494DCD928DB11010D0AC0C",
+          "FC638D7815C1445C9E9A77F2A47BC7DC"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCRReply"
+        ],
+        "workflow_people_all": [
+          "刘亚康",
+          "时东",
+          "刘江",
+          "设计文档",
+          "赵嘉明",
+          "侯婷"
+        ],
+        "workflow_org_values": [
+          "辅助系统室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "工艺系统研究设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工艺系统研究设计所",
+          "工艺系统研究设计所.辅助系统室",
+          "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+          "北京核工程研究设计院.工艺系统研究设计所.辅助系统室",
+          "未找到单位",
+          "中核工程.未找到单位"
+        ],
+        "workflow_office_values": [
+          "辅助系统室",
+          "未找到单位",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 172,
+        "a_raw": "CR",
+        "e_raw": "EFCY-400000-ECZS-0251",
+        "table_sources": [
+          "CR"
+        ],
+        "candidate_object_ids": [
+          "D4D2357C60D74055B372152B482CB9F0",
+          "EAEB54FA707446F0BED90EBE0B516350"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCR"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "李久振",
+          "设计文档"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "工程设计管理部",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "设计管理科",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "郭皓天,李昌磊,王智勇,李鹏",
+        "v_raw": "河北分公司.电气自动化所,仪控设计所.仪控二室",
+        "w_raw": "仪控一室,仪控二室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 173,
+        "a_raw": "CR",
+        "e_raw": "EFCY-400001-ECZS-0251",
+        "table_sources": [
+          "CR"
+        ],
+        "candidate_object_ids": [
+          "7EF4801D9C9D455CA5606C855930AE83",
+          "8738CB52A02B4C80A4CC32BA24FC9996"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCR"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "设计文档",
+          "李久振"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "设计管理科",
+          "工程设计管理部",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "北京核工程研究设计院",
+          "设计管理科"
+        ],
+        "x_raw": "刘玉磊,裴盛虎,张晓云,徐钰棋,秦辰禹,河北电气自动化所文档员,王智勇,黄泽群,杨健d,封昊伟,李鹏",
+        "v_raw": "河北分公司.电气自动化所",
+        "w_raw": "仪控二室,电气室,仪控一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 174,
+        "a_raw": "CR",
+        "e_raw": "EFCY-400002-ECZS-0251",
+        "table_sources": [
+          "CR"
+        ],
+        "candidate_object_ids": [
+          "7CBA13DE44D547A3A6C3E425581345A0",
+          "D5E9C95B0FD84B34833A209C6C6482CA"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCR"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "李久振",
+          "设计文档"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "工程设计管理部",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "设计管理科",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "刘玉磊,河北电气自动化所文档员,黄泽群,李鹏,封昊伟,张晓云,管祥宇,杨健d,王智勇,李昌磊",
+        "v_raw": "河北分公司.电气自动化所,仪控设计所.仪控二室",
+        "w_raw": "仪控二室,仪控一室,电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 175,
+        "a_raw": "CR",
+        "e_raw": "EHHG-400003-ECZS-0073",
+        "table_sources": [
+          "CR"
+        ],
+        "candidate_object_ids": [
+          "502F8CC0EE734F6FA31F0B696827FE78",
+          "5579554AB11A484B8D3A6D825A7E983E"
+        ],
+        "workflow_source_types": [
+          "extra.cnpe.entity.change.ExtCR"
+        ],
+        "workflow_people_all": [
+          "Super",
+          "1818设计文档",
+          "李久振",
+          "设计文档"
+        ],
+        "workflow_org_values": [
+          "水工室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.水工室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.水工室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "工程设计管理部",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.工程设计管理部",
+          "工程设计管理部.设计管理科"
+        ],
+        "workflow_office_values": [
+          "水工室",
+          "设计管理科",
+          "北京核工程研究设计院"
+        ],
+        "x_raw": "薛卫光,杨理烽,赵嘉明",
+        "v_raw": "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.辅助系统室",
+        "w_raw": ""
+      }
+    ],
+    "unresolved_examples": [
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 35,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25A32026",
+        "table_sources": [
+          "MEMORANDUM"
+        ],
+        "candidate_object_ids": [
+          "01706CF4833044CE9766C279278C9D38",
+          "6C0FE6A33A0643029CBBC7999F309BD4"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 441,
+        "a_raw": "文件传递单",
+        "e_raw": "EHXH-770000-ECZS-276A",
+        "table_sources": [
+          "FILETRANSMISSION_ROUTE"
+        ],
+        "candidate_object_ids": [
+          "C5715C04649146C586D81C4F4D7F7BE7",
+          "E98307B1D36C431EB560384BDF0414FF"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 635,
+        "a_raw": "IITF",
+        "e_raw": "EDES-300485-EDMB",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "E7E7FBB1AF8846FC84CC3E9EA14CB620"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 636,
+        "a_raw": "IITF",
+        "e_raw": "EDMB-300512-EDES",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "937E78E898114CD3A6DD792E0481EE4C"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 637,
+        "a_raw": "IITF",
+        "e_raw": "EDMB-300513-EDES",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "E18CC5F521514941ADB7152A73EF0A9C"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 638,
+        "a_raw": "IITF",
+        "e_raw": "EDMB-301312-EDNC",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "047B0FAF4DD8454BB7B223CCD7670F3E"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 639,
+        "a_raw": "IITF",
+        "e_raw": "EDMB-301313-EDNC",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "06F66B96CB904B8F8C25CBFF1F129045"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 640,
+        "a_raw": "IITF",
+        "e_raw": "EDMB-302579-ECZS",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "584F67D6942A465A8312AB79F319FE65"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 641,
+        "a_raw": "IITF",
+        "e_raw": "EDMB-302580-ECZS",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "59F64996AD784D5D928D3225A68BF430"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 642,
+        "a_raw": "IITF",
+        "e_raw": "EDMB-302584-ECZS",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "1B47914AE76D4BE29BAE7F1D120D5B5B"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 643,
+        "a_raw": "IITF",
+        "e_raw": "EDMB-302585-ECZS",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "BF66E4BB9CA6450E9892FB9239A42407"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 644,
+        "a_raw": "IITF",
+        "e_raw": "EDMB-302590-ECZS",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "411F8126ED034792BC6CA06DA9FD8969"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 645,
+        "a_raw": "IITF",
+        "e_raw": "EDMB-302593-ECZS",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "216F1FBCA4384352A3A41D153F103FF4"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 646,
+        "a_raw": "IITF",
+        "e_raw": "EFDC-300020-ECZS-0199",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "78DC5FB1AF584117A14EA53D950D16D2"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 647,
+        "a_raw": "IITF",
+        "e_raw": "EFHG-300078-ECZS-0184",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "8D1444868C2B41BD9123141932ED4A4A"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 648,
+        "a_raw": "IITF",
+        "e_raw": "EFNR-300009-ECZS-0192",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "A2573EEDA77E4C0FBFB1AD4A44235EC1"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 649,
+        "a_raw": "IITF",
+        "e_raw": "EFNR-300010-ECZS-0192",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "C138203A80AE487CBE4C67833E0780F6"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 650,
+        "a_raw": "IITF",
+        "e_raw": "EFNR-300011-ECZS-0192",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "A5402F191D4740189C1358B3663E9E28"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 651,
+        "a_raw": "IITF",
+        "e_raw": "EFZX-300000-ECZS-0269",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "68C9AA2643E241D3B3F39462F693B0E2"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 652,
+        "a_raw": "IITF",
+        "e_raw": "EFZX-300063-ECZS-0152",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "F2F6120DE9C5433381D75BC1E65D0AF9"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 653,
+        "a_raw": "IITF",
+        "e_raw": "EFZX-300065-ECZS-0152",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "D2AC768F88774CAC9BE58098946FF209"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 654,
+        "a_raw": "IITF",
+        "e_raw": "EFZX-300066-ECZS-0152",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "90E11FBE65B644DF8E085226ADDCBEA3"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 655,
+        "a_raw": "IITF",
+        "e_raw": "EFZX-300067-ECZS-0152",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "917B668CBA4A4981A7CB0883EDCC396A"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 656,
+        "a_raw": "IITF",
+        "e_raw": "EFZX-300068-ECZS-0152",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "B80AD0BC6B754C29B0A7E842B6976630"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 657,
+        "a_raw": "IITF",
+        "e_raw": "EFZX-300069-ECZS-0152",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "3BD0BC56C6EE4FD88184A4976166D1AF"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 658,
+        "a_raw": "IITF",
+        "e_raw": "EHAP-300017-ECZS-0091",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "B6F39FF7769C44F28CBA93B5858C0495"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 659,
+        "a_raw": "IITF",
+        "e_raw": "EHGY-300016-ECZS-0285",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "51E2E8946907405BB12A5915E55FEE84"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 660,
+        "a_raw": "IITF",
+        "e_raw": "EHGY-300017-ECZS-0285",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "C0FE808EF2F0439CB685E8E39C00B493"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 661,
+        "a_raw": "IITF",
+        "e_raw": "EHHC-300043-ECZS-0159",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "482D3931624C440DB5A7E7F6575EB254"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 662,
+        "a_raw": "IITF",
+        "e_raw": "EHHE-300010-ECZS-0292",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "66D36960708F4C5D9BF652B3C27517D2"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 663,
+        "a_raw": "IITF",
+        "e_raw": "EHHE-300011-ECZS-0292",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "F687991571DA446EB938AF8ABFF572EA"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 664,
+        "a_raw": "IITF",
+        "e_raw": "EHHE-300012-ECZS-0292",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "A055453064144149AD4A1B156C6B8A76"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 665,
+        "a_raw": "IITF",
+        "e_raw": "EHHJ-300026-ECZS-0133",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "E69FEADFDBB64D2F931D1E703342F396"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 666,
+        "a_raw": "IITF",
+        "e_raw": "EHJD-300004-ECZS-0088",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "1BF67DF6D7C04276BD100659E97504B5"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 667,
+        "a_raw": "IITF",
+        "e_raw": "EHJD-300005-ECZS-0088",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "39E0D3AC3F95476EB215C1E10D8F70E2"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 668,
+        "a_raw": "IITF",
+        "e_raw": "EHJD-300006-ECZS-0088",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "B0BCADA546C14086B6F37B7DEB47628F"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 669,
+        "a_raw": "IITF",
+        "e_raw": "EHJQ-300059-ECZS-162A",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "955BD3D60A8E45A6A55E62AB0FDCF49F"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 670,
+        "a_raw": "IITF",
+        "e_raw": "EHJQ-300060-ECZS-162A",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "A9341595DF0F4268887C6772B7BE6768"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 671,
+        "a_raw": "IITF",
+        "e_raw": "EHJQ-300061-ECZS-162A",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "1C4F100ECBE7429C9E82A4148E4EFD63"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 672,
+        "a_raw": "IITF",
+        "e_raw": "EHLO-300036-ECZS-0098",
+        "table_sources": [],
+        "candidate_object_ids": [
+          "22147DFCBE7849D1B14F379EE8CFF9CE"
+        ],
+        "x_raw": "",
+        "v_raw": "",
+        "w_raw": ""
+      }
+    ]
+  }
+}

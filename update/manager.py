@@ -113,9 +113,9 @@ class UpdateManager:
             self._log("未配置源文件夹路径，跳过版本检查")
             return None
 
-        remote_root = os.path.join(folder_path, "EXE")
+        remote_root = os.path.join(folder_path, "EXE-SQL")
         if not os.path.exists(remote_root):
-            self._log(f"远程EXE目录不存在，跳过版本检查: {remote_root}")
+            self._log(f"远程EXE-SQL目录不存在，跳过版本检查: {remote_root}")
             return None
 
         # 避免本地目录与远程目录相同
@@ -307,7 +307,7 @@ class UpdateManager:
         因为 update.exe 在运行时无法更新自己，所以由主程序负责更新它。
         
         参数:
-            folder_path: 源文件夹路径（用于定位远程EXE目录）
+            folder_path: 源文件夹路径（用于定位远程EXE-SQL目录）
             
         返回:
             True: 更新成功或无需更新

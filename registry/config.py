@@ -11,7 +11,7 @@ import sys
 DEFAULTS = {
     "registry_enabled": True,
     # 重要：数据库路径应该指向公共盘，以便多用户共享
-    # 默认为None，会自动使用 数据目录/.registry/registry.db
+    # 默认为None，会自动使用 数据目录/registry-sql/registry.db
     "registry_db_path": None,
     "registry_missing_keep_days": 7,
     # 固定使用DELETE模式（不再使用WAL，避免网络盘/多用户锁问题）
@@ -85,8 +85,8 @@ def load_config(
     # 注意：ensure_registry_dir=False 时仅“计算出”应使用的 db_path，不做任何文件系统操作，
     # 用于避免程序启动阶段触发网络盘访问（如 UNC 路径不可用导致卡死）。
     if config['registry_db_path'] is None and data_folder:
-        # 固定使用新结构：<data_folder>/.registry/registry.db
-        registry_dir = os.path.join(data_folder, '.registry')
+        # 固定使用新结构：<data_folder>/registry-sql/registry.db
+        registry_dir = os.path.join(data_folder, 'registry-sql')
         new_db_path = os.path.join(registry_dir, 'registry.db')
         config['registry_db_path'] = new_db_path
         if ensure_registry_dir:
@@ -133,7 +133,7 @@ def get_config() -> dict:
         except Exception:
             data_folder = None
         if data_folder:
-            expected_db_path = os.path.join(data_folder, ".registry", "registry.db")
+            expected_db_path = os.path.join(data_folder, "registry-sql", "registry.db")
             if _config_cache.get("registry_db_path") != expected_db_path:
                 _config_cache = load_config(data_folder=data_folder, ensure_registry_dir=True)
     return _config_cache

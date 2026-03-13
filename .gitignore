@@ -69,3 +69,5 @@ excel_bin/姓名角色表-*.xlsx
 
 # Local binary artifact
 /update.exe
+
+example/诊断文件/

@@ -235,48 +235,76 @@
 
 ### 6.5 发送侧 workflow/vote 探针结果
 
-本轮新增脚本：`scripts/db_tools/sql_explorer/file6_send_workflow_probe.py`
+本轮在你补齐主表后，继续修正并复跑了：`scripts/db_tools/sql_explorer/file6_send_workflow_probe.py`
 
-探针链路：
+最新结果文件：
 
-- `文号 -> SENDRECEIVEDATA -> 主对象(FILETRANSMISSION / TA / CR / NCR ... 或 OBJECTREPLYLINK 桥出的对象) -> WORKFLOWPROCESSESBIND / USERVOTERECORD`
+- `document/file6_send_workflow_probe_20260313_rel2.json`
+
+本轮新增修正点：
+
+- 不再只取 `文号 -> SENDRECEIVEDATA -> 主对象`
+- 改为把主对象内部的二跳关联也递归纳入候选池：
+  - `DESIGNREVIEWREPLY -> DESIGNREVIEWOPNION`
+  - `DESIGNREVIEWOPNION -> FILETRANSMISSION`
+  - 以及各对象 `MASTER_SEND / FILE_TRANSMISSION / REF_FILE_TRANSMISSION / REF_MEMO / REF_FAX` 等 `relation_ids`
+- 同时把 `item_key` 直命中的对象也补回候选池，避免只靠 `SEND_RECEIVE_DATA`
+
+探针链路现口径为：
+
+- `文号 -> SENDRECEIVEDATA / item_key -> 主对象 -> relation_ids 递归展开 -> WORKFLOWPROCESSESBIND / USERVOTERECORD`
 
 结果：
 
 - `SEND` 版本最佳样本：`2958`
-- 其中拿到候选对象 ID 的行：`2946`
-- 其中拿到 workflow/vote 记录的行：`1413`
+- 其中拿到候选对象 ID 的行：`2947`
+- 其中拿到 workflow/vote 记录的行：`2258`
+- 相比补表前 `1413` 行，多出 `845` 行
+- 相比上一轮 `2254` 行，再多出 `4` 行
 
-命中率：
+按 Excel 非空字段计算交集命中：
 
-- `X = 409 / 2958 = 13.8310%`
-- `V = 1098 / 2958 = 37.1021%`
-- `W = 560 / 2958 = 18.9542%`
+- `X = 165 / 911 = 18.1120%`
+- `V = 463 / 911 = 50.8233%`
+- `W = 123 / 459 = 26.7974%`
 
-这说明：
+相对上一轮增量：
 
-- 发送侧 `X/V/W` 并不是完全无 SQL 链
-- 原来把发送侧主链强压在 `DISTRIBUTERECORD` 上，方向错了
+- `X +21`
+- `V +16`
+- `W +17`
+
+这轮最关键的新增结论：
+
+- `审查意见答复单` 之前只打到 `DESIGNREVIEWREPLY` 自身流程，遗漏了其父对象及再上一层 `FILETRANSMISSION`
+- 把 `relation_ids` 递归展开后，`审查意见答复单` 直接提升到：
+  - `X = 24 / 25 = 96.0000%`
+  - `V = 25 / 25 = 100.0000%`
+  - `W = 21 / 21 = 100.0000%`
+- 这说明发送侧 `X/V/W` 的主链确实在 `WORKFLOWPROCESSESBIND / USERVOTERECORD`
+- 同时也说明：之前卡住的不只是“缺主表”，还包括“主对象内部二跳关系没继续展开”
+- 原来把发送侧主链强压在 `DISTRIBUTERECORD` 上，方向仍然是错的
 
 ### 6.6 分类型流程桥结果
 
 `图文传真`
 
-- `X = 45 / 115 = 39.1304%`
-- `V = 53 / 115 = 46.0870%`
+- `X = 47 / 115 = 40.8696%`
+- `V = 86 / 115 = 74.7826%`
 - `W = 25 / 66 = 37.8788%`
 
 `备忘录`
 
-- `X = 60 / 168 = 35.7143%`
-- `V = 64 / 168 = 38.0952%`
-- `W = 22 / 69 = 31.8841%`
+- `X = 68 / 168 = 40.4762%`
+- `V = 116 / 168 = 69.0476%`
+- `W = 35 / 69 = 50.7246%`
+- `rows_with_workflow_hits = 282 / 298`
 
 `文件传递单`
 
-- `X = 19 / 425 = 4.4706%`
-- `V = 169 / 425 = 39.7647%`
-- `W = 37 / 238 = 15.5462%`
+- `X = 21 / 425 = 4.9412%`
+- `V = 171 / 425 = 40.2353%`
+- `W = 39 / 238 = 16.3866%`
 
 `TA`
 
@@ -296,46 +324,98 @@
 - `V = 2 / 6 = 33.3333%`
 - `W = 0 / 2 = 0.0000%`
 
-仍为 `0` 的类型：
+`外发纪要`
 
-- `外发纪要`
-- `审查意见单`
-- `审查意见答复单`
-- `FU通知单`
+- `rows_with_workflow_hits = 14 / 14`
+- `X = 1 / 9 = 11.1111%`
+- `V = 8 / 9 = 88.8889%`
+- `W = 0 / 5 = 0.0000%`
+
+`审查意见单`
+
+- `rows_with_workflow_hits = 398 / 398`
+- `X = 2 / 30 = 6.6667%`
+- `V = 5 / 30 = 16.6667%`
+- `W = 0 / 14 = 0.0000%`
+
+`审查意见答复单`
+
+- `rows_with_workflow_hits = 44 / 44`
+- `X = 24 / 25 = 96.0000%`
+- `V = 25 / 25 = 100.0000%`
+- `W = 21 / 21 = 100.0000%`
+
+`FU通知单`
+
+- `rows_with_workflow_hits = 96 / 98`
+- 但当前 `X/V/W` 交集仍为 `0`
+
+`作废通知单`
+
+- `rows_with_workflow_hits = 13 / 13`
+- 但 Excel 当前 `X/V/W` 无稳定可对齐值
+
+`IICS / IITF`
+
+- 当前仍为 `0` 行 workflow/vote 命中
+- 继续不作为文件6发送侧主桥
 
 这说明：
 
 - 文件6 `A` 列确实对应不同对象族和不同存储逻辑
-- 对发送侧，至少已经可以稳定拆出两条主桥：
-  - `备忘录 / 图文传真 -> OBJECTREPLYLINK -> workflow/vote`
+- `审查意见答复单` 已从“对象桥已通、业务值部分命中”推进到“基本闭环”
+- `外发纪要 / 审查意见单` 仍是“对象桥已通、业务值部分命中”
+- `FU通知单 / 作废通知单` 也已证实能打到 workflow/vote，对象桥不再缺失
+- 对发送侧，当前已经可以稳定拆出四类主桥：
+  - `备忘录 / 图文传真 -> OBJECTREPLYLINK + 主对象 -> workflow/vote`
   - `文件传递单 / TA / CR / NCR -> 主对象 -> workflow/vote`
+  - `审查意见单 / 审查意见答复单 -> DESIGNREVIEWOPNION / DESIGNREVIEWREPLY -> relation_ids 递归展开 -> workflow/vote`
+  - `FU通知单 / 作废通知单 / 外发纪要 -> 主对象 -> workflow/vote`
 
-### 6.7 当前仍缺的主表
+### 6.7 原缺主表补齐后的状态
 
-从 `innovator.sql` 与当前 0 命中类型对照看，下一批最值得补的表是：
+你已补齐上一轮列出的 9 张主表，当前 `example/CIMS-SQL-3.5` 已确认存在：
 
-1. `MEMORANDUM`
-2. `TELEFAX`
-3. `INTERNALMINUTES`
-4. `EXTERNALMINUTES`
-5. `FUNOTIFY`
-6. `CANCELNOTIFY`
-7. `DESIGNREVIEWOPNION`
-8. `DESIGNREVIEWREPLY`
-9. `FCR`
+1. `MEMORANDUM`（`141257`）
+2. `TELEFAX`（`120600`）
+3. `INTERNALMINUTES`（`9207`）
+4. `EXTERNALMINUTES`（`9589`）
+5. `FUNOTIFY`（`10766`）
+6. `CANCELNOTIFY`（`3237`）
+7. `DESIGNREVIEWOPNION`（`158845`）
+8. `DESIGNREVIEWREPLY`（`19930`）
+9. `FCR`（`106881`）
 
-用途分别是：
+补表后，对象表 `-> SEND_RECEIVE_DATA` 直连探针结果为：
 
-- `MEMORANDUM / TELEFAX`
-  - 把当前 `OBJECTREPLYLINK` 的弱桥补成稳定对象主链
-- `INTERNALMINUTES / EXTERNALMINUTES`
-  - 对应 `内部会议纪要 / 外发纪要`
-- `FUNOTIFY / CANCELNOTIFY`
-  - 对应 `FU通知单 / 作废通知单`
-- `DESIGNREVIEWOPNION / DESIGNREVIEWREPLY`
-  - 对应 `审查意见单 / 审查意见答复单`
-- `FCR`
-  - 补齐当前 `FCRREPLY` 单边导出缺口
+- `MEMORANDUM = 344 / 324`
+- `TELEFAX = 408 / 408`
+- `EXTERNALMINUTES = 16 / 16`
+- `FUNOTIFY = 156 / 156`
+- `CANCELNOTIFY = 20 / 20`
+- `DESIGNREVIEWOPNION = 1180 / 567`
+- `DESIGNREVIEWREPLY = 55 / 55`
+- `INTERNALMINUTES = 0 / 0`
+- `FCR = 0 / 0`
+- `FCRREPLY = 0 / 0`
+
+说明：上面格式为 `rows_matched / send_link_rows`。
+
+同轮 `DISTRIBUTERECORD` 复跑结果文件：
+
+- `document/file6_distribution_chain_probe_20260313_rel2.json`
+
+结论：
+
+- 原 6.7 的“缺表未导出”判断已失效，应改成“主表已补齐，workflow/vote 主桥已增强”
+- 但 `DISTRIBUTERECORD` 对发送侧仍然没有新增实质命中，`SEND X/V/W` 继续为 `0`
+- 当前真正未闭环的是：
+  - `INTERNALMINUTES / FCR` 仍无有效 send link
+  - 已打到 workflow/vote 的对象族如何把 `X/V/W` 提升到业务可用水平
+- 另做了 `SSC_RELATED_DATA` 快筛：
+  - 发送侧命中的 `TA / CRREPLY / FILETRANSMISSION / FUNOTIFY / CANCELNOTIFY / MEMORANDUM / TELEFAX` 共提取 `661` 个 `SSC_RELATED_DATA`
+  - 在 `WORKFLOWPROCESSESBIND / USERVOTERECORD` 中命中 `0`
+  - 说明 `SSC_RELATED_DATA` 不是当前文件6发送侧 workflow/vote 的下一条主桥
 
 ## 7. 与 core/main.py 的对齐结果
 
@@ -364,9 +444,14 @@
 3. `SEND` 分支的 `E/J` 已稳定，`M` 已能用 `ANSWER_DATE / REPLY_DEADLINE / IS_ANSWERED` 派生
 4. `A` 不是单字段，而是对象族信号
 5. 文件6 `SEND` 分支 `X/V/W` 的主链必须纳入 `WORKFLOWPROCESSESBIND / USERVOTERECORD`
-6. `备忘录 / 图文传真` 当前主桥是 `OBJECTREPLYLINK -> workflow/vote`
-7. `文件传递单 / TA / CR / NCR` 当前主桥是 `主对象 -> workflow/vote`
-8. `DISTRIBUTERECORD` 对文件6发送侧只保留为补充链，不再作为主链
+6. 补表后已确认可以稳定打到 workflow/vote 的发送侧对象族包括：
+   - `FILETRANSMISSION / TA / CR / NCR`
+   - `MEMORANDUM / TELEFAX`
+   - `DESIGNREVIEWOPNION / DESIGNREVIEWREPLY`
+   - `FUNOTIFY / CANCELNOTIFY`
+   - `EXTERNALMINUTES`
+7. 对发送侧，主对象的 `relation_ids` 必须继续递归展开，不能停在第一层对象 ID
+8. `DISTRIBUTERECORD` 对文件6发送侧仍只保留为补充链，不再作为主链
 
 ### 8.2 仍未闭环
 
@@ -374,12 +459,12 @@
 2. `V/W` 的稳定 SQL 展示恢复
 3. `SEND` 分支 `AC`
 4. `H` 的稳定 SQL 规则，尤其是 `INT` 分支
-5. 尚未导出主表的发送侧类型：
-   - `外发纪要`
-   - `审查意见单`
-   - `审查意见答复单`
-   - `FU通知单`
-   - `作废通知单`
+5. 当前仍弱或仍为 `0` 的对象族：
+   - `INTERNALMINUTES`
+   - `FCR / FCRREPLY`
+   - `IICS / IITF`
+6. `FU通知单 / 作废通知单` 虽然对象桥已通，但当前 `X/V/W` 仍无稳定交集
+7. `TA / CR / 审查意见单 / 外发纪要 / 文件传递单` 仍然只打到部分业务责任人，尚未恢复到稳定业务口径
 
 ### 8.3 当前工程口径
 
@@ -387,11 +472,16 @@
   - 路由按 `INT / SEND` 双分支定稿
   - `I/J/M` 按本轮规则落地
   - `X/V/W/AC/H` 明确标记为“当前离线 SQL 未完全闭环”，但发送侧 `X/V/W` 已经有稳定主链方向，不再写成“完全未知”
+- 后续回归口径改为：
+  - 不再把整个待处理文件6的总命中率作为主拟合指标
+  - 改为按 `A` 列文档类型分别回归、分别收口
+  - 类型级回归清单见：`document/file6_type_regression_report_20260313.json`
 - 如果后续继续攻文件6，优先级应改为：
-  1. 补导缺失主表：`MEMORANDUM / TELEFAX / INTERNALMINUTES / EXTERNALMINUTES / FUNOTIFY / CANCELNOTIFY / DESIGNREVIEWOPNION / DESIGNREVIEWREPLY / FCR`
-  2. 按 `A` 列类型继续补齐对象桥
-  3. 提升 `X`
-  4. 最后再处理 `AC / H`
+  1. 优先提升仍未闭环但已打到 workflow/vote 的类型：`文件传递单 / TA / CR / 审查意见单 / FU通知单 / 作废通知单 / 外发纪要`
+  2. `审查意见答复单` 已基本闭环，可转入抽样复核
+  3. 再继续追 `INTERNALMINUTES / FCR / IICS / IITF`
+  4. 已可暂时排除 `SSC_RELATED_DATA -> workflow/vote` 这条方向
+  5. 最后再处理 `AC / H`
 
 
 ## 9. 附录A：原14号专题保留记录

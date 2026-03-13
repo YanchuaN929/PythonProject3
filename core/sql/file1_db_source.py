@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""待处理文件1数据库数据源（只读）。"""
+"""File1 SQL-backed data source."""
 
 from __future__ import annotations
 
 import datetime
 import re
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 import pandas as pd
 
+from core.sql.provider import get_active_provider, get_sql_backend_status
 from utils.adjust import adjust_date_for_project
 from utils.dept_config import get_department_codes, map_code_to_department
 
@@ -31,24 +32,20 @@ EXPORT_COLUMNS = ["接口号", "接口日期", "责任人", "所属科室"]
 
 
 def build_file1_virtual_source(project_id: str) -> str:
-    """生成文件1数据库虚拟源路径。"""
     return f"{FILE1_DB_SOURCE_PREFIX}{str(project_id or '').strip()}"
 
 
 def is_file1_db_virtual_source(path: str) -> bool:
-    """判断路径是否是文件1数据库虚拟源。"""
     return str(path or "").strip().lower().startswith(FILE1_DB_SOURCE_PREFIX)
 
 
 def is_file1_db_source_list(source_files: Sequence[str]) -> bool:
-    """判断 source_files 是否全部为文件1数据库虚拟源。"""
     if not source_files:
         return False
     return all(is_file1_db_virtual_source(item) for item in source_files)
 
 
 def extract_project_id_from_virtual_source(path: str) -> str:
-    """从文件1数据库虚拟源提取项目号。"""
     text = str(path or "").strip()
     if not is_file1_db_virtual_source(text):
         return ""
@@ -56,51 +53,29 @@ def extract_project_id_from_virtual_source(path: str) -> str:
 
 
 def get_file1_db_connection_status() -> Dict[str, str]:
-    """获取文件1数据库连接状态。"""
-    conn = None
-    connector = ""
-    try:
-        conn, connector = create_connection_from_saved_profile()
-        cursor = conn.cursor()
-        cursor.execute("SELECT DB_NAME()")
-        row = cursor.fetchone()
-        db_name = str(row[0]) if row and row[0] is not None else ""
-        msg = f"已连接（{connector}）"
-        if db_name:
-            msg += f"，数据库: {db_name}"
-        return {"connected": "1", "message": msg, "connector": connector}
-    except Exception as exc:
-        return {"connected": "0", "message": f"未连接：{exc}", "connector": ""}
-    finally:
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
+    status = get_sql_backend_status()
+    return {
+        "connected": status.get("connected", "0"),
+        "message": str(status.get("message", "")),
+        "connector": str(status.get("mode", "")),
+    }
 
 
 def fetch_file1_db_dataframe(project_id: str, current_datetime: datetime.datetime) -> pd.DataFrame:
-    """查询文件1数据库数据并返回标准 DataFrame。"""
     project = str(project_id or "").strip()
     if not project:
         return pd.DataFrame(columns=RESULT_COLUMNS)
 
-    conn = None
-    try:
-        conn, _connector = create_connection_from_saved_profile()
-        raw_rows = _query_file1_latest_rows(conn, project)
-        user_map = _query_user_name_map(conn)
-        return _build_file1_dataframe(raw_rows, user_map, project, current_datetime)
-    finally:
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
+    provider = get_active_provider()
+    if getattr(provider, "is_live", lambda: False)():
+        raw_rows = _query_file1_live_rows(provider, project)
+    else:
+        raw_rows = _query_file1_offline_rows(provider, project)
+    user_map = _query_file1_offline_user_map(provider)
+    return _build_file1_dataframe(raw_rows, user_map, project, current_datetime)
 
 
 def build_file1_export_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """将文件1处理结果收敛为导出4列。"""
     if df is None or df.empty:
         return pd.DataFrame(columns=EXPORT_COLUMNS)
 
@@ -120,7 +95,6 @@ def build_file1_export_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def create_connection_from_saved_profile() -> Tuple[Any, str]:
-    """按 sql_explorer 方式创建 SQL Server 连接。"""
     profile = _load_saved_profile()
     from scripts.db_tools.sql_explorer.connect import connect_sql_server
 
@@ -132,13 +106,13 @@ def _load_saved_profile() -> Any:
 
     profile = load_profile()
     if profile is None:
-        raise RuntimeError("未找到 sql_explorer 连接配置，请先执行一次连接向导。")
+        raise RuntimeError("sql_explorer connection profile is missing")
     if not str(getattr(profile, "host", "")).strip():
-        raise RuntimeError("sql_explorer 连接配置缺少 host。")
+        raise RuntimeError("sql_explorer connection profile is missing host")
     if not str(getattr(profile, "username", "")).strip():
-        raise RuntimeError("sql_explorer 连接配置缺少 username。")
+        raise RuntimeError("sql_explorer connection profile is missing username")
     if not str(getattr(profile, "password", "")).strip():
-        raise RuntimeError("sql_explorer 连接配置缺少 password。")
+        raise RuntimeError("sql_explorer connection profile is missing password")
     return profile
 
 
@@ -227,8 +201,94 @@ WHERE ([IS_CURRENT] = ? OR [IS_CURRENT] = 1 OR [IS_CURRENT] IS NULL)
         except Exception as exc:
             errors.append(f"{schema}.USER: {exc}")
     if errors:
-        print(f"[File1-DB] USER映射加载失败，责任人将降级解析: {' ; '.join(errors)}")
+        print(f"[File1-DB] failed to load USER map: {' ; '.join(errors)}")
     return {}
+
+
+def _query_file1_offline_rows(provider: Any, project_id: str) -> List[Tuple[Any, ...]]:
+    rows: List[Tuple[Any, ...]] = []
+    by_item: Dict[str, Tuple[Any, ...]] = {}
+    scores: Dict[str, Tuple[datetime.datetime, datetime.datetime]] = {}
+    for row in provider.get_table_rows("IDIACP1000"):
+        if str(row.get("IS_CURRENT") or "").strip().upper() not in {"", "1", "Y", "TRUE", "T"}:
+            continue
+        if str(row.get("PROJ_NUM") or "").strip() != str(project_id or "").strip():
+            continue
+        item_number = str(row.get("ITEM_NUMBER") or "").strip()
+        if not item_number:
+            continue
+        payload = (
+            row.get("ITEM_NUMBER"),
+            row.get("RELEASE_PARTY"),
+            row.get("SWAP_START_DATE"),
+            row.get("ACTUAL_OPEN_DATE"),
+            row.get("DEPART_USER"),
+            row.get("CREATED_BY_ID"),
+        )
+        score = (
+            _parse_dt(row.get("MODIFIED_ON")) or datetime.datetime.min,
+            _parse_dt(row.get("SWAP_START_DATE")) or datetime.datetime.min,
+        )
+        if item_number not in by_item or score >= scores[item_number]:
+            by_item[item_number] = payload
+            scores[item_number] = score
+    rows.extend(by_item.values())
+    return rows
+
+
+def _query_file1_live_rows(provider: Any, project_id: str) -> List[Tuple[Any, ...]]:
+    sql_template = """
+WITH ranked AS (
+    SELECT
+        [ITEM_NUMBER],
+        [RELEASE_PARTY],
+        [SWAP_START_DATE],
+        [ACTUAL_OPEN_DATE],
+        [DEPART_USER],
+        [CREATED_BY_ID],
+        [MODIFIED_ON],
+        [IS_CURRENT],
+        ROW_NUMBER() OVER (
+            PARTITION BY [ITEM_NUMBER]
+            ORDER BY
+                CASE WHEN ([IS_CURRENT] = ? OR [IS_CURRENT] = 1 OR [IS_CURRENT] IS NULL) THEN 0 ELSE 1 END,
+                TRY_CONVERT(datetime2, [MODIFIED_ON]) DESC,
+                TRY_CONVERT(datetime2, [SWAP_START_DATE]) DESC
+        ) AS rn
+    FROM [{schema}].[IDIACP1000]
+    WHERE [PROJ_NUM] = ?
+)
+SELECT
+    [ITEM_NUMBER],
+    [RELEASE_PARTY],
+    [SWAP_START_DATE],
+    [ACTUAL_OPEN_DATE],
+    [DEPART_USER],
+    [CREATED_BY_ID]
+FROM ranked
+WHERE rn = 1
+"""
+    rows = provider.fetch_rows(sql_template, params=("1", project_id))
+    return [
+        (
+            row.get("ITEM_NUMBER"),
+            row.get("RELEASE_PARTY"),
+            row.get("SWAP_START_DATE"),
+            row.get("ACTUAL_OPEN_DATE"),
+            row.get("DEPART_USER"),
+            row.get("CREATED_BY_ID"),
+        )
+        for row in rows
+    ]
+
+
+def _query_file1_offline_user_map(provider: Any) -> Dict[str, str]:
+    result: Dict[str, str] = {}
+    for user_id, info in (provider.get_user_map() or {}).items():
+        name = str((info or {}).get("user_name", "") or "").strip()
+        if name:
+            result[str(user_id).strip().upper()] = name
+    return result
 
 
 def _build_file1_dataframe(
@@ -299,7 +359,7 @@ def _is_empty_value(value: Any) -> bool:
     return text == "" or text.lower() in {"nan", "none", "null"}
 
 
-def _pick_interface_date(swap_start_date: Any, actual_open_date: Any) -> Optional[datetime.datetime]:
+def _pick_interface_date(swap_start_date: Any, actual_open_date: Any) -> datetime.datetime | None:
     for value in (swap_start_date, actual_open_date):
         parsed = pd.to_datetime(value, errors="coerce")
         if pd.isna(parsed):
@@ -404,15 +464,15 @@ def _normalize_person_name(name: str) -> str:
     return text
 
 
-def _series_or_default(df: pd.DataFrame, col: str, default: Any) -> pd.Series:
-    if col in df.columns:
-        return df[col]
-    return pd.Series([default] * len(df))
-
-
 def _series_first(df: pd.DataFrame, columns: Sequence[str], default: Any) -> pd.Series:
     for col in columns:
         if col in df.columns:
             return df[col]
     return pd.Series([default] * len(df))
 
+
+def _parse_dt(value: Any) -> datetime.datetime | None:
+    parsed = pd.to_datetime(value, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return parsed.to_pydatetime() if hasattr(parsed, "to_pydatetime") else parsed

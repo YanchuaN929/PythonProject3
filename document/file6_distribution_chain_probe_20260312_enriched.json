@@ -1,0 +1,3499 @@
+{
+  "inputs": {
+    "excel_dir": "example\\CIMS-SQL-3.5\\EXCEL导出数据",
+    "sql35_dir": "example\\CIMS-SQL-3.5"
+  },
+  "row_counts": {
+    "all_rows": 4178,
+    "version_best_rows": 4173
+  },
+  "route_summary": {
+    "by_branch": {
+      "INT": 1056,
+      "SEND": 2945,
+      "UNRESOLVED": 177
+    },
+    "by_type": {
+      "CR": 50,
+      "CR答复单": 42,
+      "FU通知单": 98,
+      "IICS": 306,
+      "IITF": 375,
+      "NCR": 6,
+      "NCR回复单": 5,
+      "TA": 81,
+      "TA回复单": 57,
+      "作废通知单": 13,
+      "内部会议纪要": 5,
+      "内部接口资料单": 1056,
+      "图文传真": 274,
+      "备忘录": 298,
+      "外发纪要": 14,
+      "审查意见单": 398,
+      "审查意见答复单": 44,
+      "工程设计资料单": 159,
+      "文件传递单": 897
+    },
+    "coverage": {
+      "resolved": 0.957635,
+      "int_branch": 0.252753,
+      "send_branch": 0.704883
+    },
+    "unresolved_samples": [
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 2,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-CFE-ZL-22C2-S-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 3,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-GA-ZL-25A5-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 4,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-GB-ZL-25A5-S-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 5,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-GT-ZL-25A2-S-010",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 6,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-HS-ZL-25E6-S-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 7,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-ISI-ZL-25B2-S-007",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 8,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-ISI-ZL-25C3-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 9,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NF-ZL-25A3-S-008",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 10,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-22A6-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 11,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-22B2-S-005",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 12,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-22N1-S-046",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 13,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-22N1-S-047",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 14,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-22N1-S-048",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 15,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-22N1-S-049",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 16,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25A1-S-035",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 17,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25A2-S-028",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 18,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25A3-S-029",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 19,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25A3-S-030",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 20,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25B1-S-118",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 21,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25B1-S-119",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 22,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25B2-S-052",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 23,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NV-ZL-25A3-S-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 24,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-TFA-ZL-22N1-S-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 25,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-WES-ZL-22Q2-S-004",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 26,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-YA-ZL-25C3-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 27,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-ZT-ZL-25A4-S-004",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 2,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-0-DY-ZL-22P6-C-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 3,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-0-DY-ZL-22P6-C-004",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 4,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-0-HB-ZL-22R2-C-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 5,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-5-HB-ZL-22D3-C-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 6,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-5-HB-ZL-25A2-C-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 7,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-6-NI-ZL-25C3-S-018",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 8,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-6-RX-ZL-25A2-S-053",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 9,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-6-TFM-ZL-22C4-S-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 10,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-6-TFM-ZL-25A5-S-004",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 11,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-GB-ZL-25A4-S-045",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 12,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-NA-ZL-22R1-C-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 13,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-NI-ZL-22C2-S-025",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 14,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-NI-ZL-22C5-B-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 15,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-NI-ZL-25A1-S-012",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 16,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-ZB-ZL-25A4-S-011",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 17,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-ZB-ZL-25E6-S-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 18,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-X-DU-ZL-25A3-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 19,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-X-EES-ZL-25A3-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 20,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-X-RX-ZL-25A3-S-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 21,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-X-TSM-ZL-22C4-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 22,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-X-TSM-ZL-25A5-S-008",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1907",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 25,
+        "a_raw": "备忘录",
+        "e_raw": "1907BW22D82026",
+        "key_type": "special_bw"
+      },
+      {
+        "project": "1915",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 2,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-EF-ZL-2600-C-008",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1915",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 3,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-HB-ZL-22R6-C-009",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1915",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 4,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-QC-ZL-22D3-B-009",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1915",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 5,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-QE-ZL-22R4-C-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1915",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 6,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-QE-ZL-22R4-C-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1915",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 7,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-QE-ZL-22R4-C-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1915",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 8,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-SF-ZL-22R4-C-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1915",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 9,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-1-NI-ZL-25A1-S-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1915",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 10,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-1-NI-ZL-25A2-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1915",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 11,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-1-NI-ZL-25A3-S-004",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1915",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 12,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-1-NI-ZL-25A4-S-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "1915",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 13,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-1-NI-ZL-25A6-S-004",
+        "key_type": "int_key"
+      }
+    ]
+  },
+  "table_scans": {
+    "INTINTERFACEDOC": {
+      "rows_scanned": 853536,
+      "rows_matched": 2341
+    },
+    "SENDRECEIVEDATA": {
+      "rows_scanned": 1109324,
+      "rows_matched": 3714
+    },
+    "FILETRANSMISSION_ROUTE": {
+      "rows_scanned": 242998,
+      "rows_matched": 538
+    },
+    "OBJECTREPLYLINK": {
+      "rows_scanned": 48961,
+      "rows_matched": 323
+    },
+    "DISTRIBUTERECORD": {
+      "statement_count": 2372886,
+      "matched_count": 833,
+      "matched_by_title_count": 833,
+      "group_count": 125
+    },
+    "send_aux_tables": {
+      "CANCELNOTIFY": {
+        "rows_scanned": 3237,
+        "rows_matched": 20,
+        "send_link_rows": 20
+      },
+      "CR": {
+        "rows_scanned": 172884,
+        "rows_matched": 126,
+        "send_link_rows": 50
+      },
+      "CRREPLY": {
+        "rows_scanned": 25341,
+        "rows_matched": 50,
+        "send_link_rows": 50
+      },
+      "DCR": {
+        "rows_scanned": 1431,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "DCRREPLY": {
+        "rows_scanned": 0,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "DESIGNREVIEWOPNION": {
+        "rows_scanned": 317690,
+        "rows_matched": 1180,
+        "send_link_rows": 567
+      },
+      "DESIGNREVIEWREPLY": {
+        "rows_scanned": 19930,
+        "rows_matched": 55,
+        "send_link_rows": 55
+      },
+      "EXTERNALMINUTES": {
+        "rows_scanned": 9589,
+        "rows_matched": 16,
+        "send_link_rows": 16
+      },
+      "FCR": {
+        "rows_scanned": 106881,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "FCRREPLY": {
+        "rows_scanned": 302,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "FILETRANSMISSION": {
+        "rows_scanned": 242998,
+        "rows_matched": 919,
+        "send_link_rows": 919
+      },
+      "FUNOTIFY": {
+        "rows_scanned": 10766,
+        "rows_matched": 156,
+        "send_link_rows": 156
+      },
+      "INTERNALMINUTES": {
+        "rows_scanned": 9207,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "MEMORANDUM": {
+        "rows_scanned": 141257,
+        "rows_matched": 344,
+        "send_link_rows": 324
+      },
+      "NCR": {
+        "rows_scanned": 9152,
+        "rows_matched": 13,
+        "send_link_rows": 6
+      },
+      "NCRREPLY": {
+        "rows_scanned": 4165,
+        "rows_matched": 5,
+        "send_link_rows": 5
+      },
+      "TA": {
+        "rows_scanned": 33734,
+        "rows_matched": 193,
+        "send_link_rows": 81
+      },
+      "TAREPLY": {
+        "rows_scanned": 20092,
+        "rows_matched": 71,
+        "send_link_rows": 71
+      },
+      "TCR": {
+        "rows_scanned": 222,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "TCRREPLY": {
+        "rows_scanned": 0,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "TELEFAX": {
+        "rows_scanned": 120600,
+        "rows_matched": 408,
+        "send_link_rows": 408
+      }
+    }
+  },
+  "distribution_metrics": {
+    "INT": {
+      "X_all": {
+        "total": 1055,
+        "hit": 2,
+        "rate": 0.001896,
+        "by_project": {
+          "1818": {
+            "total": 106,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1907": {
+            "total": 181,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1915": {
+            "total": 388,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1916": {
+            "total": 20,
+            "hit": 1,
+            "rate": 0.05
+          },
+          "2016": {
+            "total": 271,
+            "hit": 1,
+            "rate": 0.00369
+          },
+          "2026": {
+            "total": 89,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 2,
+            "rate": 0.001896
+          }
+        }
+      },
+      "V_all": {
+        "total": 1055,
+        "hit": 14,
+        "rate": 0.01327,
+        "by_project": {
+          "1818": {
+            "total": 106,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1907": {
+            "total": 181,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1915": {
+            "total": 388,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1916": {
+            "total": 20,
+            "hit": 1,
+            "rate": 0.05
+          },
+          "2016": {
+            "total": 271,
+            "hit": 12,
+            "rate": 0.04428
+          },
+          "2026": {
+            "total": 89,
+            "hit": 1,
+            "rate": 0.011236
+          }
+        },
+        "by_type": {
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 14,
+            "rate": 0.01327
+          }
+        }
+      },
+      "W_all": {
+        "total": 999,
+        "hit": 3,
+        "rate": 0.003003,
+        "by_project": {
+          "1818": {
+            "total": 106,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1907": {
+            "total": 174,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1915": {
+            "total": 381,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1916": {
+            "total": 17,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2016": {
+            "total": 244,
+            "hit": 3,
+            "rate": 0.012295
+          },
+          "2026": {
+            "total": 77,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "内部接口资料单": {
+            "total": 999,
+            "hit": 3,
+            "rate": 0.003003
+          }
+        }
+      }
+    },
+    "SEND": {
+      "X_all": {
+        "total": 911,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "1818": {
+            "total": 187,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1907": {
+            "total": 81,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1915": {
+            "total": 53,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1916": {
+            "total": 233,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2016": {
+            "total": 181,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2026": {
+            "total": 164,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2306": {
+            "total": 12,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "V_all": {
+        "total": 911,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "1818": {
+            "total": 187,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1907": {
+            "total": 81,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1915": {
+            "total": 53,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1916": {
+            "total": 233,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2016": {
+            "total": 181,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2026": {
+            "total": 164,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2306": {
+            "total": 12,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "W_all": {
+        "total": 459,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "1818": {
+            "total": 112,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1907": {
+            "total": 26,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1915": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1916": {
+            "total": 142,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2016": {
+            "total": 72,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2026": {
+            "total": 72,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2306": {
+            "total": 5,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 17,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 3,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 2,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 24,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 66,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 69,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 5,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 14,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 21,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 238,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      }
+    },
+    "version_best_overall": {
+      "X_all": {
+        "total": 1966,
+        "hit": 2,
+        "rate": 0.001017,
+        "by_project": {
+          "1818": {
+            "total": 293,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1907": {
+            "total": 262,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1915": {
+            "total": 441,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1916": {
+            "total": 253,
+            "hit": 1,
+            "rate": 0.003953
+          },
+          "2016": {
+            "total": 452,
+            "hit": 1,
+            "rate": 0.002212
+          },
+          "2026": {
+            "total": 253,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2306": {
+            "total": 12,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 2,
+            "rate": 0.001896
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "V_all": {
+        "total": 1966,
+        "hit": 14,
+        "rate": 0.007121,
+        "by_project": {
+          "1818": {
+            "total": 293,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1907": {
+            "total": 262,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1915": {
+            "total": 441,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1916": {
+            "total": 253,
+            "hit": 1,
+            "rate": 0.003953
+          },
+          "2016": {
+            "total": 452,
+            "hit": 12,
+            "rate": 0.026549
+          },
+          "2026": {
+            "total": 253,
+            "hit": 1,
+            "rate": 0.003953
+          },
+          "2306": {
+            "total": 12,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 14,
+            "rate": 0.01327
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "W_all": {
+        "total": 1458,
+        "hit": 3,
+        "rate": 0.002058,
+        "by_project": {
+          "1818": {
+            "total": 218,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1907": {
+            "total": 200,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1915": {
+            "total": 411,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "1916": {
+            "total": 159,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2016": {
+            "total": 316,
+            "hit": 3,
+            "rate": 0.009494
+          },
+          "2026": {
+            "total": 149,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "2306": {
+            "total": 5,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 17,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 3,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 2,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 24,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "内部接口资料单": {
+            "total": 999,
+            "hit": 3,
+            "rate": 0.003003
+          },
+          "图文传真": {
+            "total": 66,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 69,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 5,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 14,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 21,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 238,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      }
+    }
+  },
+  "samples": {
+    "matched_examples": [
+      {
+        "project": "1916",
+        "workbook": "收发文清单1916.xlsx",
+        "excel_row": 87,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1916-Y-TTB-ZL-22C4-S-001",
+        "branch": "INT",
+        "title_keys": [
+          "1916YTTBZL22B4S003",
+          "1916YTTBZL22C4S001",
+          "20230112",
+          "20260304"
+        ],
+        "group_ids": [
+          "09DB18C1C0E74233B281213B0E67F61F",
+          "0BCAE795BBD34633BFB6490330F824DB",
+          "1116855CB98C45CDA2481F1EE8F240FE",
+          "141115B69BC641F0AADFC0D471ABCAAE",
+          "2188A9872F31454E8CC24ABE89A3374F",
+          "2A4D829D1EB44F6091229FA294FC1B72",
+          "2D1E6BD2E3DF4B7991379E747E5FC474",
+          "2F8A2FCDE93B4E95B57941A582502BAD"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "陈鹍",
+          "赵英超",
+          "核设备所文档",
+          "宁庆坤",
+          "方晓璐",
+          "王晨",
+          "河北核电工艺所文",
+          "王亚群",
+          "刘玉磊",
+          "牛占肖",
+          "赵军军",
+          "杨伟涛",
+          "核化工设备所收发",
+          "梁汝囡",
+          "周冠辰",
+          "窦晓洁",
+          "李丕陆",
+          "彭思",
+          "杨宏悦",
+          "齐智龙"
+        ],
+        "dist_org_values": [
+          "非标设备室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "核设备所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.核设备所",
+          "核设备所.非标设备室",
+          "中核工程.北京核工程研究设计院.核设备所",
+          "北京核工程研究设计院.核设备所.非标设备室",
+          "堆本体与非标设备室",
+          "核设备所.堆本体与非标设备室",
+          "北京核工程研究设计院.核设备所.堆本体与非标设备室"
+        ],
+        "dist_office_values": [
+          "非标设备室",
+          "堆本体与非标设备室",
+          "核设备所",
+          "设备力学室",
+          "核燃料运输与工艺室",
+          "工艺布置二室",
+          "仪控二室",
+          "未找到单位",
+          "工艺布置一室",
+          "核化工设备所",
+          "核化工设备四室",
+          "核化工设备三室"
+        ],
+        "x_raw": "雷宁博,陈巧艳,堆工所文档",
+        "v_raw": "反应堆工艺研究所.严重事故分析研究室",
+        "w_raw": ""
+      },
+      {
+        "project": "2016",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 238,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-FNP-ZL-25A5-S-137",
+        "branch": "INT",
+        "title_keys": [
+          "2016XFNPZL25A4S",
+          "2016XFNPZL25A4S144",
+          "2016XFNPZL25A5S137",
+          "20260224",
+          "20260305"
+        ],
+        "group_ids": [
+          "008172BB6F3645399F1A4E39F9F7A5E3",
+          "01CC64B466DD45128AC900B1C329D843",
+          "063258F20C944A3EB78CCD1AD05F15B1",
+          "32F1D5A1217B4DA089E41C04C6147E7A",
+          "357C4463C8374E70BD794D773E8FCBE5",
+          "37B9E572061F4921922FA7B214D6FBF2",
+          "3A2120E9767447B78B1FA000D1C571DA",
+          "4D53D86A02FE4FAB9A666B4038426041"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "于波",
+          "陈娜",
+          "庞立宁",
+          "河北核电工艺所文",
+          "闫明兴",
+          "甄卫刚",
+          "王雪梅",
+          "王硕",
+          "李鸿翼",
+          "丁丹萍",
+          "王瑞桥",
+          "于婷",
+          "陆程",
+          "郭晨楠",
+          "江会磊",
+          "孟晨"
+        ],
+        "dist_org_values": [
+          "力学室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.力学室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.力学室",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部"
+        ],
+        "dist_office_values": [
+          "力学室",
+          "工艺系统室",
+          "水工工艺一室"
+        ],
+        "x_raw": "河北核电工艺所文档员,颜凡松,侯锋,宋江波,武旭优,曹行思瑾,刘宇晗,贾京鑫,张盘玉,董建华a,张静",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "水工室"
+      },
+      {
+        "project": "2016",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 244,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-FNP-ZL-25A5-S-143",
+        "branch": "INT",
+        "title_keys": [
+          "2016XFNPZL25A4S",
+          "2016XFNPZL25A4S146",
+          "2016XFNPZL25A5S143",
+          "20260224",
+          "20260305"
+        ],
+        "group_ids": [
+          "008172BB6F3645399F1A4E39F9F7A5E3",
+          "01CC64B466DD45128AC900B1C329D843",
+          "063258F20C944A3EB78CCD1AD05F15B1",
+          "32F1D5A1217B4DA089E41C04C6147E7A",
+          "357C4463C8374E70BD794D773E8FCBE5",
+          "37B9E572061F4921922FA7B214D6FBF2",
+          "3A2120E9767447B78B1FA000D1C571DA",
+          "4D53D86A02FE4FAB9A666B4038426041"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "于波",
+          "陈娜",
+          "庞立宁",
+          "河北核电工艺所文",
+          "闫明兴",
+          "甄卫刚",
+          "王雪梅",
+          "王硕",
+          "李鸿翼",
+          "丁丹萍",
+          "王瑞桥",
+          "于婷",
+          "陆程",
+          "郭晨楠",
+          "江会磊",
+          "孟晨"
+        ],
+        "dist_org_values": [
+          "力学室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.力学室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.力学室",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部"
+        ],
+        "dist_office_values": [
+          "力学室",
+          "工艺系统室",
+          "水工工艺一室"
+        ],
+        "x_raw": "侯锋,宋江波,河北核电工艺所文档员,颜凡松,董建华a,贾京鑫,张盘玉,武旭优,曹行思瑾,张静,刘宇晗",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "水工室"
+      },
+      {
+        "project": "2016",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 295,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RNS-ZL-25A6-S-073",
+        "branch": "INT",
+        "title_keys": [
+          "2016XRNSZL25A6S073",
+          "2016XRNSZL25B2S",
+          "20260302"
+        ],
+        "group_ids": [
+          "07F63CCCD3E04E32A79D3405E7D30AB2",
+          "2481A11D70E844A0A965CEDEAEDEE4A8",
+          "40B03AB2CFC845AE9C8BD569E936504D",
+          "6008C47B4EF74E97A52627FE43F5BEA6",
+          "8EA772D80604400FB0F6D151FE08BC5C",
+          "924E96CC5D6D4E318B6A8759BF002877",
+          "94188263B6F54F2AB3CB19D949A50DDF",
+          "A0DF3E617BB741A5A62D63C3D99DB8F6"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "肖占方",
+          "马卫涛",
+          "郭蒙蒙",
+          "丁丹萍",
+          "河北核工程设计所",
+          "河北核电工艺所文",
+          "于婷",
+          "李鹏",
+          "刘璐",
+          "唐凯",
+          "黄亚娟",
+          "韩冬",
+          "电气设计所文档",
+          "沈蓉",
+          "郭璇",
+          "费云艳",
+          "黄耀",
+          "覃红玉"
+        ],
+        "dist_org_values": [
+          "设备室",
+          "中核工程",
+          "河北分公司",
+          "核工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.核工程研究设计所",
+          "核工程研究设计所.设备室",
+          "中核工程.河北分公司.核工程研究设计所",
+          "河北分公司.核工程研究设计所.设备室",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部"
+        ],
+        "dist_office_values": [
+          "设备室",
+          "工艺系统室",
+          "仪控二室",
+          "电气四室",
+          "电气设计所",
+          "电气一室"
+        ],
+        "x_raw": "河北电气自动化所文档员,刘震,白东坡,刘祖全",
+        "v_raw": "河北分公司.电气自动化所",
+        "w_raw": "仪控一室,仪控二室"
+      },
+      {
+        "project": "2016",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 303,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RSI-ZL-25A6-S-058",
+        "branch": "INT",
+        "title_keys": [
+          "2016XRSIZL25A1S015",
+          "2016XRSIZL25A6S058",
+          "2016XRSIZL25B2S",
+          "20260302",
+          "20260304"
+        ],
+        "group_ids": [
+          "024987B6742F481EA06A830288417C07",
+          "148CF0567ECF42D48CBA2D13F0DCCEFF",
+          "3E37E962C5684A98B5AB717076B0FB05",
+          "4FFA9AD242264F0AAA25D5612F328C77",
+          "751D49405CE042C694F70651DD36CA41",
+          "A4083F4D095047EAB006313D669445A5",
+          "D004977ACB35408792700060077C3F61"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "电气设计所文档",
+          "费云艳",
+          "覃红玉",
+          "唐凯",
+          "黄亚娟",
+          "韩冬",
+          "郭璇",
+          "黄耀",
+          "沈蓉",
+          "李鹏",
+          "河北核电工艺所文",
+          "于婷",
+          "牛占肖",
+          "丁丹萍"
+        ],
+        "dist_org_values": [
+          "电气设计所",
+          "中核工程",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.电气设计所",
+          "中核工程.北京核工程研究设计院.电气设计所",
+          "电气一室",
+          "电气设计所.电气一室",
+          "北京核工程研究设计院.电气设计所.电气一室",
+          "电气四室",
+          "电气设计所.电气四室",
+          "北京核工程研究设计院.电气设计所.电气四室"
+        ],
+        "dist_office_values": [
+          "电气设计所",
+          "电气一室",
+          "电气四室",
+          "仪控二室",
+          "工艺系统室",
+          "未找到单位"
+        ],
+        "x_raw": "白东坡,杨义飞,刘祖全,河北电气自动化所文档员,习磊朋,桂秋媛,李崇赞,蔡泽萍,李铮铮,张嘉璐,秦鹏,李涛,河北核电工艺所文档员,张秋宁,张勇,董航",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.核电工艺所",
+        "w_raw": "仪控一室,仪控二室,工艺布置一室,工艺布置二室"
+      },
+      {
+        "project": "2016",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 307,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RVD-ZL-25A5-S-147",
+        "branch": "INT",
+        "title_keys": [
+          "2016XRVDZL25A2S",
+          "2016XRVDZL25A2S098",
+          "2016XRVDZL25A5S147",
+          "20260224",
+          "20260304"
+        ],
+        "group_ids": [
+          "12C77AF8AC0B41D2B9B3E3E04E8AB539",
+          "1326594B78384C3AA1A2C0D3325CA71F",
+          "3E4643ADB8E24AC59D86982354E1161F",
+          "41F0C65D3C014D3C865E4D12A9E92228",
+          "730784085D964F3E9A5B849266937B9A",
+          "734D29F9107A4F1AB4565AC94ED145D2",
+          "7411AA7701B04B6D837B6789212E43BB",
+          "7458413C7A464474A0B57ACA7BD6BEC9"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "河北核电工艺所文",
+          "于波",
+          "陈娜",
+          "王雪梅",
+          "闫明兴",
+          "程茜",
+          "于婷",
+          "王旭",
+          "董彬杰",
+          "郭石永",
+          "河北核工程设计所",
+          "肖占方",
+          "姜晓阳",
+          "孙传军",
+          "王峰",
+          "王少磊"
+        ],
+        "dist_org_values": [
+          "核电工艺所",
+          "中核工程",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "中核工程.河北分公司.核电工艺所",
+          "力学室",
+          "核电工艺所.力学室",
+          "河北分公司.核电工艺所.力学室",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部"
+        ],
+        "dist_office_values": [
+          "力学室",
+          "工艺系统室",
+          "未找到单位",
+          "设备室"
+        ],
+        "x_raw": "河北核电工艺所文档员,訾博文,王浩,刘昊天",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺布置二室"
+      },
+      {
+        "project": "2016",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 308,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RVD-ZL-25A5-S-148",
+        "branch": "INT",
+        "title_keys": [
+          "2016XRVDZL25A2S",
+          "2016XRVDZL25A2S099",
+          "2016XRVDZL25A5S148",
+          "20260224",
+          "20260304"
+        ],
+        "group_ids": [
+          "12C77AF8AC0B41D2B9B3E3E04E8AB539",
+          "1326594B78384C3AA1A2C0D3325CA71F",
+          "3E4643ADB8E24AC59D86982354E1161F",
+          "41F0C65D3C014D3C865E4D12A9E92228",
+          "730784085D964F3E9A5B849266937B9A",
+          "734D29F9107A4F1AB4565AC94ED145D2",
+          "7411AA7701B04B6D837B6789212E43BB",
+          "7458413C7A464474A0B57ACA7BD6BEC9"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "河北核电工艺所文",
+          "于波",
+          "陈娜",
+          "王雪梅",
+          "闫明兴",
+          "程茜",
+          "于婷",
+          "王旭",
+          "董彬杰",
+          "郭石永",
+          "河北核工程设计所",
+          "肖占方",
+          "姜晓阳",
+          "孙传军",
+          "王峰",
+          "王少磊"
+        ],
+        "dist_org_values": [
+          "核电工艺所",
+          "中核工程",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "中核工程.河北分公司.核电工艺所",
+          "力学室",
+          "核电工艺所.力学室",
+          "河北分公司.核电工艺所.力学室",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部"
+        ],
+        "dist_office_values": [
+          "力学室",
+          "工艺系统室",
+          "未找到单位",
+          "设备室"
+        ],
+        "x_raw": "王浩,訾博文,刘昊天,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺布置二室"
+      },
+      {
+        "project": "2016",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 313,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RVD-ZL-25A6-S-089",
+        "branch": "INT",
+        "title_keys": [
+          "2016XRVDZL25A2S",
+          "2016XRVDZL25A6S089",
+          "2016XRVDZL25B2S023",
+          "20260303",
+          "20260305"
+        ],
+        "group_ids": [
+          "12C77AF8AC0B41D2B9B3E3E04E8AB539",
+          "1326594B78384C3AA1A2C0D3325CA71F",
+          "3E4643ADB8E24AC59D86982354E1161F",
+          "41F0C65D3C014D3C865E4D12A9E92228",
+          "730784085D964F3E9A5B849266937B9A",
+          "734D29F9107A4F1AB4565AC94ED145D2",
+          "7411AA7701B04B6D837B6789212E43BB",
+          "7458413C7A464474A0B57ACA7BD6BEC9"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "河北核电工艺所文",
+          "于波",
+          "陈娜",
+          "王雪梅",
+          "闫明兴",
+          "程茜",
+          "于婷",
+          "王旭",
+          "董彬杰",
+          "郭石永",
+          "河北核工程设计所",
+          "肖占方",
+          "姜晓阳",
+          "孙传军",
+          "王峰",
+          "王少磊"
+        ],
+        "dist_org_values": [
+          "核电工艺所",
+          "中核工程",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "中核工程.河北分公司.核电工艺所",
+          "力学室",
+          "核电工艺所.力学室",
+          "河北分公司.核电工艺所.力学室",
+          "设计管理部",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部"
+        ],
+        "dist_office_values": [
+          "力学室",
+          "工艺系统室",
+          "未找到单位",
+          "设备室"
+        ],
+        "x_raw": "赵银亮,刘祖全,贾雅永,张勇,桂秋媛,李洋,河北电气自动化所文档员,李菁,白东坡,吕雪纯,习磊朋,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "工艺布置二室,仪控二室,工艺布置一室,仪控一室"
+      },
+      {
+        "project": "2016",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 316,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RVD-ZL-25A6-S-092",
+        "branch": "INT",
+        "title_keys": [
+          "2016XRVDZL22C2S",
+          "2016XRVDZL25A6S092",
+          "20260303"
+        ],
+        "group_ids": [
+          "351585DA168C41BD969EDFD6EAA0FED6",
+          "9B417B8F5174439CB5CED70DF299A772"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "河北核电工艺所文",
+          "于婷",
+          "陈科",
+          "王旭",
+          "杨亚伟"
+        ],
+        "dist_org_values": [
+          "核电工艺所",
+          "中核工程",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "中核工程.河北分公司.核电工艺所",
+          "工艺系统室",
+          "核电工艺所.工艺系统室",
+          "河北分公司.核电工艺所.工艺系统室",
+          "设计管理科",
+          "北京核工程研究设计院",
+          "工程设计管理部"
+        ],
+        "dist_office_values": [
+          "工艺系统室",
+          "设计管理科",
+          "未找到单位"
+        ],
+        "x_raw": "河北核电工艺所文档员,工艺系统研究设计所文档,于婷,杜广,黄若琳",
+        "v_raw": "河北分公司.核电工艺所,工艺系统研究设计所,工艺系统研究设计所.总体布置室,工艺系统研究设计所.工艺设备室",
+        "w_raw": "工艺系统室"
+      },
+      {
+        "project": "2016",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 361,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-WAS-ZL-25A5-S-037",
+        "branch": "INT",
+        "title_keys": [
+          "2016XWASZL25A2S",
+          "2016XWASZL25A5S037",
+          "20260302"
+        ],
+        "group_ids": [
+          "0CEE6A339A60434DA3E7668459712211",
+          "4E0A9223EC034E31867CFEB66FD5A577"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "王雪梅",
+          "河北核电工艺所文",
+          "于波",
+          "陈娜",
+          "闫明兴",
+          "于婷",
+          "李姗",
+          "王思佳",
+          "程茜",
+          "杜广",
+          "黄若琳",
+          "刘朋飞",
+          "工艺系统研究设计",
+          "焦森林",
+          "马惠昀",
+          "刘宇腾",
+          "蒋克涛",
+          "李丕陆",
+          "王勋"
+        ],
+        "dist_org_values": [
+          "设计管理部",
+          "中核工程",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部",
+          "核电工艺所",
+          "河北分公司.核电工艺所",
+          "中核工程.河北分公司.核电工艺所",
+          "力学室",
+          "核电工艺所.力学室",
+          "河北分公司.核电工艺所.力学室"
+        ],
+        "dist_office_values": [
+          "力学室",
+          "工艺系统室",
+          "总体布置室",
+          "工艺设备室",
+          "工艺系统研究设计所",
+          "安全系统室",
+          "未找到单位"
+        ],
+        "x_raw": "訾博文,刘昊天,河北核电工艺所文档员,李颖",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺布置二室,工艺布置一室"
+      },
+      {
+        "project": "2016",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 383,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-WPW-ZL-25A6-S-038",
+        "branch": "INT",
+        "title_keys": [
+          "2016XWPWZL25A1S",
+          "2016XWPWZL25A6S038",
+          "2016XWPWZL25B3S016",
+          "20260226",
+          "20260305"
+        ],
+        "group_ids": [
+          "0E62E66CBCD74FFF83B87B05839B20C7",
+          "3A6DE5C67C874CE6A0987FAA9432DC38",
+          "830D62D5C24442DEA4B03F3EC4481DB1"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "王雪梅",
+          "河北核电工艺所文",
+          "于婷",
+          "高汉桥"
+        ],
+        "dist_org_values": [
+          "设计管理部",
+          "中核工程",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部",
+          "核电工艺所",
+          "河北分公司.核电工艺所",
+          "中核工程.河北分公司.核电工艺所",
+          "工艺系统室",
+          "核电工艺所.工艺系统室",
+          "河北分公司.核电工艺所.工艺系统室"
+        ],
+        "dist_office_values": [
+          "工艺系统室"
+        ],
+        "x_raw": "张静,刘宇晗,习磊朋,侯锋,宋江波,河北核电工艺所文档员,颜凡松,董建华a,武旭优,曹行思瑾,刘晓光,管祥宇,王梦含,姚腾飞,刘祖全,张盘玉,贾京鑫,肖龙腾,河北电气自动化所文档员",
+        "v_raw": "河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "水工室,工艺布置一室,仪控二室"
+      },
+      {
+        "project": "2016",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 384,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-WPW-ZL-25A6-S-039",
+        "branch": "INT",
+        "title_keys": [
+          "2016XWPWZL25A1S",
+          "2016XWPWZL25A6S039",
+          "2016XWPWZL25B3S015",
+          "20260226",
+          "20260305"
+        ],
+        "group_ids": [
+          "0E62E66CBCD74FFF83B87B05839B20C7",
+          "3A6DE5C67C874CE6A0987FAA9432DC38",
+          "830D62D5C24442DEA4B03F3EC4481DB1"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "王雪梅",
+          "河北核电工艺所文",
+          "于婷",
+          "高汉桥"
+        ],
+        "dist_org_values": [
+          "设计管理部",
+          "中核工程",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部",
+          "核电工艺所",
+          "河北分公司.核电工艺所",
+          "中核工程.河北分公司.核电工艺所",
+          "工艺系统室",
+          "核电工艺所.工艺系统室",
+          "河北分公司.核电工艺所.工艺系统室"
+        ],
+        "dist_office_values": [
+          "工艺系统室"
+        ],
+        "x_raw": "河北电气自动化所文档员,刘祖全,王梦含,姚腾飞,刘晓光,贾京鑫,张盘玉,董建华a,肖龙腾,武旭优,曹行思瑾,习磊朋,侯锋,宋江波,河北核电工艺所文档员,颜凡松,张静,刘宇晗",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.核电工艺所",
+        "w_raw": "仪控二室,水工室,工艺布置一室"
+      },
+      {
+        "project": "2016",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 385,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-WPW-ZL-25A6-S-040",
+        "branch": "INT",
+        "title_keys": [
+          "2016XWPWZL25A1S",
+          "2016XWPWZL25A6S040",
+          "2016XWPWZL25B3S014",
+          "20260226",
+          "20260305"
+        ],
+        "group_ids": [
+          "0E62E66CBCD74FFF83B87B05839B20C7",
+          "3A6DE5C67C874CE6A0987FAA9432DC38",
+          "830D62D5C24442DEA4B03F3EC4481DB1"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "王雪梅",
+          "河北核电工艺所文",
+          "于婷",
+          "高汉桥"
+        ],
+        "dist_org_values": [
+          "设计管理部",
+          "中核工程",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部",
+          "核电工艺所",
+          "河北分公司.核电工艺所",
+          "中核工程.河北分公司.核电工艺所",
+          "工艺系统室",
+          "核电工艺所.工艺系统室",
+          "河北分公司.核电工艺所.工艺系统室"
+        ],
+        "dist_office_values": [
+          "工艺系统室"
+        ],
+        "x_raw": "河北核电工艺所文档员,颜凡松,习磊朋,侯锋,宋江波,张静,刘宇晗,武旭优,曹行思瑾,董建华a,河北电气自动化所文档员,刘祖全,王梦含,姚腾飞,刘晓光,贾京鑫,张盘玉,肖龙腾",
+        "v_raw": "河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "水工室,工艺布置一室,仪控二室"
+      },
+      {
+        "project": "2026",
+        "workbook": "收发文清单2026.xlsx",
+        "excel_row": 174,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2026-X-WES-ZL-22Q2-S-040",
+        "branch": "INT",
+        "title_keys": [
+          "20260225",
+          "2026XWESZL22Q2S040",
+          "2026XWESZL25B2S",
+          "2026XWESZL25B2S012"
+        ],
+        "group_ids": [
+          "576DB62D3A944E01B9E27F92B3BACDC6",
+          "79C2B7AEDF3A4075BA92E88E68D3669A",
+          "9F9025EB6C324ECEBC702FDED7EF31AB",
+          "DE1EFCCC04F146B68C159900D7FB77BA",
+          "E182B0538234408E87595771F74B148E"
+        ],
+        "dist_source_types": [
+          "extra.cnpe.entity.internalInterface.ExtIntInterfaceDoc"
+        ],
+        "dist_people_all": [
+          "王瑞桥",
+          "公用系统所文档",
+          "焦迪",
+          "刘晓轻",
+          "李娜娜",
+          "闫征",
+          "曹冉冉",
+          "姜佳音",
+          "李鹏",
+          "张志柳"
+        ],
+        "dist_org_values": [
+          "设计管理部",
+          "中核工程",
+          "河北分公司",
+          "中核工程.河北分公司",
+          "河北分公司.设计管理部",
+          "中核工程.河北分公司.设计管理部",
+          "公用系统所",
+          "北京核工程研究设计院",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.公用系统所",
+          "中核工程.北京核工程研究设计院.公用系统所",
+          "水工工艺二室"
+        ],
+        "dist_office_values": [
+          "公用系统所",
+          "水工工艺二室",
+          "公用二室",
+          "暖通二室",
+          "仪控二室"
+        ],
+        "x_raw": "河北电气自动化所文档员,许春辉,孙涛,王智勇",
+        "v_raw": "河北分公司.电气自动化所",
+        "w_raw": "电气室,仪控一室"
+      }
+    ],
+    "no_distribution_examples": [
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 29,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW22K020260011",
+        "branch": "SEND",
+        "title_keys": [
+          "1818BW22K020260011",
+          "1818BW22Q320260001"
+        ],
+        "doc_tables": [
+          "OBJECTREPLYLINK",
+          "MEMORANDUM"
+        ],
+        "x_raw": "焦迪,王瑞c,许可宸,梁晓曦,张杰,池云莉,河北电力工程设计所文档员,魏川铖,李娜娜,闫征,公用系统所文档,河北设计管理部文档员,李鸿翼,魏晰茹,武婕,马雪翠,王贝,潘亭",
+        "v_raw": "公用系统所.水工工艺二室,公用系统所.水工工艺三室,河北分公司.电力工程研究设计所,公用系统所.公用二室,公用系统所.暖通二室,河北分公司.设计管理部,公用系统所.水工工艺四室",
+        "w_raw": "仪控室,机务室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 31,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW252020260010",
+        "branch": "SEND",
+        "title_keys": [
+          "1818BW252020260010"
+        ],
+        "doc_tables": [
+          "MEMORANDUM"
+        ],
+        "x_raw": "王智勇,封昊伟,韩冰,王倩,周明鑫,周智昊,张学朔,王传悦,安康,余益,张志强,周鑫,肖占方,韩旭亮,耿林松,李炳宪,李钟扬,王子帆,闫红伟,赵若愚,郑少娟,明艳,田登港,田伟龙,王海波,张朋勇,张伟卓,张旭d,张艳刚,甄林棚,赵玉,刘星雨,麻晓帅,黄卓,卢艳超,张烨,杨振国,何海峰,杨焕起,白冬梅,张云峰,河北电气自动化所文档员,靳鹏,梁耀龙,宋欣,刘恒畅,王晓晨,王栋梁,张泽宇,河北电力工程设计所文档员,池云莉,侯晔凝,胡朝硕 ,焦子跃,刘峰b,彭程,王涛,黄楠,李江,柳文旭,闫占芳,杨佳鹤\n,徐佳丽,何正阳,张玉岐,李梦雨,张延景,白兰,高汉桥,郭晨楠,何毅,李姗,刘璐,刘朋飞,刘红坤,王鹤飞,王思佳,王勋,辛克,薛润格,杨亚伟,于婷,张五怡,张子杰,于嘉蕾,韩星星,李佩育,刘世龙,孙昊博,刘玉磊,李浓,房志刚,刘祖全,赵彩霞,闫伟,张静,张雄谦,河北建筑结构所文档员,于颖琪,河北核工程设计所文档员,孔敏娜,贾晓旭,王志从,于凤荣,冯国忠,于波,张海波a,王贝,马雪翠,宋晓兰,赵琛,潘亭,赵保增,杨熙,梁卿达,万忠义,胡建成,栗涛,马广辉,赵华立,眭洪涛,河北核电工艺所文档员,桂秋媛,康乐嘉,刘康利,赵银亮,张勇,郭淳杉,付煦,甄彩霞,李洋,蔺子尧,刘文,田新乐,廖涛,王威峰,董航,李铮铮,余云,蔡泽萍,任美贤,刘泽平,李涛,齐伦,董剑鑫,马晓喆,张文通,秦荣,崔华,刘挽平,王亚群,秦鹏,张嘉璐,侯锋,齐建华,武旭优,解景昭,张娅,赵华伟,宋江波,王亚辉,马骏,崔硕,李谦,刘建栋,刘晓萌,王彪,白智萌,马思嘉,董建华a,李宪祺,祁华标,张景钊,段泽萌,武晓楠,牛向阳,郭浩磊,张盘玉,贾京鑫,刘卫隆,刘宇晗,王益广,蒲红宇,檀博轩,张弘c,田梦晴,苑若彤,刘绪金,卢欣基,许春辉,张晓云,单锁兰,葛荣亮,贾双卓,李伟霞,王秀瑞,张剑冰,赵忠臣,朱佩晓,吕风杰,师陆陆,张伟超,默子涵,刘徙铎,薛冰,刘凯,尚文斌,刘媛媛,刘传,温馨,陆梦晗,董世傲,崔春雷,王鹏举",
+        "v_raw": "河北分公司.电气自动化所,未找到单位,河北分公司.核工程研究设计所,河北分公司.核电工艺所,河北分公司.建筑结构所,河北分公司.电力工程研究设计所",
+        "w_raw": "仪控一室,设备室,暖通室,建筑总图室,电气室,通信室,工艺系统室,仪控二室,工艺室,土建室,力学室,仪控室,机务室,结构一室,工艺布置一室,工艺布置二室,水工室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 32,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25A020260006",
+        "branch": "SEND",
+        "title_keys": [
+          "1818BW25A020260006"
+        ],
+        "doc_tables": [
+          "MEMORANDUM"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 33,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25A220260007",
+        "branch": "SEND",
+        "title_keys": [
+          "1818BW25A220260007"
+        ],
+        "doc_tables": [
+          "MEMORANDUM"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 34,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25A220260008",
+        "branch": "SEND",
+        "title_keys": [
+          "1818BW25A220260008"
+        ],
+        "doc_tables": [
+          "MEMORANDUM"
+        ],
+        "x_raw": "赵泾雄",
+        "v_raw": "工程设计管理部.设计管理科",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 37,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25A420260009",
+        "branch": "SEND",
+        "title_keys": [
+          "1818BW25A420260009"
+        ],
+        "doc_tables": [
+          "MEMORANDUM"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 38,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25A420260010",
+        "branch": "SEND",
+        "title_keys": [
+          "1818BW25A420260010"
+        ],
+        "doc_tables": [
+          "MEMORANDUM"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,黄良,魏晰茹",
+        "v_raw": "河北分公司.设计管理部",
+        "w_raw": ""
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 39,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25B120260009",
+        "branch": "SEND",
+        "title_keys": [
+          "1818BW25B120260009"
+        ],
+        "doc_tables": [
+          "MEMORANDUM"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 40,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25B320260008",
+        "branch": "SEND",
+        "title_keys": [
+          "1818BW25B320260008"
+        ],
+        "doc_tables": [
+          "MEMORANDUM"
+        ],
+        "x_raw": "封昊伟,李浓,齐复兴,河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.设计管理部",
+        "w_raw": "仪控一室,仪控二室,电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 41,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25C220260011",
+        "branch": "SEND",
+        "title_keys": [
+          "1818BW25C220260011"
+        ],
+        "doc_tables": [
+          "MEMORANDUM"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 42,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25C220260012",
+        "branch": "SEND",
+        "title_keys": [
+          "1818BW25C220260012"
+        ],
+        "doc_tables": [
+          "MEMORANDUM"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 43,
+        "a_raw": "备忘录",
+        "e_raw": "1818BW25E620260002",
+        "branch": "SEND",
+        "title_keys": [
+          "1818BW25E620260002"
+        ],
+        "doc_tables": [
+          "MEMORANDUM"
+        ],
+        "x_raw": "河北设计管理部文档员,李鸿翼,张晓云",
+        "v_raw": "河北分公司.设计管理部,河北分公司.电气自动化所",
+        "w_raw": "电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 45,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25A2-S-008",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A2S008",
+          "18185BEZL25A4S017",
+          "18185BEZL25B1S",
+          "18185BEZL25B3S",
+          "18185BEZL25C2S015",
+          "18185BEZL25C3S019",
+          "18185BEZL25C3S020",
+          "18185BEZL25E6S011"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "周铭海,梁耀龙,靳鹏,河北建筑结构所文档员,梁卿达,苏志松",
+        "v_raw": "河北分公司.建筑结构所",
+        "w_raw": "结构二室,建筑总图室,结构一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 46,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25A3-S-017",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A3S017",
+          "18185BEZL25B1S012",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "封昊伟,默子涵,张晓云,河北电气自动化所文档员",
+        "v_raw": "河北分公司.电气自动化所",
+        "w_raw": "仪控一室,电气室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 47,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25A4-S-017",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A2S008",
+          "18185BEZL25A4S017",
+          "18185BEZL25B1S",
+          "18185BEZL25B3S",
+          "18185BEZL25C2S015",
+          "18185BEZL25C3S019",
+          "18185BEZL25C3S020",
+          "18185BEZL25E6S011"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北建筑结构所文档员,苏志松,梁卿达,周铭海,梁耀龙,靳鹏",
+        "v_raw": "河北分公司.建筑结构所",
+        "w_raw": "结构二室,结构一室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 48,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25B3-S-023",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A4S",
+          "18185BEZL25A4S016",
+          "18185BEZL25B3S023",
+          "20260225"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "马思嘉,侯锋,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "水工室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 49,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25C2-S-012",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A2S007",
+          "18185BEZL25C2S012",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北核电工艺所文档员,王亚群,李铮铮",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺布置二室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 50,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25C2-S-013",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A4S014",
+          "18185BEZL25C2S013",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "马思嘉,侯锋,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "水工室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 51,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25C2-S-014",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25B1S013",
+          "18185BEZL25C2S014",
+          "20260213",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北电气自动化所文档员,张晓云,默子涵,封昊伟",
+        "v_raw": "河北分公司.电气自动化所",
+        "w_raw": "电气室,仪控一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 52,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25C2-S-015",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A2S008",
+          "18185BEZL25A4S017",
+          "18185BEZL25B1S",
+          "18185BEZL25B3S",
+          "18185BEZL25C2S015",
+          "18185BEZL25C3S019",
+          "18185BEZL25C3S020",
+          "18185BEZL25E6S011"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "封昊伟,河北核电工艺所文档员,马思嘉,侯锋,曹卿,河北核工程设计所文档员,张勇,张延景,李铮铮,柳文旭,梁卿达,桂秋媛,王亚群,曹红梅,张晓云,默子涵,王东苗,河北电气自动化所文档员,河北建筑结构所文档员,刘玉磊,孙晓红,李鹏,白冬梅,耿林松,杨振国,靳鹏,梁耀龙,陈思思",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.核电工艺所,深圳设计院,河北分公司.核工程研究设计所,河北分公司.建筑结构所,建筑结构所.建筑二室",
+        "w_raw": "仪控一室,水工室,工艺布置二室,通信室,结构一室,仪控二室,电气室,暖通室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 53,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25C2-S-015",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A2S008",
+          "18185BEZL25A4S017",
+          "18185BEZL25B1S",
+          "18185BEZL25B3S",
+          "18185BEZL25C2S015",
+          "18185BEZL25C3S019",
+          "18185BEZL25C3S020",
+          "18185BEZL25E6S011"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "封昊伟,河北核电工艺所文档员,马思嘉,侯锋,曹卿,河北核工程设计所文档员,张勇,张延景,李铮铮,柳文旭,梁卿达,桂秋媛,王亚群,曹红梅,张晓云,默子涵,王东苗,河北电气自动化所文档员,河北建筑结构所文档员,刘玉磊,孙晓红,李鹏,白冬梅,耿林松,杨振国,靳鹏,梁耀龙,陈思思",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.核电工艺所,深圳设计院,河北分公司.核工程研究设计所,河北分公司.建筑结构所,建筑结构所.建筑二室",
+        "w_raw": "仪控一室,水工室,工艺布置二室,通信室,结构一室,仪控二室,电气室,暖通室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 54,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25C2-S-015",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A2S008",
+          "18185BEZL25A4S017",
+          "18185BEZL25B1S",
+          "18185BEZL25B3S",
+          "18185BEZL25C2S015",
+          "18185BEZL25C3S019",
+          "18185BEZL25C3S020",
+          "18185BEZL25E6S011"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "封昊伟,河北核电工艺所文档员,马思嘉,侯锋,曹卿,河北核工程设计所文档员,张勇,张延景,李铮铮,柳文旭,梁卿达,桂秋媛,王亚群,曹红梅,张晓云,默子涵,王东苗,河北电气自动化所文档员,河北建筑结构所文档员,刘玉磊,孙晓红,李鹏,白冬梅,耿林松,杨振国,靳鹏,梁耀龙,陈思思",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.核电工艺所,深圳设计院,河北分公司.核工程研究设计所,河北分公司.建筑结构所,建筑结构所.建筑二室",
+        "w_raw": "仪控一室,水工室,工艺布置二室,通信室,结构一室,仪控二室,电气室,暖通室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 55,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25C2-S-015",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A2S008",
+          "18185BEZL25A4S017",
+          "18185BEZL25B1S",
+          "18185BEZL25B3S",
+          "18185BEZL25C2S015",
+          "18185BEZL25C3S019",
+          "18185BEZL25C3S020",
+          "18185BEZL25E6S011"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "封昊伟,河北核电工艺所文档员,马思嘉,侯锋,曹卿,河北核工程设计所文档员,张勇,张延景,李铮铮,柳文旭,梁卿达,桂秋媛,王亚群,曹红梅,张晓云,默子涵,王东苗,河北电气自动化所文档员,河北建筑结构所文档员,刘玉磊,孙晓红,李鹏,白冬梅,耿林松,杨振国,靳鹏,梁耀龙,陈思思",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.核电工艺所,深圳设计院,河北分公司.核工程研究设计所,河北分公司.建筑结构所,建筑结构所.建筑二室",
+        "w_raw": "仪控一室,水工室,工艺布置二室,通信室,结构一室,仪控二室,电气室,暖通室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 56,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25C2-S-015",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A2S008",
+          "18185BEZL25A4S017",
+          "18185BEZL25B1S",
+          "18185BEZL25B3S",
+          "18185BEZL25C2S015",
+          "18185BEZL25C3S019",
+          "18185BEZL25C3S020",
+          "18185BEZL25E6S011"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "封昊伟,河北核电工艺所文档员,马思嘉,侯锋,曹卿,河北核工程设计所文档员,张勇,张延景,李铮铮,柳文旭,梁卿达,桂秋媛,王亚群,曹红梅,张晓云,默子涵,王东苗,河北电气自动化所文档员,河北建筑结构所文档员,刘玉磊,孙晓红,李鹏,白冬梅,耿林松,杨振国,靳鹏,梁耀龙,陈思思",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.核电工艺所,深圳设计院,河北分公司.核工程研究设计所,河北分公司.建筑结构所,建筑结构所.建筑二室",
+        "w_raw": "仪控一室,水工室,工艺布置二室,通信室,结构一室,仪控二室,电气室,暖通室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 57,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25C3-S-019",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A2S008",
+          "18185BEZL25A4S017",
+          "18185BEZL25B1S",
+          "18185BEZL25B3S",
+          "18185BEZL25C2S015",
+          "18185BEZL25C3S019",
+          "18185BEZL25C3S020",
+          "18185BEZL25E6S011"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北建筑结构所文档员,梁卿达,苏志松,周铭海,梁耀龙,靳鹏",
+        "v_raw": "河北分公司.建筑结构所",
+        "w_raw": "结构一室,结构二室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 58,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25C3-S-020",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A2S008",
+          "18185BEZL25A4S017",
+          "18185BEZL25B1S",
+          "18185BEZL25B3S",
+          "18185BEZL25C2S015",
+          "18185BEZL25C3S019",
+          "18185BEZL25C3S020",
+          "18185BEZL25E6S011"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "梁卿达,河北建筑结构所文档员,周铭海,苏志松,梁耀龙,靳鹏",
+        "v_raw": "河北分公司.建筑结构所",
+        "w_raw": "结构一室,结构二室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 59,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25E6-S-010",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A3S015",
+          "18185BEZL25E6S010",
+          "20260224"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "白冬梅,耿林松,杨振国,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "暖通室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 60,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BE-ZL-25E6-S-011",
+        "branch": "INT",
+        "title_keys": [
+          "18185BEZL25A2S008",
+          "18185BEZL25A4S017",
+          "18185BEZL25B1S",
+          "18185BEZL25B3S",
+          "18185BEZL25C2S015",
+          "18185BEZL25C3S019",
+          "18185BEZL25C3S020",
+          "18185BEZL25E6S011"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "靳鹏,梁耀龙,苏志松,周铭海,河北建筑结构所文档员,梁卿达",
+        "v_raw": "河北分公司.建筑结构所",
+        "w_raw": "建筑总图室,结构二室,结构一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 61,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BL-ZL-25B3-S-014",
+        "branch": "INT",
+        "title_keys": [
+          "18185BLZL25A3S014",
+          "18185BLZL25B3S014",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "白冬梅,刘丽然,杨振国,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "暖通室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 62,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BL-ZL-25C2-S-011",
+        "branch": "INT",
+        "title_keys": [
+          "18185BLZL25A4S012",
+          "18185BLZL25C2S011",
+          "18185BLZL25C3S018",
+          "20260211",
+          "20260212",
+          "20260225"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北核电工艺所文档员,马思嘉,侯锋",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "水工室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 63,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BL-ZL-25C2-S-012",
+        "branch": "INT",
+        "title_keys": [
+          "18185BLZL25A2S019",
+          "18185BLZL25C2S012",
+          "18185BLZL25C3S021",
+          "20260212",
+          "20260225",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "王亚群,河北核电工艺所文档员,田新乐",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺布置二室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 64,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BL-ZL-25C2-S-013",
+        "branch": "INT",
+        "title_keys": [
+          "18185BLZL25B3S013",
+          "18185BLZL25C2S013",
+          "18185BLZL25C3S017",
+          "20260211",
+          "20260212",
+          "20260225"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "刘玉磊,孙晓红,河北电气自动化所文档员,吴乐平,康磊,封昊伟",
+        "v_raw": "河北分公司.电气自动化所",
+        "w_raw": "仪控二室,仪控一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 65,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BL-ZL-25C2-S-014",
+        "branch": "INT",
+        "title_keys": [
+          "18185BLZL25B1S015",
+          "18185BLZL25C2S014",
+          "18185BLZL25C3S020",
+          "20260212",
+          "20260225",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北电气自动化所文档员,张晓云,刘徙铎,封昊伟",
+        "v_raw": "河北分公司.电气自动化所",
+        "w_raw": "电气室,仪控一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 66,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BL-ZL-25C2-S-015",
+        "branch": "INT",
+        "title_keys": [
+          "18185BLZL25A3S015",
+          "18185BLZL25C2S015",
+          "18185BLZL25C3S019",
+          "20260212",
+          "20260225",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北核电工艺所文档员,白冬梅,刘丽然,杨振国",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "暖通室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 67,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BL-ZL-25C3-S-019",
+        "branch": "INT",
+        "title_keys": [
+          "18185BLZL25A3S015",
+          "18185BLZL25C2S015",
+          "18185BLZL25C3S019",
+          "20260212",
+          "20260225",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "白冬梅,刘丽然,杨振国,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "暖通室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 68,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BL-ZL-25C3-S-020",
+        "branch": "INT",
+        "title_keys": [
+          "18185BLZL25B1S015",
+          "18185BLZL25C2S014",
+          "18185BLZL25C3S020",
+          "20260212",
+          "20260225",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北电气自动化所文档员,张晓云,刘徙铎,封昊伟",
+        "v_raw": "河北分公司.电气自动化所",
+        "w_raw": "电气室,仪控一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 69,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BL-ZL-25C3-S-021",
+        "branch": "INT",
+        "title_keys": [
+          "18185BLZL25A2S019",
+          "18185BLZL25C2S012",
+          "18185BLZL25C3S021",
+          "20260212",
+          "20260225",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "王亚群,河北核电工艺所文档员,田新乐",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺布置二室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 70,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-BOP-ZL-25A4-S-061",
+        "branch": "INT",
+        "title_keys": [
+          "18185BOPZL25A4S061",
+          "20260303"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "梁卿达,河北建筑结构所文档员,周铭海,梁耀龙,靳鹏",
+        "v_raw": "河北分公司.建筑结构所",
+        "w_raw": "结构一室,结构二室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 71,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-CFE-ZL-25B3-S-008",
+        "branch": "INT",
+        "title_keys": [
+          "18185CFEZL25A6S025",
+          "18185CFEZL25B3S008",
+          "20260213",
+          "20260225"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "白兰,郭晨楠,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺系统室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 72,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-CSP-ZL-25A2-S-653",
+        "branch": "INT",
+        "title_keys": [
+          "18185CSPZL25A2S653",
+          "20260302"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "孟晨,张海波a,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "力学室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 73,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-EI-ZL-25A3-S-006",
+        "branch": "INT",
+        "title_keys": [
+          "18185EIZL25A3S006",
+          "18185EIZL25A4S006",
+          "18185EIZL25B1S011",
+          "18185EIZL25C1S008",
+          "18185EIZL25C3S011",
+          "18185EIZL25E6S006",
+          "20260224",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "梁耀龙,靳鹏,河北建筑结构所文档员,梁卿达,梁文龙",
+        "v_raw": "河北分公司.建筑结构所",
+        "w_raw": "建筑总图室,结构一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 74,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-EI-ZL-25A4-S-006",
+        "branch": "INT",
+        "title_keys": [
+          "18185EIZL25A3S006",
+          "18185EIZL25A4S006",
+          "18185EIZL25B1S011",
+          "18185EIZL25C1S008",
+          "18185EIZL25C3S011",
+          "18185EIZL25E6S006",
+          "20260224",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北建筑结构所文档员,梁卿达,梁文龙,梁耀龙,靳鹏",
+        "v_raw": "河北分公司.建筑结构所",
+        "w_raw": "结构一室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 75,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-EI-ZL-25B1-S-011",
+        "branch": "INT",
+        "title_keys": [
+          "18185EIZL25A3S006",
+          "18185EIZL25A4S006",
+          "18185EIZL25B1S011",
+          "18185EIZL25C1S008",
+          "18185EIZL25C3S011",
+          "18185EIZL25E6S006",
+          "20260224",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北建筑结构所文档员,梁文龙,梁卿达,梁耀龙,靳鹏",
+        "v_raw": "河北分公司.建筑结构所",
+        "w_raw": "结构一室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 76,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-EI-ZL-25C1-S-008",
+        "branch": "INT",
+        "title_keys": [
+          "18185EIZL25A3S006",
+          "18185EIZL25A4S006",
+          "18185EIZL25B1S011",
+          "18185EIZL25C1S008",
+          "18185EIZL25C3S011",
+          "18185EIZL25E6S006",
+          "20260224",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "梁耀龙,河北核工程设计所文档员,李欣,靳鹏,河北核电工艺所文档员,封昊伟,柳文旭,河北建筑结构所文档员,侯锋,刘卫隆,河北电气自动化所文档员,白冬梅,刘丽然,杨振国,张晓云,薛冰,梁卿达,张延景",
+        "v_raw": "河北分公司.建筑结构所,河北分公司.核工程研究设计所,河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "建筑总图室,仪控一室,通信室,水工室,暖通室,电气室,结构一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 77,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-EI-ZL-25C1-S-008",
+        "branch": "INT",
+        "title_keys": [
+          "18185EIZL25A3S006",
+          "18185EIZL25A4S006",
+          "18185EIZL25B1S011",
+          "18185EIZL25C1S008",
+          "18185EIZL25C3S011",
+          "18185EIZL25E6S006",
+          "20260224",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "梁耀龙,河北核工程设计所文档员,李欣,靳鹏,河北核电工艺所文档员,封昊伟,柳文旭,河北建筑结构所文档员,侯锋,刘卫隆,河北电气自动化所文档员,白冬梅,刘丽然,杨振国,张晓云,薛冰,梁卿达,张延景",
+        "v_raw": "河北分公司.建筑结构所,河北分公司.核工程研究设计所,河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "建筑总图室,仪控一室,通信室,水工室,暖通室,电气室,结构一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 78,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-EI-ZL-25C1-S-008",
+        "branch": "INT",
+        "title_keys": [
+          "18185EIZL25A3S006",
+          "18185EIZL25A4S006",
+          "18185EIZL25B1S011",
+          "18185EIZL25C1S008",
+          "18185EIZL25C3S011",
+          "18185EIZL25E6S006",
+          "20260224",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "梁耀龙,河北核工程设计所文档员,李欣,靳鹏,河北核电工艺所文档员,封昊伟,柳文旭,河北建筑结构所文档员,侯锋,刘卫隆,河北电气自动化所文档员,白冬梅,刘丽然,杨振国,张晓云,薛冰,梁卿达,张延景",
+        "v_raw": "河北分公司.建筑结构所,河北分公司.核工程研究设计所,河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "建筑总图室,仪控一室,通信室,水工室,暖通室,电气室,结构一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 79,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-EI-ZL-25C1-S-008",
+        "branch": "INT",
+        "title_keys": [
+          "18185EIZL25A3S006",
+          "18185EIZL25A4S006",
+          "18185EIZL25B1S011",
+          "18185EIZL25C1S008",
+          "18185EIZL25C3S011",
+          "18185EIZL25E6S006",
+          "20260224",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "梁耀龙,河北核工程设计所文档员,李欣,靳鹏,河北核电工艺所文档员,封昊伟,柳文旭,河北建筑结构所文档员,侯锋,刘卫隆,河北电气自动化所文档员,白冬梅,刘丽然,杨振国,张晓云,薛冰,梁卿达,张延景",
+        "v_raw": "河北分公司.建筑结构所,河北分公司.核工程研究设计所,河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "建筑总图室,仪控一室,通信室,水工室,暖通室,电气室,结构一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 80,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-EI-ZL-25C1-S-008",
+        "branch": "INT",
+        "title_keys": [
+          "18185EIZL25A3S006",
+          "18185EIZL25A4S006",
+          "18185EIZL25B1S011",
+          "18185EIZL25C1S008",
+          "18185EIZL25C3S011",
+          "18185EIZL25E6S006",
+          "20260224",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "梁耀龙,河北核工程设计所文档员,李欣,靳鹏,河北核电工艺所文档员,封昊伟,柳文旭,河北建筑结构所文档员,侯锋,刘卫隆,河北电气自动化所文档员,白冬梅,刘丽然,杨振国,张晓云,薛冰,梁卿达,张延景",
+        "v_raw": "河北分公司.建筑结构所,河北分公司.核工程研究设计所,河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "建筑总图室,仪控一室,通信室,水工室,暖通室,电气室,结构一室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 81,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-EI-ZL-25C3-S-011",
+        "branch": "INT",
+        "title_keys": [
+          "18185EIZL25A3S006",
+          "18185EIZL25A4S006",
+          "18185EIZL25B1S011",
+          "18185EIZL25C1S008",
+          "18185EIZL25C3S011",
+          "18185EIZL25E6S006",
+          "20260224",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北建筑结构所文档员,梁卿达,梁文龙,梁耀龙,靳鹏",
+        "v_raw": "河北分公司.建筑结构所",
+        "w_raw": "结构一室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 82,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-EI-ZL-25E6-S-006",
+        "branch": "INT",
+        "title_keys": [
+          "18185EIZL25A3S006",
+          "18185EIZL25A4S006",
+          "18185EIZL25B1S011",
+          "18185EIZL25C1S008",
+          "18185EIZL25C3S011",
+          "18185EIZL25E6S006",
+          "20260224",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "梁卿达,梁文龙,河北建筑结构所文档员,靳鹏,梁耀龙",
+        "v_raw": "河北分公司.建筑结构所",
+        "w_raw": "结构一室,建筑总图室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 83,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-FEP-ZL-25A4-S-029",
+        "branch": "INT",
+        "title_keys": [
+          "18185FEPZL25A4S029",
+          "20260227"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北核电工艺所文档员,张海波a,王浩杰",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "力学室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 84,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-FEP-ZL-25A4-S-030",
+        "branch": "INT",
+        "title_keys": [
+          "18185FEPZL25A4S030",
+          "20260227"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北核电工艺所文档员,张海波a,闫明兴",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "力学室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 85,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-FEP-ZL-25A4-S-031",
+        "branch": "INT",
+        "title_keys": [
+          "18185FEPZL25A4S031",
+          "20260227"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "张海波a,王浩杰,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "力学室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 86,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-FSP-ZL-25A4-S-036",
+        "branch": "INT",
+        "title_keys": [
+          "18185FSPZL25A4S036",
+          "20260224"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "张海波a,闫明兴,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "力学室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 87,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-FSP-ZL-25A4-S-037",
+        "branch": "INT",
+        "title_keys": [
+          "18185FSPZL25A4S037",
+          "20260224"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北核电工艺所文档员,张海波a,闫明兴",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "力学室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 88,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-FSP-ZL-25A4-S-038",
+        "branch": "INT",
+        "title_keys": [
+          "18185FSPZL25A4S038",
+          "20260224"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "张海波a,河北核电工艺所文档员,王浩杰",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "力学室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 89,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-FSP-ZL-25A4-S-039",
+        "branch": "INT",
+        "title_keys": [
+          "18185FSPZL25A4S039",
+          "20260224"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北核电工艺所文档员,张海波a,王浩杰",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "力学室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 90,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-FSP-ZL-25A4-S-040",
+        "branch": "INT",
+        "title_keys": [
+          "18185FSPZL25A4S040",
+          "20260226"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "河北核电工艺所文档员,王浩杰,张海波a",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "力学室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 91,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-FWD-ZL-25A4-S-020",
+        "branch": "INT",
+        "title_keys": [
+          "18185FWDZL25A4S020",
+          "20260227"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "孟晨,河北核电工艺所文档员,张海波a",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "力学室"
+      },
+      {
+        "project": "1818",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 92,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1818-5-GT-ZL-25A4-S-030",
+        "branch": "INT",
+        "title_keys": [
+          "18185GTZL25A4S030",
+          "20260228"
+        ],
+        "doc_tables": [
+          "INT_CHAIN"
+        ],
+        "x_raw": "靳鹏,梁耀龙,周铭海,申浩,张亚涛,梁卿达,河北建筑结构所文档员",
+        "v_raw": "河北分公司.建筑结构所",
+        "w_raw": "建筑总图室,结构二室,结构一室"
+      }
+    ]
+  }
+}

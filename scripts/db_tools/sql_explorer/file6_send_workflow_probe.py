@@ -12,13 +12,17 @@ from .composite_excel_sql_recheck import prefilter_sql
 from .file4_ah_owner_chain_probe import _owner_match, _remark_names
 from .file6_distribution_chain_probe import (
     PARENT_TABLE_BY_REPLY,
+    PARENT_FIELD_BY_REPLY,
     SEND_SIDE_TABLES,
+    _build_relation_map,
     _clean_text,
+    _expand_relation_ids,
     _filter_highest_version,
     _metric,
     _office_match,
     _org_match,
     _resolve_distribution_entities,
+    resolve_sql35_table_path,
     _safe_get,
     load_file6_rows,
     parse_department_tree,
@@ -34,6 +38,12 @@ from .validate_cims_sql_dump import iter_insert_rows, normalize_hex32, parse_cre
 def _parse_time(value: Any) -> Tuple[str, str]:
     text = _clean_text(value)
     return (text, text)
+
+
+def _add_unique(items: List[str], value: Any) -> None:
+    text = _clean_text(value)
+    if text and text not in items:
+        items.append(text)
 
 
 def parse_workflow_union_rows(path: Path, source_ids: Set[str]) -> Dict[str, Dict[str, Any]]:
@@ -69,25 +79,31 @@ def parse_workflow_union_rows(path: Path, source_ids: Set[str]) -> Dict[str, Dic
         actor_values: List[str] = []
         active_actor_values: List[str] = []
         source_types: List[str] = []
+        source_type_actor_values: Dict[str, List[str]] = {}
+        source_type_active_actor_values: Dict[str, List[str]] = {}
         for item in items:
+            source_type = _clean_text(item.get("source_type")) or "[unknown]"
+            if source_type not in source_types:
+                source_types.append(source_type)
             for value in (
                 item.get("created_by_id"),
                 item.get("modified_by_id"),
                 item.get("user_name"),
                 item.get("transactor_name"),
             ):
-                text = _clean_text(value)
-                if text and text not in actor_values:
-                    actor_values.append(text)
-                if _clean_text(item.get("is_active")) == "1" and text and text not in active_actor_values:
-                    active_actor_values.append(text)
-            source_type = _clean_text(item.get("source_type"))
-            if source_type and source_type not in source_types:
-                source_types.append(source_type)
+                _add_unique(actor_values, value)
+                source_bucket = source_type_actor_values.setdefault(source_type, [])
+                _add_unique(source_bucket, value)
+                if _clean_text(item.get("is_active")) == "1":
+                    _add_unique(active_actor_values, value)
+                    active_bucket = source_type_active_actor_values.setdefault(source_type, [])
+                    _add_unique(active_bucket, value)
         result[source_id] = {
             "actor_values": actor_values,
             "active_actor_values": active_actor_values,
             "source_types": source_types,
+            "source_type_actor_values": source_type_actor_values,
+            "source_type_active_actor_values": source_type_active_actor_values,
             "row_count": len(items),
         }
     return {"scanned": scanned, "matched": matched, "by_source": result}
@@ -125,16 +141,22 @@ def parse_vote_union_rows(path: Path, source_ids: Set[str]) -> Dict[str, Dict[st
     for source_id, items in grouped.items():
         operator_values: List[str] = []
         valid_operator_values: List[str] = []
+        activity_to_operator_values: Dict[str, List[str]] = {}
+        valid_activity_to_operator_values: Dict[str, List[str]] = {}
         for item in items:
             operator = _clean_text(item.get("operator"))
-            if operator and operator not in operator_values:
-                operator_values.append(operator)
-            if _clean_text(item.get("is_valid")) in {"1", "Y", "TRUE", "T"} and operator and operator not in valid_operator_values:
-                valid_operator_values.append(operator)
+            activity_name = _clean_text(item.get("activity_name")) or "[unknown]"
+            _add_unique(operator_values, operator)
+            _add_unique(activity_to_operator_values.setdefault(activity_name, []), operator)
+            if _clean_text(item.get("is_valid")) in {"1", "Y", "TRUE", "T"}:
+                _add_unique(valid_operator_values, operator)
+                _add_unique(valid_activity_to_operator_values.setdefault(activity_name, []), operator)
         latest_item = max(items, key=lambda item: _parse_time(item.get("operation_time")))
         result[source_id] = {
             "operator_values": operator_values,
             "valid_operator_values": valid_operator_values,
+            "activity_to_operator_values": activity_to_operator_values,
+            "valid_activity_to_operator_values": valid_activity_to_operator_values,
             "latest_operator": _clean_text(latest_item.get("operator")),
             "row_count": len(items),
         }
@@ -152,15 +174,30 @@ def _best_id(ids: Iterable[str], by_id: Dict[str, Dict[str, Any]]) -> str:
     return choice
 
 
-def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path, temp_dir: Path) -> Dict[str, Any]:
+def run(
+    excel_dir: Path,
+    sql35_dir: Path,
+    sql37_dir: Path,
+    output_path: Path,
+    temp_dir: Path,
+    doc_types: Sequence[str] | None = None,
+    detail_output: Path | None = None,
+) -> Dict[str, Any]:
     rows = load_file6_rows(excel_dir)
     version_best = _filter_highest_version(rows)
-    department_map = parse_department_tree(sql35_dir / "DEPARTMENT_20260305.sql")
-    user_map = parse_user_map(sql35_dir / "USER_20260305.sql", department_map)
+    department_map = parse_department_tree(resolve_sql35_table_path(sql35_dir, "DEPARTMENT"))
+    user_map = parse_user_map(resolve_sql35_table_path(sql35_dir, "USER"), department_map)
     roster_names = load_all_roster_names()
+    doc_type_filter = {_clean_text(item) for item in (doc_types or []) if _clean_text(item)}
 
-    send_rows = [row for row in rows if row["key_type"] not in {"empty_key", "int_key"} and row["e_key"]]
-    send_scan = scan_send_table(sql35_dir / "SENDRECEIVEDATA_20260305.sql", {row["e_key"] for row in send_rows})
+    send_rows = [
+        row
+        for row in rows
+        if row["key_type"] not in {"empty_key", "int_key"}
+        and row["e_key"]
+        and (not doc_type_filter or _clean_text(row["a_raw"]) in doc_type_filter)
+    ]
+    send_scan = scan_send_table(resolve_sql35_table_path(sql35_dir, "SENDRECEIVEDATA"), {row["e_key"] for row in send_rows})
 
     needed_send_ids: Set[str] = set()
     for mapping_name in ("rec_to_ids", "send_to_ids"):
@@ -170,7 +207,7 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path, te
     child_tables: Dict[str, Dict[str, Any]] = {}
     child_item_keys = {row["e_key"] for row in send_rows}
     for table_name in SEND_SIDE_TABLES:
-        sql_path = sql35_dir / f"{table_name}_20260305.sql"
+        sql_path = resolve_sql35_table_path(sql35_dir, table_name)
         if not sql_path.exists():
             continue
         child_tables[table_name] = scan_child_table(sql_path, table_name, needed_send_ids, child_item_keys)
@@ -179,15 +216,17 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path, te
         scan = child_tables.get(reply_table)
         if not scan:
             continue
+        parent_field = PARENT_FIELD_BY_REPLY.get(reply_table)
+        if not parent_field:
+            continue
         needed_parent_ids: Set[str] = set()
         for payload in scan["by_id"].values():
-            for field_name in ("CR", "TA", "NCR"):
-                rel_id = normalize_hex32(payload.get(field_name))
-                if rel_id:
-                    needed_parent_ids.add(rel_id)
+            rel_id = normalize_hex32(payload.get(parent_field))
+            if rel_id:
+                needed_parent_ids.add(rel_id)
         if not needed_parent_ids:
             continue
-        sql_path = sql35_dir / f"{parent_table}_20260305.sql"
+        sql_path = resolve_sql35_table_path(sql35_dir, parent_table)
         if not sql_path.exists():
             continue
         rescan = scan_child_table(sql_path, parent_table, needed_send_ids, child_item_keys, needed_ids=needed_parent_ids)
@@ -200,9 +239,12 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path, te
             base["by_id"].update(rescan.get("by_id", {}))
             for key, ids in rescan.get("send_to_ids", {}).items():
                 base["send_to_ids"][key].update(ids)
+            for key, ids in rescan.get("item_to_ids", {}).items():
+                base["item_to_ids"][key].update(ids)
 
-    ft_direct = scan_filetransmission_route(sql35_dir / "FILETRANSMISSION_20260305.sql", {row["e_key"] for row in send_rows})
-    obj_reply = scan_objectreplylink(sql35_dir / "OBJECTREPLYLINK_20260305.sql", {row["e_key"] for row in send_rows})
+    ft_direct = scan_filetransmission_route(resolve_sql35_table_path(sql35_dir, "FILETRANSMISSION"), {row["e_key"] for row in send_rows})
+    obj_reply = scan_objectreplylink(resolve_sql35_table_path(sql35_dir, "OBJECTREPLYLINK"), {row["e_key"] for row in send_rows})
+    relation_map = _build_relation_map(send_scan, ft_direct, *child_tables.values())
 
     for row in send_rows:
         row["version_best"] = (row["workbook"], row["excel_row"]) in version_best
@@ -229,12 +271,14 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path, te
             candidate_ids.update(obj_reply_payload.get("relation_ids", []))
             row["table_sources"].append("OBJECTREPLYLINK")
         for table_name, scan in child_tables.items():
-            child_ids = list(scan["send_to_ids"].get(send_id, set())) if send_id else []
+            child_ids: Set[str] = set(scan.get("item_to_ids", {}).get(row["e_key"], set()))
+            if send_id:
+                child_ids.update(scan["send_to_ids"].get(send_id, set()))
             if child_ids:
                 row["table_sources"].append(table_name)
                 candidate_ids.update(child_ids)
 
-        row["candidate_object_ids"] = sorted(candidate_ids)
+        row["candidate_object_ids"] = sorted(_expand_relation_ids(candidate_ids, relation_map))
 
     all_object_ids = {obj_id for row in send_rows for obj_id in row["candidate_object_ids"]}
 
@@ -250,20 +294,65 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path, te
     unresolved_examples: List[Dict[str, Any]] = []
     source_counter: Counter[str] = Counter()
     row_source_counter: Counter[str] = Counter()
+    detail_rows: List[Dict[str, Any]] = []
+    detail_enabled = detail_output is not None
 
     for row in send_rows:
         actor_values: List[str] = []
         source_types: List[str] = []
+        workflow_all_actor_values: List[str] = []
+        workflow_active_actor_values: List[str] = []
+        vote_all_operators: List[str] = []
+        vote_valid_operators: List[str] = []
+        workflow_source_type_actors: Dict[str, List[str]] = {}
+        workflow_source_type_active_actors: Dict[str, List[str]] = {}
+        vote_activity_operators: Dict[str, List[str]] = {}
+        vote_valid_activity_operators: Dict[str, List[str]] = {}
+        vote_source_type_operators: Dict[str, List[str]] = {}
+        vote_source_type_activity_operators: Dict[str, Dict[str, List[str]]] = {}
+        vote_valid_source_type_activity_operators: Dict[str, Dict[str, List[str]]] = {}
         for obj_id in row["candidate_object_ids"]:
             wf_payload = wf["by_source"].get(obj_id, {})
             vote_payload = vote["by_source"].get(obj_id, {})
+            obj_source_types = wf_payload.get("source_types", []) or ["[unknown]"]
             for value in wf_payload.get("actor_values", []):
-                if value and value not in actor_values:
-                    actor_values.append(value)
+                _add_unique(actor_values, value)
+                _add_unique(workflow_all_actor_values, value)
+            for value in wf_payload.get("active_actor_values", []):
+                _add_unique(workflow_active_actor_values, value)
+            for source_type, values in wf_payload.get("source_type_actor_values", {}).items():
+                bucket = workflow_source_type_actors.setdefault(source_type, [])
+                for value in values:
+                    _add_unique(bucket, value)
+            for source_type, values in wf_payload.get("source_type_active_actor_values", {}).items():
+                bucket = workflow_source_type_active_actors.setdefault(source_type, [])
+                for value in values:
+                    _add_unique(bucket, value)
             for value in vote_payload.get("operator_values", []):
-                if value and value not in actor_values:
-                    actor_values.append(value)
-            for source_type in wf_payload.get("source_types", []):
+                _add_unique(actor_values, value)
+                _add_unique(vote_all_operators, value)
+            for value in vote_payload.get("valid_operator_values", []):
+                _add_unique(vote_valid_operators, value)
+            for activity_name, values in vote_payload.get("activity_to_operator_values", {}).items():
+                activity_bucket = vote_activity_operators.setdefault(activity_name, [])
+                for value in values:
+                    _add_unique(activity_bucket, value)
+                for source_type in obj_source_types:
+                    source_bucket = vote_source_type_operators.setdefault(source_type, [])
+                    for value in values:
+                        _add_unique(source_bucket, value)
+                    activity_bucket_by_source = vote_source_type_activity_operators.setdefault(source_type, {}).setdefault(activity_name, [])
+                    for value in values:
+                        _add_unique(activity_bucket_by_source, value)
+            for activity_name, values in vote_payload.get("valid_activity_to_operator_values", {}).items():
+                activity_bucket = vote_valid_activity_operators.setdefault(activity_name, [])
+                for value in values:
+                    _add_unique(activity_bucket, value)
+                for source_type in obj_source_types:
+                    activity_bucket_by_source = vote_valid_source_type_activity_operators.setdefault(source_type, {}).setdefault(activity_name, [])
+                    for value in values:
+                        _add_unique(activity_bucket_by_source, value)
+            for source_type in obj_source_types:
                 if source_type and source_type not in source_types:
                     source_types.append(source_type)
         resolved = _resolve_distribution_entities(actor_values, user_map, department_map)
@@ -315,12 +404,60 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path, te
                 }
             )
 
+        if detail_enabled and row["version_best"]:
+            detail_rows.append(
+                {
+                    "project": row["project"],
+                    "workbook": row["workbook"],
+                    "excel_row": row["excel_row"],
+                    "a_raw": row["a_raw"],
+                    "e_raw": row["e_raw"],
+                    "x_raw": row["x_raw"],
+                    "v_raw": row["v_raw"],
+                    "w_raw": row["w_raw"],
+                    "table_sources": row["table_sources"],
+                    "candidate_object_ids": row["candidate_object_ids"],
+                    "workflow_source_types": row["workflow_source_types"],
+                    "workflow_object_hit_count": row["workflow_object_hit_count"],
+                    "workflow_people_all": row["workflow_people_all"],
+                    "workflow_org_values": row["workflow_org_values"],
+                    "workflow_office_values": row["workflow_office_values"],
+                    "workflow_all_actor_values": workflow_all_actor_values,
+                    "workflow_active_actor_values": workflow_active_actor_values,
+                    "workflow_source_type_actors": workflow_source_type_actors,
+                    "workflow_source_type_active_actors": workflow_source_type_active_actors,
+                    "vote_all_operators": vote_all_operators,
+                    "vote_valid_operators": vote_valid_operators,
+                    "vote_activity_operators": vote_activity_operators,
+                    "vote_valid_activity_operators": vote_valid_activity_operators,
+                    "vote_source_type_operators": vote_source_type_operators,
+                    "vote_source_type_activity_operators": vote_source_type_activity_operators,
+                    "vote_valid_source_type_activity_operators": vote_valid_source_type_activity_operators,
+                }
+            )
+
     version_rows = [row for row in send_rows if row["version_best"]]
+    by_type_metrics = {}
+    for doc_type in sorted({_clean_text(row["a_raw"]) for row in version_rows if _clean_text(row["a_raw"])}):
+        doc_rows = [row for row in version_rows if _clean_text(row["a_raw"]) == doc_type]
+        by_type_metrics[doc_type] = {
+            "row_count": len(doc_rows),
+            "rows_with_workflow_hits": sum(1 for row in doc_rows if row["workflow_object_hit_count"]),
+            "X_all": _metric(
+                doc_rows,
+                "x_raw",
+                lambda row: ",".join(row["workflow_people_all"]),
+                lambda excel, sql: _owner_match(excel, sql, user_map, roster_names),
+            ),
+            "V_all": _metric(doc_rows, "v_raw", lambda row: row["workflow_org_values"], _org_match),
+            "W_all": _metric(doc_rows, "w_raw", lambda row: row["workflow_office_values"], _office_match),
+        }
     payload = {
         "inputs": {
             "excel_dir": str(excel_dir),
             "sql35_dir": str(sql35_dir),
             "sql37_dir": str(sql37_dir),
+            "doc_types": sorted(doc_type_filter),
         },
         "row_counts": {
             "all_send_rows": len(send_rows),
@@ -363,7 +500,8 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path, te
                 ),
                 "V_all": _metric(version_rows, "v_raw", lambda row: row["workflow_org_values"], _org_match),
                 "W_all": _metric(version_rows, "w_raw", lambda row: row["workflow_office_values"], _office_match),
-            }
+            },
+            "by_type": by_type_metrics,
         },
         "source_counters": {
             "workflow_source_types": dict(source_counter.most_common(20)),
@@ -375,6 +513,24 @@ def run(excel_dir: Path, sql35_dir: Path, sql37_dir: Path, output_path: Path, te
         },
     }
     output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    if detail_output is not None:
+        detail_output.parent.mkdir(parents=True, exist_ok=True)
+        detail_output.write_text(
+            json.dumps(
+                {
+                    "inputs": payload["inputs"],
+                    "row_counts": payload["row_counts"],
+                    "table_scans": {
+                        "WORKFLOWPROCESSESBIND": payload["table_scans"]["WORKFLOWPROCESSESBIND"],
+                        "USERVOTERECORD": payload["table_scans"]["USERVOTERECORD"],
+                    },
+                    "rows": detail_rows,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
     return payload
 
 
@@ -385,13 +541,28 @@ def main() -> None:
     parser.add_argument("--sql37-dir", type=Path, default=Path("example/CIMS-sql-3.7"))
     parser.add_argument("--output", type=Path, default=Path("tmp/file6_send_workflow_probe_20260312.json"))
     parser.add_argument("--temp-dir", type=Path, default=Path("tmp/file6_send_workflow_probe"))
+    parser.add_argument("--detail-output", type=Path, help="Optional row-level detail JSON for type-specific role probing.")
+    parser.add_argument("--doc-types", nargs="*", help="Optional A-column doc types to probe. Supports comma-separated values.")
     args = parser.parse_args()
 
-    payload = run(args.excel_dir, args.sql35_dir, args.sql37_dir, args.output, args.temp_dir)
+    doc_types: List[str] = []
+    for raw_value in args.doc_types or []:
+        doc_types.extend([item.strip() for item in raw_value.split(",") if item.strip()])
+
+    payload = run(
+        args.excel_dir,
+        args.sql35_dir,
+        args.sql37_dir,
+        args.output,
+        args.temp_dir,
+        doc_types=doc_types or None,
+        detail_output=args.detail_output,
+    )
     print(
         json.dumps(
             {
                 "output": str(args.output),
+                "doc_types": payload["inputs"]["doc_types"],
                 "version_best_rows": payload["row_counts"]["version_best_send_rows"],
                 "rows_with_workflow_hits": payload["row_counts"]["version_best_rows_with_workflow_hits"],
                 "x_rate": payload["workflow_metrics"]["version_best"]["X_all"]["rate"],

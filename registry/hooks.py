@@ -94,11 +94,11 @@ def _ensure_data_folder_from_path(source_path: Optional[str]) -> None:
         if not folder:
             return
 
-        # 向上寻找包含 .registry 的目录（数据根目录的标志）
+        # 向上寻找包含 registry-sql 的目录（数据根目录的标志）
         search_dir = folder
         for _ in range(5):
             try:
-                registry_dir_candidate = os.path.join(search_dir, ".registry")
+                registry_dir_candidate = os.path.join(search_dir, "registry-sql")
                 if os.path.isdir(registry_dir_candidate):
                     set_data_folder(search_dir)
                     return
@@ -109,7 +109,7 @@ def _ensure_data_folder_from_path(source_path: Optional[str]) -> None:
                 break
             search_dir = parent
 
-        # 如果没找到 .registry 目录，使用文件所在目录
+        # 如果没找到 registry-sql 目录，使用文件所在目录
         set_data_folder(folder)
     except Exception:
         pass
@@ -132,7 +132,7 @@ def set_data_folder(folder_path: str):
     设置数据文件夹路径（用于多用户协作）
     
     应该在程序启动时调用，传入公共盘的数据文件夹路径。
-    数据库将自动创建在该文件夹下的.registry子目录中。
+    数据库将自动创建在该文件夹下的registry-sql子目录中。
     
     参数:
         folder_path: 数据文件夹的绝对路径
