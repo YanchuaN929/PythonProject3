@@ -130,14 +130,30 @@ def test_get_display_status_uses_read_connection(monkeypatch):
     from registry import service as registry_service
 
     class FakeCursor:
-        def __init__(self, row):
+        def __init__(self, row=None, rows=None):
             self._row = row
+            self._rows = rows or []
 
         def fetchone(self):
             return self._row
 
+        def fetchall(self):
+            return self._rows
+
     class FakeConn:
-        def execute(self, _sql, _params):
+        def execute(self, sql, _params=()):
+            if "PRAGMA table_info" in sql:
+                return FakeCursor(
+                    rows=[
+                        (0, "status", "TEXT", 0, None, 0),
+                        (1, "display_status", "TEXT", 0, None, 0),
+                        (2, "assigned_by", "TEXT", 0, None, 0),
+                        (3, "role", "TEXT", 0, None, 0),
+                        (4, "confirmed_at", "TEXT", 0, None, 0),
+                        (5, "responsible_person", "TEXT", 0, None, 0),
+                        (6, "ignored", "INTEGER", 0, None, 0),
+                    ]
+                )
             return FakeCursor(("open", "待完成", None, None, None, "张三", 0))
 
     monkeypatch.setattr(registry_service, "get_read_connection", lambda _db_path: FakeConn())

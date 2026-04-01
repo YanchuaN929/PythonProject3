@@ -73,26 +73,28 @@ def test_resolve_update_runner_does_not_fallback_to_cli_when_frozen(monkeypatch,
     assert runner is None
 
 
-def test_launch_update_executable_uses_shell_execute(monkeypatch, tmp_path):
+def test_launch_update_executable_uses_visible_detached_process(monkeypatch, tmp_path):
     manager = UpdateManager(str(tmp_path), log_fn=lambda _msg: None)
     update_exe = tmp_path / "update.exe"
     update_exe.write_text("stub", encoding="utf-8")
     captured = {}
 
-    class DummyShell32:
-        @staticmethod
-        def ShellExecuteW(_hwnd, operation, file, params, directory, show_cmd):
-            captured["operation"] = operation
-            captured["file"] = file
-            captured["params"] = params
-            captured["directory"] = directory
-            captured["show_cmd"] = show_cmd
-            return 33
+    monkeypatch.setattr("update.manager.subprocess.CREATE_NEW_CONSOLE", 0x00000010, raising=False)
+    monkeypatch.setattr("update.manager.subprocess.CREATE_NEW_PROCESS_GROUP", 0x00000200, raising=False)
+    monkeypatch.setattr("update.manager.subprocess.CREATE_BREAKAWAY_FROM_JOB", 0x01000000, raising=False)
 
-    class DummyWindll:
-        shell32 = DummyShell32()
+    def fake_popen(cmd, cwd=None, close_fds=None, creationflags=None):
+        captured["cmd"] = cmd
+        captured["cwd"] = cwd
+        captured["close_fds"] = close_fds
+        captured["creationflags"] = creationflags
 
-    monkeypatch.setattr("update.manager.ctypes.windll", DummyWindll())
+        class _DummyProc:
+            pass
+
+        return _DummyProc()
+
+    monkeypatch.setattr("update.manager.subprocess.Popen", fake_popen)
 
     launched = manager._launch_update_executable(
         str(update_exe),
@@ -100,11 +102,11 @@ def test_launch_update_executable_uses_shell_execute(monkeypatch, tmp_path):
     )
 
     assert launched is True
-    assert captured["operation"] == "open"
-    assert captured["file"] == str(update_exe)
-    assert "--remote" in captured["params"]
-    assert captured["directory"] == str(tmp_path)
-    assert captured["show_cmd"] == 1
+    assert captured["cmd"][0] == str(update_exe)
+    assert "--remote" in captured["cmd"]
+    assert captured["cwd"] == str(tmp_path)
+    assert captured["close_fds"] is True
+    assert captured["creationflags"] == 0x01000210
 
 
 def test_wait_for_main_exit_prefers_pid(monkeypatch):
@@ -291,3 +293,78 @@ def test_fill_missing_args_supports_double_click(monkeypatch, tmp_path):
     assert os.path.normpath(args.remote) == os.path.normpath(str(remote_dir))
     assert args.version == "1.2.3"
     assert args.main_exe == "接口筛选.exe"
+
+
+def test_update_fails_when_critical_locked_files_remain(monkeypatch, tmp_path):
+    remote_dir = tmp_path / "remote" / "EXE"
+    local_dir = tmp_path / "local"
+    remote_dir.mkdir(parents=True, exist_ok=True)
+    local_dir.mkdir(parents=True, exist_ok=True)
+
+    class Args:
+        remote = str(remote_dir)
+        local = str(local_dir)
+        version = "1.2.3"
+        resume = "startup"
+        main_exe = "接口筛选.exe"
+        main_pid = 123
+        auto_mode = False
+
+    monkeypatch.setattr(updater_cli, "get_current_executable", lambda: "update.exe")
+    monkeypatch.setattr(updater_cli, "wait_for_main_exit", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(updater_cli, "copy_directory_atomic", lambda *_args, **_kwargs: ["_internal\\python38.dll"])
+
+    restart_calls = []
+    monkeypatch.setattr(
+        updater_cli,
+        "restart_main_program",
+        lambda *_args, **_kwargs: restart_calls.append("restart"),
+    )
+
+    assert updater_cli.perform_update(Args()) is False
+    assert restart_calls == []
+
+
+def test_schedule_exit_for_update_has_thread_fallback(monkeypatch):
+    from base import ExcelProcessorApp
+
+    events = []
+
+    class DummyRoot:
+        @staticmethod
+        def after(_delay, _callback):
+            events.append("after_scheduled")
+
+        @staticmethod
+        def quit():
+            events.append("quit")
+
+        @staticmethod
+        def destroy():
+            events.append("destroy")
+
+    class ImmediateThread:
+        def __init__(self, target=None, daemon=None):
+            self._target = target
+
+        def start(self):
+            if self._target:
+                self._target()
+
+    app = ExcelProcessorApp.__new__(ExcelProcessorApp)
+    app.root = DummyRoot()
+    app._update_shutdown_scheduled = False
+    app._log_update_message = lambda _msg: events.append("log")
+    app._log_exit_reason = lambda reason: events.append(reason)
+
+    monkeypatch.setattr("base.threading.Thread", ImmediateThread)
+    monkeypatch.setattr("base.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("base.os._exit", lambda code: events.append(f"exit:{code}"))
+
+    app._schedule_exit_for_update()
+
+    assert "after_scheduled" in events
+    assert "quit" in events
+    assert "destroy" in events
+    assert "update_exit" in events
+    assert "exit:0" in events

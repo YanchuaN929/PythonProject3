@@ -57,3 +57,23 @@ def test_on_assigned_retries_when_database_locked(monkeypatch):
     )
 
     assert attempts["count"] == 3
+
+
+def test_malformed_error_disables_registry_runtime(monkeypatch):
+    from registry import hooks
+
+    hooks._RUNTIME_DISABLED_REASON = ""
+    hooks._RUNTIME_DISABLE_NOTIFIED = False
+
+    notified = []
+    monkeypatch.setattr(
+        "services.db_status.notify_error",
+        lambda message, show_dialog=True: notified.append((message, show_dialog)),
+    )
+
+    hooks._handle_runtime_registry_error(Exception("database disk image is malformed"))
+
+    assert "malformed" in hooks._RUNTIME_DISABLED_REASON.lower()
+    assert notified
+    assert notified[0][1] is True
+    assert hooks._enabled({"registry_enabled": True}) is False

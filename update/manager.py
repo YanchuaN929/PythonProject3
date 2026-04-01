@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import os
-import ctypes
 import subprocess
 import sys
 from datetime import datetime
@@ -219,21 +218,26 @@ class UpdateManager:
         return None
 
     def _launch_update_executable(self, exe_path: str, arguments: list[str]) -> bool:
-        """用 ShellExecute 独立拉起 update.exe，避免主程序退出时连带终止子进程。"""
-        params = subprocess.list2cmdline(arguments)
-        self._write_update_launch_trace(f"shell_execute start exe={exe_path} params={params}")
-        result = ctypes.windll.shell32.ShellExecuteW(
-            None,
-            "open",
-            exe_path,
-            params,
-            self.app_root,
-            1,
+        """用独立进程拉起 update.exe，并保持更新窗口可见。"""
+        cmd = [exe_path, *arguments]
+        creationflags = 0
+        for flag_name in (
+            "CREATE_NEW_CONSOLE",
+            "CREATE_NEW_PROCESS_GROUP",
+            "CREATE_BREAKAWAY_FROM_JOB",
+        ):
+            creationflags |= int(getattr(subprocess, flag_name, 0))
+
+        self._write_update_launch_trace(
+            f"popen start exe={exe_path} args={subprocess.list2cmdline(arguments)} creationflags={creationflags}"
         )
-        if result <= 32:
-            self._write_update_launch_trace(f"shell_execute failed code={result}")
-            raise OSError(f"ShellExecuteW failed: {result}")
-        self._write_update_launch_trace(f"shell_execute success code={result}")
+        subprocess.Popen(
+            cmd,
+            cwd=self.app_root,
+            close_fds=True,
+            creationflags=creationflags,
+        )
+        self._write_update_launch_trace("popen success")
         return True
 
     def _write_update_launch_trace(self, message: str) -> None:

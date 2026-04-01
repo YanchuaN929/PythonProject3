@@ -445,6 +445,7 @@ def analyze_locked_files(locked_files: list) -> dict:
     critical_patterns = [
         # Python 核心 - 只有在 Python 版本升级时才变化
         "python3",  # python3xx.dll
+        "base_library.zip",
     ]
     
     # 安全跳过的文件（运行时库，通常不变）
@@ -483,6 +484,21 @@ def analyze_locked_files(locked_files: list) -> dict:
         result["unknown"].append(file_path)
     
     return result
+
+
+def _has_restart_blocking_locks(analysis: dict) -> bool:
+    """判断被占用文件是否会导致重启后程序不完整。"""
+    if analysis.get("critical"):
+        return True
+
+    blocking_suffixes = (".dll", ".pyd", ".exe", ".zip")
+    for file_path in analysis.get("unknown", []):
+        normalized = str(file_path).replace("/", "\\").lower()
+        if normalized.endswith(blocking_suffixes):
+            return True
+        if "\\_internal\\" in normalized:
+            return True
+    return False
 
 
 def perform_update(args) -> bool:
@@ -553,6 +569,11 @@ def perform_update(args) -> bool:
                     log(f"    - {f}")
             
             log("-" * 40)
+
+            if _has_restart_blocking_locks(analysis):
+                log("检测到关键运行文件仍被占用，本次更新终止，避免重启后出现运行时损坏。", "ERROR")
+                log("请确认旧程序已完全退出后重新执行更新。", "ERROR")
+                return False
         
         # 重启主程序
         log("步骤 3/3: 重启主程序...")

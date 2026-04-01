@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional, List
 from .db import get_connection, get_read_connection, close_connection_after_use
 from .models import Status, EventType
+from .recovery import row_to_dict, select_available_columns
 from .util import make_task_id, make_business_id
 
 def find_task_by_business_id(
@@ -38,40 +39,66 @@ def find_task_by_business_id(
     business_id = make_business_id(file_type, project_id, interface_id)
     
     try:
-        cursor = conn.execute("""
-            SELECT id, source_file, row_index, interface_time, 
-                   status, display_status, responsible_person,
-                   assigned_by, assigned_at, confirmed_by, completed_at, completed_by, confirmed_at,
-                   ignored, ignored_at, ignored_by, interface_time_when_ignored, ignored_reason
+        preferred_columns = [
+            "id",
+            "source_file",
+            "row_index",
+            "interface_time",
+            "status",
+            "display_status",
+            "responsible_person",
+            "assigned_by",
+            "assigned_at",
+            "confirmed_by",
+            "completed_at",
+            "completed_by",
+            "confirmed_at",
+            "ignored",
+            "ignored_at",
+            "ignored_by",
+            "interface_time_when_ignored",
+            "ignored_reason",
+        ]
+        selected_columns = select_available_columns(conn, "tasks", preferred_columns)
+        if not selected_columns:
+            return None
+
+        where_sql = "business_id = ?" if "business_id" in select_available_columns(conn, "tasks", ["business_id"]) else "file_type = ? AND project_id = ? AND interface_id = ?"
+        params = (business_id,) if "business_id" in where_sql else (file_type, project_id, interface_id)
+        status_filter = " AND status != 'archived'" if "status" in selected_columns or "status" in select_available_columns(conn, "tasks", ["status"]) else ""
+        order_by = "last_seen_at DESC" if "last_seen_at" in select_available_columns(conn, "tasks", ["last_seen_at"]) else "rowid DESC"
+        cursor = conn.execute(
+            f"""
+            SELECT {", ".join(selected_columns)}
             FROM tasks
-            WHERE business_id = ?
-              AND status != 'archived'
-            ORDER BY last_seen_at DESC
+            WHERE {where_sql}{status_filter}
+            ORDER BY {order_by}
             LIMIT 1
-        """, (business_id,))
-        
+            """,
+            params,
+        )
+
         row = cursor.fetchone()
         if row:
-            return {
-                'id': row[0],
-                'source_file': row[1],
-                'row_index': row[2],
-                'interface_time': row[3],
-                'status': row[4],
-                'display_status': row[5],
-                'responsible_person': row[6],
-                'assigned_by': row[7],
-                'assigned_at': row[8],
-                'confirmed_by': row[9],
-                'completed_at': row[10],
-                'completed_by': row[11],
-                'confirmed_at': row[12],
-                'ignored': row[13],
-                'ignored_at': row[14],
-                'ignored_by': row[15],
-                'interface_time_when_ignored': row[16],
-                'ignored_reason': row[17]
-            }
+            return row_to_dict(
+                row,
+                selected_columns,
+                defaults={
+                    "display_status": None,
+                    "responsible_person": None,
+                    "assigned_by": None,
+                    "assigned_at": None,
+                    "confirmed_by": None,
+                    "completed_at": None,
+                    "completed_by": None,
+                    "confirmed_at": None,
+                    "ignored": 0,
+                    "ignored_at": None,
+                    "ignored_by": None,
+                    "interface_time_when_ignored": None,
+                    "ignored_reason": None,
+                },
+            )
         return None
     finally:
         if owns_conn:
@@ -883,6 +910,14 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
             return False
     
     try:
+        selected_columns = select_available_columns(
+            conn,
+            "tasks",
+            ["status", "display_status", "assigned_by", "role", "confirmed_at", "responsible_person", "ignored"],
+        )
+        if not selected_columns:
+            return {}
+
         for key in task_keys:
             tid = make_task_id(
                 key['file_type'],
@@ -898,8 +933,8 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
             
             # 查询任务信息
             cursor = conn.execute(
-                """
-                SELECT status, display_status, assigned_by, role, confirmed_at, responsible_person, ignored
+                f"""
+                SELECT {", ".join(selected_columns)}
                 FROM tasks
                 WHERE id = ?
                 """,
@@ -911,7 +946,24 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
                 # 任务不存在，不显示状态
                 continue
             
-            status, display_status, assigned_by, role, confirmed_at, responsible_person, ignored = row
+            task = row_to_dict(
+                row,
+                selected_columns,
+                defaults={
+                    "status": "open",
+                    "display_status": None,
+                    "assigned_by": None,
+                    "role": "",
+                    "confirmed_at": None,
+                    "responsible_person": None,
+                    "ignored": 0,
+                },
+            )
+            display_status = task["display_status"]
+            role = task["role"]
+            confirmed_at = task["confirmed_at"]
+            responsible_person = task["responsible_person"]
+            ignored = task["ignored"]
             
             # 【新增】如果任务被忽略，完全不返回（UI中会被过滤）
             if ignored == 1:
@@ -1546,34 +1598,91 @@ def query_task_history(db_path: str, wal: bool, project_id: str, interface_id: s
     conn = get_connection(db_path, wal)
     
     try:
+        selected_columns = select_available_columns(
+            conn,
+            "tasks",
+            [
+                "id",
+                "file_type",
+                "project_id",
+                "interface_id",
+                "source_file",
+                "row_index",
+                "business_id",
+                "department",
+                "interface_time",
+                "role",
+                "status",
+                "completed_at",
+                "completed_by",
+                "confirmed_at",
+                "confirmed_by",
+                "assigned_by",
+                "assigned_at",
+                "display_status",
+                "responsible_person",
+                "response_number",
+                "ignored",
+                "ignored_at",
+                "ignored_by",
+                "interface_time_when_ignored",
+                "ignored_reason",
+                "first_seen_at",
+                "last_seen_at",
+                "missing_since",
+                "archive_reason",
+                "archived_at",
+            ],
+        )
+        if not selected_columns:
+            return []
+
+        has_business_id = "business_id" in select_available_columns(conn, "tasks", ["business_id"])
+        order_by = "first_seen_at DESC" if "first_seen_at" in selected_columns else "rowid DESC"
         if file_type:
-            # 精确查询特定文件类型
-            business_id = f"{file_type}|{project_id}|{interface_id}"
-            sql = """
-                SELECT * FROM tasks 
-                WHERE business_id = ? 
-                ORDER BY first_seen_at DESC
-            """
-            params = (business_id,)
+            if has_business_id:
+                business_id = f"{file_type}|{project_id}|{interface_id}"
+                sql = f"""
+                    SELECT {", ".join(selected_columns)}
+                    FROM tasks
+                    WHERE business_id = ?
+                    ORDER BY {order_by}
+                """
+                params = (business_id,)
+            else:
+                sql = f"""
+                    SELECT {", ".join(selected_columns)}
+                    FROM tasks
+                    WHERE file_type = ? AND project_id = ? AND interface_id = ?
+                    ORDER BY {order_by}
+                """
+                params = (file_type, project_id, interface_id)
         else:
-            # 查询所有文件类型
-            business_id_pattern = f"%|{project_id}|{interface_id}"
-            sql = """
-                SELECT * FROM tasks 
-                WHERE business_id LIKE ? 
-                ORDER BY first_seen_at DESC
-            """
-            params = (business_id_pattern,)
+            if has_business_id:
+                business_id_pattern = f"%|{project_id}|{interface_id}"
+                sql = f"""
+                    SELECT {", ".join(selected_columns)}
+                    FROM tasks
+                    WHERE business_id LIKE ?
+                    ORDER BY {order_by}
+                """
+                params = (business_id_pattern,)
+            else:
+                sql = f"""
+                    SELECT {", ".join(selected_columns)}
+                    FROM tasks
+                    WHERE project_id = ? AND interface_id = ?
+                    ORDER BY {order_by}
+                """
+                params = (project_id, interface_id)
         
         cursor = conn.execute(sql, params)
         rows = cursor.fetchall()
         
         # 转换为字典列表
-        columns = [desc[0] for desc in cursor.description]
         results = []
         for row in rows:
-            task = dict(zip(columns, row))
-            results.append(task)
+            results.append(row_to_dict(row, selected_columns))
         
         return results
         
@@ -1615,27 +1724,62 @@ def find_tasks_for_force_assign(
     business_id = make_business_id(file_type, project_id, interface_id)
     
     try:
-        cursor = conn.execute("""
-            SELECT source_file, row_index, file_type, project_id, interface_id,
-                   responsible_person, display_status, status
-            FROM tasks
-            WHERE business_id = ?
-              AND status != 'archived'
-            ORDER BY last_seen_at DESC
-        """, (business_id,))
+        selected_columns = select_available_columns(
+            conn,
+            "tasks",
+            [
+                "source_file",
+                "row_index",
+                "file_type",
+                "project_id",
+                "interface_id",
+                "responsible_person",
+                "display_status",
+                "status",
+            ],
+        )
+        if not selected_columns:
+            return []
+
+        has_business_id = "business_id" in select_available_columns(conn, "tasks", ["business_id"])
+        status_filter = " AND status != 'archived'" if "status" in selected_columns else ""
+        order_by = "last_seen_at DESC" if "last_seen_at" in select_available_columns(conn, "tasks", ["last_seen_at"]) else "rowid DESC"
+        if has_business_id:
+            sql = f"""
+                SELECT {", ".join(selected_columns)}
+                FROM tasks
+                WHERE business_id = ?{status_filter}
+                ORDER BY {order_by}
+            """
+            params = (business_id,)
+        else:
+            sql = f"""
+                SELECT {", ".join(selected_columns)}
+                FROM tasks
+                WHERE file_type = ? AND project_id = ? AND interface_id = ?{status_filter}
+                ORDER BY {order_by}
+            """
+            params = (file_type, project_id, interface_id)
+
+        cursor = conn.execute(sql, params)
         
         rows = cursor.fetchall()
         results = []
         for row in rows:
+            task = row_to_dict(
+                row,
+                selected_columns,
+                defaults={"responsible_person": None, "display_status": None, "status": "open"},
+            )
             results.append({
-                'source_file': row[0],
-                'row_index': row[1],
-                'file_type': row[2],
-                'project_id': row[3],
-                'interface_id': row[4],
-                'responsible_person': row[5],
-                'display_status': row[6],
-                'status': row[7],
+                'source_file': task.get('source_file', ''),
+                'row_index': task.get('row_index', 0),
+                'file_type': task.get('file_type', file_type),
+                'project_id': task.get('project_id', project_id),
+                'interface_id': task.get('interface_id', interface_id),
+                'responsible_person': task.get('responsible_person'),
+                'display_status': task.get('display_status'),
+                'status': task.get('status', 'open'),
             })
         return results
         

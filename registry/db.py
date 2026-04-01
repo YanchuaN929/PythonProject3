@@ -370,6 +370,28 @@ def get_connection(db_path: str, wal: bool = True) -> sqlite3.Connection:
         db_dir = os.path.dirname(db_path)
         if db_dir and not os.path.exists(db_dir):
             os.makedirs(db_dir, exist_ok=True)
+
+        # 连接前先做兼容探测；若检测到部分损坏则尽量先重建，再继续正常迁移/初始化。
+        try:
+            from .recovery import ensure_database_compatible
+
+            compatibility = ensure_database_compatible(db_path)
+            if compatibility.get("status") == "recovered":
+                _diag_log(
+                    "db_recovered",
+                    db_path=db_path,
+                    tasks=compatibility.get("tasks", 0),
+                    events=compatibility.get("events", 0),
+                    ignored_snapshots=compatibility.get("ignored_snapshots", 0),
+                )
+            elif compatibility.get("status") == "recover_failed":
+                _diag_log(
+                    "db_recover_failed",
+                    db_path=db_path,
+                    error=compatibility.get("recover_error", ""),
+                )
+        except Exception as e:
+            print(f"[Registry] 数据库兼容探测失败: {e}")
         
         # 缓存网络路径检测结果（按 db_path 维度缓存）
         if _FORCE_NETWORK_MODE:

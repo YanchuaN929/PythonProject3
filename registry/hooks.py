@@ -87,6 +87,48 @@ def _retry_on_lock(operation_name: str, func, max_retries: int = 8):
 # 【多用户协作】全局数据文件夹路径，用于确定共享数据库位置
 _DATA_FOLDER = None
 _DISABLED_NOTIFIED = False
+_RUNTIME_DISABLED_REASON = ""
+_RUNTIME_DISABLE_NOTIFIED = False
+
+
+def _is_malformed_error(error: Exception) -> bool:
+    text = str(error).lower()
+    return (
+        "database disk image is malformed" in text
+        or "file is not a database" in text
+        or "malformed" in text
+    )
+
+
+def _disable_registry_runtime(message: str, *, show_dialog: bool = True) -> None:
+    global _RUNTIME_DISABLED_REASON, _RUNTIME_DISABLE_NOTIFIED
+    _RUNTIME_DISABLED_REASON = message
+    if _RUNTIME_DISABLE_NOTIFIED:
+        return
+    _RUNTIME_DISABLE_NOTIFIED = True
+    try:
+        from services.db_status import notify_error
+        notify_error(message, show_dialog=show_dialog)
+    except Exception:
+        print(f"[Registry] {message}")
+
+
+def _handle_runtime_registry_error(error: Exception) -> None:
+    if _is_malformed_error(error):
+        _disable_registry_runtime(
+            "共享 Registry 数据库已损坏（database disk image is malformed），本次运行已暂停 Registry 功能，请联系管理员修复共享盘 .registry/registry.db。",
+            show_dialog=True,
+        )
+        return
+
+    try:
+        from services.db_status import notify_error
+        if _is_lock_error(error):
+            notify_error("数据库被其他用户锁定，系统已自动重试，请稍后再试", show_dialog=False)
+        else:
+            notify_error(str(error), show_dialog=True)
+    except Exception:
+        pass
 
 def _normalize_folder_path(path: str) -> str:
     if not path:
@@ -163,8 +205,10 @@ def set_data_folder(folder_path: str):
     参数:
         folder_path: 数据文件夹的绝对路径
     """
-    global _DATA_FOLDER
+    global _DATA_FOLDER, _RUNTIME_DISABLED_REASON, _RUNTIME_DISABLE_NOTIFIED
     _DATA_FOLDER = folder_path
+    _RUNTIME_DISABLED_REASON = ""
+    _RUNTIME_DISABLE_NOTIFIED = False
     # 在“允许触网”的时机（用户刷新/选择目录后）主动校验一次 registry 目录可用性。
     # 若不可用：直接禁用并提示（不回退到本地 result_cache/registry.db）。
     try:
@@ -241,7 +285,7 @@ def _cfg():
 
 def _enabled(cfg: dict) -> bool:
     """检查registry是否启用（内部辅助函数）"""
-    return bool(cfg.get('registry_enabled', True))
+    return bool(cfg.get('registry_enabled', True)) and not bool(_RUNTIME_DISABLED_REASON)
 
 
 def _handle_maintenance_mode(error: Exception):
@@ -395,16 +439,7 @@ def on_process_done(
             traceback=tb_text,
         )
         
-        # 通知数据库状态显示器
-        try:
-            from services.db_status import notify_error
-            if _is_lock_error(e):
-                # 锁冲突属于可恢复问题，避免频繁打断用户操作。
-                notify_error("数据库被其他用户锁定，系统已自动重试，请稍后再试", show_dialog=False)
-            else:
-                notify_error(str(e), show_dialog=True)
-        except ImportError:
-            pass
+        _handle_runtime_registry_error(e)
     finally:
         close_connection_after_use()
 
@@ -459,6 +494,7 @@ def on_export_done(
         _handle_maintenance_mode(e)
     except Exception as e:
         print(f"[Registry] on_export_done 失败: {e}")
+        _handle_runtime_registry_error(e)
     finally:
         close_connection_after_use()
 
@@ -544,6 +580,7 @@ def on_assigned(
         print(f"[Registry] on_assigned 失败: {e}")
         import traceback
         traceback.print_exc()
+        _handle_runtime_registry_error(e)
     finally:
         close_connection_after_use()
 
@@ -707,6 +744,7 @@ def on_response_written(
         print(f"[Registry] on_response_written 失败: {e}")
         import traceback
         traceback.print_exc()
+        _handle_runtime_registry_error(e)
     finally:
         close_connection_after_use()
 
@@ -778,6 +816,7 @@ def on_confirmed_by_superior(
         print(f"[Registry] on_confirmed_by_superior 失败: {e}")
         import traceback
         traceback.print_exc()
+        _handle_runtime_registry_error(e)
     finally:
         close_connection_after_use()
 
@@ -817,6 +856,7 @@ def on_unconfirmed_by_superior(
         print(f"[Registry] on_unconfirmed_by_superior 失败: {e}")
         import traceback
         traceback.print_exc()
+        _handle_runtime_registry_error(e)
     finally:
         close_connection_after_use()
 
@@ -857,6 +897,7 @@ def on_scan_finalize(
         _handle_maintenance_mode(e)
     except Exception as e:
         print(f"[Registry] on_scan_finalize 失败: {e}")
+        _handle_runtime_registry_error(e)
     finally:
         close_connection_after_use()
 
@@ -889,6 +930,7 @@ def write_event_only(event: str, payload: dict) -> None:
         _handle_maintenance_mode(e)
     except Exception as e:
         print(f"[Registry] write_event_only 失败: {e}")
+        _handle_runtime_registry_error(e)
     finally:
         close_connection_after_use()
 

@@ -725,8 +725,13 @@ class ExcelProcessorApp:
             return
         self._update_shutdown_scheduled = True
         self._log_update_message("已触发自动更新，程序即将退出以完成更新")
+        shutdown_delay_ms = 1200
+        shutdown_started = threading.Event()
 
         def _perform_shutdown():
+            if shutdown_started.is_set():
+                return
+            shutdown_started.set()
             try:
                 root = getattr(self, 'root', None)
                 if root:
@@ -743,13 +748,15 @@ class ExcelProcessorApp:
                 os._exit(0)
 
         try:
-            self.root.after(500, _perform_shutdown)
+            self.root.after(shutdown_delay_ms, _perform_shutdown)
         except Exception:
-            def _delayed_exit():
-                time.sleep(0.5)
-                _perform_shutdown()
+            pass
 
-            threading.Thread(target=_delayed_exit, daemon=True).start()
+        def _delayed_exit():
+            time.sleep(max(shutdown_delay_ms / 1000.0, 1.2))
+            _perform_shutdown()
+
+        threading.Thread(target=_delayed_exit, daemon=True).start()
 
     def _schedule_resume_action(self):
         if not getattr(self, 'resume_action', ''):

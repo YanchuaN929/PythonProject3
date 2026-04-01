@@ -77,6 +77,13 @@ class LocalCacheManager:
         source_conn = None
         target_conn = None
         try:
+            try:
+                from .recovery import ensure_database_compatible
+
+                ensure_database_compatible(self.network_db_path)
+            except Exception as recovery_error:
+                print(f"[LocalCache] 预探测共享库失败，将继续尝试直接备份: {recovery_error}")
+
             source_conn = sqlite3.connect(self.network_db_path, timeout=30.0)
             target_conn = sqlite3.connect(self.local_db_path, timeout=30.0)
             source_conn.backup(target_conn)
