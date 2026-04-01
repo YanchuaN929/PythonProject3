@@ -71,3 +71,4 @@ excel_bin/姓名角色表-*.xlsx
 /update.exe
 
 example/诊断文件/
+build/

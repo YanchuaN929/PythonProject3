@@ -1,0 +1,2531 @@
+{
+  "input": "document\\file6_send_workflow_probe_20260313_rel4_detail_rows.json",
+  "sql35_dir": "example\\CIMS-SQL-3.5",
+  "doc_type_filter": [
+    "CR",
+    "TA"
+  ],
+  "doc_type_reports": {
+    "CR": {
+      "row_count": 50,
+      "metrics": {
+        "X_author_prefix_leave_one_out": {
+          "hit": 28,
+          "total": 49,
+          "rate": 0.571429
+        },
+        "V_author_prefix_leave_one_out": {
+          "hit": 28,
+          "total": 49,
+          "rate": 0.571429
+        },
+        "W_author_prefix_leave_one_out": {
+          "hit": 12,
+          "total": 17,
+          "rate": 0.705882
+        }
+      },
+      "author_groups": {
+        "HEAVY MECHANICAL COMPLEX-3": {
+          "row_count": 11,
+          "x_nonempty": 11,
+          "top_v": [
+            [
+              "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+              9
+            ],
+            [
+              "核设备所.核燃料运输与工艺室",
+              1
+            ],
+            [
+              "核设备所.核燃料运输与工艺室,核设备所.工艺及成套设备室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺室,设备室,通信室",
+              3
+            ],
+            [
+              "设备室,工艺室,通信室",
+              2
+            ],
+            [
+              "通信室,设备室,工艺室",
+              2
+            ],
+            [
+              "设备室,通信室,工艺室",
+              1
+            ],
+            [
+              "通信室,工艺室,设备室",
+              1
+            ]
+          ]
+        },
+        "航天晨光股份有限公司": {
+          "row_count": 4,
+          "x_nonempty": 4,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室",
+              2
+            ],
+            [
+              "工程设计管理部.设计管理科,核设备所.工艺及成套设备室",
+              2
+            ]
+          ],
+          "top_w": []
+        },
+        "EHLS": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室",
+              2
+            ],
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPDN": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "工程设计管理部.设计管理科",
+              2
+            ],
+            [
+              "工程设计管理部.设计管理科,工艺系统研究设计所.安全系统室,工艺系统研究设计所.辅助系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPCN": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.总体布置室",
+              3
+            ]
+          ],
+          "top_w": []
+        },
+        "西安核设备有限公司": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "工程设计管理部.设计管理科,核设备所.工艺及成套设备室,核设备所.设备结构分析室",
+              1
+            ],
+            [
+              "工程设计管理部.设计管理科,核设备所.工艺及成套设备室,核设备所.核燃料运输与工艺室",
+              1
+            ],
+            [
+              "核设备所.工艺及成套设备室,核设备所.设备结构分析室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "重庆川仪自动化股份有限公司": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "河北分公司.电气自动化所,仪控设计所.仪控二室",
+              2
+            ],
+            [
+              "河北分公司.电气自动化所",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "仪控一室,仪控二室",
+              1
+            ],
+            [
+              "仪控二室,电气室,仪控一室",
+              1
+            ],
+            [
+              "仪控二室,仪控一室,电气室",
+              1
+            ]
+          ]
+        },
+        "EHHG": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.辅助系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "EHSF": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.辅助系统室,河北分公司.核电工艺所",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺系统室",
+              1
+            ]
+          ]
+        },
+        "EHST": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.总体布置室,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPAB": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPAD": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPAG": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.核电工艺所,北京核化工研究设计院.放射性废物管理工程所",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺系统室,放射性废物管理三室",
+              1
+            ]
+          ]
+        },
+        "FAPAS": {
+          "row_count": 1,
+          "x_nonempty": 0,
+          "top_v": [],
+          "top_w": []
+        },
+        "FAPAX": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所,工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPDB": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.电气自动化所,仪控设计所.仪控二室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "仪控一室,仪控二室,电气室",
+              1
+            ]
+          ]
+        },
+        "FAPSK": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPYS": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPAD": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工程设计管理部.设计管理科,核设备所.工艺及成套设备室,核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPCB": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.总体布置室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPNQ": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室,核设备所.堆本体与非标设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "SMPCT": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "YBPYG": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.设计管理部,工程设计管理部.设计管理科,河北分公司.电力工程研究设计所",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "电气室",
+              1
+            ]
+          ]
+        },
+        "北京汉氢科技有限公司": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "公用系统所.暖通二室,公用系统所.水工工艺二室,公用系统所.公用二室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "江苏赛德电气有限公司": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "仪控设计所,仪控设计所.辐射监测室,仪控设计所.仪控二室,仪控设计所.仪控一室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "苏州纽威阀门股份有限公司": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.辅助系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        }
+      },
+      "prefix_groups": {
+        "EHMC": {
+          "row_count": 11,
+          "x_nonempty": 11,
+          "top_v": [
+            [
+              "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+              9
+            ],
+            [
+              "核设备所.核燃料运输与工艺室",
+              1
+            ],
+            [
+              "核设备所.核燃料运输与工艺室,核设备所.工艺及成套设备室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺室,设备室,通信室",
+              3
+            ],
+            [
+              "设备室,工艺室,通信室",
+              2
+            ],
+            [
+              "通信室,设备室,工艺室",
+              2
+            ],
+            [
+              "设备室,通信室,工艺室",
+              1
+            ],
+            [
+              "通信室,工艺室,设备室",
+              1
+            ]
+          ]
+        },
+        "EFCY": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "河北分公司.电气自动化所,仪控设计所.仪控二室",
+              2
+            ],
+            [
+              "河北分公司.电气自动化所",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "仪控一室,仪控二室",
+              1
+            ],
+            [
+              "仪控二室,电气室,仪控一室",
+              1
+            ],
+            [
+              "仪控二室,仪控一室,电气室",
+              1
+            ]
+          ]
+        },
+        "EHLS": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室",
+              2
+            ],
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPAD": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "工程设计管理部.设计管理科,核设备所.工艺及成套设备室,核设备所.设备结构分析室",
+              1
+            ],
+            [
+              "工程设计管理部.设计管理科,核设备所.工艺及成套设备室,核设备所.核燃料运输与工艺室",
+              1
+            ],
+            [
+              "核设备所.工艺及成套设备室,核设备所.设备结构分析室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPDN": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "工程设计管理部.设计管理科",
+              2
+            ],
+            [
+              "工程设计管理部.设计管理科,工艺系统研究设计所.安全系统室,工艺系统研究设计所.辅助系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPCN": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.总体布置室",
+              3
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPKP": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工程设计管理部.设计管理科,核设备所.工艺及成套设备室",
+              2
+            ]
+          ],
+          "top_w": []
+        },
+        "SMPKP": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室",
+              2
+            ]
+          ],
+          "top_w": []
+        },
+        "EHHG": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.辅助系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "EHNW": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.辅助系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "EHQK": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "公用系统所.暖通二室,公用系统所.水工工艺二室,公用系统所.公用二室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "EHSF": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.辅助系统室,河北分公司.核电工艺所",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺系统室",
+              1
+            ]
+          ]
+        },
+        "EHST": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.总体布置室,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "EHZZ": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺室,设备室,通信室",
+              1
+            ]
+          ]
+        },
+        "FAPAB": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPAD": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPAG": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.核电工艺所,北京核化工研究设计院.放射性废物管理工程所",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺系统室,放射性废物管理三室",
+              1
+            ]
+          ]
+        },
+        "FAPAS": {
+          "row_count": 1,
+          "x_nonempty": 0,
+          "top_v": [],
+          "top_w": []
+        },
+        "FAPAX": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所,工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPDB": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.电气自动化所,仪控设计所.仪控二室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "仪控一室,仪控二室,电气室",
+              1
+            ]
+          ]
+        },
+        "FAPSK": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPYS": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPCC": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工程设计管理部.设计管理科,核设备所.工艺及成套设备室,核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPQA": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "仪控设计所,仪控设计所.辐射监测室,仪控设计所.仪控二室,仪控设计所.仪控一室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPCB": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.总体布置室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPNQ": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室,核设备所.堆本体与非标设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "SMPCT": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "YBPYG": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.设计管理部,工程设计管理部.设计管理科,河北分公司.电力工程研究设计所",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "电气室",
+              1
+            ]
+          ]
+        }
+      },
+      "prediction_samples": [
+        {
+          "e_raw": "EFCY-400000-ECZS-0251",
+          "author_unit": "重庆川仪自动化股份有限公司",
+          "letter_prefix": "EFCY",
+          "excel_v": "河北分公司.电气自动化所,仪控设计所.仪控二室",
+          "excel_w": "仪控一室,仪控二室",
+          "excel_x": "郭皓天,李昌磊,王智勇,李鹏",
+          "predicted_v": "河北分公司.电气自动化所",
+          "predicted_w": "仪控二室,电气室,仪控一室",
+          "predicted_x_count": 473,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "重庆川仪自动化股份有限公司"
+        },
+        {
+          "e_raw": "EFCY-400001-ECZS-0251",
+          "author_unit": "重庆川仪自动化股份有限公司",
+          "letter_prefix": "EFCY",
+          "excel_v": "河北分公司.电气自动化所",
+          "excel_w": "仪控二室,电气室,仪控一室",
+          "excel_x": "刘玉磊,裴盛虎,张晓云,徐钰棋,秦辰禹,河北电气自动化所文档员,王智勇,黄泽群,杨健d,封昊伟,李鹏",
+          "predicted_v": "河北分公司.电气自动化所,仪控设计所.仪控二室",
+          "predicted_w": "仪控一室,仪控二室",
+          "predicted_x_count": 421,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "重庆川仪自动化股份有限公司"
+        },
+        {
+          "e_raw": "EFCY-400002-ECZS-0251",
+          "author_unit": "重庆川仪自动化股份有限公司",
+          "letter_prefix": "EFCY",
+          "excel_v": "河北分公司.电气自动化所,仪控设计所.仪控二室",
+          "excel_w": "仪控二室,仪控一室,电气室",
+          "excel_x": "刘玉磊,河北电气自动化所文档员,黄泽群,李鹏,封昊伟,张晓云,管祥宇,杨健d,王智勇,李昌磊",
+          "predicted_v": "河北分公司.电气自动化所,仪控设计所.仪控二室",
+          "predicted_w": "仪控一室,仪控二室",
+          "predicted_x_count": 421,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "重庆川仪自动化股份有限公司"
+        },
+        {
+          "e_raw": "EHHG-400003-ECZS-0073",
+          "author_unit": "EHHG",
+          "letter_prefix": "EHHG",
+          "excel_v": "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.辅助系统室",
+          "excel_w": "",
+          "excel_x": "薛卫光,杨理烽,赵嘉明",
+          "predicted_v": "",
+          "predicted_w": "",
+          "predicted_x_count": 0,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "EHHG"
+        },
+        {
+          "e_raw": "EHLS-400011-ECZS-0021",
+          "author_unit": "EHLS",
+          "letter_prefix": "EHLS",
+          "excel_v": "工艺系统研究设计所.辅助系统室",
+          "excel_w": "",
+          "excel_x": "吕佳宁,赵嘉明",
+          "predicted_v": "工艺系统研究设计所.辅助系统室",
+          "predicted_w": "",
+          "predicted_x_count": 47,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "EHLS"
+        },
+        {
+          "e_raw": "EHLS-400012-ECZS-0021",
+          "author_unit": "EHLS",
+          "letter_prefix": "EHLS",
+          "excel_v": "工艺系统研究设计所.辅助系统室",
+          "excel_w": "",
+          "excel_x": "赵嘉明,刘亚康",
+          "predicted_v": "工艺系统研究设计所.辅助系统室",
+          "predicted_w": "",
+          "predicted_x_count": 47,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "EHLS"
+        },
+        {
+          "e_raw": "EHLS-400013-ECZS-0021",
+          "author_unit": "EHLS",
+          "letter_prefix": "EHLS",
+          "excel_v": "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.安全系统室",
+          "excel_w": "",
+          "excel_x": "赵嘉明,刘加志,郭振宁",
+          "predicted_v": "工艺系统研究设计所.辅助系统室",
+          "predicted_w": "",
+          "predicted_x_count": 47,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "EHLS"
+        },
+        {
+          "e_raw": "EHMC-400001-ECZS-0076",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "核设备所.核燃料运输与工艺室",
+          "excel_w": "",
+          "excel_x": "李云华,周洋",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "工艺室,设备室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-400012-ECZS-0077",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "设备室,工艺室,通信室",
+          "excel_x": "肖占方,葛亚涛a,河北核工程设计所文档员,黄良,逯晴,于颖琪,张延景",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "工艺室,设备室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-400013-ECZS-0077",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "通信室,设备室,工艺室",
+          "excel_x": "张延景,肖占方,黄良,河北核工程设计所文档员,于颖琪",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "工艺室,设备室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-400014-ECZS-0077",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "工艺室,设备室,通信室",
+          "excel_x": "于颖琪,河北核工程设计所文档员,黄良,钤旭,刘世峰,肖占方,张延景",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-400015-ECZS-0077",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "工艺室,设备室,通信室",
+          "excel_x": "于颖琪,钤旭,张延景,黄良,肖占方,刘世峰,河北核工程设计所文档员",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-400016-ECZS-0077",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "通信室,设备室,工艺室",
+          "excel_x": "张延景,河北核工程设计所文档员,宋长飞,肖占方,于颖琪,黄良,段保亮",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "工艺室,设备室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-400017-ECZS-0077",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "设备室,通信室,工艺室",
+          "excel_x": "米海霞,黄良,张延景,河北核工程设计所文档员,肖占方,侯继儒,于颖琪",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "工艺室,设备室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-400018-ECZS-0077",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "设备室,工艺室,通信室",
+          "excel_x": "王峰e,于颖琪,肖占方,河北核工程设计所文档员,黄良,米海霞,张延景",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "工艺室,设备室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-400035-ECZS-0075",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "工艺室,设备室,通信室",
+          "excel_x": "于颖琪,董朝盼,河北核工程设计所文档员,黄良,陈皓朋,肖占方,张延景",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-400036-ECZS-0075",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "核设备所.核燃料运输与工艺室,核设备所.工艺及成套设备室",
+          "excel_w": "",
+          "excel_x": "李云华,李媛",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "工艺室,设备室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-400037-ECZS-0075",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "通信室,工艺室,设备室",
+          "excel_x": "张延景,于颖琪,肖占方,姜晓阳,黄良,河北核工程设计所文档员",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "工艺室,设备室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHNW-400000-ECZS-0104",
+          "author_unit": "苏州纽威阀门股份有限公司",
+          "letter_prefix": "EHNW",
+          "excel_v": "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.辅助系统室",
+          "excel_w": "",
+          "excel_x": "曹晓楠,赵嘉明,薛卫光",
+          "predicted_v": "",
+          "predicted_w": "",
+          "predicted_x_count": 0,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "苏州纽威阀门股份有限公司"
+        },
+        {
+          "e_raw": "EHQK-400000-ECZS-0138",
+          "author_unit": "北京汉氢科技有限公司",
+          "letter_prefix": "EHQK",
+          "excel_v": "公用系统所.暖通二室,公用系统所.水工工艺二室,公用系统所.公用二室",
+          "excel_w": "",
+          "excel_x": "闫征,焦迪,公用系统所文档,王璐,李娜娜,魏川铖",
+          "predicted_v": "",
+          "predicted_w": "",
+          "predicted_x_count": 0,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "北京汉氢科技有限公司"
+        }
+      ]
+    },
+    "TA": {
+      "row_count": 81,
+      "metrics": {
+        "X_author_prefix_leave_one_out": {
+          "hit": 41,
+          "total": 80,
+          "rate": 0.5125
+        },
+        "V_author_prefix_leave_one_out": {
+          "hit": 39,
+          "total": 80,
+          "rate": 0.4875
+        },
+        "W_author_prefix_leave_one_out": {
+          "hit": 20,
+          "total": 24,
+          "rate": 0.833333
+        }
+      },
+      "author_groups": {
+        "HEAVY MECHANICAL COMPLEX-3": {
+          "row_count": 11,
+          "x_nonempty": 11,
+          "top_v": [
+            [
+              "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+              6
+            ],
+            [
+              "核设备所.非标设备室,核设备所.核燃料运输与工艺室",
+              2
+            ],
+            [
+              "核设备所.核燃料运输与工艺室,核设备所.非标设备室",
+              1
+            ],
+            [
+              "河北分公司.核工程研究设计所,核设备所.核燃料运输与工艺室",
+              1
+            ],
+            [
+              "核设备所.工艺及成套设备室,核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "设备室,工艺室,通信室",
+              7
+            ]
+          ]
+        },
+        "JAPCN": {
+          "row_count": 6,
+          "x_nonempty": 5,
+          "top_v": [
+            [
+              "工程设计管理部.设计管理科",
+              2
+            ],
+            [
+              "河北分公司.核电工艺所,工艺系统研究设计所.安全系统室,工艺系统研究设计所.工艺设备室",
+              1
+            ],
+            [
+              "工艺系统研究设计所.工艺设备室,河北分公司.核电工艺所,工艺系统研究设计所.安全系统室,核设备所.工艺及成套设备室",
+              1
+            ],
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺系统室",
+              2
+            ]
+          ]
+        },
+        "FAPCN": {
+          "row_count": 4,
+          "x_nonempty": 4,
+          "top_v": [
+            [
+              "工艺系统研究设计所,河北分公司.核电工艺所,工艺系统研究设计所.安全系统室,工艺系统研究设计所.工艺设备室",
+              2
+            ],
+            [
+              "河北分公司.核电工艺所,工艺系统研究设计所,工艺系统研究设计所.安全系统室,工艺系统研究设计所.工艺设备室",
+              1
+            ],
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺系统室",
+              3
+            ]
+          ]
+        },
+        "JDPNQ": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "核设备所.核燃料运输与工艺室",
+              3
+            ]
+          ],
+          "top_w": []
+        },
+        "SMPCT": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.工艺设备室",
+              3
+            ]
+          ],
+          "top_w": []
+        },
+        "西安核设备有限公司": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室,核设备所.设备结构分析室",
+              2
+            ],
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "EHSH": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "核设备所.核燃料运输与工艺室,核设备所.非标设备室",
+              1
+            ],
+            [
+              "核设备所.非标设备室,核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "EHWH": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "核设备所.核燃料运输与工艺室,河北分公司.核工程研究设计所",
+              1
+            ],
+            [
+              "核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "设备室,工艺室,通信室",
+              1
+            ]
+          ]
+        },
+        "FAPAX": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工艺系统研究设计所,工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              2
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPBT": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "河北分公司.电气自动化所",
+              2
+            ]
+          ],
+          "top_w": [
+            [
+              "仪控二室,电气室,仪控一室",
+              1
+            ],
+            [
+              "仪控二室,仪控一室,电气室",
+              1
+            ]
+          ]
+        },
+        "FAPDB": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              2
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPFQ": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "核设备所.堆本体与非标设备室",
+              1
+            ],
+            [
+              "核设备所.非标设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPAD": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室,核设备所.核燃料运输与工艺室",
+              2
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPDN": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工程设计管理部.设计管理科,工艺系统研究设计所.安全系统室,工艺系统研究设计所.辅助系统室,核设备所.工艺及成套设备室",
+              1
+            ],
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPST": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "河北分公司.核电工艺所,河北分公司.设计管理部,工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ],
+            [
+              "河北分公司.核电工艺所,工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺布置一室,工艺系统室",
+              1
+            ],
+            [
+              "工艺系统室",
+              1
+            ]
+          ]
+        },
+        "JDPAX": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.总体布置室",
+              1
+            ],
+            [
+              "核设备所.堆本体与非标设备室,核设备所.工艺及成套设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPCJ": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工艺系统研究设计所.安全系统室,工艺系统研究设计所.总体布置室",
+              2
+            ]
+          ],
+          "top_w": []
+        },
+        "SMPCJ": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工艺系统研究设计所.安全系统室,工艺系统研究设计所.总体布置室",
+              1
+            ],
+            [
+              "工程设计管理部.设计管理科",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "沈阳远大压缩机有限公司": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "北京核化工研究设计院.放射性废物管理工程所",
+              2
+            ]
+          ],
+          "top_w": [
+            [
+              "放射性废物管理三室",
+              2
+            ]
+          ]
+        },
+        "EHHG": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "设备室,工艺室,通信室",
+              1
+            ]
+          ]
+        },
+        "EHHW": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "北京核化工研究设计院.放射性废物管理工程所",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "放射性废物管理一室",
+              1
+            ]
+          ]
+        },
+        "EHST": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.辅助系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "ESXH": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPAG": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.核电工艺所",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPAP": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.非标设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPDN": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPYS": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.核工程研究设计所,核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "设备室",
+              1
+            ]
+          ]
+        },
+        "JAPAX": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.堆本体与非标设备室,核设备所.工艺及成套设备室,工程设计管理部.设计管理科",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPBH": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPNQ": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室,核设备所.设备结构分析室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPCB": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "公用系统所.水工工艺一室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPCN": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "电气设计所.电气一室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPHJ": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.总体布置室,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPST": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.总体布置室,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPTD": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.总体布置室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPYS": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室,核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "SMPAX": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.堆本体与非标设备室,核设备所.工艺及成套设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "SMPBH": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "VALSERVE": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.总体布置室,北京核工程研究设计院,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "江苏电力装备有限公司": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "福建省中明技术开发有限公司": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.总体布置室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "航天晨光股份有限公司": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室,工程设计管理部.设计管理科",
+              1
+            ]
+          ],
+          "top_w": []
+        }
+      },
+      "prefix_groups": {
+        "EHMC": {
+          "row_count": 11,
+          "x_nonempty": 11,
+          "top_v": [
+            [
+              "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+              6
+            ],
+            [
+              "核设备所.非标设备室,核设备所.核燃料运输与工艺室",
+              2
+            ],
+            [
+              "核设备所.核燃料运输与工艺室,核设备所.非标设备室",
+              1
+            ],
+            [
+              "河北分公司.核工程研究设计所,核设备所.核燃料运输与工艺室",
+              1
+            ],
+            [
+              "核设备所.工艺及成套设备室,核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "设备室,工艺室,通信室",
+              7
+            ]
+          ]
+        },
+        "JAPCN": {
+          "row_count": 6,
+          "x_nonempty": 5,
+          "top_v": [
+            [
+              "工程设计管理部.设计管理科",
+              2
+            ],
+            [
+              "河北分公司.核电工艺所,工艺系统研究设计所.安全系统室,工艺系统研究设计所.工艺设备室",
+              1
+            ],
+            [
+              "工艺系统研究设计所.工艺设备室,河北分公司.核电工艺所,工艺系统研究设计所.安全系统室,核设备所.工艺及成套设备室",
+              1
+            ],
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺系统室",
+              2
+            ]
+          ]
+        },
+        "FAPCN": {
+          "row_count": 4,
+          "x_nonempty": 4,
+          "top_v": [
+            [
+              "工艺系统研究设计所,河北分公司.核电工艺所,工艺系统研究设计所.安全系统室,工艺系统研究设计所.工艺设备室",
+              2
+            ],
+            [
+              "河北分公司.核电工艺所,工艺系统研究设计所,工艺系统研究设计所.安全系统室,工艺系统研究设计所.工艺设备室",
+              1
+            ],
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺系统室",
+              3
+            ]
+          ]
+        },
+        "JAPAD": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室,核设备所.设备结构分析室",
+              2
+            ],
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPNQ": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "核设备所.核燃料运输与工艺室",
+              3
+            ]
+          ],
+          "top_w": []
+        },
+        "SMPCT": {
+          "row_count": 3,
+          "x_nonempty": 3,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.工艺设备室",
+              3
+            ]
+          ],
+          "top_w": []
+        },
+        "EHSH": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "核设备所.核燃料运输与工艺室,核设备所.非标设备室",
+              1
+            ],
+            [
+              "核设备所.非标设备室,核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "EHWH": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "核设备所.核燃料运输与工艺室,河北分公司.核工程研究设计所",
+              1
+            ],
+            [
+              "核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "设备室,工艺室,通信室",
+              1
+            ]
+          ]
+        },
+        "EHZZ": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+              2
+            ]
+          ],
+          "top_w": [
+            [
+              "设备室,工艺室,通信室",
+              2
+            ]
+          ]
+        },
+        "FAPAX": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工艺系统研究设计所,工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              2
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPBT": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "河北分公司.电气自动化所",
+              2
+            ]
+          ],
+          "top_w": [
+            [
+              "仪控二室,电气室,仪控一室",
+              1
+            ],
+            [
+              "仪控二室,仪控一室,电气室",
+              1
+            ]
+          ]
+        },
+        "FAPDB": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              2
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPFQ": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "核设备所.堆本体与非标设备室",
+              1
+            ],
+            [
+              "核设备所.非标设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPCC": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室,核设备所.核燃料运输与工艺室",
+              2
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPDN": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工程设计管理部.设计管理科,工艺系统研究设计所.安全系统室,工艺系统研究设计所.辅助系统室,核设备所.工艺及成套设备室",
+              1
+            ],
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPST": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "河北分公司.核电工艺所,河北分公司.设计管理部,工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ],
+            [
+              "河北分公司.核电工艺所,工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "工艺布置一室,工艺系统室",
+              1
+            ],
+            [
+              "工艺系统室",
+              1
+            ]
+          ]
+        },
+        "JDPAL": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "北京核化工研究设计院.放射性废物管理工程所",
+              2
+            ]
+          ],
+          "top_w": [
+            [
+              "放射性废物管理三室",
+              2
+            ]
+          ]
+        },
+        "JDPAX": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.总体布置室",
+              1
+            ],
+            [
+              "核设备所.堆本体与非标设备室,核设备所.工艺及成套设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPCJ": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工艺系统研究设计所.安全系统室,工艺系统研究设计所.总体布置室",
+              2
+            ]
+          ],
+          "top_w": []
+        },
+        "SMPCJ": {
+          "row_count": 2,
+          "x_nonempty": 2,
+          "top_v": [
+            [
+              "工艺系统研究设计所.安全系统室,工艺系统研究设计所.总体布置室",
+              1
+            ],
+            [
+              "工程设计管理部.设计管理科",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "EHDL": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "EHHG": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "设备室,工艺室,通信室",
+              1
+            ]
+          ]
+        },
+        "EHHW": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "北京核化工研究设计院.放射性废物管理工程所",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "放射性废物管理一室",
+              1
+            ]
+          ]
+        },
+        "EHST": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.辅助系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "ESXH": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPAG": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.核电工艺所",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPAP": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.非标设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPDN": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPTD": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.总体布置室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "FAPYS": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "河北分公司.核工程研究设计所,核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": [
+            [
+              "设备室",
+              1
+            ]
+          ]
+        },
+        "JAPAX": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.堆本体与非标设备室,核设备所.工艺及成套设备室,工程设计管理部.设计管理科",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPBH": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.安全系统室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPKP": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室,工程设计管理部.设计管理科",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JAPNQ": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室,核设备所.设备结构分析室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPCB": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "公用系统所.水工工艺一室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPCN": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "电气设计所.电气一室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPDK": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.总体布置室,北京核工程研究设计院,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPHJ": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.总体布置室,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPST": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.总体布置室,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPTD": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.总体布置室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "JDPYS": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.工艺及成套设备室,核设备所.核燃料运输与工艺室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "SMPAX": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "核设备所.堆本体与非标设备室,核设备所.工艺及成套设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        },
+        "SMPBH": {
+          "row_count": 1,
+          "x_nonempty": 1,
+          "top_v": [
+            [
+              "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.工艺设备室",
+              1
+            ]
+          ],
+          "top_w": []
+        }
+      },
+      "prediction_samples": [
+        {
+          "e_raw": "EHDL-420001-ECZS-0046",
+          "author_unit": "江苏电力装备有限公司",
+          "letter_prefix": "EHDL",
+          "excel_v": "工艺系统研究设计所.辅助系统室,工艺系统研究设计所.工艺设备室",
+          "excel_w": "",
+          "excel_x": "赵嘉明,薛卫光",
+          "predicted_v": "",
+          "predicted_w": "",
+          "predicted_x_count": 0,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "江苏电力装备有限公司"
+        },
+        {
+          "e_raw": "EHHG-420006-ECZS-057A",
+          "author_unit": "EHHG",
+          "letter_prefix": "EHHG",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "设备室,工艺室,通信室",
+          "excel_x": "陈皓朋,黄良,河北核工程设计所文档员,肖占方,于颖琪,张延景,葛亚涛a",
+          "predicted_v": "",
+          "predicted_w": "",
+          "predicted_x_count": 0,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "EHHG"
+        },
+        {
+          "e_raw": "EHHW-420001-ECZS-0038",
+          "author_unit": "EHHW",
+          "letter_prefix": "EHHW",
+          "excel_v": "北京核化工研究设计院.放射性废物管理工程所",
+          "excel_w": "放射性废物管理一室",
+          "excel_x": "赵景宇",
+          "predicted_v": "",
+          "predicted_w": "",
+          "predicted_x_count": 0,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "EHHW"
+        },
+        {
+          "e_raw": "EHMC-420045-ECZS-0077",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "设备室,工艺室,通信室",
+          "excel_x": "侯自轩,董朝盼,肖占方,于颖琪,张延景,黄良,河北核工程设计所文档员",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-420046-ECZS-0077",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "设备室,工艺室,通信室",
+          "excel_x": "米海霞,黄良,河北核工程设计所文档员,肖占方,于颖琪,张延景",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-420118-ECZS-0075",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "设备室,工艺室,通信室",
+          "excel_x": "董朝盼,黄良,河北核工程设计所文档员,肖占方,于颖琪,张延景",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-420119-ECZS-0075",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "核设备所.非标设备室,核设备所.核燃料运输与工艺室",
+          "excel_w": "",
+          "excel_x": "李雨桐,李云华,陈鹍",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-420120-ECZS-0075",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "设备室,工艺室,通信室",
+          "excel_x": "肖占方,于颖琪,张延景,姜晓阳,黄良,河北核工程设计所文档员",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-420121-ECZS-0075",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "核设备所.核燃料运输与工艺室,核设备所.非标设备室",
+          "excel_w": "",
+          "excel_x": "李云华,刘迎",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-420122-ECZS-0075",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "设备室,工艺室,通信室",
+          "excel_x": "肖占方,于颖琪,张延景,张弛,黄良,河北核工程设计所文档员",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-420123-ECZS-0075",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "设备室,工艺室,通信室",
+          "excel_x": "肖占方,于颖琪,张延景,姜晓阳,黄良,河北核工程设计所文档员",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-420124-ECZS-0075",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "河北分公司.核工程研究设计所,核设备所.核燃料运输与工艺室",
+          "excel_w": "设备室,工艺室,通信室",
+          "excel_x": "河北核工程设计所文档员,李云华,肖占方,于颖琪,张延景,张弛",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-420125-ECZS-0075",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "核设备所.非标设备室,核设备所.核燃料运输与工艺室",
+          "excel_w": "",
+          "excel_x": "李雨桐,李云华,陈鹍",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHMC-420126-ECZS-0075",
+          "author_unit": "HEAVY MECHANICAL COMPLEX-3",
+          "letter_prefix": "EHMC",
+          "excel_v": "核设备所.工艺及成套设备室,核设备所.核燃料运输与工艺室",
+          "excel_w": "",
+          "excel_x": "丁磊,曹捷铭,李云华",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "HEAVY MECHANICAL COMPLEX-3"
+        },
+        {
+          "e_raw": "EHSH-420051-ECZS-0024",
+          "author_unit": "EHSH",
+          "letter_prefix": "EHSH",
+          "excel_v": "核设备所.核燃料运输与工艺室,核设备所.非标设备室",
+          "excel_w": "",
+          "excel_x": "李云华,刘昕宇",
+          "predicted_v": "核设备所.非标设备室,核设备所.核燃料运输与工艺室",
+          "predicted_w": "",
+          "predicted_x_count": 44,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "EHSH"
+        },
+        {
+          "e_raw": "EHSH-420052-ECZS-0024",
+          "author_unit": "EHSH",
+          "letter_prefix": "EHSH",
+          "excel_v": "核设备所.非标设备室,核设备所.核燃料运输与工艺室",
+          "excel_w": "",
+          "excel_x": "赵英昆,李云华,刘昕宇",
+          "predicted_v": "核设备所.核燃料运输与工艺室,核设备所.非标设备室",
+          "predicted_w": "",
+          "predicted_x_count": 44,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "EHSH"
+        },
+        {
+          "e_raw": "EHST-420007-ECZS-0051",
+          "author_unit": "EHST",
+          "letter_prefix": "EHST",
+          "excel_v": "工艺系统研究设计所.工艺设备室,工艺系统研究设计所.辅助系统室",
+          "excel_w": "",
+          "excel_x": "豆朝宗,赵嘉明,薛卫光",
+          "predicted_v": "",
+          "predicted_w": "",
+          "predicted_x_count": 0,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "EHST"
+        },
+        {
+          "e_raw": "EHWH-420002-ECZS-0033",
+          "author_unit": "EHWH",
+          "letter_prefix": "EHWH",
+          "excel_v": "核设备所.核燃料运输与工艺室,河北分公司.核工程研究设计所",
+          "excel_w": "设备室,工艺室,通信室",
+          "excel_x": "李云华,沈艳祥,河北核工程设计所文档员,肖占方,于颖琪,张延景",
+          "predicted_v": "核设备所.核燃料运输与工艺室",
+          "predicted_w": "",
+          "predicted_x_count": 32,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "EHWH"
+        },
+        {
+          "e_raw": "EHWH-420003-ECZS-0033",
+          "author_unit": "EHWH",
+          "letter_prefix": "EHWH",
+          "excel_v": "核设备所.核燃料运输与工艺室",
+          "excel_w": "",
+          "excel_x": "沈艳祥,李云华",
+          "predicted_v": "核设备所.核燃料运输与工艺室,河北分公司.核工程研究设计所",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 240,
+          "prediction_key": "author_unit",
+          "prediction_key_value": "EHWH"
+        },
+        {
+          "e_raw": "EHZZ-420003-ECZS-0054",
+          "author_unit": "",
+          "letter_prefix": "EHZZ",
+          "excel_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "excel_w": "设备室,工艺室,通信室",
+          "excel_x": "李景星,黄良,肖占方,于颖琪,张延景,河北核工程设计所文档员",
+          "predicted_v": "河北分公司.核工程研究设计所,河北分公司.设计管理部",
+          "predicted_w": "设备室,工艺室,通信室",
+          "predicted_x_count": 261,
+          "prediction_key": "letter_prefix",
+          "prediction_key_value": "EHZZ"
+        }
+      ]
+    }
+  }
+}

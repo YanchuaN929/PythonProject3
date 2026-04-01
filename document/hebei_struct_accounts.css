@@ -1,0 +1,19 @@
+/* Auto-generated from USER.sql and DEPARTMENT.sql */
+/* Scope: Hebei branch structural department tree */
+/* Department roots matched by NAME_MEMO containing: 河北分公司-建筑结构所 */
+
+:root {
+  --hb-struct-account-count: 129;
+
+  /* 25C0 | 建筑结构所 */
+  --hb-struct-25c0-logins: "hbjjswd,l-gengtj,l-sunyy,l-zhouxy,lipya,wangdd,xuexh,yanwei,zengtj,zhangjinga,zhangxqb";
+
+  /* 25C1 | 结构一室 */
+  --hb-struct-25c1-logins: "L-wangrya,baiwt,caohh,cheney,daipenga,dujt,hanbingb,houypa,jiangth,l-dongjh,l-duxb,l-jiapp,l-liuweia,l-zhaoyang,liangqd,liangwl,lislc,liwsa,mengzy,renxk,w-huangxh,w-wangjh,w-yumz,w-zhangwz,wanggqb,wangjxi,wangrca,wangxyb,wangyane,yangtaoa,yangxi,yanpn,zhangbca,zhanghanga,zhangjwg,zhangliangc,zhangwza,zhangxmd,zhangyfg,zhangyla,zhaoyueb,zhoulx";
+
+  /* 25C2 | 结构二室 */
+  --hb-struct-25c2-logins: "L-chendc,L-liukya,L-lizx,cuimf,donghs,duanww,gaofx,huangbh,l-hesong,l-lilj,l-lisha,l-liuhj,l-liuzye,l-niuzl,l-shihw,l-wangjfb,l-wangxua,l-zhaoqi,liningd,linxp,lishuaib,liufenga,liuff,liulld,liumx,liuyhe,liyzd,lizxd,peixb,shenhaoa,songyj,suyt,suzs,taolx,w-dushuo,w-zhangrc,w-zhaorx,w-zhaoyc,wanghyl,wangjxj,wangmb,wangype,wufza,xuezxa,xujyb,xuwl,zhangmc,zhangqp,zhangxb,zhangyt,zhaojie,zhoulhb,zhoumh";
+
+  /* 25C3 | 建筑总图室 */
+  --hb-struct-25c3-logins: "chenssa,dujuan,hubina,jinpenga,jiyq,l-lizq,l-zhaohm,lianghh,liangyl,lichaof,lilib,liuzyc,lixinf,liyda,maxga,maxha,sunhf,sunhs,xiezh,xinhy,yangyyc,zhangtian,zhibt";
+}

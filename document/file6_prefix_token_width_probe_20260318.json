@@ -1,0 +1,769 @@
+{
+  "input": "document\\file6_send_workflow_probe_20260313_rel4_detail_rows.json",
+  "donor_report": "document\\file6_prefix_donor_probe_20260318.json",
+  "sql35_dir": "example\\CIMS-SQL-3.5",
+  "max_topn": 5,
+  "doc_type_filter": [],
+  "target_reports": {
+    "文件传递单": {
+      "donor_types": [
+        "TA",
+        "审查意见答复单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 310,
+            "total": 425,
+            "rate": 0.729412
+          },
+          "V": {
+            "hit": 316,
+            "total": 425,
+            "rate": 0.743529
+          },
+          "W": {
+            "hit": 185,
+            "total": 238,
+            "rate": 0.777311
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 187.89,
+          "max_count": 838
+        }
+      },
+      "best_token_width": {
+        "v_topn": 5,
+        "w_topn": 3,
+        "metrics": {
+          "X": {
+            "hit": 315,
+            "total": 425,
+            "rate": 0.741176
+          },
+          "V": {
+            "hit": 322,
+            "total": 425,
+            "rate": 0.757647
+          },
+          "W": {
+            "hit": 185,
+            "total": 238,
+            "rate": 0.777311
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 197.88,
+          "max_count": 844
+        },
+        "delta_sum_vs_3_3": 0.025882
+      }
+    },
+    "审查意见单": {
+      "donor_types": [
+        "CR答复单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 19,
+            "total": 30,
+            "rate": 0.633333
+          },
+          "V": {
+            "hit": 19,
+            "total": 30,
+            "rate": 0.633333
+          },
+          "W": {
+            "hit": 12,
+            "total": 14,
+            "rate": 0.857143
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 44.7,
+          "max_count": 658
+        }
+      },
+      "best_token_width": {
+        "v_topn": 3,
+        "w_topn": 3,
+        "metrics": {
+          "X": {
+            "hit": 19,
+            "total": 30,
+            "rate": 0.633333
+          },
+          "V": {
+            "hit": 19,
+            "total": 30,
+            "rate": 0.633333
+          },
+          "W": {
+            "hit": 12,
+            "total": 14,
+            "rate": 0.857143
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 44.7,
+          "max_count": 658
+        },
+        "delta_sum_vs_3_3": 0.0
+      }
+    },
+    "IITF": {
+      "donor_types": [
+        "CR答复单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "V": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "W": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 0.0,
+          "max_count": 0
+        }
+      },
+      "best_token_width": {
+        "v_topn": 3,
+        "w_topn": 3,
+        "metrics": {
+          "X": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "V": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "W": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 0.0,
+          "max_count": 0
+        },
+        "delta_sum_vs_3_3": 0.0
+      }
+    },
+    "IICS": {
+      "donor_types": [
+        "CR答复单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "V": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "W": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 0.0,
+          "max_count": 0
+        }
+      },
+      "best_token_width": {
+        "v_topn": 3,
+        "w_topn": 3,
+        "metrics": {
+          "X": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "V": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "W": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 0.0,
+          "max_count": 0
+        },
+        "delta_sum_vs_3_3": 0.0
+      }
+    },
+    "图文传真": {
+      "donor_types": [
+        "外发纪要",
+        "审查意见单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 81,
+            "total": 115,
+            "rate": 0.704348
+          },
+          "V": {
+            "hit": 77,
+            "total": 115,
+            "rate": 0.669565
+          },
+          "W": {
+            "hit": 53,
+            "total": 66,
+            "rate": 0.80303
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 262.1,
+          "max_count": 874
+        }
+      },
+      "best_token_width": {
+        "v_topn": 5,
+        "w_topn": 4,
+        "metrics": {
+          "X": {
+            "hit": 85,
+            "total": 115,
+            "rate": 0.73913
+          },
+          "V": {
+            "hit": 83,
+            "total": 115,
+            "rate": 0.721739
+          },
+          "W": {
+            "hit": 56,
+            "total": 66,
+            "rate": 0.848485
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 395.68,
+          "max_count": 1320
+        },
+        "delta_sum_vs_3_3": 0.132411
+      }
+    },
+    "FU通知单": {
+      "donor_types": [
+        "文件传递单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 4,
+            "total": 4,
+            "rate": 1.0
+          },
+          "V": {
+            "hit": 4,
+            "total": 4,
+            "rate": 1.0
+          },
+          "W": {
+            "hit": 3,
+            "total": 3,
+            "rate": 1.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 42.69,
+          "max_count": 700
+        }
+      },
+      "best_token_width": {
+        "v_topn": 2,
+        "w_topn": 1,
+        "metrics": {
+          "X": {
+            "hit": 4,
+            "total": 4,
+            "rate": 1.0
+          },
+          "V": {
+            "hit": 4,
+            "total": 4,
+            "rate": 1.0
+          },
+          "W": {
+            "hit": 3,
+            "total": 3,
+            "rate": 1.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 27.32,
+          "max_count": 590
+        },
+        "delta_sum_vs_3_3": 0.0
+      }
+    },
+    "TA": {
+      "donor_types": [
+        "CR",
+        "文件传递单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 59,
+            "total": 80,
+            "rate": 0.7375
+          },
+          "V": {
+            "hit": 60,
+            "total": 80,
+            "rate": 0.75
+          },
+          "W": {
+            "hit": 20,
+            "total": 24,
+            "rate": 0.833333
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 202.93,
+          "max_count": 573
+        }
+      },
+      "best_token_width": {
+        "v_topn": 3,
+        "w_topn": 1,
+        "metrics": {
+          "X": {
+            "hit": 59,
+            "total": 80,
+            "rate": 0.7375
+          },
+          "V": {
+            "hit": 60,
+            "total": 80,
+            "rate": 0.75
+          },
+          "W": {
+            "hit": 20,
+            "total": 24,
+            "rate": 0.833333
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 189.89,
+          "max_count": 573
+        },
+        "delta_sum_vs_3_3": 0.0
+      }
+    },
+    "TA回复单": {
+      "donor_types": [
+        "CR答复单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "V": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "W": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 0.0,
+          "max_count": 0
+        }
+      },
+      "best_token_width": {
+        "v_topn": 3,
+        "w_topn": 3,
+        "metrics": {
+          "X": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "V": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "W": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 0.0,
+          "max_count": 0
+        },
+        "delta_sum_vs_3_3": 0.0
+      }
+    },
+    "CR": {
+      "donor_types": [
+        "TA",
+        "文件传递单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 39,
+            "total": 49,
+            "rate": 0.795918
+          },
+          "V": {
+            "hit": 38,
+            "total": 49,
+            "rate": 0.77551
+          },
+          "W": {
+            "hit": 13,
+            "total": 17,
+            "rate": 0.764706
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 191.4,
+          "max_count": 541
+        }
+      },
+      "best_token_width": {
+        "v_topn": 3,
+        "w_topn": 1,
+        "metrics": {
+          "X": {
+            "hit": 39,
+            "total": 49,
+            "rate": 0.795918
+          },
+          "V": {
+            "hit": 38,
+            "total": 49,
+            "rate": 0.77551
+          },
+          "W": {
+            "hit": 13,
+            "total": 17,
+            "rate": 0.764706
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 179.44,
+          "max_count": 461
+        },
+        "delta_sum_vs_3_3": 0.0
+      }
+    },
+    "审查意见答复单": {
+      "donor_types": [
+        "文件传递单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 25,
+            "total": 25,
+            "rate": 1.0
+          },
+          "V": {
+            "hit": 25,
+            "total": 25,
+            "rate": 1.0
+          },
+          "W": {
+            "hit": 15,
+            "total": 21,
+            "rate": 0.714286
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 291.27,
+          "max_count": 836
+        }
+      },
+      "best_token_width": {
+        "v_topn": 3,
+        "w_topn": 4,
+        "metrics": {
+          "X": {
+            "hit": 25,
+            "total": 25,
+            "rate": 1.0
+          },
+          "V": {
+            "hit": 25,
+            "total": 25,
+            "rate": 1.0
+          },
+          "W": {
+            "hit": 16,
+            "total": 21,
+            "rate": 0.761905
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 316.45,
+          "max_count": 913
+        },
+        "delta_sum_vs_3_3": 0.047619
+      }
+    },
+    "CR答复单": {
+      "donor_types": [
+        "FU通知单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "V": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "W": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 0.0,
+          "max_count": 0
+        }
+      },
+      "best_token_width": {
+        "v_topn": 3,
+        "w_topn": 3,
+        "metrics": {
+          "X": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "V": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "W": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 0.0,
+          "max_count": 0
+        },
+        "delta_sum_vs_3_3": 0.0
+      }
+    },
+    "外发纪要": {
+      "donor_types": [
+        "图文传真"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 4,
+            "total": 9,
+            "rate": 0.444444
+          },
+          "V": {
+            "hit": 4,
+            "total": 9,
+            "rate": 0.444444
+          },
+          "W": {
+            "hit": 2,
+            "total": 5,
+            "rate": 0.4
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 355.0,
+          "max_count": 751
+        }
+      },
+      "best_token_width": {
+        "v_topn": 1,
+        "w_topn": 5,
+        "metrics": {
+          "X": {
+            "hit": 5,
+            "total": 9,
+            "rate": 0.555556
+          },
+          "V": {
+            "hit": 4,
+            "total": 9,
+            "rate": 0.444444
+          },
+          "W": {
+            "hit": 3,
+            "total": 5,
+            "rate": 0.6
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 338.43,
+          "max_count": 536
+        },
+        "delta_sum_vs_3_3": 0.311112
+      }
+    },
+    "作废通知单": {
+      "donor_types": [
+        "CR答复单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "V": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "W": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 0.0,
+          "max_count": 0
+        }
+      },
+      "best_token_width": {
+        "v_topn": 3,
+        "w_topn": 3,
+        "metrics": {
+          "X": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "V": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          },
+          "W": {
+            "hit": 0,
+            "total": 0,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 0.0,
+          "max_count": 0
+        },
+        "delta_sum_vs_3_3": 0.0
+      }
+    },
+    "NCR": {
+      "donor_types": [
+        "文件传递单"
+      ],
+      "baseline_combo_3_3": {
+        "metrics": {
+          "X": {
+            "hit": 4,
+            "total": 6,
+            "rate": 0.666667
+          },
+          "V": {
+            "hit": 4,
+            "total": 6,
+            "rate": 0.666667
+          },
+          "W": {
+            "hit": 0,
+            "total": 2,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 173.67,
+          "max_count": 509
+        }
+      },
+      "best_token_width": {
+        "v_topn": 3,
+        "w_topn": 1,
+        "metrics": {
+          "X": {
+            "hit": 4,
+            "total": 6,
+            "rate": 0.666667
+          },
+          "V": {
+            "hit": 4,
+            "total": 6,
+            "rate": 0.666667
+          },
+          "W": {
+            "hit": 0,
+            "total": 2,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 165.5,
+          "max_count": 460
+        },
+        "delta_sum_vs_3_3": 0.0
+      }
+    }
+  }
+}

@@ -54,7 +54,11 @@ def _sorted_projects(projects: Iterable[Any]) -> list[str]:
 def build_processing_diagnostic_report(app: Any, total_projects=None, error_message: str = "") -> str:
     now = datetime.datetime.now()
     backend_status = get_sql_backend_status()
-    total_projects = _sorted_projects(total_projects or set())
+    result_projects = _sorted_projects(total_projects or set())
+    try:
+        selected_projects = _sorted_projects(getattr(app, "get_enabled_projects", lambda: [])())
+    except Exception:
+        selected_projects = []
     config = getattr(app, "config", {}) or {}
 
     lines = [
@@ -77,7 +81,8 @@ def build_processing_diagnostic_report(app: Any, total_projects=None, error_mess
         f"offline_root: {backend_status.get('offline_root', '')}",
         "",
         "[Selection]",
-        f"selected_projects: {', '.join(total_projects)}",
+        f"selected_projects: {', '.join(selected_projects)}",
+        f"result_projects: {', '.join(result_projects)}",
         f"process_file1: {bool(getattr(app, 'process_file1_var', None).get() if getattr(app, 'process_file1_var', None) else False)}",
         f"process_file2: {bool(getattr(app, 'process_file2_var', None).get() if getattr(app, 'process_file2_var', None) else False)}",
         f"process_file3: {bool(getattr(app, 'process_file3_var', None).get() if getattr(app, 'process_file3_var', None) else False)}",

@@ -1,0 +1,7834 @@
+{
+  "input": "document\\file6_send_workflow_probe_20260313_rel4_detail_rows.json",
+  "sql35_dir": "example\\CIMS-SQL-3.5",
+  "row_count": 2958,
+  "profiles": {
+    "workflow_only": {
+      "metrics": {
+        "X": {
+          "hit": 165,
+          "total": 911,
+          "rate": 0.18112
+        },
+        "V": {
+          "hit": 498,
+          "total": 911,
+          "rate": 0.546652
+        },
+        "W": {
+          "hit": 138,
+          "total": 459,
+          "rate": 0.300654
+        }
+      },
+      "by_type": {
+        "CR": {
+          "row_count": 50,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 49,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 22,
+              "total": 49,
+              "rate": 0.44898
+            },
+            "W": {
+              "hit": 1,
+              "total": 17,
+              "rate": 0.058824
+            }
+          }
+        },
+        "CR答复单": {
+          "row_count": 42,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          }
+        },
+        "FU通知单": {
+          "row_count": 98,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 4,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 4,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 3,
+              "rate": 0.0
+            }
+          }
+        },
+        "IICS": {
+          "row_count": 306,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          }
+        },
+        "IITF": {
+          "row_count": 375,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          }
+        },
+        "NCR": {
+          "row_count": 6,
+          "metrics": {
+            "X": {
+              "hit": 1,
+              "total": 6,
+              "rate": 0.166667
+            },
+            "V": {
+              "hit": 2,
+              "total": 6,
+              "rate": 0.333333
+            },
+            "W": {
+              "hit": 0,
+              "total": 2,
+              "rate": 0.0
+            }
+          }
+        },
+        "NCR回复单": {
+          "row_count": 5,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          }
+        },
+        "TA": {
+          "row_count": 81,
+          "metrics": {
+            "X": {
+              "hit": 1,
+              "total": 80,
+              "rate": 0.0125
+            },
+            "V": {
+              "hit": 28,
+              "total": 80,
+              "rate": 0.35
+            },
+            "W": {
+              "hit": 2,
+              "total": 24,
+              "rate": 0.083333
+            }
+          }
+        },
+        "TA回复单": {
+          "row_count": 57,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          }
+        },
+        "作废通知单": {
+          "row_count": 13,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          }
+        },
+        "图文传真": {
+          "row_count": 274,
+          "metrics": {
+            "X": {
+              "hit": 47,
+              "total": 115,
+              "rate": 0.408696
+            },
+            "V": {
+              "hit": 89,
+              "total": 115,
+              "rate": 0.773913
+            },
+            "W": {
+              "hit": 33,
+              "total": 66,
+              "rate": 0.5
+            }
+          }
+        },
+        "备忘录": {
+          "row_count": 298,
+          "metrics": {
+            "X": {
+              "hit": 68,
+              "total": 168,
+              "rate": 0.404762
+            },
+            "V": {
+              "hit": 118,
+              "total": 168,
+              "rate": 0.702381
+            },
+            "W": {
+              "hit": 38,
+              "total": 69,
+              "rate": 0.550725
+            }
+          }
+        },
+        "外发纪要": {
+          "row_count": 14,
+          "metrics": {
+            "X": {
+              "hit": 1,
+              "total": 9,
+              "rate": 0.111111
+            },
+            "V": {
+              "hit": 8,
+              "total": 9,
+              "rate": 0.888889
+            },
+            "W": {
+              "hit": 0,
+              "total": 5,
+              "rate": 0.0
+            }
+          }
+        },
+        "审查意见单": {
+          "row_count": 398,
+          "metrics": {
+            "X": {
+              "hit": 2,
+              "total": 30,
+              "rate": 0.066667
+            },
+            "V": {
+              "hit": 5,
+              "total": 30,
+              "rate": 0.166667
+            },
+            "W": {
+              "hit": 0,
+              "total": 14,
+              "rate": 0.0
+            }
+          }
+        },
+        "审查意见答复单": {
+          "row_count": 44,
+          "metrics": {
+            "X": {
+              "hit": 24,
+              "total": 25,
+              "rate": 0.96
+            },
+            "V": {
+              "hit": 25,
+              "total": 25,
+              "rate": 1.0
+            },
+            "W": {
+              "hit": 21,
+              "total": 21,
+              "rate": 1.0
+            }
+          }
+        },
+        "文件传递单": {
+          "row_count": 897,
+          "metrics": {
+            "X": {
+              "hit": 21,
+              "total": 425,
+              "rate": 0.049412
+            },
+            "V": {
+              "hit": 201,
+              "total": 425,
+              "rate": 0.472941
+            },
+            "W": {
+              "hit": 43,
+              "total": 238,
+              "rate": 0.180672
+            }
+          }
+        }
+      }
+    },
+    "stable_composite": {
+      "metrics": {
+        "X": {
+          "hit": 615,
+          "total": 911,
+          "rate": 0.675082
+        },
+        "V": {
+          "hit": 739,
+          "total": 911,
+          "rate": 0.811196
+        },
+        "W": {
+          "hit": 350,
+          "total": 459,
+          "rate": 0.762527
+        }
+      },
+      "delta_vs_workflow": {
+        "X_hit_delta": 450,
+        "V_hit_delta": 241,
+        "W_hit_delta": 212,
+        "changed_row_count": 460
+      },
+      "by_type": {
+        "CR": {
+          "row_count": 50,
+          "rows_with_prefix_rule": 50,
+          "rows_with_prefix_prediction": 44,
+          "metrics": {
+            "X": {
+              "hit": 39,
+              "total": 49,
+              "rate": 0.795918
+            },
+            "V": {
+              "hit": 41,
+              "total": 49,
+              "rate": 0.836735
+            },
+            "W": {
+              "hit": 14,
+              "total": 17,
+              "rate": 0.823529
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 39,
+            "V_hit_delta": 19,
+            "W_hit_delta": 13
+          }
+        },
+        "CR答复单": {
+          "row_count": 42,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "FU通知单": {
+          "row_count": 98,
+          "rows_with_prefix_rule": 98,
+          "rows_with_prefix_prediction": 21,
+          "metrics": {
+            "X": {
+              "hit": 4,
+              "total": 4,
+              "rate": 1.0
+            },
+            "V": {
+              "hit": 4,
+              "total": 4,
+              "rate": 1.0
+            },
+            "W": {
+              "hit": 3,
+              "total": 3,
+              "rate": 1.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 4,
+            "V_hit_delta": 4,
+            "W_hit_delta": 3
+          }
+        },
+        "IICS": {
+          "row_count": 306,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "IITF": {
+          "row_count": 375,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "NCR": {
+          "row_count": 6,
+          "rows_with_prefix_rule": 6,
+          "rows_with_prefix_prediction": 4,
+          "metrics": {
+            "X": {
+              "hit": 4,
+              "total": 6,
+              "rate": 0.666667
+            },
+            "V": {
+              "hit": 5,
+              "total": 6,
+              "rate": 0.833333
+            },
+            "W": {
+              "hit": 0,
+              "total": 2,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 3,
+            "V_hit_delta": 3,
+            "W_hit_delta": 0
+          }
+        },
+        "NCR回复单": {
+          "row_count": 5,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "TA": {
+          "row_count": 81,
+          "rows_with_prefix_rule": 81,
+          "rows_with_prefix_prediction": 70,
+          "metrics": {
+            "X": {
+              "hit": 59,
+              "total": 80,
+              "rate": 0.7375
+            },
+            "V": {
+              "hit": 67,
+              "total": 80,
+              "rate": 0.8375
+            },
+            "W": {
+              "hit": 20,
+              "total": 24,
+              "rate": 0.833333
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 58,
+            "V_hit_delta": 39,
+            "W_hit_delta": 18
+          }
+        },
+        "TA回复单": {
+          "row_count": 57,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "作废通知单": {
+          "row_count": 13,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "图文传真": {
+          "row_count": 274,
+          "rows_with_prefix_rule": 274,
+          "rows_with_prefix_prediction": 179,
+          "metrics": {
+            "X": {
+              "hit": 92,
+              "total": 115,
+              "rate": 0.8
+            },
+            "V": {
+              "hit": 103,
+              "total": 115,
+              "rate": 0.895652
+            },
+            "W": {
+              "hit": 60,
+              "total": 66,
+              "rate": 0.909091
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 45,
+            "V_hit_delta": 14,
+            "W_hit_delta": 27
+          }
+        },
+        "备忘录": {
+          "row_count": 298,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 68,
+              "total": 168,
+              "rate": 0.404762
+            },
+            "V": {
+              "hit": 118,
+              "total": 168,
+              "rate": 0.702381
+            },
+            "W": {
+              "hit": 38,
+              "total": 69,
+              "rate": 0.550725
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "外发纪要": {
+          "row_count": 14,
+          "rows_with_prefix_rule": 14,
+          "rows_with_prefix_prediction": 11,
+          "metrics": {
+            "X": {
+              "hit": 5,
+              "total": 9,
+              "rate": 0.555556
+            },
+            "V": {
+              "hit": 8,
+              "total": 9,
+              "rate": 0.888889
+            },
+            "W": {
+              "hit": 3,
+              "total": 5,
+              "rate": 0.6
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 4,
+            "V_hit_delta": 0,
+            "W_hit_delta": 3
+          }
+        },
+        "审查意见单": {
+          "row_count": 398,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 2,
+              "total": 30,
+              "rate": 0.066667
+            },
+            "V": {
+              "hit": 5,
+              "total": 30,
+              "rate": 0.166667
+            },
+            "W": {
+              "hit": 0,
+              "total": 14,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "审查意见答复单": {
+          "row_count": 44,
+          "rows_with_prefix_rule": 44,
+          "rows_with_prefix_prediction": 25,
+          "metrics": {
+            "X": {
+              "hit": 25,
+              "total": 25,
+              "rate": 1.0
+            },
+            "V": {
+              "hit": 25,
+              "total": 25,
+              "rate": 1.0
+            },
+            "W": {
+              "hit": 21,
+              "total": 21,
+              "rate": 1.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 1,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "文件传递单": {
+          "row_count": 897,
+          "rows_with_prefix_rule": 897,
+          "rows_with_prefix_prediction": 508,
+          "metrics": {
+            "X": {
+              "hit": 317,
+              "total": 425,
+              "rate": 0.745882
+            },
+            "V": {
+              "hit": 363,
+              "total": 425,
+              "rate": 0.854118
+            },
+            "W": {
+              "hit": 191,
+              "total": 238,
+              "rate": 0.802521
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 296,
+            "V_hit_delta": 162,
+            "W_hit_delta": 148
+          }
+        }
+      },
+      "samples": [
+        {
+          "a_raw": "CR",
+          "e_raw": "EFCY-400000-ECZS-0251",
+          "excel_row": 172,
+          "prefix": "EFCY",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.电气自动化所",
+            "仪控设计所.仪控二室"
+          ],
+          "prefix_pred_w": [
+            "仪控二室"
+          ],
+          "prefix_pred_names": [
+            "么天禹",
+            "乔学举",
+            "乔泓森",
+            "习春苗",
+            "于晓宁",
+            "于林厚",
+            "任鑫赫",
+            "何丹阳",
+            "余周俊",
+            "刘东昆",
+            "刘亚农",
+            "刘仁杰",
+            "刘伟",
+            "刘传",
+            "刘凯",
+            "刘嘉龙",
+            "刘城",
+            "刘媛媛",
+            "刘徙铎",
+            "刘思禹",
+            "刘怡柔",
+            "刘敬",
+            "刘晓光",
+            "刘晓静",
+            "刘泽",
+            "刘玉磊",
+            "刘祖全",
+            "刘祜瑶",
+            "刘绪金",
+            "刘艳菊"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EFCY-400001-ECZS-0251",
+          "excel_row": 173,
+          "prefix": "EFCY",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "设计管理科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "北京核工程研究设计院",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.电气自动化所",
+            "仪控设计所.仪控二室"
+          ],
+          "prefix_pred_w": [
+            "仪控一室"
+          ],
+          "prefix_pred_names": [
+            "么天禹",
+            "乔学举",
+            "乔泓森",
+            "习春苗",
+            "于晓宁",
+            "于林厚",
+            "任鑫赫",
+            "何丹阳",
+            "余周俊",
+            "刘东昆",
+            "刘亚农",
+            "刘仁杰",
+            "刘伟",
+            "刘传",
+            "刘凯",
+            "刘嘉龙",
+            "刘城",
+            "刘媛媛",
+            "刘徙铎",
+            "刘思禹",
+            "刘怡柔",
+            "刘敬",
+            "刘晓光",
+            "刘晓静",
+            "刘泽",
+            "刘玉磊",
+            "刘祖全",
+            "刘祜瑶",
+            "刘绪金",
+            "刘艳菊"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EFCY-400002-ECZS-0251",
+          "excel_row": 174,
+          "prefix": "EFCY",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.电气自动化所",
+            "仪控设计所.仪控二室"
+          ],
+          "prefix_pred_w": [
+            "仪控一室"
+          ],
+          "prefix_pred_names": [
+            "么天禹",
+            "乔学举",
+            "乔泓森",
+            "习春苗",
+            "于晓宁",
+            "于林厚",
+            "任鑫赫",
+            "何丹阳",
+            "余周俊",
+            "刘东昆",
+            "刘亚农",
+            "刘仁杰",
+            "刘伟",
+            "刘传",
+            "刘凯",
+            "刘嘉龙",
+            "刘城",
+            "刘媛媛",
+            "刘徙铎",
+            "刘思禹",
+            "刘怡柔",
+            "刘敬",
+            "刘晓光",
+            "刘晓静",
+            "刘泽",
+            "刘玉磊",
+            "刘祖全",
+            "刘祜瑶",
+            "刘绪金",
+            "刘艳菊"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHLS-400011-ECZS-0021",
+          "excel_row": 176,
+          "prefix": "EHLS",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.辅助系统室",
+            "工艺系统研究设计所.安全系统室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯婷",
+            "刘东东",
+            "刘亚康",
+            "刘伟",
+            "刘小琳",
+            "刘明辉",
+            "刘洋",
+            "刘飞雪",
+            "吕佳宁",
+            "周天威",
+            "姚立渊",
+            "孙华清",
+            "孙英娜",
+            "宋时伟",
+            "庄秋义",
+            "张俊京",
+            "张孟极",
+            "张志豪",
+            "张蕊",
+            "房丽萍",
+            "文圣群",
+            "时东",
+            "李嫦月",
+            "李庆华",
+            "李杰",
+            "杨昭会",
+            "林达平",
+            "潘佳琪",
+            "潘聪葱",
+            "王品卉"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHLS-400012-ECZS-0021",
+          "excel_row": 177,
+          "prefix": "EHLS",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.辅助系统室",
+            "工艺系统研究设计所.安全系统室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯婷",
+            "刘东东",
+            "刘亚康",
+            "刘伟",
+            "刘小琳",
+            "刘明辉",
+            "刘洋",
+            "刘飞雪",
+            "吕佳宁",
+            "周天威",
+            "姚立渊",
+            "孙华清",
+            "孙英娜",
+            "宋时伟",
+            "庄秋义",
+            "张俊京",
+            "张孟极",
+            "张志豪",
+            "张蕊",
+            "房丽萍",
+            "文圣群",
+            "时东",
+            "李嫦月",
+            "李庆华",
+            "李杰",
+            "杨昭会",
+            "林达平",
+            "潘佳琪",
+            "潘聪葱",
+            "王品卉"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHLS-400013-ECZS-0021",
+          "excel_row": 178,
+          "prefix": "EHLS",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.辅助系统室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯婷",
+            "刘东东",
+            "刘亚康",
+            "刘伟",
+            "刘小琳",
+            "刘明辉",
+            "刘洋",
+            "刘飞雪",
+            "吕佳宁",
+            "周天威",
+            "姚立渊",
+            "孙华清",
+            "孙英娜",
+            "宋时伟",
+            "庄秋义",
+            "张俊京",
+            "张孟极",
+            "张志豪",
+            "张蕊",
+            "房丽萍",
+            "文圣群",
+            "时东",
+            "李嫦月",
+            "李庆华",
+            "李杰",
+            "杨昭会",
+            "林达平",
+            "潘佳琪",
+            "潘聪葱",
+            "王品卉"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400001-ECZS-0076",
+          "excel_row": 179,
+          "prefix": "EHMC",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400012-ECZS-0077",
+          "excel_row": 180,
+          "prefix": "EHMC",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "通信室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400013-ECZS-0077",
+          "excel_row": 181,
+          "prefix": "EHMC",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400014-ECZS-0077",
+          "excel_row": 182,
+          "prefix": "EHMC",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400015-ECZS-0077",
+          "excel_row": 183,
+          "prefix": "EHMC",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "设计管理科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "北京核工程研究设计院",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400016-ECZS-0077",
+          "excel_row": 184,
+          "prefix": "EHMC",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "设计管理科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "北京核工程研究设计院",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400017-ECZS-0077",
+          "excel_row": 185,
+          "prefix": "EHMC",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400018-ECZS-0077",
+          "excel_row": 186,
+          "prefix": "EHMC",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400035-ECZS-0075",
+          "excel_row": 187,
+          "prefix": "EHMC",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400036-ECZS-0075",
+          "excel_row": 188,
+          "prefix": "EHMC",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400037-ECZS-0075",
+          "excel_row": 189,
+          "prefix": "EHMC",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "设计管理科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "北京核工程研究设计院",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHST-400003-ECZS-0051",
+          "excel_row": 193,
+          "prefix": "EHST",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "设计管理科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "北京核工程研究设计院",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核电工艺所",
+            "工艺系统研究设计所.工艺设备室",
+            "工艺系统研究设计所.辅助系统室"
+          ],
+          "prefix_pred_w": [
+            "工艺系统室"
+          ],
+          "prefix_pred_names": [
+            "Super",
+            "万忠义",
+            "乔伟",
+            "习磊朋",
+            "于嘉蕾",
+            "于婷",
+            "于波",
+            "付煦",
+            "任美贤",
+            "任运佳",
+            "何毅",
+            "何海峰",
+            "余云",
+            "侯锋",
+            "倪东海",
+            "傅兴",
+            "兰志远",
+            "冯乾",
+            "冯佳庆",
+            "冯国忠",
+            "刘世龙",
+            "刘丽然",
+            "刘勇兵",
+            "刘卫隆",
+            "刘哲",
+            "刘宇晗",
+            "刘峰廷",
+            "刘康利",
+            "刘建中",
+            "刘建栋"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHZZ-400001-ECZS-0054",
+          "excel_row": 194,
+          "prefix": "EHZZ",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "设计管理科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "北京核工程研究设计院",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "SMPCT-400007-SMPMB-725A",
+          "excel_row": 233,
+          "prefix": "SMPCT",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计文档科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计文档科",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.辅助系统室",
+            "工艺系统研究设计所.工艺设备室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯婷",
+            "刘东东",
+            "刘亚康",
+            "刘伟",
+            "刘小琳",
+            "刘明辉",
+            "刘洋",
+            "刘飞雪",
+            "吕佳宁",
+            "周天威",
+            "姚立渊",
+            "孙华清",
+            "孙英娜",
+            "宋时伟",
+            "庄秋义",
+            "张俊京",
+            "张孟极",
+            "张志豪",
+            "张蕊",
+            "房丽萍",
+            "文圣群",
+            "时东",
+            "李嫦月",
+            "李庆华",
+            "李杰",
+            "杨昭会",
+            "林达平",
+            "潘佳琪",
+            "潘聪葱",
+            "王品卉"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "SMPKP-400001-SMPMB-361A",
+          "excel_row": 234,
+          "prefix": "SMPKP",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计文档科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计文档科",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "核设备所.工艺及成套设备室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丁磊",
+            "余成林",
+            "刘国彪",
+            "刘恺雯",
+            "周洪琦",
+            "娄志华",
+            "尹明月",
+            "张海春",
+            "曹捷铭",
+            "李媛",
+            "王玉莹",
+            "王鹏",
+            "石兵",
+            "郭建伟",
+            "黄文頔"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "SMPKP-400002-SMPMB-361A",
+          "excel_row": 235,
+          "prefix": "SMPKP",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计文档科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计文档科",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "核设备所.工艺及成套设备室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丁磊",
+            "余成林",
+            "刘国彪",
+            "刘恺雯",
+            "周洪琦",
+            "娄志华",
+            "尹明月",
+            "张海春",
+            "曹捷铭",
+            "李媛",
+            "王玉莹",
+            "王鹏",
+            "石兵",
+            "郭建伟",
+            "黄文頔"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "FAPAG-400006-FAPMB-285A",
+          "excel_row": 107,
+          "prefix": "FAPAG",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "非标设备室",
+            "北京核工程研究设计院",
+            "核设备所",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.核设备所",
+            "核设备所.非标设备室",
+            "中核工程.北京核工程研究设计院.核设备所",
+            "北京核工程研究设计院.核设备所.非标设备室",
+            "设计文档科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "非标设备室",
+            "设计文档科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核电工艺所"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "Super",
+            "万忠义",
+            "乔伟",
+            "习磊朋",
+            "于嘉蕾",
+            "于婷",
+            "于波",
+            "付煦",
+            "任美贤",
+            "任运佳",
+            "何毅",
+            "何海峰",
+            "余云",
+            "侯锋",
+            "倪东海",
+            "傅兴",
+            "兰志远",
+            "冯乾",
+            "冯佳庆",
+            "冯国忠",
+            "刘世龙",
+            "刘丽然",
+            "刘勇兵",
+            "刘卫隆",
+            "刘哲",
+            "刘宇晗",
+            "刘峰廷",
+            "刘康利",
+            "刘建中",
+            "刘建栋"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "FAPAX-400013-FAPMB-725A",
+          "excel_row": 109,
+          "prefix": "FAPAX",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "非标设备室",
+            "北京核工程研究设计院",
+            "核设备所",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.核设备所",
+            "核设备所.非标设备室",
+            "中核工程.北京核工程研究设计院.核设备所",
+            "北京核工程研究设计院.核设备所.非标设备室",
+            "设计文档科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "非标设备室",
+            "设计文档科"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所",
+            "工艺系统研究设计所.工艺设备室",
+            "工艺系统研究设计所.安全系统室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "12",
+            "丁亮",
+            "丘锦萌",
+            "东乐水",
+            "丰亮泽",
+            "于凤云",
+            "于沛",
+            "付浩然",
+            "任晓欣",
+            "任永刚",
+            "余朝贵",
+            "侯婷",
+            "侯智华",
+            "冯鹤云",
+            "刘东东",
+            "刘亚光",
+            "刘亚康",
+            "刘伟",
+            "刘加志",
+            "刘学芬",
+            "刘小琳",
+            "刘文宇",
+            "刘明辉",
+            "刘松洋",
+            "刘洋",
+            "刘艺萱",
+            "刘金光",
+            "刘长亮",
+            "刘飞雪",
+            "刘鹏飞"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "FAPSK-400000-FAPMB-307A",
+          "excel_row": 111,
+          "prefix": "FAPSK",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "安全系统室",
+            "北京核工程研究设计院",
+            "工艺系统研究设计所",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工艺系统研究设计所",
+            "工艺系统研究设计所.安全系统室",
+            "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+            "北京核工程研究设计院.工艺系统研究设计所.安全系统室",
+            "设计文档科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "安全系统室",
+            "设计文档科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核电工艺所"
+          ],
+          "prefix_pred_w": [
+            "暖通室"
+          ],
+          "prefix_pred_names": [
+            "Super",
+            "万忠义",
+            "乔伟",
+            "习磊朋",
+            "于嘉蕾",
+            "于婷",
+            "于波",
+            "付煦",
+            "任美贤",
+            "任运佳",
+            "何毅",
+            "何海峰",
+            "余云",
+            "侯锋",
+            "倪东海",
+            "傅兴",
+            "兰志远",
+            "冯乾",
+            "冯佳庆",
+            "冯国忠",
+            "刘世龙",
+            "刘丽然",
+            "刘勇兵",
+            "刘卫隆",
+            "刘哲",
+            "刘宇晗",
+            "刘峰廷",
+            "刘康利",
+            "刘建中",
+            "刘建栋"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "FAPYS-400018-FAPMB-181A",
+          "excel_row": 112,
+          "prefix": "FAPYS",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "非标设备室",
+            "北京核工程研究设计院",
+            "核设备所",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.核设备所",
+            "核设备所.非标设备室",
+            "中核工程.北京核工程研究设计院.核设备所",
+            "北京核工程研究设计院.核设备所.非标设备室",
+            "设计文档科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "非标设备室",
+            "设计文档科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JDPCN-400000-JDPMB-147A",
+          "excel_row": 401,
+          "prefix": "JDPCN",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.工艺设备室",
+            "工艺系统研究设计所.总体布置室",
+            "电气设计所.电气一室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯智华",
+            "冯鹤云",
+            "刘长亮",
+            "孙佳丽",
+            "张吉来",
+            "张志明",
+            "曹晓楠",
+            "李栋梁",
+            "李瑞雪",
+            "杨志全",
+            "杨洋",
+            "杨理烽",
+            "王子垚",
+            "蒋克涛",
+            "薛卫光",
+            "豆朝宗",
+            "郎瑞峰",
+            "黄若琳",
+            "龚钊",
+            "吴巧英",
+            "张艳红",
+            "彭春华",
+            "彭立",
+            "李思创",
+            "杜广",
+            "杜晓彬",
+            "杨乐",
+            "梁毅",
+            "樊彦芳",
+            "牛艳颖"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JDPCN-400007-JDPMB-146E",
+          "excel_row": 402,
+          "prefix": "JDPCN",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "工程设计管理部",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "工程设计管理部",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.工艺设备室",
+            "工艺系统研究设计所.总体布置室",
+            "电气设计所.电气一室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯智华",
+            "冯鹤云",
+            "刘长亮",
+            "孙佳丽",
+            "张吉来",
+            "张志明",
+            "曹晓楠",
+            "李栋梁",
+            "李瑞雪",
+            "杨志全",
+            "杨洋",
+            "杨理烽",
+            "王子垚",
+            "蒋克涛",
+            "薛卫光",
+            "豆朝宗",
+            "郎瑞峰",
+            "黄若琳",
+            "龚钊",
+            "吴巧英",
+            "张艳红",
+            "彭春华",
+            "彭立",
+            "李思创",
+            "杜广",
+            "杜晓彬",
+            "杨乐",
+            "梁毅",
+            "樊彦芳",
+            "牛艳颖"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JDPCN-400008-JDPMB-146E",
+          "excel_row": 403,
+          "prefix": "JDPCN",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.工艺设备室",
+            "工艺系统研究设计所.总体布置室",
+            "电气设计所.电气一室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯智华",
+            "冯鹤云",
+            "刘长亮",
+            "孙佳丽",
+            "张吉来",
+            "张志明",
+            "曹晓楠",
+            "李栋梁",
+            "李瑞雪",
+            "杨志全",
+            "杨洋",
+            "杨理烽",
+            "王子垚",
+            "蒋克涛",
+            "薛卫光",
+            "豆朝宗",
+            "郎瑞峰",
+            "黄若琳",
+            "龚钊",
+            "吴巧英",
+            "张艳红",
+            "彭春华",
+            "彭立",
+            "李思创",
+            "杜广",
+            "杜晓彬",
+            "杨乐",
+            "梁毅",
+            "樊彦芳",
+            "牛艳颖"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPAD-400036-JAPMB-261A",
+          "excel_row": 204,
+          "prefix": "JAPAD",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "核设备所.工艺及成套设备室",
+            "核设备所.设备结构分析室",
+            "工程设计管理部.设计管理科"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丁磊",
+            "余成林",
+            "刘国彪",
+            "刘恺雯",
+            "周洪琦",
+            "娄志华",
+            "尹明月",
+            "张海春",
+            "曹捷铭",
+            "李媛",
+            "王玉莹",
+            "王鹏",
+            "石兵",
+            "郭建伟",
+            "黄文頔",
+            "付一晨",
+            "冯鹏飞",
+            "孟祥盖",
+            "晋文娟",
+            "李瑾",
+            "王兵臣",
+            "王正义",
+            "缪岭",
+            "范章",
+            "薛万勋",
+            "袁占航",
+            "付翌",
+            "伍旻虹",
+            "余淼",
+            "刘松林"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPAD-400037-JAPMB-261A",
+          "excel_row": 205,
+          "prefix": "JAPAD",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "核设备所.工艺及成套设备室",
+            "核设备所.设备结构分析室",
+            "工程设计管理部.设计管理科"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丁磊",
+            "余成林",
+            "刘国彪",
+            "刘恺雯",
+            "周洪琦",
+            "娄志华",
+            "尹明月",
+            "张海春",
+            "曹捷铭",
+            "李媛",
+            "王玉莹",
+            "王鹏",
+            "石兵",
+            "郭建伟",
+            "黄文頔",
+            "付一晨",
+            "冯鹏飞",
+            "孟祥盖",
+            "晋文娟",
+            "李瑾",
+            "王兵臣",
+            "王正义",
+            "缪岭",
+            "范章",
+            "薛万勋",
+            "袁占航",
+            "付翌",
+            "伍旻虹",
+            "余淼",
+            "刘松林"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPAD-400038-JAPMB-261A",
+          "excel_row": 206,
+          "prefix": "JAPAD",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "工程设计管理部",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "工程设计管理部",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "核设备所.工艺及成套设备室",
+            "核设备所.设备结构分析室",
+            "工程设计管理部.设计管理科"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丁磊",
+            "余成林",
+            "刘国彪",
+            "刘恺雯",
+            "周洪琦",
+            "娄志华",
+            "尹明月",
+            "张海春",
+            "曹捷铭",
+            "李媛",
+            "王玉莹",
+            "王鹏",
+            "石兵",
+            "郭建伟",
+            "黄文頔",
+            "付一晨",
+            "冯鹏飞",
+            "孟祥盖",
+            "晋文娟",
+            "李瑾",
+            "王兵臣",
+            "王正义",
+            "缪岭",
+            "范章",
+            "薛万勋",
+            "袁占航",
+            "付翌",
+            "伍旻虹",
+            "余淼",
+            "刘松林"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPCC-400001-JAPMB-263A",
+          "excel_row": 207,
+          "prefix": "JAPCC",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "工程设计管理部",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "工程设计管理部",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "核设备所.工艺及成套设备室",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丁磊",
+            "余成林",
+            "刘国彪",
+            "刘恺雯",
+            "周洪琦",
+            "娄志华",
+            "尹明月",
+            "张海春",
+            "曹捷铭",
+            "李媛",
+            "王玉莹",
+            "王鹏",
+            "石兵",
+            "郭建伟",
+            "黄文頔",
+            "乔振铭",
+            "刘慧芳",
+            "刘爱军",
+            "叶阳春",
+            "周洋",
+            "周超",
+            "姚向豫",
+            "孙福江",
+            "张洪军",
+            "战蓉洁",
+            "朱鹏吉",
+            "李云华",
+            "李佳政",
+            "李均",
+            "李建奇"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPDN-400005-JAPMB-253A",
+          "excel_row": 208,
+          "prefix": "JAPDN",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "工程设计管理部",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "工程设计管理部",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.安全系统室",
+            "工艺系统研究设计所.辅助系统室",
+            "工程设计管理部.设计管理科"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丘锦萌",
+            "付浩然",
+            "刘亚光",
+            "刘加志",
+            "吴健",
+            "吴冰",
+            "孙奇",
+            "孙超杰",
+            "宋立峰",
+            "张冉",
+            "张志成",
+            "张念喆",
+            "李丽娟",
+            "李妍",
+            "杨俊琦",
+            "梁慧茹",
+            "池翔宇",
+            "沈剑男",
+            "洪德训",
+            "王佳卓",
+            "王凯",
+            "田卫卫",
+            "田海静",
+            "皮耀",
+            "盛美玲",
+            "程岳",
+            "薛棋铭",
+            "赵梦巧",
+            "辛培梅",
+            "邹文重"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPDN-400023-JAPMB-253A",
+          "excel_row": 209,
+          "prefix": "JAPDN",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.安全系统室",
+            "工艺系统研究设计所.辅助系统室",
+            "工程设计管理部.设计管理科"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丘锦萌",
+            "付浩然",
+            "刘亚光",
+            "刘加志",
+            "吴健",
+            "吴冰",
+            "孙奇",
+            "孙超杰",
+            "宋立峰",
+            "张冉",
+            "张志成",
+            "张念喆",
+            "李丽娟",
+            "李妍",
+            "杨俊琦",
+            "梁慧茹",
+            "池翔宇",
+            "沈剑男",
+            "洪德训",
+            "王佳卓",
+            "王凯",
+            "田卫卫",
+            "田海静",
+            "皮耀",
+            "盛美玲",
+            "程岳",
+            "薛棋铭",
+            "赵梦巧",
+            "辛培梅",
+            "邹文重"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPDN-400024-JAPMB-253A",
+          "excel_row": 210,
+          "prefix": "JAPDN",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "工程设计管理部",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "工程设计管理部",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.安全系统室",
+            "工艺系统研究设计所.辅助系统室",
+            "工程设计管理部.设计管理科"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丘锦萌",
+            "付浩然",
+            "刘亚光",
+            "刘加志",
+            "吴健",
+            "吴冰",
+            "孙奇",
+            "孙超杰",
+            "宋立峰",
+            "张冉",
+            "张志成",
+            "张念喆",
+            "李丽娟",
+            "李妍",
+            "杨俊琦",
+            "梁慧茹",
+            "池翔宇",
+            "沈剑男",
+            "洪德训",
+            "王佳卓",
+            "王凯",
+            "田卫卫",
+            "田海静",
+            "皮耀",
+            "盛美玲",
+            "程岳",
+            "薛棋铭",
+            "赵梦巧",
+            "辛培梅",
+            "邹文重"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPKP-400000-JAPMB-361A",
+          "excel_row": 211,
+          "prefix": "JAPKP",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "工程设计管理部.设计管理科",
+            "核设备所.工艺及成套设备室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "付翌",
+            "伍旻虹",
+            "余淼",
+            "刘松林",
+            "刘颖",
+            "初立波",
+            "南薇",
+            "吕飞",
+            "吴春勇",
+            "周林军",
+            "姜青和",
+            "孙强",
+            "尚丽华",
+            "尹坤尹坤",
+            "常宗虎",
+            "张会乔",
+            "张倩",
+            "张冬",
+            "张国翔",
+            "张毅",
+            "张海波",
+            "张瑜",
+            "彭康玮",
+            "戴连军",
+            "朱宪澈",
+            "李久振",
+            "李云屹",
+            "李博",
+            "李占全",
+            "李卫杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPKP-400001-JAPMB-361A",
+          "excel_row": 212,
+          "prefix": "JAPKP",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "工程设计管理部",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "工程设计管理部",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "工程设计管理部.设计管理科",
+            "核设备所.工艺及成套设备室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "付翌",
+            "伍旻虹",
+            "余淼",
+            "刘松林",
+            "刘颖",
+            "初立波",
+            "南薇",
+            "吕飞",
+            "吴春勇",
+            "周林军",
+            "姜青和",
+            "孙强",
+            "尚丽华",
+            "尹坤尹坤",
+            "常宗虎",
+            "张会乔",
+            "张倩",
+            "张冬",
+            "张国翔",
+            "张毅",
+            "张海波",
+            "张瑜",
+            "彭康玮",
+            "戴连军",
+            "朱宪澈",
+            "李久振",
+            "李云屹",
+            "李博",
+            "李占全",
+            "李卫杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPQA-400000-JAPMB-745A",
+          "excel_row": 213,
+          "prefix": "JAPQA",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.电气自动化所",
+            "仪控设计所.仪控一室"
+          ],
+          "prefix_pred_w": [
+            "仪控一室"
+          ],
+          "prefix_pred_names": [
+            "么天禹",
+            "乔学举",
+            "乔泓森",
+            "习春苗",
+            "于晓宁",
+            "于林厚",
+            "任鑫赫",
+            "何丹阳",
+            "余周俊",
+            "刘东昆",
+            "刘亚农",
+            "刘仁杰",
+            "刘伟",
+            "刘传",
+            "刘凯",
+            "刘嘉龙",
+            "刘城",
+            "刘媛媛",
+            "刘徙铎",
+            "刘思禹",
+            "刘怡柔",
+            "刘敬",
+            "刘晓光",
+            "刘晓静",
+            "刘泽",
+            "刘玉磊",
+            "刘祖全",
+            "刘祜瑶",
+            "刘绪金",
+            "刘艳菊"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "NCR",
+          "e_raw": "SMPDB-430000-SMPMB-159A",
+          "excel_row": 236,
+          "prefix": "SMPDB",
+          "profile": "stable",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科",
+            "设计文档科",
+            "工程设计管理部.设计文档科",
+            "北京核工程研究设计院.工程设计管理部.设计文档科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "设计文档科"
+          ],
+          "prefix_pred_v": [
+            "公用系统所.公用一室",
+            "北京核化工研究设计院.放射性废物管理工程所",
+            "河北分公司.核电工艺所"
+          ],
+          "prefix_pred_w": [
+            "放射性废物管理三室"
+          ],
+          "prefix_pred_names": [
+            "倪明波",
+            "刘婧",
+            "孙立臣",
+            "康健",
+            "张丽丽",
+            "张凤霖",
+            "张宏伟",
+            "朱芸芸",
+            "杜文学",
+            "林兆娣",
+            "温华",
+            "王幽雁",
+            "王杰",
+            "童欣",
+            "胡北",
+            "赵磊",
+            "邱珊珊",
+            "郭静涛",
+            "陆松",
+            "陈浩南",
+            "韩金权",
+            "马莉",
+            "于湉湉",
+            "任天屹",
+            "侯超",
+            "冯桐伟",
+            "刘培娟",
+            "刘昱祺",
+            "刘江海",
+            "刘铁军"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        }
+      ]
+    },
+    "experimental_composite": {
+      "metrics": {
+        "X": {
+          "hit": 616,
+          "total": 911,
+          "rate": 0.67618
+        },
+        "V": {
+          "hit": 740,
+          "total": 911,
+          "rate": 0.812294
+        },
+        "W": {
+          "hit": 351,
+          "total": 459,
+          "rate": 0.764706
+        }
+      },
+      "delta_vs_workflow": {
+        "X_hit_delta": 451,
+        "V_hit_delta": 242,
+        "W_hit_delta": 213,
+        "changed_row_count": 461
+      },
+      "by_type": {
+        "CR": {
+          "row_count": 50,
+          "rows_with_prefix_rule": 50,
+          "rows_with_prefix_prediction": 44,
+          "metrics": {
+            "X": {
+              "hit": 39,
+              "total": 49,
+              "rate": 0.795918
+            },
+            "V": {
+              "hit": 41,
+              "total": 49,
+              "rate": 0.836735
+            },
+            "W": {
+              "hit": 14,
+              "total": 17,
+              "rate": 0.823529
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 39,
+            "V_hit_delta": 19,
+            "W_hit_delta": 13
+          }
+        },
+        "CR答复单": {
+          "row_count": 42,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "FU通知单": {
+          "row_count": 98,
+          "rows_with_prefix_rule": 98,
+          "rows_with_prefix_prediction": 21,
+          "metrics": {
+            "X": {
+              "hit": 4,
+              "total": 4,
+              "rate": 1.0
+            },
+            "V": {
+              "hit": 4,
+              "total": 4,
+              "rate": 1.0
+            },
+            "W": {
+              "hit": 3,
+              "total": 3,
+              "rate": 1.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 4,
+            "V_hit_delta": 4,
+            "W_hit_delta": 3
+          }
+        },
+        "IICS": {
+          "row_count": 306,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "IITF": {
+          "row_count": 375,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "NCR": {
+          "row_count": 6,
+          "rows_with_prefix_rule": 6,
+          "rows_with_prefix_prediction": 4,
+          "metrics": {
+            "X": {
+              "hit": 4,
+              "total": 6,
+              "rate": 0.666667
+            },
+            "V": {
+              "hit": 5,
+              "total": 6,
+              "rate": 0.833333
+            },
+            "W": {
+              "hit": 0,
+              "total": 2,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 3,
+            "V_hit_delta": 3,
+            "W_hit_delta": 0
+          }
+        },
+        "NCR回复单": {
+          "row_count": 5,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "TA": {
+          "row_count": 81,
+          "rows_with_prefix_rule": 81,
+          "rows_with_prefix_prediction": 70,
+          "metrics": {
+            "X": {
+              "hit": 59,
+              "total": 80,
+              "rate": 0.7375
+            },
+            "V": {
+              "hit": 67,
+              "total": 80,
+              "rate": 0.8375
+            },
+            "W": {
+              "hit": 20,
+              "total": 24,
+              "rate": 0.833333
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 58,
+            "V_hit_delta": 39,
+            "W_hit_delta": 18
+          }
+        },
+        "TA回复单": {
+          "row_count": 57,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "作废通知单": {
+          "row_count": 13,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "V": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            },
+            "W": {
+              "hit": 0,
+              "total": 0,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "图文传真": {
+          "row_count": 274,
+          "rows_with_prefix_rule": 274,
+          "rows_with_prefix_prediction": 179,
+          "metrics": {
+            "X": {
+              "hit": 93,
+              "total": 115,
+              "rate": 0.808696
+            },
+            "V": {
+              "hit": 104,
+              "total": 115,
+              "rate": 0.904348
+            },
+            "W": {
+              "hit": 61,
+              "total": 66,
+              "rate": 0.924242
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 46,
+            "V_hit_delta": 15,
+            "W_hit_delta": 28
+          }
+        },
+        "备忘录": {
+          "row_count": 298,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 68,
+              "total": 168,
+              "rate": 0.404762
+            },
+            "V": {
+              "hit": 118,
+              "total": 168,
+              "rate": 0.702381
+            },
+            "W": {
+              "hit": 38,
+              "total": 69,
+              "rate": 0.550725
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "外发纪要": {
+          "row_count": 14,
+          "rows_with_prefix_rule": 14,
+          "rows_with_prefix_prediction": 11,
+          "metrics": {
+            "X": {
+              "hit": 5,
+              "total": 9,
+              "rate": 0.555556
+            },
+            "V": {
+              "hit": 8,
+              "total": 9,
+              "rate": 0.888889
+            },
+            "W": {
+              "hit": 3,
+              "total": 5,
+              "rate": 0.6
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 4,
+            "V_hit_delta": 0,
+            "W_hit_delta": 3
+          }
+        },
+        "审查意见单": {
+          "row_count": 398,
+          "rows_with_prefix_rule": 0,
+          "rows_with_prefix_prediction": 0,
+          "metrics": {
+            "X": {
+              "hit": 2,
+              "total": 30,
+              "rate": 0.066667
+            },
+            "V": {
+              "hit": 5,
+              "total": 30,
+              "rate": 0.166667
+            },
+            "W": {
+              "hit": 0,
+              "total": 14,
+              "rate": 0.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 0,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "审查意见答复单": {
+          "row_count": 44,
+          "rows_with_prefix_rule": 44,
+          "rows_with_prefix_prediction": 25,
+          "metrics": {
+            "X": {
+              "hit": 25,
+              "total": 25,
+              "rate": 1.0
+            },
+            "V": {
+              "hit": 25,
+              "total": 25,
+              "rate": 1.0
+            },
+            "W": {
+              "hit": 21,
+              "total": 21,
+              "rate": 1.0
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 1,
+            "V_hit_delta": 0,
+            "W_hit_delta": 0
+          }
+        },
+        "文件传递单": {
+          "row_count": 897,
+          "rows_with_prefix_rule": 897,
+          "rows_with_prefix_prediction": 508,
+          "metrics": {
+            "X": {
+              "hit": 317,
+              "total": 425,
+              "rate": 0.745882
+            },
+            "V": {
+              "hit": 363,
+              "total": 425,
+              "rate": 0.854118
+            },
+            "W": {
+              "hit": 191,
+              "total": 238,
+              "rate": 0.802521
+            }
+          },
+          "delta_vs_workflow": {
+            "X_hit_delta": 296,
+            "V_hit_delta": 162,
+            "W_hit_delta": 148
+          }
+        }
+      },
+      "samples": [
+        {
+          "a_raw": "CR",
+          "e_raw": "EFCY-400000-ECZS-0251",
+          "excel_row": 172,
+          "prefix": "EFCY",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.电气自动化所",
+            "仪控设计所.仪控二室"
+          ],
+          "prefix_pred_w": [
+            "仪控二室"
+          ],
+          "prefix_pred_names": [
+            "么天禹",
+            "乔学举",
+            "乔泓森",
+            "习春苗",
+            "于晓宁",
+            "于林厚",
+            "任鑫赫",
+            "何丹阳",
+            "余周俊",
+            "刘东昆",
+            "刘亚农",
+            "刘仁杰",
+            "刘伟",
+            "刘传",
+            "刘凯",
+            "刘嘉龙",
+            "刘城",
+            "刘媛媛",
+            "刘徙铎",
+            "刘思禹",
+            "刘怡柔",
+            "刘敬",
+            "刘晓光",
+            "刘晓静",
+            "刘泽",
+            "刘玉磊",
+            "刘祖全",
+            "刘祜瑶",
+            "刘绪金",
+            "刘艳菊"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EFCY-400001-ECZS-0251",
+          "excel_row": 173,
+          "prefix": "EFCY",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "设计管理科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "北京核工程研究设计院",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.电气自动化所",
+            "仪控设计所.仪控二室"
+          ],
+          "prefix_pred_w": [
+            "仪控一室"
+          ],
+          "prefix_pred_names": [
+            "么天禹",
+            "乔学举",
+            "乔泓森",
+            "习春苗",
+            "于晓宁",
+            "于林厚",
+            "任鑫赫",
+            "何丹阳",
+            "余周俊",
+            "刘东昆",
+            "刘亚农",
+            "刘仁杰",
+            "刘伟",
+            "刘传",
+            "刘凯",
+            "刘嘉龙",
+            "刘城",
+            "刘媛媛",
+            "刘徙铎",
+            "刘思禹",
+            "刘怡柔",
+            "刘敬",
+            "刘晓光",
+            "刘晓静",
+            "刘泽",
+            "刘玉磊",
+            "刘祖全",
+            "刘祜瑶",
+            "刘绪金",
+            "刘艳菊"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EFCY-400002-ECZS-0251",
+          "excel_row": 174,
+          "prefix": "EFCY",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.电气自动化所",
+            "仪控设计所.仪控二室"
+          ],
+          "prefix_pred_w": [
+            "仪控一室"
+          ],
+          "prefix_pred_names": [
+            "么天禹",
+            "乔学举",
+            "乔泓森",
+            "习春苗",
+            "于晓宁",
+            "于林厚",
+            "任鑫赫",
+            "何丹阳",
+            "余周俊",
+            "刘东昆",
+            "刘亚农",
+            "刘仁杰",
+            "刘伟",
+            "刘传",
+            "刘凯",
+            "刘嘉龙",
+            "刘城",
+            "刘媛媛",
+            "刘徙铎",
+            "刘思禹",
+            "刘怡柔",
+            "刘敬",
+            "刘晓光",
+            "刘晓静",
+            "刘泽",
+            "刘玉磊",
+            "刘祖全",
+            "刘祜瑶",
+            "刘绪金",
+            "刘艳菊"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHLS-400011-ECZS-0021",
+          "excel_row": 176,
+          "prefix": "EHLS",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.辅助系统室",
+            "工艺系统研究设计所.安全系统室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯婷",
+            "刘东东",
+            "刘亚康",
+            "刘伟",
+            "刘小琳",
+            "刘明辉",
+            "刘洋",
+            "刘飞雪",
+            "吕佳宁",
+            "周天威",
+            "姚立渊",
+            "孙华清",
+            "孙英娜",
+            "宋时伟",
+            "庄秋义",
+            "张俊京",
+            "张孟极",
+            "张志豪",
+            "张蕊",
+            "房丽萍",
+            "文圣群",
+            "时东",
+            "李嫦月",
+            "李庆华",
+            "李杰",
+            "杨昭会",
+            "林达平",
+            "潘佳琪",
+            "潘聪葱",
+            "王品卉"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHLS-400012-ECZS-0021",
+          "excel_row": 177,
+          "prefix": "EHLS",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.辅助系统室",
+            "工艺系统研究设计所.安全系统室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯婷",
+            "刘东东",
+            "刘亚康",
+            "刘伟",
+            "刘小琳",
+            "刘明辉",
+            "刘洋",
+            "刘飞雪",
+            "吕佳宁",
+            "周天威",
+            "姚立渊",
+            "孙华清",
+            "孙英娜",
+            "宋时伟",
+            "庄秋义",
+            "张俊京",
+            "张孟极",
+            "张志豪",
+            "张蕊",
+            "房丽萍",
+            "文圣群",
+            "时东",
+            "李嫦月",
+            "李庆华",
+            "李杰",
+            "杨昭会",
+            "林达平",
+            "潘佳琪",
+            "潘聪葱",
+            "王品卉"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHLS-400013-ECZS-0021",
+          "excel_row": 178,
+          "prefix": "EHLS",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.辅助系统室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯婷",
+            "刘东东",
+            "刘亚康",
+            "刘伟",
+            "刘小琳",
+            "刘明辉",
+            "刘洋",
+            "刘飞雪",
+            "吕佳宁",
+            "周天威",
+            "姚立渊",
+            "孙华清",
+            "孙英娜",
+            "宋时伟",
+            "庄秋义",
+            "张俊京",
+            "张孟极",
+            "张志豪",
+            "张蕊",
+            "房丽萍",
+            "文圣群",
+            "时东",
+            "李嫦月",
+            "李庆华",
+            "李杰",
+            "杨昭会",
+            "林达平",
+            "潘佳琪",
+            "潘聪葱",
+            "王品卉"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400001-ECZS-0076",
+          "excel_row": 179,
+          "prefix": "EHMC",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400012-ECZS-0077",
+          "excel_row": 180,
+          "prefix": "EHMC",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "通信室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400013-ECZS-0077",
+          "excel_row": 181,
+          "prefix": "EHMC",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400014-ECZS-0077",
+          "excel_row": 182,
+          "prefix": "EHMC",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400015-ECZS-0077",
+          "excel_row": 183,
+          "prefix": "EHMC",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "设计管理科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "北京核工程研究设计院",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400016-ECZS-0077",
+          "excel_row": 184,
+          "prefix": "EHMC",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "设计管理科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "北京核工程研究设计院",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400017-ECZS-0077",
+          "excel_row": 185,
+          "prefix": "EHMC",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400018-ECZS-0077",
+          "excel_row": 186,
+          "prefix": "EHMC",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400035-ECZS-0075",
+          "excel_row": 187,
+          "prefix": "EHMC",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400036-ECZS-0075",
+          "excel_row": 188,
+          "prefix": "EHMC",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "北京核工程研究设计院"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHMC-400037-ECZS-0075",
+          "excel_row": 189,
+          "prefix": "EHMC",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "设计管理科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "北京核工程研究设计院",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHST-400003-ECZS-0051",
+          "excel_row": 193,
+          "prefix": "EHST",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "设计管理科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "北京核工程研究设计院",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核电工艺所",
+            "工艺系统研究设计所.工艺设备室",
+            "工艺系统研究设计所.辅助系统室"
+          ],
+          "prefix_pred_w": [
+            "工艺系统室"
+          ],
+          "prefix_pred_names": [
+            "Super",
+            "万忠义",
+            "乔伟",
+            "习磊朋",
+            "于嘉蕾",
+            "于婷",
+            "于波",
+            "付煦",
+            "任美贤",
+            "任运佳",
+            "何毅",
+            "何海峰",
+            "余云",
+            "侯锋",
+            "倪东海",
+            "傅兴",
+            "兰志远",
+            "冯乾",
+            "冯佳庆",
+            "冯国忠",
+            "刘世龙",
+            "刘丽然",
+            "刘勇兵",
+            "刘卫隆",
+            "刘哲",
+            "刘宇晗",
+            "刘峰廷",
+            "刘康利",
+            "刘建中",
+            "刘建栋"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "EHZZ-400001-ECZS-0054",
+          "excel_row": 194,
+          "prefix": "EHZZ",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "设计管理科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "北京核工程研究设计院",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "河北分公司.设计管理部"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": true
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "SMPCT-400007-SMPMB-725A",
+          "excel_row": 233,
+          "prefix": "SMPCT",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计文档科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计文档科",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.辅助系统室",
+            "工艺系统研究设计所.工艺设备室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯婷",
+            "刘东东",
+            "刘亚康",
+            "刘伟",
+            "刘小琳",
+            "刘明辉",
+            "刘洋",
+            "刘飞雪",
+            "吕佳宁",
+            "周天威",
+            "姚立渊",
+            "孙华清",
+            "孙英娜",
+            "宋时伟",
+            "庄秋义",
+            "张俊京",
+            "张孟极",
+            "张志豪",
+            "张蕊",
+            "房丽萍",
+            "文圣群",
+            "时东",
+            "李嫦月",
+            "李庆华",
+            "李杰",
+            "杨昭会",
+            "林达平",
+            "潘佳琪",
+            "潘聪葱",
+            "王品卉"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "SMPKP-400001-SMPMB-361A",
+          "excel_row": 234,
+          "prefix": "SMPKP",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计文档科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计文档科",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "核设备所.工艺及成套设备室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丁磊",
+            "余成林",
+            "刘国彪",
+            "刘恺雯",
+            "周洪琦",
+            "娄志华",
+            "尹明月",
+            "张海春",
+            "曹捷铭",
+            "李媛",
+            "王玉莹",
+            "王鹏",
+            "石兵",
+            "郭建伟",
+            "黄文頔"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "SMPKP-400002-SMPMB-361A",
+          "excel_row": 235,
+          "prefix": "SMPKP",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计文档科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计文档科",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "核设备所.工艺及成套设备室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丁磊",
+            "余成林",
+            "刘国彪",
+            "刘恺雯",
+            "周洪琦",
+            "娄志华",
+            "尹明月",
+            "张海春",
+            "曹捷铭",
+            "李媛",
+            "王玉莹",
+            "王鹏",
+            "石兵",
+            "郭建伟",
+            "黄文頔"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "FAPAG-400006-FAPMB-285A",
+          "excel_row": 107,
+          "prefix": "FAPAG",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "非标设备室",
+            "北京核工程研究设计院",
+            "核设备所",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.核设备所",
+            "核设备所.非标设备室",
+            "中核工程.北京核工程研究设计院.核设备所",
+            "北京核工程研究设计院.核设备所.非标设备室",
+            "设计文档科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "非标设备室",
+            "设计文档科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核电工艺所"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "Super",
+            "万忠义",
+            "乔伟",
+            "习磊朋",
+            "于嘉蕾",
+            "于婷",
+            "于波",
+            "付煦",
+            "任美贤",
+            "任运佳",
+            "何毅",
+            "何海峰",
+            "余云",
+            "侯锋",
+            "倪东海",
+            "傅兴",
+            "兰志远",
+            "冯乾",
+            "冯佳庆",
+            "冯国忠",
+            "刘世龙",
+            "刘丽然",
+            "刘勇兵",
+            "刘卫隆",
+            "刘哲",
+            "刘宇晗",
+            "刘峰廷",
+            "刘康利",
+            "刘建中",
+            "刘建栋"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "FAPAX-400013-FAPMB-725A",
+          "excel_row": 109,
+          "prefix": "FAPAX",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "非标设备室",
+            "北京核工程研究设计院",
+            "核设备所",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.核设备所",
+            "核设备所.非标设备室",
+            "中核工程.北京核工程研究设计院.核设备所",
+            "北京核工程研究设计院.核设备所.非标设备室",
+            "设计文档科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "非标设备室",
+            "设计文档科"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所",
+            "工艺系统研究设计所.工艺设备室",
+            "工艺系统研究设计所.安全系统室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "12",
+            "丁亮",
+            "丘锦萌",
+            "东乐水",
+            "丰亮泽",
+            "于凤云",
+            "于沛",
+            "付浩然",
+            "任晓欣",
+            "任永刚",
+            "余朝贵",
+            "侯婷",
+            "侯智华",
+            "冯鹤云",
+            "刘东东",
+            "刘亚光",
+            "刘亚康",
+            "刘伟",
+            "刘加志",
+            "刘学芬",
+            "刘小琳",
+            "刘文宇",
+            "刘明辉",
+            "刘松洋",
+            "刘洋",
+            "刘艺萱",
+            "刘金光",
+            "刘长亮",
+            "刘飞雪",
+            "刘鹏飞"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "FAPSK-400000-FAPMB-307A",
+          "excel_row": 111,
+          "prefix": "FAPSK",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "安全系统室",
+            "北京核工程研究设计院",
+            "工艺系统研究设计所",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工艺系统研究设计所",
+            "工艺系统研究设计所.安全系统室",
+            "中核工程.北京核工程研究设计院.工艺系统研究设计所",
+            "北京核工程研究设计院.工艺系统研究设计所.安全系统室",
+            "设计文档科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "安全系统室",
+            "设计文档科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核电工艺所"
+          ],
+          "prefix_pred_w": [
+            "暖通室"
+          ],
+          "prefix_pred_names": [
+            "Super",
+            "万忠义",
+            "乔伟",
+            "习磊朋",
+            "于嘉蕾",
+            "于婷",
+            "于波",
+            "付煦",
+            "任美贤",
+            "任运佳",
+            "何毅",
+            "何海峰",
+            "余云",
+            "侯锋",
+            "倪东海",
+            "傅兴",
+            "兰志远",
+            "冯乾",
+            "冯佳庆",
+            "冯国忠",
+            "刘世龙",
+            "刘丽然",
+            "刘勇兵",
+            "刘卫隆",
+            "刘哲",
+            "刘宇晗",
+            "刘峰廷",
+            "刘康利",
+            "刘建中",
+            "刘建栋"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "FAPYS-400018-FAPMB-181A",
+          "excel_row": 112,
+          "prefix": "FAPYS",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "非标设备室",
+            "北京核工程研究设计院",
+            "核设备所",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.核设备所",
+            "核设备所.非标设备室",
+            "中核工程.北京核工程研究设计院.核设备所",
+            "北京核工程研究设计院.核设备所.非标设备室",
+            "设计文档科",
+            "工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计文档科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计文档科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "非标设备室",
+            "设计文档科"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.核工程研究设计所",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [
+            "设备室"
+          ],
+          "prefix_pred_names": [
+            "万净卫",
+            "乔朝坤",
+            "于建涛",
+            "于颖琪",
+            "付旭鹏",
+            "任若松",
+            "任超",
+            "何宝森",
+            "何正阳",
+            "何磊",
+            "侯凯",
+            "侯晔凝",
+            "侯盘星",
+            "侯继儒",
+            "侯自轩",
+            "侯轶",
+            "冯可琢",
+            "刘世峰",
+            "刘伟楠",
+            "刘典",
+            "刘峰",
+            "刘帅",
+            "刘希玲",
+            "刘建龙",
+            "刘彩红",
+            "刘彩虹",
+            "刘旺",
+            "刘智明",
+            "刘玉倩",
+            "刘胜杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JDPCN-400000-JDPMB-147A",
+          "excel_row": 401,
+          "prefix": "JDPCN",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.工艺设备室",
+            "工艺系统研究设计所.总体布置室",
+            "电气设计所.电气一室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯智华",
+            "冯鹤云",
+            "刘长亮",
+            "孙佳丽",
+            "张吉来",
+            "张志明",
+            "曹晓楠",
+            "李栋梁",
+            "李瑞雪",
+            "杨志全",
+            "杨洋",
+            "杨理烽",
+            "王子垚",
+            "蒋克涛",
+            "薛卫光",
+            "豆朝宗",
+            "郎瑞峰",
+            "黄若琳",
+            "龚钊",
+            "吴巧英",
+            "张艳红",
+            "彭春华",
+            "彭立",
+            "李思创",
+            "杜广",
+            "杜晓彬",
+            "杨乐",
+            "梁毅",
+            "樊彦芳",
+            "牛艳颖"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JDPCN-400007-JDPMB-146E",
+          "excel_row": 402,
+          "prefix": "JDPCN",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "工程设计管理部",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "工程设计管理部",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.工艺设备室",
+            "工艺系统研究设计所.总体布置室",
+            "电气设计所.电气一室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯智华",
+            "冯鹤云",
+            "刘长亮",
+            "孙佳丽",
+            "张吉来",
+            "张志明",
+            "曹晓楠",
+            "李栋梁",
+            "李瑞雪",
+            "杨志全",
+            "杨洋",
+            "杨理烽",
+            "王子垚",
+            "蒋克涛",
+            "薛卫光",
+            "豆朝宗",
+            "郎瑞峰",
+            "黄若琳",
+            "龚钊",
+            "吴巧英",
+            "张艳红",
+            "彭春华",
+            "彭立",
+            "李思创",
+            "杜广",
+            "杜晓彬",
+            "杨乐",
+            "梁毅",
+            "樊彦芳",
+            "牛艳颖"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JDPCN-400008-JDPMB-146E",
+          "excel_row": 403,
+          "prefix": "JDPCN",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.工艺设备室",
+            "工艺系统研究设计所.总体布置室",
+            "电气设计所.电气一室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "侯智华",
+            "冯鹤云",
+            "刘长亮",
+            "孙佳丽",
+            "张吉来",
+            "张志明",
+            "曹晓楠",
+            "李栋梁",
+            "李瑞雪",
+            "杨志全",
+            "杨洋",
+            "杨理烽",
+            "王子垚",
+            "蒋克涛",
+            "薛卫光",
+            "豆朝宗",
+            "郎瑞峰",
+            "黄若琳",
+            "龚钊",
+            "吴巧英",
+            "张艳红",
+            "彭春华",
+            "彭立",
+            "李思创",
+            "杜广",
+            "杜晓彬",
+            "杨乐",
+            "梁毅",
+            "樊彦芳",
+            "牛艳颖"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPAD-400036-JAPMB-261A",
+          "excel_row": 204,
+          "prefix": "JAPAD",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "核设备所.工艺及成套设备室",
+            "核设备所.设备结构分析室",
+            "工程设计管理部.设计管理科"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丁磊",
+            "余成林",
+            "刘国彪",
+            "刘恺雯",
+            "周洪琦",
+            "娄志华",
+            "尹明月",
+            "张海春",
+            "曹捷铭",
+            "李媛",
+            "王玉莹",
+            "王鹏",
+            "石兵",
+            "郭建伟",
+            "黄文頔",
+            "付一晨",
+            "冯鹏飞",
+            "孟祥盖",
+            "晋文娟",
+            "李瑾",
+            "王兵臣",
+            "王正义",
+            "缪岭",
+            "范章",
+            "薛万勋",
+            "袁占航",
+            "付翌",
+            "伍旻虹",
+            "余淼",
+            "刘松林"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPAD-400037-JAPMB-261A",
+          "excel_row": 205,
+          "prefix": "JAPAD",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "核设备所.工艺及成套设备室",
+            "核设备所.设备结构分析室",
+            "工程设计管理部.设计管理科"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丁磊",
+            "余成林",
+            "刘国彪",
+            "刘恺雯",
+            "周洪琦",
+            "娄志华",
+            "尹明月",
+            "张海春",
+            "曹捷铭",
+            "李媛",
+            "王玉莹",
+            "王鹏",
+            "石兵",
+            "郭建伟",
+            "黄文頔",
+            "付一晨",
+            "冯鹏飞",
+            "孟祥盖",
+            "晋文娟",
+            "李瑾",
+            "王兵臣",
+            "王正义",
+            "缪岭",
+            "范章",
+            "薛万勋",
+            "袁占航",
+            "付翌",
+            "伍旻虹",
+            "余淼",
+            "刘松林"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPAD-400038-JAPMB-261A",
+          "excel_row": 206,
+          "prefix": "JAPAD",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "工程设计管理部",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "工程设计管理部",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "核设备所.工艺及成套设备室",
+            "核设备所.设备结构分析室",
+            "工程设计管理部.设计管理科"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丁磊",
+            "余成林",
+            "刘国彪",
+            "刘恺雯",
+            "周洪琦",
+            "娄志华",
+            "尹明月",
+            "张海春",
+            "曹捷铭",
+            "李媛",
+            "王玉莹",
+            "王鹏",
+            "石兵",
+            "郭建伟",
+            "黄文頔",
+            "付一晨",
+            "冯鹏飞",
+            "孟祥盖",
+            "晋文娟",
+            "李瑾",
+            "王兵臣",
+            "王正义",
+            "缪岭",
+            "范章",
+            "薛万勋",
+            "袁占航",
+            "付翌",
+            "伍旻虹",
+            "余淼",
+            "刘松林"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPCC-400001-JAPMB-263A",
+          "excel_row": 207,
+          "prefix": "JAPCC",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "工程设计管理部",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "工程设计管理部",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "核设备所.工艺及成套设备室",
+            "核设备所.核燃料运输与工艺室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丁磊",
+            "余成林",
+            "刘国彪",
+            "刘恺雯",
+            "周洪琦",
+            "娄志华",
+            "尹明月",
+            "张海春",
+            "曹捷铭",
+            "李媛",
+            "王玉莹",
+            "王鹏",
+            "石兵",
+            "郭建伟",
+            "黄文頔",
+            "乔振铭",
+            "刘慧芳",
+            "刘爱军",
+            "叶阳春",
+            "周洋",
+            "周超",
+            "姚向豫",
+            "孙福江",
+            "张洪军",
+            "战蓉洁",
+            "朱鹏吉",
+            "李云华",
+            "李佳政",
+            "李均",
+            "李建奇"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPDN-400005-JAPMB-253A",
+          "excel_row": 208,
+          "prefix": "JAPDN",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "工程设计管理部",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "工程设计管理部",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.安全系统室",
+            "工艺系统研究设计所.辅助系统室",
+            "工程设计管理部.设计管理科"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丘锦萌",
+            "付浩然",
+            "刘亚光",
+            "刘加志",
+            "吴健",
+            "吴冰",
+            "孙奇",
+            "孙超杰",
+            "宋立峰",
+            "张冉",
+            "张志成",
+            "张念喆",
+            "李丽娟",
+            "李妍",
+            "杨俊琦",
+            "梁慧茹",
+            "池翔宇",
+            "沈剑男",
+            "洪德训",
+            "王佳卓",
+            "王凯",
+            "田卫卫",
+            "田海静",
+            "皮耀",
+            "盛美玲",
+            "程岳",
+            "薛棋铭",
+            "赵梦巧",
+            "辛培梅",
+            "邹文重"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPDN-400023-JAPMB-253A",
+          "excel_row": 209,
+          "prefix": "JAPDN",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.安全系统室",
+            "工艺系统研究设计所.辅助系统室",
+            "工程设计管理部.设计管理科"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丘锦萌",
+            "付浩然",
+            "刘亚光",
+            "刘加志",
+            "吴健",
+            "吴冰",
+            "孙奇",
+            "孙超杰",
+            "宋立峰",
+            "张冉",
+            "张志成",
+            "张念喆",
+            "李丽娟",
+            "李妍",
+            "杨俊琦",
+            "梁慧茹",
+            "池翔宇",
+            "沈剑男",
+            "洪德训",
+            "王佳卓",
+            "王凯",
+            "田卫卫",
+            "田海静",
+            "皮耀",
+            "盛美玲",
+            "程岳",
+            "薛棋铭",
+            "赵梦巧",
+            "辛培梅",
+            "邹文重"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPDN-400024-JAPMB-253A",
+          "excel_row": 210,
+          "prefix": "JAPDN",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "工程设计管理部",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "工程设计管理部",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "工艺系统研究设计所.安全系统室",
+            "工艺系统研究设计所.辅助系统室",
+            "工程设计管理部.设计管理科"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "丘锦萌",
+            "付浩然",
+            "刘亚光",
+            "刘加志",
+            "吴健",
+            "吴冰",
+            "孙奇",
+            "孙超杰",
+            "宋立峰",
+            "张冉",
+            "张志成",
+            "张念喆",
+            "李丽娟",
+            "李妍",
+            "杨俊琦",
+            "梁慧茹",
+            "池翔宇",
+            "沈剑男",
+            "洪德训",
+            "王佳卓",
+            "王凯",
+            "田卫卫",
+            "田海静",
+            "皮耀",
+            "盛美玲",
+            "程岳",
+            "薛棋铭",
+            "赵梦巧",
+            "辛培梅",
+            "邹文重"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPKP-400000-JAPMB-361A",
+          "excel_row": 211,
+          "prefix": "JAPKP",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "工程设计管理部.设计管理科",
+            "核设备所.工艺及成套设备室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "付翌",
+            "伍旻虹",
+            "余淼",
+            "刘松林",
+            "刘颖",
+            "初立波",
+            "南薇",
+            "吕飞",
+            "吴春勇",
+            "周林军",
+            "姜青和",
+            "孙强",
+            "尚丽华",
+            "尹坤尹坤",
+            "常宗虎",
+            "张会乔",
+            "张倩",
+            "张冬",
+            "张国翔",
+            "张毅",
+            "张海波",
+            "张瑜",
+            "彭康玮",
+            "戴连军",
+            "朱宪澈",
+            "李久振",
+            "李云屹",
+            "李博",
+            "李占全",
+            "李卫杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPKP-400001-JAPMB-361A",
+          "excel_row": 212,
+          "prefix": "JAPKP",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "工程设计管理部",
+            "北京核工程研究设计院",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "设计管理科",
+            "工程设计管理部.设计管理科",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "工程设计管理部",
+            "设计管理科"
+          ],
+          "prefix_pred_v": [
+            "工程设计管理部.设计管理科",
+            "核设备所.工艺及成套设备室"
+          ],
+          "prefix_pred_w": [],
+          "prefix_pred_names": [
+            "付翌",
+            "伍旻虹",
+            "余淼",
+            "刘松林",
+            "刘颖",
+            "初立波",
+            "南薇",
+            "吕飞",
+            "吴春勇",
+            "周林军",
+            "姜青和",
+            "孙强",
+            "尚丽华",
+            "尹坤尹坤",
+            "常宗虎",
+            "张会乔",
+            "张倩",
+            "张冬",
+            "张国翔",
+            "张毅",
+            "张海波",
+            "张瑜",
+            "彭康玮",
+            "戴连军",
+            "朱宪澈",
+            "李久振",
+            "李云屹",
+            "李博",
+            "李占全",
+            "李卫杰"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": true,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "CR",
+          "e_raw": "JAPQA-400000-JAPMB-745A",
+          "excel_row": 213,
+          "prefix": "JAPQA",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "工程设计管理部"
+          ],
+          "prefix_pred_v": [
+            "河北分公司.电气自动化所",
+            "仪控设计所.仪控一室"
+          ],
+          "prefix_pred_w": [
+            "仪控一室"
+          ],
+          "prefix_pred_names": [
+            "么天禹",
+            "乔学举",
+            "乔泓森",
+            "习春苗",
+            "于晓宁",
+            "于林厚",
+            "任鑫赫",
+            "何丹阳",
+            "余周俊",
+            "刘东昆",
+            "刘亚农",
+            "刘仁杰",
+            "刘伟",
+            "刘传",
+            "刘凯",
+            "刘嘉龙",
+            "刘城",
+            "刘媛媛",
+            "刘徙铎",
+            "刘思禹",
+            "刘怡柔",
+            "刘敬",
+            "刘晓光",
+            "刘晓静",
+            "刘泽",
+            "刘玉磊",
+            "刘祖全",
+            "刘祜瑶",
+            "刘绪金",
+            "刘艳菊"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        },
+        {
+          "a_raw": "NCR",
+          "e_raw": "SMPDB-430000-SMPMB-159A",
+          "excel_row": 236,
+          "prefix": "SMPDB",
+          "profile": "experimental",
+          "workflow_org_values": [
+            "水工室",
+            "中核工程",
+            "河北分公司",
+            "核电工艺所",
+            "中核工程.河北分公司",
+            "河北分公司.核电工艺所",
+            "核电工艺所.水工室",
+            "中核工程.河北分公司.核电工艺所",
+            "河北分公司.核电工艺所.水工室",
+            "设计管理科",
+            "北京核工程研究设计院",
+            "工程设计管理部",
+            "中核工程.北京核工程研究设计院",
+            "北京核工程研究设计院.工程设计管理部",
+            "工程设计管理部.设计管理科",
+            "中核工程.北京核工程研究设计院.工程设计管理部",
+            "北京核工程研究设计院.工程设计管理部.设计管理科",
+            "设计文档科",
+            "工程设计管理部.设计文档科",
+            "北京核工程研究设计院.工程设计管理部.设计文档科"
+          ],
+          "workflow_office_values": [
+            "水工室",
+            "设计管理科",
+            "设计文档科"
+          ],
+          "prefix_pred_v": [
+            "公用系统所.公用一室",
+            "北京核化工研究设计院.放射性废物管理工程所",
+            "河北分公司.核电工艺所"
+          ],
+          "prefix_pred_w": [
+            "放射性废物管理三室"
+          ],
+          "prefix_pred_names": [
+            "倪明波",
+            "刘婧",
+            "孙立臣",
+            "康健",
+            "张丽丽",
+            "张凤霖",
+            "张宏伟",
+            "朱芸芸",
+            "杜文学",
+            "林兆娣",
+            "温华",
+            "王幽雁",
+            "王杰",
+            "童欣",
+            "胡北",
+            "赵磊",
+            "邱珊珊",
+            "郭静涛",
+            "陆松",
+            "陈浩南",
+            "韩金权",
+            "马莉",
+            "于湉湉",
+            "任天屹",
+            "侯超",
+            "冯桐伟",
+            "刘培娟",
+            "刘昱祺",
+            "刘江海",
+            "刘铁军"
+          ],
+          "baseline_hits": {
+            "X": false,
+            "V": false,
+            "W": false
+          },
+          "composite_hits": {
+            "X": true,
+            "V": true,
+            "W": false
+          }
+        }
+      ]
+    }
+  },
+  "rulebooks": {
+    "stable": {
+      "TA": {
+        "donor_types": [
+          "CR",
+          "文件传递单"
+        ],
+        "default_v_topn": 3,
+        "default_w_topn": 1,
+        "boost_v_topn": 0,
+        "boost_w_topn": 0,
+        "boosted_prefixes": []
+      },
+      "CR": {
+        "donor_types": [
+          "TA",
+          "文件传递单"
+        ],
+        "default_v_topn": 3,
+        "default_w_topn": 1,
+        "boost_v_topn": 0,
+        "boost_w_topn": 0,
+        "boosted_prefixes": []
+      },
+      "文件传递单": {
+        "donor_types": [
+          "TA",
+          "审查意见答复单"
+        ],
+        "default_v_topn": 3,
+        "default_w_topn": 3,
+        "boost_v_topn": 5,
+        "boost_w_topn": 3,
+        "boosted_prefixes": [
+          "JAPDB",
+          "FAPAK",
+          "FAPBH",
+          "SMPCJ"
+        ]
+      },
+      "审查意见答复单": {
+        "donor_types": [
+          "文件传递单"
+        ],
+        "default_v_topn": 3,
+        "default_w_topn": 3,
+        "boost_v_topn": 3,
+        "boost_w_topn": 4,
+        "boosted_prefixes": [
+          "EDES"
+        ]
+      },
+      "FU通知单": {
+        "donor_types": [
+          "文件传递单"
+        ],
+        "default_v_topn": 2,
+        "default_w_topn": 1,
+        "boost_v_topn": 0,
+        "boost_w_topn": 0,
+        "boosted_prefixes": []
+      },
+      "外发纪要": {
+        "donor_types": [
+          "图文传真"
+        ],
+        "default_v_topn": 1,
+        "default_w_topn": 5,
+        "boost_v_topn": 0,
+        "boost_w_topn": 0,
+        "boosted_prefixes": []
+      },
+      "NCR": {
+        "donor_types": [
+          "文件传递单"
+        ],
+        "default_v_topn": 3,
+        "default_w_topn": 1,
+        "boost_v_topn": 0,
+        "boost_w_topn": 0,
+        "boosted_prefixes": []
+      },
+      "图文传真": {
+        "donor_types": [
+          "外发纪要",
+          "审查意见单"
+        ],
+        "default_v_topn": 3,
+        "default_w_topn": 3,
+        "boost_v_topn": 5,
+        "boost_w_topn": 4,
+        "boosted_prefixes": [
+          "ECZB",
+          "ECZS"
+        ]
+      }
+    },
+    "experimental": {
+      "TA": {
+        "donor_types": [
+          "CR",
+          "文件传递单"
+        ],
+        "default_v_topn": 3,
+        "default_w_topn": 1,
+        "boost_v_topn": 0,
+        "boost_w_topn": 0,
+        "boosted_prefixes": []
+      },
+      "CR": {
+        "donor_types": [
+          "TA",
+          "文件传递单"
+        ],
+        "default_v_topn": 3,
+        "default_w_topn": 1,
+        "boost_v_topn": 0,
+        "boost_w_topn": 0,
+        "boosted_prefixes": []
+      },
+      "文件传递单": {
+        "donor_types": [
+          "TA",
+          "审查意见答复单"
+        ],
+        "default_v_topn": 3,
+        "default_w_topn": 3,
+        "boost_v_topn": 5,
+        "boost_w_topn": 3,
+        "boosted_prefixes": [
+          "JAPDB",
+          "FAPAK",
+          "FAPBH",
+          "SMPCJ"
+        ]
+      },
+      "审查意见答复单": {
+        "donor_types": [
+          "文件传递单"
+        ],
+        "default_v_topn": 3,
+        "default_w_topn": 3,
+        "boost_v_topn": 3,
+        "boost_w_topn": 4,
+        "boosted_prefixes": [
+          "EDES"
+        ]
+      },
+      "FU通知单": {
+        "donor_types": [
+          "文件传递单"
+        ],
+        "default_v_topn": 2,
+        "default_w_topn": 1,
+        "boost_v_topn": 0,
+        "boost_w_topn": 0,
+        "boosted_prefixes": []
+      },
+      "外发纪要": {
+        "donor_types": [
+          "图文传真"
+        ],
+        "default_v_topn": 1,
+        "default_w_topn": 5,
+        "boost_v_topn": 0,
+        "boost_w_topn": 0,
+        "boosted_prefixes": []
+      },
+      "NCR": {
+        "donor_types": [
+          "文件传递单"
+        ],
+        "default_v_topn": 3,
+        "default_w_topn": 1,
+        "boost_v_topn": 0,
+        "boost_w_topn": 0,
+        "boosted_prefixes": []
+      },
+      "图文传真": {
+        "donor_types": [
+          "外发纪要",
+          "审查意见单"
+        ],
+        "default_v_topn": 3,
+        "default_w_topn": 3,
+        "boost_v_topn": 5,
+        "boost_w_topn": 4,
+        "boosted_prefixes": [
+          "ECZB",
+          "ECZS",
+          "YBANY",
+          "FADGB"
+        ]
+      }
+    }
+  }
+}

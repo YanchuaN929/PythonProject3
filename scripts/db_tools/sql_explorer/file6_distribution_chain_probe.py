@@ -524,6 +524,8 @@ def scan_child_table(
         "CONFIG_ID",
         "ITEM_NUMBER",
         "SEND_RECEIVE_DATA",
+        "CREATED_BY_ID",
+        "MODIFIED_BY_ID",
         "CR",
         "DCR",
         "FCR",

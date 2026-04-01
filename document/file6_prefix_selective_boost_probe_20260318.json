@@ -1,0 +1,933 @@
+{
+  "input": "document\\file6_send_workflow_probe_20260313_rel4_detail_rows.json",
+  "width_report": "document\\file6_prefix_token_width_probe_20260318.json",
+  "sql35_dir": "example\\CIMS-SQL-3.5",
+  "scope_growth_ratio": 1.1,
+  "doc_type_filter": [],
+  "target_reports": {
+    "文件传递单": {
+      "donor_types": [
+        "TA",
+        "审查意见答复单"
+      ],
+      "base_token_width": {
+        "v_topn": 3,
+        "w_topn": 3
+      },
+      "extra_token_width": {
+        "v_topn": 5,
+        "w_topn": 3
+      },
+      "scope_growth_ratio": 1.1,
+      "scope_limit": 206.68,
+      "candidate_prefixes": [
+        {
+          "row_count": 6,
+          "delta_sum": 4,
+          "base": {
+            "x": 3,
+            "v": 3,
+            "w": 0
+          },
+          "extra": {
+            "x": 5,
+            "v": 5,
+            "w": 0
+          },
+          "scope_base": [
+            200,
+            443,
+            253,
+            433,
+            433,
+            430
+          ],
+          "scope_extra": [
+            485,
+            485,
+            472,
+            472,
+            485,
+            472
+          ],
+          "prefix": "JAPDB",
+          "avg_scope_base": 365.33,
+          "avg_scope_extra": 478.5
+        },
+        {
+          "row_count": 5,
+          "delta_sum": 4,
+          "base": {
+            "x": 3,
+            "v": 3,
+            "w": 0
+          },
+          "extra": {
+            "x": 5,
+            "v": 5,
+            "w": 0
+          },
+          "scope_base": [
+            152,
+            217,
+            217,
+            234,
+            234
+          ],
+          "scope_extra": [
+            369,
+            369,
+            369,
+            369,
+            369
+          ],
+          "prefix": "FAPAK",
+          "avg_scope_base": 210.8,
+          "avg_scope_extra": 369.0
+        },
+        {
+          "row_count": 4,
+          "delta_sum": 2,
+          "base": {
+            "x": 3,
+            "v": 2,
+            "w": 0
+          },
+          "extra": {
+            "x": 3,
+            "v": 4,
+            "w": 0
+          },
+          "scope_base": [
+            838,
+            369,
+            617,
+            617
+          ],
+          "scope_extra": [
+            838,
+            369,
+            838,
+            838
+          ],
+          "prefix": "FAPBH",
+          "avg_scope_base": 610.25,
+          "avg_scope_extra": 720.75
+        },
+        {
+          "row_count": 12,
+          "delta_sum": 1,
+          "base": {
+            "x": 11,
+            "v": 11,
+            "w": 3
+          },
+          "extra": {
+            "x": 12,
+            "v": 11,
+            "w": 3
+          },
+          "scope_base": [
+            497,
+            497,
+            497,
+            497,
+            497,
+            497,
+            497,
+            497,
+            497,
+            497,
+            497,
+            497
+          ],
+          "scope_extra": [
+            648,
+            567,
+            701,
+            567,
+            567,
+            567,
+            567,
+            567,
+            567,
+            567,
+            567,
+            567
+          ],
+          "prefix": "SMPCJ",
+          "avg_scope_base": 497.0,
+          "avg_scope_extra": 584.92
+        }
+      ],
+      "best_unrestricted": {
+        "boosted_prefixes": [
+          "JAPDB",
+          "FAPAK",
+          "FAPBH",
+          "SMPCJ"
+        ],
+        "metrics": {
+          "X": {
+            "hit": 315,
+            "total": 425,
+            "rate": 0.741176
+          },
+          "V": {
+            "hit": 322,
+            "total": 425,
+            "rate": 0.757647
+          },
+          "W": {
+            "hit": 185,
+            "total": 238,
+            "rate": 0.777311
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 191.19,
+          "max_count": 838
+        }
+      },
+      "best_under_limit": {
+        "boosted_prefixes": [
+          "JAPDB",
+          "FAPAK",
+          "FAPBH",
+          "SMPCJ"
+        ],
+        "metrics": {
+          "X": {
+            "hit": 315,
+            "total": 425,
+            "rate": 0.741176
+          },
+          "V": {
+            "hit": 322,
+            "total": 425,
+            "rate": 0.757647
+          },
+          "W": {
+            "hit": 185,
+            "total": 238,
+            "rate": 0.777311
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 191.19,
+          "max_count": 838
+        }
+      }
+    },
+    "图文传真": {
+      "donor_types": [
+        "外发纪要",
+        "审查意见单"
+      ],
+      "base_token_width": {
+        "v_topn": 3,
+        "w_topn": 3
+      },
+      "extra_token_width": {
+        "v_topn": 5,
+        "w_topn": 4
+      },
+      "scope_growth_ratio": 1.1,
+      "scope_limit": 288.31,
+      "candidate_prefixes": [
+        {
+          "row_count": 17,
+          "delta_sum": 8,
+          "base": {
+            "x": 10,
+            "v": 10,
+            "w": 8
+          },
+          "extra": {
+            "x": 13,
+            "v": 13,
+            "w": 10
+          },
+          "scope_base": [
+            611,
+            611,
+            642,
+            663,
+            476,
+            357,
+            476,
+            476,
+            663,
+            476,
+            476,
+            476,
+            476,
+            476,
+            476,
+            476,
+            476
+          ],
+          "scope_extra": [
+            870,
+            870,
+            870,
+            922,
+            870,
+            870,
+            811,
+            870,
+            870,
+            870,
+            870,
+            870,
+            870,
+            870,
+            870,
+            870,
+            870
+          ],
+          "prefix": "ECZB",
+          "avg_scope_base": 516.65,
+          "avg_scope_extra": 869.59
+        },
+        {
+          "row_count": 8,
+          "delta_sum": 2,
+          "base": {
+            "x": 5,
+            "v": 3,
+            "w": 2
+          },
+          "extra": {
+            "x": 5,
+            "v": 5,
+            "w": 2
+          },
+          "scope_base": [
+            474,
+            557,
+            421,
+            557,
+            557,
+            638,
+            557,
+            638
+          ],
+          "scope_extra": [
+            587,
+            700,
+            590,
+            700,
+            700,
+            684,
+            700,
+            684
+          ],
+          "prefix": "ECZS",
+          "avg_scope_base": 549.88,
+          "avg_scope_extra": 668.12
+        },
+        {
+          "row_count": 7,
+          "delta_sum": 2,
+          "base": {
+            "x": 5,
+            "v": 5,
+            "w": 2
+          },
+          "extra": {
+            "x": 6,
+            "v": 6,
+            "w": 2
+          },
+          "scope_base": [
+            244,
+            257,
+            260,
+            260,
+            260,
+            257,
+            257
+          ],
+          "scope_extra": [
+            319,
+            319,
+            319,
+            319,
+            410,
+            319,
+            319
+          ],
+          "prefix": "YBANY",
+          "avg_scope_base": 256.43,
+          "avg_scope_extra": 332.0
+        },
+        {
+          "row_count": 19,
+          "delta_sum": 1,
+          "base": {
+            "x": 17,
+            "v": 17,
+            "w": 16
+          },
+          "extra": {
+            "x": 17,
+            "v": 17,
+            "w": 17
+          },
+          "scope_base": [
+            719,
+            643,
+            719,
+            719,
+            719,
+            719,
+            719,
+            719,
+            719,
+            719,
+            719,
+            719,
+            719,
+            719,
+            719,
+            719,
+            719,
+            719,
+            719
+          ],
+          "scope_extra": [
+            878,
+            878,
+            878,
+            878,
+            878,
+            878,
+            878,
+            794,
+            878,
+            878,
+            927,
+            878,
+            878,
+            878,
+            878,
+            878,
+            878,
+            878,
+            878
+          ],
+          "prefix": "FADGB",
+          "avg_scope_base": 715.0,
+          "avg_scope_extra": 876.16
+        }
+      ],
+      "best_unrestricted": {
+        "boosted_prefixes": [
+          "ECZB",
+          "ECZS",
+          "YBANY",
+          "FADGB"
+        ],
+        "metrics": {
+          "X": {
+            "hit": 85,
+            "total": 115,
+            "rate": 0.73913
+          },
+          "V": {
+            "hit": 83,
+            "total": 115,
+            "rate": 0.721739
+          },
+          "W": {
+            "hit": 56,
+            "total": 66,
+            "rate": 0.848485
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 300.55,
+          "max_count": 927
+        }
+      },
+      "best_under_limit": {
+        "boosted_prefixes": [
+          "ECZB",
+          "ECZS"
+        ],
+        "metrics": {
+          "X": {
+            "hit": 84,
+            "total": 115,
+            "rate": 0.730435
+          },
+          "V": {
+            "hit": 82,
+            "total": 115,
+            "rate": 0.713043
+          },
+          "W": {
+            "hit": 55,
+            "total": 66,
+            "rate": 0.833333
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 287.45,
+          "max_count": 922
+        }
+      }
+    },
+    "FU通知单": {
+      "donor_types": [
+        "文件传递单"
+      ],
+      "base_token_width": {
+        "v_topn": 3,
+        "w_topn": 3
+      },
+      "extra_token_width": {
+        "v_topn": 2,
+        "w_topn": 1
+      },
+      "scope_growth_ratio": 1.1,
+      "scope_limit": 46.96,
+      "candidate_prefixes": [],
+      "best_unrestricted": {
+        "boosted_prefixes": [],
+        "metrics": {
+          "X": {
+            "hit": 4,
+            "total": 4,
+            "rate": 1.0
+          },
+          "V": {
+            "hit": 4,
+            "total": 4,
+            "rate": 1.0
+          },
+          "W": {
+            "hit": 3,
+            "total": 3,
+            "rate": 1.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 42.69,
+          "max_count": 700
+        }
+      },
+      "best_under_limit": {
+        "boosted_prefixes": [],
+        "metrics": {
+          "X": {
+            "hit": 4,
+            "total": 4,
+            "rate": 1.0
+          },
+          "V": {
+            "hit": 4,
+            "total": 4,
+            "rate": 1.0
+          },
+          "W": {
+            "hit": 3,
+            "total": 3,
+            "rate": 1.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 42.69,
+          "max_count": 700
+        }
+      }
+    },
+    "TA": {
+      "donor_types": [
+        "CR",
+        "文件传递单"
+      ],
+      "base_token_width": {
+        "v_topn": 3,
+        "w_topn": 3
+      },
+      "extra_token_width": {
+        "v_topn": 3,
+        "w_topn": 1
+      },
+      "scope_growth_ratio": 1.1,
+      "scope_limit": 223.22,
+      "candidate_prefixes": [],
+      "best_unrestricted": {
+        "boosted_prefixes": [],
+        "metrics": {
+          "X": {
+            "hit": 59,
+            "total": 80,
+            "rate": 0.7375
+          },
+          "V": {
+            "hit": 60,
+            "total": 80,
+            "rate": 0.75
+          },
+          "W": {
+            "hit": 20,
+            "total": 24,
+            "rate": 0.833333
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 202.93,
+          "max_count": 573
+        }
+      },
+      "best_under_limit": {
+        "boosted_prefixes": [],
+        "metrics": {
+          "X": {
+            "hit": 59,
+            "total": 80,
+            "rate": 0.7375
+          },
+          "V": {
+            "hit": 60,
+            "total": 80,
+            "rate": 0.75
+          },
+          "W": {
+            "hit": 20,
+            "total": 24,
+            "rate": 0.833333
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 202.93,
+          "max_count": 573
+        }
+      }
+    },
+    "CR": {
+      "donor_types": [
+        "TA",
+        "文件传递单"
+      ],
+      "base_token_width": {
+        "v_topn": 3,
+        "w_topn": 3
+      },
+      "extra_token_width": {
+        "v_topn": 3,
+        "w_topn": 1
+      },
+      "scope_growth_ratio": 1.1,
+      "scope_limit": 210.54,
+      "candidate_prefixes": [],
+      "best_unrestricted": {
+        "boosted_prefixes": [],
+        "metrics": {
+          "X": {
+            "hit": 39,
+            "total": 49,
+            "rate": 0.795918
+          },
+          "V": {
+            "hit": 38,
+            "total": 49,
+            "rate": 0.77551
+          },
+          "W": {
+            "hit": 13,
+            "total": 17,
+            "rate": 0.764706
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 191.4,
+          "max_count": 541
+        }
+      },
+      "best_under_limit": {
+        "boosted_prefixes": [],
+        "metrics": {
+          "X": {
+            "hit": 39,
+            "total": 49,
+            "rate": 0.795918
+          },
+          "V": {
+            "hit": 38,
+            "total": 49,
+            "rate": 0.77551
+          },
+          "W": {
+            "hit": 13,
+            "total": 17,
+            "rate": 0.764706
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 191.4,
+          "max_count": 541
+        }
+      }
+    },
+    "审查意见答复单": {
+      "donor_types": [
+        "文件传递单"
+      ],
+      "base_token_width": {
+        "v_topn": 3,
+        "w_topn": 3
+      },
+      "extra_token_width": {
+        "v_topn": 3,
+        "w_topn": 4
+      },
+      "scope_growth_ratio": 1.1,
+      "scope_limit": 320.4,
+      "candidate_prefixes": [
+        {
+          "row_count": 5,
+          "delta_sum": 1,
+          "base": {
+            "x": 5,
+            "v": 5,
+            "w": 1
+          },
+          "extra": {
+            "x": 5,
+            "v": 5,
+            "w": 2
+          },
+          "scope_base": [
+            836,
+            836,
+            836,
+            836,
+            836
+          ],
+          "scope_extra": [
+            913,
+            836,
+            913,
+            913,
+            913
+          ],
+          "prefix": "EDES",
+          "avg_scope_base": 836.0,
+          "avg_scope_extra": 897.6
+        }
+      ],
+      "best_unrestricted": {
+        "boosted_prefixes": [
+          "EDES"
+        ],
+        "metrics": {
+          "X": {
+            "hit": 25,
+            "total": 25,
+            "rate": 1.0
+          },
+          "V": {
+            "hit": 25,
+            "total": 25,
+            "rate": 1.0
+          },
+          "W": {
+            "hit": 16,
+            "total": 21,
+            "rate": 0.761905
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 298.27,
+          "max_count": 913
+        }
+      },
+      "best_under_limit": {
+        "boosted_prefixes": [
+          "EDES"
+        ],
+        "metrics": {
+          "X": {
+            "hit": 25,
+            "total": 25,
+            "rate": 1.0
+          },
+          "V": {
+            "hit": 25,
+            "total": 25,
+            "rate": 1.0
+          },
+          "W": {
+            "hit": 16,
+            "total": 21,
+            "rate": 0.761905
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 298.27,
+          "max_count": 913
+        }
+      }
+    },
+    "外发纪要": {
+      "donor_types": [
+        "图文传真"
+      ],
+      "base_token_width": {
+        "v_topn": 3,
+        "w_topn": 3
+      },
+      "extra_token_width": {
+        "v_topn": 1,
+        "w_topn": 5
+      },
+      "scope_growth_ratio": 1.1,
+      "scope_limit": 390.5,
+      "candidate_prefixes": [
+        {
+          "row_count": 1,
+          "delta_sum": 2,
+          "base": {
+            "x": 0,
+            "v": 0,
+            "w": 0
+          },
+          "extra": {
+            "x": 1,
+            "v": 0,
+            "w": 1
+          },
+          "scope_base": [
+            219
+          ],
+          "scope_extra": [
+            340
+          ],
+          "prefix": "YBANY",
+          "avg_scope_base": 219.0,
+          "avg_scope_extra": 340.0
+        }
+      ],
+      "best_unrestricted": {
+        "boosted_prefixes": [
+          "YBANY"
+        ],
+        "metrics": {
+          "X": {
+            "hit": 5,
+            "total": 9,
+            "rate": 0.555556
+          },
+          "V": {
+            "hit": 4,
+            "total": 9,
+            "rate": 0.444444
+          },
+          "W": {
+            "hit": 3,
+            "total": 5,
+            "rate": 0.6
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 363.64,
+          "max_count": 751
+        }
+      },
+      "best_under_limit": {
+        "boosted_prefixes": [
+          "YBANY"
+        ],
+        "metrics": {
+          "X": {
+            "hit": 5,
+            "total": 9,
+            "rate": 0.555556
+          },
+          "V": {
+            "hit": 4,
+            "total": 9,
+            "rate": 0.444444
+          },
+          "W": {
+            "hit": 3,
+            "total": 5,
+            "rate": 0.6
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 363.64,
+          "max_count": 751
+        }
+      }
+    },
+    "NCR": {
+      "donor_types": [
+        "文件传递单"
+      ],
+      "base_token_width": {
+        "v_topn": 3,
+        "w_topn": 3
+      },
+      "extra_token_width": {
+        "v_topn": 3,
+        "w_topn": 1
+      },
+      "scope_growth_ratio": 1.1,
+      "scope_limit": 191.04,
+      "candidate_prefixes": [],
+      "best_unrestricted": {
+        "boosted_prefixes": [],
+        "metrics": {
+          "X": {
+            "hit": 4,
+            "total": 6,
+            "rate": 0.666667
+          },
+          "V": {
+            "hit": 4,
+            "total": 6,
+            "rate": 0.666667
+          },
+          "W": {
+            "hit": 0,
+            "total": 2,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 173.67,
+          "max_count": 509
+        }
+      },
+      "best_under_limit": {
+        "boosted_prefixes": [],
+        "metrics": {
+          "X": {
+            "hit": 4,
+            "total": 6,
+            "rate": 0.666667
+          },
+          "V": {
+            "hit": 4,
+            "total": 6,
+            "rate": 0.666667
+          },
+          "W": {
+            "hit": 0,
+            "total": 2,
+            "rate": 0.0
+          }
+        },
+        "predicted_name_scope": {
+          "avg_count": 173.67,
+          "max_count": 509
+        }
+      }
+    }
+  }
+}

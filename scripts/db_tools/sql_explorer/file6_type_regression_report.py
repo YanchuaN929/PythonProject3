@@ -2,10 +2,21 @@
 
 from __future__ import annotations
 
+import os
+import sys
+
+if __package__ in {None, ""}:
+    _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(_SCRIPT_DIR)))
+    sys.path = [item for item in sys.path if os.path.abspath(item or ".") != _SCRIPT_DIR]
+    sys.path.insert(0, _PROJECT_ROOT)
+
 import argparse
 import json
 from pathlib import Path
 from typing import Any, Dict, List
+
+from core.sql.file6_send_resolver import get_file6_send_type_rule, serialize_file6_send_rule
 
 
 STATUS_PRIORITY = {
@@ -67,10 +78,13 @@ def _classify_type(doc_type: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         status = "semantic_gap"
         next_step = "对象桥已通，优先拆责任人口径"
 
+    rule = serialize_file6_send_rule(get_file6_send_type_rule(doc_type))
+
     return {
         "doc_type": doc_type,
         "status": status,
         "next_step": next_step,
+        "rule": rule,
         "row_count": row_count,
         "rows_with_workflow_hits": workflow_hits,
         "workflow_hit_rate": workflow_hit_rate,

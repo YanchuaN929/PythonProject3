@@ -1,0 +1,1220 @@
+{
+  "input": "document\\file6_send_workflow_probe_20260313_rel4.json",
+  "summary": {
+    "type_count": 16,
+    "focus_type_count": 15,
+    "closed_type_count": 1
+  },
+  "focus_types": [
+    {
+      "doc_type": "审查意见单",
+      "status": "semantic_gap",
+      "next_step": "对象桥已通，优先拆责任人口径",
+      "row_count": 398,
+      "rows_with_workflow_hits": 398,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 30,
+          "hit": 2,
+          "rate": 0.066667,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 30,
+          "hit": 5,
+          "rate": 0.166667,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 14,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "图文传真",
+      "status": "semantic_gap",
+      "next_step": "对象桥已通，优先拆责任人口径",
+      "row_count": 274,
+      "rows_with_workflow_hits": 274,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 115,
+          "hit": 47,
+          "rate": 0.408696,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 115,
+          "hit": 89,
+          "rate": 0.773913,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 66,
+          "hit": 33,
+          "rate": 0.5,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "TA",
+      "status": "semantic_gap",
+      "next_step": "对象桥已通，优先拆责任人口径",
+      "row_count": 81,
+      "rows_with_workflow_hits": 81,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 80,
+          "hit": 1,
+          "rate": 0.0125,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 80,
+          "hit": 28,
+          "rate": 0.35,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 24,
+          "hit": 2,
+          "rate": 0.083333,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "CR",
+      "status": "semantic_gap",
+      "next_step": "对象桥已通，优先拆责任人口径",
+      "row_count": 50,
+      "rows_with_workflow_hits": 50,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 49,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 49,
+          "hit": 22,
+          "rate": 0.44898,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 17,
+          "hit": 1,
+          "rate": 0.058824,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "外发纪要",
+      "status": "semantic_gap",
+      "next_step": "对象桥已通，优先拆责任人口径",
+      "row_count": 14,
+      "rows_with_workflow_hits": 14,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 9,
+          "hit": 1,
+          "rate": 0.111111,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 9,
+          "hit": 8,
+          "rate": 0.888889,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 5,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "NCR",
+      "status": "semantic_gap",
+      "next_step": "对象桥已通，优先拆责任人口径",
+      "row_count": 6,
+      "rows_with_workflow_hits": 6,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 6,
+          "hit": 1,
+          "rate": 0.166667,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 6,
+          "hit": 2,
+          "rate": 0.333333,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 2,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "文件传递单",
+      "status": "chain_and_semantics",
+      "next_step": "先补对象桥，再拆责任人口径",
+      "row_count": 897,
+      "rows_with_workflow_hits": 896,
+      "workflow_hit_rate": 0.998885,
+      "metrics": {
+        "X": {
+          "total": 425,
+          "hit": 21,
+          "rate": 0.049412,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 425,
+          "hit": 201,
+          "rate": 0.472941,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 238,
+          "hit": 43,
+          "rate": 0.180672,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "备忘录",
+      "status": "chain_and_semantics",
+      "next_step": "先补对象桥，再拆责任人口径",
+      "row_count": 298,
+      "rows_with_workflow_hits": 282,
+      "workflow_hit_rate": 0.946309,
+      "metrics": {
+        "X": {
+          "total": 168,
+          "hit": 68,
+          "rate": 0.404762,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 168,
+          "hit": 118,
+          "rate": 0.702381,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 69,
+          "hit": 38,
+          "rate": 0.550725,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "FU通知单",
+      "status": "chain_and_semantics",
+      "next_step": "先补对象桥，再拆责任人口径",
+      "row_count": 98,
+      "rows_with_workflow_hits": 96,
+      "workflow_hit_rate": 0.979592,
+      "metrics": {
+        "X": {
+          "total": 4,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 4,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 3,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "IITF",
+      "status": "workflow_missing",
+      "next_step": "先追对象桥",
+      "row_count": 375,
+      "rows_with_workflow_hits": 0,
+      "workflow_hit_rate": 0.0,
+      "metrics": {
+        "X": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "V": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "W": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        }
+      },
+      "baselined_metrics": [],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "IICS",
+      "status": "workflow_missing",
+      "next_step": "先追对象桥",
+      "row_count": 306,
+      "rows_with_workflow_hits": 0,
+      "workflow_hit_rate": 0.0,
+      "metrics": {
+        "X": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "V": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "W": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        }
+      },
+      "baselined_metrics": [],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "TA回复单",
+      "status": "no_excel_baseline",
+      "next_step": "仅保留链路验证，等待更多 Excel 真值",
+      "row_count": 57,
+      "rows_with_workflow_hits": 57,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "V": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "W": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        }
+      },
+      "baselined_metrics": [],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "CR答复单",
+      "status": "no_excel_baseline",
+      "next_step": "仅保留链路验证，等待更多 Excel 真值",
+      "row_count": 42,
+      "rows_with_workflow_hits": 42,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "V": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "W": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        }
+      },
+      "baselined_metrics": [],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "作废通知单",
+      "status": "no_excel_baseline",
+      "next_step": "仅保留链路验证，等待更多 Excel 真值",
+      "row_count": 13,
+      "rows_with_workflow_hits": 13,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "V": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "W": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        }
+      },
+      "baselined_metrics": [],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    {
+      "doc_type": "NCR回复单",
+      "status": "no_excel_baseline",
+      "next_step": "仅保留链路验证，等待更多 Excel 真值",
+      "row_count": 5,
+      "rows_with_workflow_hits": 5,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "V": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "W": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        }
+      },
+      "baselined_metrics": [],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    }
+  ],
+  "closed_types": [
+    {
+      "doc_type": "审查意见答复单",
+      "status": "near_closed",
+      "next_step": "转抽样复核",
+      "row_count": 44,
+      "rows_with_workflow_hits": 44,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 25,
+          "hit": 24,
+          "rate": 0.96,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 25,
+          "hit": 25,
+          "rate": 1.0,
+          "closed": true,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 21,
+          "hit": 21,
+          "rate": 1.0,
+          "closed": true,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [
+        "V",
+        "W"
+      ],
+      "all_metrics_closed": false,
+      "near_closed": true
+    }
+  ],
+  "all_types": {
+    "审查意见单": {
+      "doc_type": "审查意见单",
+      "status": "semantic_gap",
+      "next_step": "对象桥已通，优先拆责任人口径",
+      "row_count": 398,
+      "rows_with_workflow_hits": 398,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 30,
+          "hit": 2,
+          "rate": 0.066667,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 30,
+          "hit": 5,
+          "rate": 0.166667,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 14,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "图文传真": {
+      "doc_type": "图文传真",
+      "status": "semantic_gap",
+      "next_step": "对象桥已通，优先拆责任人口径",
+      "row_count": 274,
+      "rows_with_workflow_hits": 274,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 115,
+          "hit": 47,
+          "rate": 0.408696,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 115,
+          "hit": 89,
+          "rate": 0.773913,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 66,
+          "hit": 33,
+          "rate": 0.5,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "TA": {
+      "doc_type": "TA",
+      "status": "semantic_gap",
+      "next_step": "对象桥已通，优先拆责任人口径",
+      "row_count": 81,
+      "rows_with_workflow_hits": 81,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 80,
+          "hit": 1,
+          "rate": 0.0125,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 80,
+          "hit": 28,
+          "rate": 0.35,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 24,
+          "hit": 2,
+          "rate": 0.083333,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "CR": {
+      "doc_type": "CR",
+      "status": "semantic_gap",
+      "next_step": "对象桥已通，优先拆责任人口径",
+      "row_count": 50,
+      "rows_with_workflow_hits": 50,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 49,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 49,
+          "hit": 22,
+          "rate": 0.44898,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 17,
+          "hit": 1,
+          "rate": 0.058824,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "外发纪要": {
+      "doc_type": "外发纪要",
+      "status": "semantic_gap",
+      "next_step": "对象桥已通，优先拆责任人口径",
+      "row_count": 14,
+      "rows_with_workflow_hits": 14,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 9,
+          "hit": 1,
+          "rate": 0.111111,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 9,
+          "hit": 8,
+          "rate": 0.888889,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 5,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "NCR": {
+      "doc_type": "NCR",
+      "status": "semantic_gap",
+      "next_step": "对象桥已通，优先拆责任人口径",
+      "row_count": 6,
+      "rows_with_workflow_hits": 6,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 6,
+          "hit": 1,
+          "rate": 0.166667,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 6,
+          "hit": 2,
+          "rate": 0.333333,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 2,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "文件传递单": {
+      "doc_type": "文件传递单",
+      "status": "chain_and_semantics",
+      "next_step": "先补对象桥，再拆责任人口径",
+      "row_count": 897,
+      "rows_with_workflow_hits": 896,
+      "workflow_hit_rate": 0.998885,
+      "metrics": {
+        "X": {
+          "total": 425,
+          "hit": 21,
+          "rate": 0.049412,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 425,
+          "hit": 201,
+          "rate": 0.472941,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 238,
+          "hit": 43,
+          "rate": 0.180672,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "备忘录": {
+      "doc_type": "备忘录",
+      "status": "chain_and_semantics",
+      "next_step": "先补对象桥，再拆责任人口径",
+      "row_count": 298,
+      "rows_with_workflow_hits": 282,
+      "workflow_hit_rate": 0.946309,
+      "metrics": {
+        "X": {
+          "total": 168,
+          "hit": 68,
+          "rate": 0.404762,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 168,
+          "hit": 118,
+          "rate": 0.702381,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 69,
+          "hit": 38,
+          "rate": 0.550725,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "FU通知单": {
+      "doc_type": "FU通知单",
+      "status": "chain_and_semantics",
+      "next_step": "先补对象桥，再拆责任人口径",
+      "row_count": 98,
+      "rows_with_workflow_hits": 96,
+      "workflow_hit_rate": 0.979592,
+      "metrics": {
+        "X": {
+          "total": 4,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 4,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 3,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "IITF": {
+      "doc_type": "IITF",
+      "status": "workflow_missing",
+      "next_step": "先追对象桥",
+      "row_count": 375,
+      "rows_with_workflow_hits": 0,
+      "workflow_hit_rate": 0.0,
+      "metrics": {
+        "X": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "V": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "W": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        }
+      },
+      "baselined_metrics": [],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "IICS": {
+      "doc_type": "IICS",
+      "status": "workflow_missing",
+      "next_step": "先追对象桥",
+      "row_count": 306,
+      "rows_with_workflow_hits": 0,
+      "workflow_hit_rate": 0.0,
+      "metrics": {
+        "X": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "V": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "W": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        }
+      },
+      "baselined_metrics": [],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "TA回复单": {
+      "doc_type": "TA回复单",
+      "status": "no_excel_baseline",
+      "next_step": "仅保留链路验证，等待更多 Excel 真值",
+      "row_count": 57,
+      "rows_with_workflow_hits": 57,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "V": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "W": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        }
+      },
+      "baselined_metrics": [],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "CR答复单": {
+      "doc_type": "CR答复单",
+      "status": "no_excel_baseline",
+      "next_step": "仅保留链路验证，等待更多 Excel 真值",
+      "row_count": 42,
+      "rows_with_workflow_hits": 42,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "V": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "W": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        }
+      },
+      "baselined_metrics": [],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "作废通知单": {
+      "doc_type": "作废通知单",
+      "status": "no_excel_baseline",
+      "next_step": "仅保留链路验证，等待更多 Excel 真值",
+      "row_count": 13,
+      "rows_with_workflow_hits": 13,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "V": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "W": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        }
+      },
+      "baselined_metrics": [],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "NCR回复单": {
+      "doc_type": "NCR回复单",
+      "status": "no_excel_baseline",
+      "next_step": "仅保留链路验证，等待更多 Excel 真值",
+      "row_count": 5,
+      "rows_with_workflow_hits": 5,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "V": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        },
+        "W": {
+          "total": 0,
+          "hit": 0,
+          "rate": 0.0,
+          "closed": false,
+          "has_baseline": false
+        }
+      },
+      "baselined_metrics": [],
+      "closed_metrics": [],
+      "all_metrics_closed": false,
+      "near_closed": false
+    },
+    "审查意见答复单": {
+      "doc_type": "审查意见答复单",
+      "status": "near_closed",
+      "next_step": "转抽样复核",
+      "row_count": 44,
+      "rows_with_workflow_hits": 44,
+      "workflow_hit_rate": 1.0,
+      "metrics": {
+        "X": {
+          "total": 25,
+          "hit": 24,
+          "rate": 0.96,
+          "closed": false,
+          "has_baseline": true
+        },
+        "V": {
+          "total": 25,
+          "hit": 25,
+          "rate": 1.0,
+          "closed": true,
+          "has_baseline": true
+        },
+        "W": {
+          "total": 21,
+          "hit": 21,
+          "rate": 1.0,
+          "closed": true,
+          "has_baseline": true
+        }
+      },
+      "baselined_metrics": [
+        "X",
+        "V",
+        "W"
+      ],
+      "closed_metrics": [
+        "V",
+        "W"
+      ],
+      "all_metrics_closed": false,
+      "near_closed": true
+    }
+  }
+}

@@ -1,0 +1,3248 @@
+{
+  "inputs": {
+    "excel_dir": "example\\CIMS-SQL-3.5\\EXCEL导出数据",
+    "sql35_dir": "example\\CIMS-SQL-3.5",
+    "doc_types": [],
+    "logic_mode": "word_strict_distribution_leaf_only"
+  },
+  "word_constraints": {
+    "workflow_tables_used_for_x": false,
+    "prefix_routing_used": false,
+    "x_source": "DISTRIBUTERECORD leaf/latest-leaf operators only",
+    "vw_source": "department resolution derived from leaf/latest-leaf operators only",
+    "completion_rule_note": "Word states reply date means completed; this probe focuses on X/V/W strict owner path."
+  },
+  "row_counts": {
+    "all_rows": 4178,
+    "version_best_rows": 4003,
+    "resolved_rows": 4003,
+    "version_best_rows_with_groups": 23,
+    "version_best_rows_with_leafs": 23,
+    "version_best_rows_with_row_latest_leaf": 23
+  },
+  "route_summary": {
+    "by_branch": {
+      "INT": 1056,
+      "SEND": 2947,
+      "UNRESOLVED": 175
+    },
+    "coverage": {
+      "resolved": 0.958114,
+      "version_best_with_groups": 0.005746,
+      "version_best_with_leafs": 0.005746,
+      "version_best_with_row_latest_leaf": 0.005746
+    },
+    "by_type_group_hits": {
+      "CR": {
+        "row_count": 50,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "CR答复单": {
+        "row_count": 42,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "FU通知单": {
+        "row_count": 98,
+        "hit_rows": 8,
+        "rate": 0.081633
+      },
+      "IICS": {
+        "row_count": 306,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "IITF": {
+        "row_count": 375,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "NCR": {
+        "row_count": 6,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "NCR回复单": {
+        "row_count": 5,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "TA": {
+        "row_count": 81,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "TA回复单": {
+        "row_count": 57,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "作废通知单": {
+        "row_count": 13,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "内部接口资料单": {
+        "row_count": 1056,
+        "hit_rows": 14,
+        "rate": 0.013258
+      },
+      "图文传真": {
+        "row_count": 274,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "备忘录": {
+        "row_count": 287,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "外发纪要": {
+        "row_count": 14,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "审查意见单": {
+        "row_count": 398,
+        "hit_rows": 1,
+        "rate": 0.002513
+      },
+      "审查意见答复单": {
+        "row_count": 44,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "文件传递单": {
+        "row_count": 897,
+        "hit_rows": 0,
+        "rate": 0.0
+      }
+    },
+    "by_type_leaf_hits": {
+      "CR": {
+        "row_count": 50,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "CR答复单": {
+        "row_count": 42,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "FU通知单": {
+        "row_count": 98,
+        "hit_rows": 8,
+        "rate": 0.081633
+      },
+      "IICS": {
+        "row_count": 306,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "IITF": {
+        "row_count": 375,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "NCR": {
+        "row_count": 6,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "NCR回复单": {
+        "row_count": 5,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "TA": {
+        "row_count": 81,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "TA回复单": {
+        "row_count": 57,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "作废通知单": {
+        "row_count": 13,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "内部接口资料单": {
+        "row_count": 1056,
+        "hit_rows": 14,
+        "rate": 0.013258
+      },
+      "图文传真": {
+        "row_count": 274,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "备忘录": {
+        "row_count": 287,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "外发纪要": {
+        "row_count": 14,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "审查意见单": {
+        "row_count": 398,
+        "hit_rows": 1,
+        "rate": 0.002513
+      },
+      "审查意见答复单": {
+        "row_count": 44,
+        "hit_rows": 0,
+        "rate": 0.0
+      },
+      "文件传递单": {
+        "row_count": 897,
+        "hit_rows": 0,
+        "rate": 0.0
+      }
+    },
+    "unresolved_samples": [
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 2,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-CFE-ZL-22C2-S-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 3,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-GA-ZL-25A5-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 4,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-GB-ZL-25A5-S-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 5,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-GT-ZL-25A2-S-010",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 6,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-HS-ZL-25E6-S-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 7,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-ISI-ZL-25B2-S-007",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 8,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-ISI-ZL-25C3-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 9,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NF-ZL-25A3-S-008",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 10,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-22A6-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 11,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-22B2-S-005",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 12,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-22N1-S-046",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 13,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-22N1-S-047",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 14,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-22N1-S-048",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 15,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-22N1-S-049",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 16,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25A1-S-035",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 17,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25A2-S-028",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 18,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25A3-S-029",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 19,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25A3-S-030",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 20,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25B1-S-118",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 21,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25B1-S-119",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 22,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NI-ZL-25B2-S-052",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 23,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-NV-ZL-25A3-S-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 24,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-TFA-ZL-22N1-S-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 25,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-WES-ZL-22Q2-S-004",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 26,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-YA-ZL-25C3-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1818.xlsx",
+        "excel_row": 27,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1818-5-ZT-ZL-25A4-S-004",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 2,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-0-DY-ZL-22P6-C-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 3,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-0-DY-ZL-22P6-C-004",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 4,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-0-HB-ZL-22R2-C-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 5,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-5-HB-ZL-22D3-C-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 6,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-5-HB-ZL-25A2-C-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 7,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-6-NI-ZL-25C3-S-018",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 8,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-6-RX-ZL-25A2-S-053",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 9,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-6-TFM-ZL-22C4-S-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 10,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-6-TFM-ZL-25A5-S-004",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 11,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-GB-ZL-25A4-S-045",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 12,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-NA-ZL-22R1-C-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 13,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-NI-ZL-22C2-S-025",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 14,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-NI-ZL-22C5-B-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 15,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-NI-ZL-25A1-S-012",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 16,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-ZB-ZL-25A4-S-011",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 17,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-7-ZB-ZL-25E6-S-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 18,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-X-DU-ZL-25A3-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 19,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-X-EES-ZL-25A3-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 20,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-X-RX-ZL-25A3-S-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 21,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-X-TSM-ZL-22C4-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1907.xlsx",
+        "excel_row": 22,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1907-X-TSM-ZL-25A5-S-008",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 2,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-EF-ZL-2600-C-008",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 3,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-HB-ZL-22R6-C-009",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 4,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-QC-ZL-22D3-B-009",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 5,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-QE-ZL-22R4-C-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 6,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-QE-ZL-22R4-C-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 7,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-QE-ZL-22R4-C-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 8,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-0-SF-ZL-22R4-C-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 9,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-1-NI-ZL-25A1-S-003",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 10,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-1-NI-ZL-25A2-S-002",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 11,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-1-NI-ZL-25A3-S-004",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 12,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-1-NI-ZL-25A4-S-001",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 13,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-1-NI-ZL-25A6-S-004",
+        "key_type": "int_key"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单1915.xlsx",
+        "excel_row": 14,
+        "a_raw": "工程设计资料单",
+        "e_raw": "1915-1-NI-ZL-25B2-S-001",
+        "key_type": "int_key"
+      }
+    ]
+  },
+  "table_scans": {
+    "INTINTERFACEDOC": {
+      "rows_scanned": 853536,
+      "rows_matched": 2341
+    },
+    "SENDRECEIVEDATA": {
+      "rows_scanned": 1109324,
+      "rows_matched": 3714
+    },
+    "FILETRANSMISSION_ROUTE": {
+      "rows_scanned": 242998,
+      "rows_matched": 538
+    },
+    "OBJECTREPLYLINK": {
+      "rows_scanned": 48961,
+      "rows_matched": 323
+    },
+    "DISTRIBUTERECORD": {
+      "statement_count": 2372886,
+      "matched_count": 833,
+      "matched_by_title_count": 833,
+      "group_count": 125
+    },
+    "send_aux_tables": {
+      "CANCELNOTIFY": {
+        "rows_scanned": 3237,
+        "rows_matched": 20,
+        "send_link_rows": 20
+      },
+      "CR": {
+        "rows_scanned": 172884,
+        "rows_matched": 126,
+        "send_link_rows": 50
+      },
+      "CRREPLY": {
+        "rows_scanned": 25341,
+        "rows_matched": 50,
+        "send_link_rows": 50
+      },
+      "DCR": {
+        "rows_scanned": 1431,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "DCRREPLY": {
+        "rows_scanned": 0,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "DESIGNREVIEWOPNION": {
+        "rows_scanned": 317690,
+        "rows_matched": 1180,
+        "send_link_rows": 567
+      },
+      "DESIGNREVIEWREPLY": {
+        "rows_scanned": 19930,
+        "rows_matched": 55,
+        "send_link_rows": 55
+      },
+      "EXTERNALMINUTES": {
+        "rows_scanned": 9589,
+        "rows_matched": 16,
+        "send_link_rows": 16
+      },
+      "FCR": {
+        "rows_scanned": 106881,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "FCRREPLY": {
+        "rows_scanned": 302,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "FILETRANSMISSION": {
+        "rows_scanned": 242998,
+        "rows_matched": 919,
+        "send_link_rows": 919
+      },
+      "FUNOTIFY": {
+        "rows_scanned": 10766,
+        "rows_matched": 156,
+        "send_link_rows": 156
+      },
+      "INTERNALMINUTES": {
+        "rows_scanned": 9207,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "MEMORANDUM": {
+        "rows_scanned": 141257,
+        "rows_matched": 344,
+        "send_link_rows": 324
+      },
+      "NCR": {
+        "rows_scanned": 9152,
+        "rows_matched": 13,
+        "send_link_rows": 6
+      },
+      "NCRREPLY": {
+        "rows_scanned": 4165,
+        "rows_matched": 5,
+        "send_link_rows": 5
+      },
+      "TA": {
+        "rows_scanned": 33734,
+        "rows_matched": 193,
+        "send_link_rows": 81
+      },
+      "TAREPLY": {
+        "rows_scanned": 20092,
+        "rows_matched": 71,
+        "send_link_rows": 71
+      },
+      "TCR": {
+        "rows_scanned": 222,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "TCRREPLY": {
+        "rows_scanned": 0,
+        "rows_matched": 0,
+        "send_link_rows": 0
+      },
+      "TELEFAX": {
+        "rows_scanned": 120600,
+        "rows_matched": 408,
+        "send_link_rows": 408
+      }
+    }
+  },
+  "strict_metrics": {
+    "INT": {
+      "X_leaf_union": {
+        "total": 1055,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 1055,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "X_latest_leaf_union": {
+        "total": 1055,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 1055,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "X_row_latest_leaf": {
+        "total": 1055,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 1055,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "V_leaf_union": {
+        "total": 1055,
+        "hit": 10,
+        "rate": 0.009479,
+        "by_project": {
+          "": {
+            "total": 1055,
+            "hit": 10,
+            "rate": 0.009479
+          }
+        },
+        "by_type": {
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 10,
+            "rate": 0.009479
+          }
+        }
+      },
+      "V_latest_leaf_union": {
+        "total": 1055,
+        "hit": 6,
+        "rate": 0.005687,
+        "by_project": {
+          "": {
+            "total": 1055,
+            "hit": 6,
+            "rate": 0.005687
+          }
+        },
+        "by_type": {
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 6,
+            "rate": 0.005687
+          }
+        }
+      },
+      "V_row_latest_leaf": {
+        "total": 1055,
+        "hit": 5,
+        "rate": 0.004739,
+        "by_project": {
+          "": {
+            "total": 1055,
+            "hit": 5,
+            "rate": 0.004739
+          }
+        },
+        "by_type": {
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 5,
+            "rate": 0.004739
+          }
+        }
+      },
+      "W_leaf_union": {
+        "total": 999,
+        "hit": 1,
+        "rate": 0.001001,
+        "by_project": {
+          "": {
+            "total": 999,
+            "hit": 1,
+            "rate": 0.001001
+          }
+        },
+        "by_type": {
+          "内部接口资料单": {
+            "total": 999,
+            "hit": 1,
+            "rate": 0.001001
+          }
+        }
+      },
+      "W_latest_leaf_union": {
+        "total": 999,
+        "hit": 1,
+        "rate": 0.001001,
+        "by_project": {
+          "": {
+            "total": 999,
+            "hit": 1,
+            "rate": 0.001001
+          }
+        },
+        "by_type": {
+          "内部接口资料单": {
+            "total": 999,
+            "hit": 1,
+            "rate": 0.001001
+          }
+        }
+      },
+      "W_row_latest_leaf": {
+        "total": 999,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 999,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "内部接口资料单": {
+            "total": 999,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      }
+    },
+    "SEND": {
+      "X_leaf_union": {
+        "total": 911,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 911,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "X_latest_leaf_union": {
+        "total": 911,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 911,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "X_row_latest_leaf": {
+        "total": 911,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 911,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "V_leaf_union": {
+        "total": 911,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 911,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "V_latest_leaf_union": {
+        "total": 911,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 911,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "V_row_latest_leaf": {
+        "total": 911,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 911,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "W_leaf_union": {
+        "total": 459,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 459,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 17,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 3,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 2,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 24,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 66,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 69,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 5,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 14,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 21,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 238,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "W_latest_leaf_union": {
+        "total": 459,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 459,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 17,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 3,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 2,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 24,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 66,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 69,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 5,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 14,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 21,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 238,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "W_row_latest_leaf": {
+        "total": 459,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 459,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 17,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 3,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 2,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 24,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 66,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 69,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 5,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 14,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 21,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 238,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      }
+    },
+    "version_best_overall": {
+      "X_leaf_union": {
+        "total": 1966,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 1966,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "X_latest_leaf_union": {
+        "total": 1966,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 1966,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "X_row_latest_leaf": {
+        "total": 1966,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 1966,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "V_leaf_union": {
+        "total": 1966,
+        "hit": 10,
+        "rate": 0.005086,
+        "by_project": {
+          "": {
+            "total": 1966,
+            "hit": 10,
+            "rate": 0.005086
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 10,
+            "rate": 0.009479
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "V_latest_leaf_union": {
+        "total": 1966,
+        "hit": 6,
+        "rate": 0.003052,
+        "by_project": {
+          "": {
+            "total": 1966,
+            "hit": 6,
+            "rate": 0.003052
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 6,
+            "rate": 0.005687
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "V_row_latest_leaf": {
+        "total": 1966,
+        "hit": 5,
+        "rate": 0.002543,
+        "by_project": {
+          "": {
+            "total": 1966,
+            "hit": 5,
+            "rate": 0.002543
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 49,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 4,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 6,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 80,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "内部接口资料单": {
+            "total": 1055,
+            "hit": 5,
+            "rate": 0.004739
+          },
+          "图文传真": {
+            "total": 115,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 168,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 9,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 30,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 25,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 425,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "W_leaf_union": {
+        "total": 1458,
+        "hit": 1,
+        "rate": 0.000686,
+        "by_project": {
+          "": {
+            "total": 1458,
+            "hit": 1,
+            "rate": 0.000686
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 17,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 3,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 2,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 24,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "内部接口资料单": {
+            "total": 999,
+            "hit": 1,
+            "rate": 0.001001
+          },
+          "图文传真": {
+            "total": 66,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 69,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 5,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 14,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 21,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 238,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "W_latest_leaf_union": {
+        "total": 1458,
+        "hit": 1,
+        "rate": 0.000686,
+        "by_project": {
+          "": {
+            "total": 1458,
+            "hit": 1,
+            "rate": 0.000686
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 17,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 3,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 2,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 24,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "内部接口资料单": {
+            "total": 999,
+            "hit": 1,
+            "rate": 0.001001
+          },
+          "图文传真": {
+            "total": 66,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 69,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 5,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 14,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 21,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 238,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "W_row_latest_leaf": {
+        "total": 1458,
+        "hit": 0,
+        "rate": 0.0,
+        "by_project": {
+          "": {
+            "total": 1458,
+            "hit": 0,
+            "rate": 0.0
+          }
+        },
+        "by_type": {
+          "CR": {
+            "total": 17,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "FU通知单": {
+            "total": 3,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "NCR": {
+            "total": 2,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "TA": {
+            "total": 24,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "内部接口资料单": {
+            "total": 999,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "图文传真": {
+            "total": 66,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "备忘录": {
+            "total": 69,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "外发纪要": {
+            "total": 5,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见单": {
+            "total": 14,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "审查意见答复单": {
+            "total": 21,
+            "hit": 0,
+            "rate": 0.0
+          },
+          "文件传递单": {
+            "total": 238,
+            "hit": 0,
+            "rate": 0.0
+          }
+        }
+      }
+    }
+  },
+  "samples": {
+    "strict_leaf_examples": [
+      {
+        "project": "",
+        "workbook": "收发文清单1916.xlsx",
+        "excel_row": 87,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1916-Y-TTB-ZL-22C4-S-001",
+        "branch": "INT",
+        "group_ids": [
+          "09DB18C1C0E74233B281213B0E67F61F",
+          "0BCAE795BBD34633BFB6490330F824DB",
+          "1116855CB98C45CDA2481F1EE8F240FE",
+          "141115B69BC641F0AADFC0D471ABCAAE",
+          "2188A9872F31454E8CC24ABE89A3374F",
+          "2A4D829D1EB44F6091229FA294FC1B72",
+          "2D1E6BD2E3DF4B7991379E747E5FC474",
+          "2F8A2FCDE93B4E95B57941A582502BAD"
+        ],
+        "leaf_people": [
+          "赵英超",
+          "方晓璐",
+          "王晨",
+          "牛占肖",
+          "杨伟涛",
+          "窦晓洁",
+          "李丕陆",
+          "彭思",
+          "杨宏悦",
+          "周同盼",
+          "万忠义",
+          "韩坤阁"
+        ],
+        "latest_leaf_people": [
+          "方晓璐",
+          "牛占肖",
+          "窦晓洁",
+          "程茜",
+          "王汉迎",
+          "康健",
+          "王丹丹",
+          "贾京鑫",
+          "孙智华",
+          "吴永重",
+          "徐琰",
+          "李谦"
+        ],
+        "row_latest_leaf_people": [
+          "吴永重"
+        ],
+        "leaf_org_values": [
+          "堆本体与非标设备室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "核设备所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.核设备所",
+          "核设备所.堆本体与非标设备室",
+          "中核工程.北京核工程研究设计院.核设备所",
+          "北京核工程研究设计院.核设备所.堆本体与非标设备室",
+          "核燃料运输与工艺室",
+          "核设备所.核燃料运输与工艺室",
+          "北京核工程研究设计院.核设备所.核燃料运输与工艺室"
+        ],
+        "leaf_office_values": [
+          "堆本体与非标设备室",
+          "核燃料运输与工艺室",
+          "未找到单位",
+          "工艺布置一室",
+          "核化工设备三室",
+          "工艺系统室",
+          "核化工设备所",
+          "工程设计管理部",
+          "结构二室",
+          "公用一室",
+          "水工室",
+          "辅助系统室"
+        ],
+        "x_raw": "雷宁博,陈巧艳,堆工所文档",
+        "v_raw": "反应堆工艺研究所.严重事故分析研究室",
+        "w_raw": ""
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 238,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-FNP-ZL-25A5-S-137",
+        "branch": "INT",
+        "group_ids": [
+          "008172BB6F3645399F1A4E39F9F7A5E3",
+          "01CC64B466DD45128AC900B1C329D843",
+          "063258F20C944A3EB78CCD1AD05F15B1",
+          "32F1D5A1217B4DA089E41C04C6147E7A",
+          "357C4463C8374E70BD794D773E8FCBE5",
+          "37B9E572061F4921922FA7B214D6FBF2",
+          "3A2120E9767447B78B1FA000D1C571DA",
+          "4D53D86A02FE4FAB9A666B4038426041"
+        ],
+        "leaf_people": [
+          "闫明兴",
+          "甄卫刚",
+          "王硕",
+          "陈娜",
+          "郭晨楠",
+          "江会磊",
+          "孟晨"
+        ],
+        "latest_leaf_people": [
+          "郭晨楠"
+        ],
+        "row_latest_leaf_people": [
+          "郭晨楠"
+        ],
+        "leaf_org_values": [
+          "力学室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.力学室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.力学室",
+          "工艺系统室",
+          "核电工艺所.工艺系统室",
+          "河北分公司.核电工艺所.工艺系统室"
+        ],
+        "leaf_office_values": [
+          "力学室",
+          "工艺系统室"
+        ],
+        "x_raw": "河北核电工艺所文档员,颜凡松,侯锋,宋江波,武旭优,曹行思瑾,刘宇晗,贾京鑫,张盘玉,董建华a,张静",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "水工室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 244,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-FNP-ZL-25A5-S-143",
+        "branch": "INT",
+        "group_ids": [
+          "008172BB6F3645399F1A4E39F9F7A5E3",
+          "01CC64B466DD45128AC900B1C329D843",
+          "063258F20C944A3EB78CCD1AD05F15B1",
+          "32F1D5A1217B4DA089E41C04C6147E7A",
+          "357C4463C8374E70BD794D773E8FCBE5",
+          "37B9E572061F4921922FA7B214D6FBF2",
+          "3A2120E9767447B78B1FA000D1C571DA",
+          "4D53D86A02FE4FAB9A666B4038426041"
+        ],
+        "leaf_people": [
+          "闫明兴",
+          "甄卫刚",
+          "王硕",
+          "陈娜",
+          "郭晨楠",
+          "江会磊",
+          "孟晨"
+        ],
+        "latest_leaf_people": [
+          "郭晨楠"
+        ],
+        "row_latest_leaf_people": [
+          "郭晨楠"
+        ],
+        "leaf_org_values": [
+          "力学室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.力学室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.力学室",
+          "工艺系统室",
+          "核电工艺所.工艺系统室",
+          "河北分公司.核电工艺所.工艺系统室"
+        ],
+        "leaf_office_values": [
+          "力学室",
+          "工艺系统室"
+        ],
+        "x_raw": "侯锋,宋江波,河北核电工艺所文档员,颜凡松,董建华a,贾京鑫,张盘玉,武旭优,曹行思瑾,张静,刘宇晗",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "水工室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 295,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RNS-ZL-25A6-S-073",
+        "branch": "INT",
+        "group_ids": [
+          "07F63CCCD3E04E32A79D3405E7D30AB2",
+          "2481A11D70E844A0A965CEDEAEDEE4A8",
+          "40B03AB2CFC845AE9C8BD569E936504D",
+          "6008C47B4EF74E97A52627FE43F5BEA6",
+          "8EA772D80604400FB0F6D151FE08BC5C",
+          "924E96CC5D6D4E318B6A8759BF002877",
+          "94188263B6F54F2AB3CB19D949A50DDF",
+          "A0DF3E617BB741A5A62D63C3D99DB8F6"
+        ],
+        "leaf_people": [
+          "马卫涛",
+          "郭蒙蒙",
+          "刘璐",
+          "黄亚娟",
+          "韩冬",
+          "沈蓉",
+          "郭璇",
+          "黄耀"
+        ],
+        "latest_leaf_people": [
+          "马卫涛",
+          "刘璐",
+          "黄亚娟"
+        ],
+        "row_latest_leaf_people": [
+          "刘璐"
+        ],
+        "leaf_org_values": [
+          "设备室",
+          "中核工程",
+          "河北分公司",
+          "核工程研究设计所",
+          "中核工程.河北分公司",
+          "河北分公司.核工程研究设计所",
+          "核工程研究设计所.设备室",
+          "中核工程.河北分公司.核工程研究设计所",
+          "河北分公司.核工程研究设计所.设备室",
+          "工艺系统室",
+          "核电工艺所",
+          "河北分公司.核电工艺所"
+        ],
+        "leaf_office_values": [
+          "设备室",
+          "工艺系统室",
+          "电气四室",
+          "电气设计所"
+        ],
+        "x_raw": "河北电气自动化所文档员,刘震,白东坡,刘祖全",
+        "v_raw": "河北分公司.电气自动化所",
+        "w_raw": "仪控一室,仪控二室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 303,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RSI-ZL-25A6-S-058",
+        "branch": "INT",
+        "group_ids": [
+          "024987B6742F481EA06A830288417C07",
+          "148CF0567ECF42D48CBA2D13F0DCCEFF",
+          "3E37E962C5684A98B5AB717076B0FB05",
+          "4FFA9AD242264F0AAA25D5612F328C77",
+          "751D49405CE042C694F70651DD36CA41",
+          "A4083F4D095047EAB006313D669445A5",
+          "D004977ACB35408792700060077C3F61"
+        ],
+        "leaf_people": [
+          "黄亚娟",
+          "韩冬",
+          "郭璇",
+          "黄耀",
+          "沈蓉",
+          "牛占肖"
+        ],
+        "latest_leaf_people": [
+          "黄亚娟",
+          "牛占肖",
+          "黄耀"
+        ],
+        "row_latest_leaf_people": [
+          "牛占肖"
+        ],
+        "leaf_org_values": [
+          "电气四室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "电气设计所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.电气设计所",
+          "电气设计所.电气四室",
+          "中核工程.北京核工程研究设计院.电气设计所",
+          "北京核工程研究设计院.电气设计所.电气四室",
+          "未找到单位",
+          "中核工程.未找到单位"
+        ],
+        "leaf_office_values": [
+          "电气四室",
+          "电气设计所",
+          "未找到单位"
+        ],
+        "x_raw": "白东坡,杨义飞,刘祖全,河北电气自动化所文档员,习磊朋,桂秋媛,李崇赞,蔡泽萍,李铮铮,张嘉璐,秦鹏,李涛,河北核电工艺所文档员,张秋宁,张勇,董航",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.核电工艺所",
+        "w_raw": "仪控一室,仪控二室,工艺布置一室,工艺布置二室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 307,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RVD-ZL-25A5-S-147",
+        "branch": "INT",
+        "group_ids": [
+          "12C77AF8AC0B41D2B9B3E3E04E8AB539",
+          "1326594B78384C3AA1A2C0D3325CA71F",
+          "3E4643ADB8E24AC59D86982354E1161F",
+          "41F0C65D3C014D3C865E4D12A9E92228",
+          "730784085D964F3E9A5B849266937B9A",
+          "734D29F9107A4F1AB4565AC94ED145D2",
+          "7411AA7701B04B6D837B6789212E43BB",
+          "7458413C7A464474A0B57ACA7BD6BEC9"
+        ],
+        "leaf_people": [
+          "闫明兴",
+          "王旭",
+          "董彬杰",
+          "郭石永",
+          "姜晓阳",
+          "王峰",
+          "王少磊"
+        ],
+        "latest_leaf_people": [
+          "王旭",
+          "王少磊"
+        ],
+        "row_latest_leaf_people": [
+          "王旭"
+        ],
+        "leaf_org_values": [
+          "力学室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.力学室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.力学室",
+          "未找到单位",
+          "中核工程.未找到单位",
+          "设备室"
+        ],
+        "leaf_office_values": [
+          "力学室",
+          "未找到单位",
+          "设备室"
+        ],
+        "x_raw": "河北核电工艺所文档员,訾博文,王浩,刘昊天",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺布置二室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 308,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RVD-ZL-25A5-S-148",
+        "branch": "INT",
+        "group_ids": [
+          "12C77AF8AC0B41D2B9B3E3E04E8AB539",
+          "1326594B78384C3AA1A2C0D3325CA71F",
+          "3E4643ADB8E24AC59D86982354E1161F",
+          "41F0C65D3C014D3C865E4D12A9E92228",
+          "730784085D964F3E9A5B849266937B9A",
+          "734D29F9107A4F1AB4565AC94ED145D2",
+          "7411AA7701B04B6D837B6789212E43BB",
+          "7458413C7A464474A0B57ACA7BD6BEC9"
+        ],
+        "leaf_people": [
+          "闫明兴",
+          "王旭",
+          "董彬杰",
+          "郭石永",
+          "姜晓阳",
+          "王峰",
+          "王少磊"
+        ],
+        "latest_leaf_people": [
+          "王旭",
+          "王少磊"
+        ],
+        "row_latest_leaf_people": [
+          "王旭"
+        ],
+        "leaf_org_values": [
+          "力学室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.力学室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.力学室",
+          "未找到单位",
+          "中核工程.未找到单位",
+          "设备室"
+        ],
+        "leaf_office_values": [
+          "力学室",
+          "未找到单位",
+          "设备室"
+        ],
+        "x_raw": "王浩,訾博文,刘昊天,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺布置二室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 313,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RVD-ZL-25A6-S-089",
+        "branch": "INT",
+        "group_ids": [
+          "12C77AF8AC0B41D2B9B3E3E04E8AB539",
+          "1326594B78384C3AA1A2C0D3325CA71F",
+          "3E4643ADB8E24AC59D86982354E1161F",
+          "41F0C65D3C014D3C865E4D12A9E92228",
+          "730784085D964F3E9A5B849266937B9A",
+          "734D29F9107A4F1AB4565AC94ED145D2",
+          "7411AA7701B04B6D837B6789212E43BB",
+          "7458413C7A464474A0B57ACA7BD6BEC9"
+        ],
+        "leaf_people": [
+          "闫明兴",
+          "王旭",
+          "董彬杰",
+          "郭石永",
+          "姜晓阳",
+          "王峰",
+          "王少磊"
+        ],
+        "latest_leaf_people": [
+          "王旭",
+          "王少磊"
+        ],
+        "row_latest_leaf_people": [
+          "王旭"
+        ],
+        "leaf_org_values": [
+          "力学室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.力学室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.力学室",
+          "未找到单位",
+          "中核工程.未找到单位",
+          "设备室"
+        ],
+        "leaf_office_values": [
+          "力学室",
+          "未找到单位",
+          "设备室"
+        ],
+        "x_raw": "赵银亮,刘祖全,贾雅永,张勇,桂秋媛,李洋,河北电气自动化所文档员,李菁,白东坡,吕雪纯,习磊朋,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "工艺布置二室,仪控二室,工艺布置一室,仪控一室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 316,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RVD-ZL-25A6-S-092",
+        "branch": "INT",
+        "group_ids": [
+          "351585DA168C41BD969EDFD6EAA0FED6",
+          "9B417B8F5174439CB5CED70DF299A772"
+        ],
+        "leaf_people": [
+          "王旭",
+          "杨亚伟"
+        ],
+        "latest_leaf_people": [
+          "王旭",
+          "杨亚伟"
+        ],
+        "row_latest_leaf_people": [
+          "王旭"
+        ],
+        "leaf_org_values": [
+          "未找到单位",
+          "中核工程",
+          "中核工程.未找到单位",
+          "工艺系统室",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.工艺系统室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.工艺系统室"
+        ],
+        "leaf_office_values": [
+          "未找到单位",
+          "工艺系统室"
+        ],
+        "x_raw": "河北核电工艺所文档员,工艺系统研究设计所文档,于婷,杜广,黄若琳",
+        "v_raw": "河北分公司.核电工艺所,工艺系统研究设计所,工艺系统研究设计所.总体布置室,工艺系统研究设计所.工艺设备室",
+        "w_raw": "工艺系统室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 361,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-WAS-ZL-25A5-S-037",
+        "branch": "INT",
+        "group_ids": [
+          "0CEE6A339A60434DA3E7668459712211",
+          "4E0A9223EC034E31867CFEB66FD5A577"
+        ],
+        "leaf_people": [
+          "闫明兴",
+          "王思佳",
+          "程茜",
+          "刘朋飞",
+          "焦森林",
+          "马惠昀",
+          "刘宇腾",
+          "蒋克涛",
+          "李丕陆",
+          "王勋"
+        ],
+        "latest_leaf_people": [
+          "刘宇腾"
+        ],
+        "row_latest_leaf_people": [
+          "刘宇腾"
+        ],
+        "leaf_org_values": [
+          "力学室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.力学室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.力学室",
+          "工艺系统室",
+          "核电工艺所.工艺系统室",
+          "河北分公司.核电工艺所.工艺系统室"
+        ],
+        "leaf_office_values": [
+          "力学室",
+          "工艺系统室",
+          "安全系统室",
+          "未找到单位",
+          "工艺设备室"
+        ],
+        "x_raw": "訾博文,刘昊天,河北核电工艺所文档员,李颖",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺布置二室,工艺布置一室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 383,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-WPW-ZL-25A6-S-038",
+        "branch": "INT",
+        "group_ids": [
+          "0E62E66CBCD74FFF83B87B05839B20C7",
+          "3A6DE5C67C874CE6A0987FAA9432DC38",
+          "830D62D5C24442DEA4B03F3EC4481DB1"
+        ],
+        "leaf_people": [
+          "高汉桥"
+        ],
+        "latest_leaf_people": [
+          "高汉桥"
+        ],
+        "row_latest_leaf_people": [
+          "高汉桥"
+        ],
+        "leaf_org_values": [
+          "工艺系统室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.工艺系统室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.工艺系统室"
+        ],
+        "leaf_office_values": [
+          "工艺系统室"
+        ],
+        "x_raw": "张静,刘宇晗,习磊朋,侯锋,宋江波,河北核电工艺所文档员,颜凡松,董建华a,武旭优,曹行思瑾,刘晓光,管祥宇,王梦含,姚腾飞,刘祖全,张盘玉,贾京鑫,肖龙腾,河北电气自动化所文档员",
+        "v_raw": "河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "水工室,工艺布置一室,仪控二室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 384,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-WPW-ZL-25A6-S-039",
+        "branch": "INT",
+        "group_ids": [
+          "0E62E66CBCD74FFF83B87B05839B20C7",
+          "3A6DE5C67C874CE6A0987FAA9432DC38",
+          "830D62D5C24442DEA4B03F3EC4481DB1"
+        ],
+        "leaf_people": [
+          "高汉桥"
+        ],
+        "latest_leaf_people": [
+          "高汉桥"
+        ],
+        "row_latest_leaf_people": [
+          "高汉桥"
+        ],
+        "leaf_org_values": [
+          "工艺系统室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.工艺系统室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.工艺系统室"
+        ],
+        "leaf_office_values": [
+          "工艺系统室"
+        ],
+        "x_raw": "河北电气自动化所文档员,刘祖全,王梦含,姚腾飞,刘晓光,贾京鑫,张盘玉,董建华a,肖龙腾,武旭优,曹行思瑾,习磊朋,侯锋,宋江波,河北核电工艺所文档员,颜凡松,张静,刘宇晗",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.核电工艺所",
+        "w_raw": "仪控二室,水工室,工艺布置一室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 385,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-WPW-ZL-25A6-S-040",
+        "branch": "INT",
+        "group_ids": [
+          "0E62E66CBCD74FFF83B87B05839B20C7",
+          "3A6DE5C67C874CE6A0987FAA9432DC38",
+          "830D62D5C24442DEA4B03F3EC4481DB1"
+        ],
+        "leaf_people": [
+          "高汉桥"
+        ],
+        "latest_leaf_people": [
+          "高汉桥"
+        ],
+        "row_latest_leaf_people": [
+          "高汉桥"
+        ],
+        "leaf_org_values": [
+          "工艺系统室",
+          "中核工程",
+          "河北分公司",
+          "核电工艺所",
+          "中核工程.河北分公司",
+          "河北分公司.核电工艺所",
+          "核电工艺所.工艺系统室",
+          "中核工程.河北分公司.核电工艺所",
+          "河北分公司.核电工艺所.工艺系统室"
+        ],
+        "leaf_office_values": [
+          "工艺系统室"
+        ],
+        "x_raw": "河北核电工艺所文档员,颜凡松,习磊朋,侯锋,宋江波,张静,刘宇晗,武旭优,曹行思瑾,董建华a,河北电气自动化所文档员,刘祖全,王梦含,姚腾飞,刘晓光,贾京鑫,张盘玉,肖龙腾",
+        "v_raw": "河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "水工室,工艺布置一室,仪控二室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2026.xlsx",
+        "excel_row": 174,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2026-X-WES-ZL-22Q2-S-040",
+        "branch": "INT",
+        "group_ids": [
+          "576DB62D3A944E01B9E27F92B3BACDC6",
+          "79C2B7AEDF3A4075BA92E88E68D3669A",
+          "9F9025EB6C324ECEBC702FDED7EF31AB",
+          "DE1EFCCC04F146B68C159900D7FB77BA",
+          "E182B0538234408E87595771F74B148E"
+        ],
+        "leaf_people": [
+          "刘晓轻",
+          "李娜娜",
+          "闫征",
+          "曹冉冉",
+          "姜佳音",
+          "焦迪",
+          "张志柳"
+        ],
+        "latest_leaf_people": [
+          "刘晓轻",
+          "姜佳音",
+          "张志柳"
+        ],
+        "row_latest_leaf_people": [
+          "张志柳"
+        ],
+        "leaf_org_values": [
+          "水工工艺二室",
+          "中核工程",
+          "北京核工程研究设计院",
+          "公用系统所",
+          "中核工程.北京核工程研究设计院",
+          "北京核工程研究设计院.公用系统所",
+          "公用系统所.水工工艺二室",
+          "中核工程.北京核工程研究设计院.公用系统所",
+          "北京核工程研究设计院.公用系统所.水工工艺二室",
+          "公用二室",
+          "公用系统所.公用二室",
+          "北京核工程研究设计院.公用系统所.公用二室"
+        ],
+        "leaf_office_values": [
+          "水工工艺二室",
+          "公用二室",
+          "暖通二室"
+        ],
+        "x_raw": "河北电气自动化所文档员,许春辉,孙涛,王智勇",
+        "v_raw": "河北分公司.电气自动化所",
+        "w_raw": "电气室,仪控一室"
+      }
+    ],
+    "group_without_leaf_examples": [],
+    "leaf_miss_examples": [
+      {
+        "project": "",
+        "workbook": "收发文清单1916.xlsx",
+        "excel_row": 87,
+        "a_raw": "内部接口资料单",
+        "e_raw": "1916-Y-TTB-ZL-22C4-S-001",
+        "branch": "INT",
+        "leaf_people": [
+          "赵英超",
+          "方晓璐",
+          "王晨",
+          "牛占肖",
+          "杨伟涛",
+          "窦晓洁",
+          "李丕陆",
+          "彭思",
+          "杨宏悦",
+          "周同盼"
+        ],
+        "row_latest_leaf_people": [
+          "吴永重"
+        ],
+        "x_raw": "雷宁博,陈巧艳,堆工所文档",
+        "v_raw": "反应堆工艺研究所.严重事故分析研究室",
+        "w_raw": ""
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 238,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-FNP-ZL-25A5-S-137",
+        "branch": "INT",
+        "leaf_people": [
+          "闫明兴",
+          "甄卫刚",
+          "王硕",
+          "陈娜",
+          "郭晨楠",
+          "江会磊",
+          "孟晨"
+        ],
+        "row_latest_leaf_people": [
+          "郭晨楠"
+        ],
+        "x_raw": "河北核电工艺所文档员,颜凡松,侯锋,宋江波,武旭优,曹行思瑾,刘宇晗,贾京鑫,张盘玉,董建华a,张静",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "水工室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 244,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-FNP-ZL-25A5-S-143",
+        "branch": "INT",
+        "leaf_people": [
+          "闫明兴",
+          "甄卫刚",
+          "王硕",
+          "陈娜",
+          "郭晨楠",
+          "江会磊",
+          "孟晨"
+        ],
+        "row_latest_leaf_people": [
+          "郭晨楠"
+        ],
+        "x_raw": "侯锋,宋江波,河北核电工艺所文档员,颜凡松,董建华a,贾京鑫,张盘玉,武旭优,曹行思瑾,张静,刘宇晗",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "水工室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 295,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RNS-ZL-25A6-S-073",
+        "branch": "INT",
+        "leaf_people": [
+          "马卫涛",
+          "郭蒙蒙",
+          "刘璐",
+          "黄亚娟",
+          "韩冬",
+          "沈蓉",
+          "郭璇",
+          "黄耀"
+        ],
+        "row_latest_leaf_people": [
+          "刘璐"
+        ],
+        "x_raw": "河北电气自动化所文档员,刘震,白东坡,刘祖全",
+        "v_raw": "河北分公司.电气自动化所",
+        "w_raw": "仪控一室,仪控二室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 303,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RSI-ZL-25A6-S-058",
+        "branch": "INT",
+        "leaf_people": [
+          "黄亚娟",
+          "韩冬",
+          "郭璇",
+          "黄耀",
+          "沈蓉",
+          "牛占肖"
+        ],
+        "row_latest_leaf_people": [
+          "牛占肖"
+        ],
+        "x_raw": "白东坡,杨义飞,刘祖全,河北电气自动化所文档员,习磊朋,桂秋媛,李崇赞,蔡泽萍,李铮铮,张嘉璐,秦鹏,李涛,河北核电工艺所文档员,张秋宁,张勇,董航",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.核电工艺所",
+        "w_raw": "仪控一室,仪控二室,工艺布置一室,工艺布置二室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 307,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RVD-ZL-25A5-S-147",
+        "branch": "INT",
+        "leaf_people": [
+          "闫明兴",
+          "王旭",
+          "董彬杰",
+          "郭石永",
+          "姜晓阳",
+          "王峰",
+          "王少磊"
+        ],
+        "row_latest_leaf_people": [
+          "王旭"
+        ],
+        "x_raw": "河北核电工艺所文档员,訾博文,王浩,刘昊天",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺布置二室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 308,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RVD-ZL-25A5-S-148",
+        "branch": "INT",
+        "leaf_people": [
+          "闫明兴",
+          "王旭",
+          "董彬杰",
+          "郭石永",
+          "姜晓阳",
+          "王峰",
+          "王少磊"
+        ],
+        "row_latest_leaf_people": [
+          "王旭"
+        ],
+        "x_raw": "王浩,訾博文,刘昊天,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺布置二室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 313,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RVD-ZL-25A6-S-089",
+        "branch": "INT",
+        "leaf_people": [
+          "闫明兴",
+          "王旭",
+          "董彬杰",
+          "郭石永",
+          "姜晓阳",
+          "王峰",
+          "王少磊"
+        ],
+        "row_latest_leaf_people": [
+          "王旭"
+        ],
+        "x_raw": "赵银亮,刘祖全,贾雅永,张勇,桂秋媛,李洋,河北电气自动化所文档员,李菁,白东坡,吕雪纯,习磊朋,河北核电工艺所文档员",
+        "v_raw": "河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "工艺布置二室,仪控二室,工艺布置一室,仪控一室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 316,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-RVD-ZL-25A6-S-092",
+        "branch": "INT",
+        "leaf_people": [
+          "王旭",
+          "杨亚伟"
+        ],
+        "row_latest_leaf_people": [
+          "王旭"
+        ],
+        "x_raw": "河北核电工艺所文档员,工艺系统研究设计所文档,于婷,杜广,黄若琳",
+        "v_raw": "河北分公司.核电工艺所,工艺系统研究设计所,工艺系统研究设计所.总体布置室,工艺系统研究设计所.工艺设备室",
+        "w_raw": "工艺系统室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 361,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-WAS-ZL-25A5-S-037",
+        "branch": "INT",
+        "leaf_people": [
+          "闫明兴",
+          "王思佳",
+          "程茜",
+          "刘朋飞",
+          "焦森林",
+          "马惠昀",
+          "刘宇腾",
+          "蒋克涛",
+          "李丕陆",
+          "王勋"
+        ],
+        "row_latest_leaf_people": [
+          "刘宇腾"
+        ],
+        "x_raw": "訾博文,刘昊天,河北核电工艺所文档员,李颖",
+        "v_raw": "河北分公司.核电工艺所",
+        "w_raw": "工艺布置二室,工艺布置一室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 383,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-WPW-ZL-25A6-S-038",
+        "branch": "INT",
+        "leaf_people": [
+          "高汉桥"
+        ],
+        "row_latest_leaf_people": [
+          "高汉桥"
+        ],
+        "x_raw": "张静,刘宇晗,习磊朋,侯锋,宋江波,河北核电工艺所文档员,颜凡松,董建华a,武旭优,曹行思瑾,刘晓光,管祥宇,王梦含,姚腾飞,刘祖全,张盘玉,贾京鑫,肖龙腾,河北电气自动化所文档员",
+        "v_raw": "河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "水工室,工艺布置一室,仪控二室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 384,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-WPW-ZL-25A6-S-039",
+        "branch": "INT",
+        "leaf_people": [
+          "高汉桥"
+        ],
+        "row_latest_leaf_people": [
+          "高汉桥"
+        ],
+        "x_raw": "河北电气自动化所文档员,刘祖全,王梦含,姚腾飞,刘晓光,贾京鑫,张盘玉,董建华a,肖龙腾,武旭优,曹行思瑾,习磊朋,侯锋,宋江波,河北核电工艺所文档员,颜凡松,张静,刘宇晗",
+        "v_raw": "河北分公司.电气自动化所,河北分公司.核电工艺所",
+        "w_raw": "仪控二室,水工室,工艺布置一室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2016.xlsx",
+        "excel_row": 385,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2016-X-WPW-ZL-25A6-S-040",
+        "branch": "INT",
+        "leaf_people": [
+          "高汉桥"
+        ],
+        "row_latest_leaf_people": [
+          "高汉桥"
+        ],
+        "x_raw": "河北核电工艺所文档员,颜凡松,习磊朋,侯锋,宋江波,张静,刘宇晗,武旭优,曹行思瑾,董建华a,河北电气自动化所文档员,刘祖全,王梦含,姚腾飞,刘晓光,贾京鑫,张盘玉,肖龙腾",
+        "v_raw": "河北分公司.核电工艺所,河北分公司.电气自动化所",
+        "w_raw": "水工室,工艺布置一室,仪控二室"
+      },
+      {
+        "project": "",
+        "workbook": "收发文清单2026.xlsx",
+        "excel_row": 174,
+        "a_raw": "内部接口资料单",
+        "e_raw": "2026-X-WES-ZL-22Q2-S-040",
+        "branch": "INT",
+        "leaf_people": [
+          "刘晓轻",
+          "李娜娜",
+          "闫征",
+          "曹冉冉",
+          "姜佳音",
+          "焦迪",
+          "张志柳"
+        ],
+        "row_latest_leaf_people": [
+          "张志柳"
+        ],
+        "x_raw": "河北电气自动化所文档员,许春辉,孙涛,王智勇",
+        "v_raw": "河北分公司.电气自动化所",
+        "w_raw": "电气室,仪控一室"
+      }
+    ]
+  }
+}

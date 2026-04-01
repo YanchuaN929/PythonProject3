@@ -290,6 +290,20 @@ class WindowManager:
         )
         help_btn.grid(row=0, column=4, sticky=tk.E, padx=(5, 0))
 
+        ttk.Label(path_frame, text="导出结果位置:").grid(row=1, column=0, sticky=tk.W, padx=(0, 10), pady=(8, 0))
+
+        export_entry = ttk.Entry(path_frame, textvariable=self.export_path_var, width=60)
+        export_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=(0, 10), pady=(8, 0))
+
+        browse_export_btn = ttk.Button(
+            path_frame,
+            text="浏览",
+            command=lambda: self._trigger_callback('on_browse_export_folder')
+        )
+        browse_export_btn.grid(row=1, column=2, sticky=tk.W, pady=(8, 0))
+
+        self.buttons['browse_export'] = browse_export_btn
+
     def create_info_section(self, parent):
         """创建文件信息显示区域"""
         container = ttk.Frame(parent)
@@ -456,6 +470,22 @@ class WindowManager:
         )
         refresh_btn.pack(side=tk.LEFT, padx=(0, 10))
         self.buttons['refresh'] = refresh_btn
+
+        export_btn = ttk.Button(
+            button_frame,
+            text="导出结果",
+            command=lambda: self._trigger_callback('on_export_results')
+        )
+        export_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self.buttons['export'] = export_btn
+
+        open_folder_btn = ttk.Button(
+            button_frame,
+            text="打开文件位置",
+            command=lambda: self._trigger_callback('on_open_folder')
+        )
+        open_folder_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self.buttons['open_folder'] = open_folder_btn
 
         test_db_btn = ttk.Button(
             button_frame,

@@ -76,9 +76,19 @@ def _metric_rows(
     }
 
 
-def build_report(detail_path: Path, sql35_dir: Path, top_n: int) -> Dict[str, Any]:
+def build_report(
+    detail_path: Path,
+    sql35_dir: Path,
+    top_n: int,
+    doc_types: Sequence[str] | None = None,
+) -> Dict[str, Any]:
     payload = json.loads(detail_path.read_text(encoding="utf-8"))
-    rows = payload.get("rows", [])
+    doc_type_filter = {_clean_text(item) for item in (doc_types or []) if _clean_text(item)}
+    rows = [
+        row
+        for row in payload.get("rows", [])
+        if not doc_type_filter or _clean_text(row.get("a_raw")) in doc_type_filter
+    ]
     department_map = parse_department_tree(resolve_sql35_table_path(sql35_dir, "DEPARTMENT"))
     user_map = parse_user_map(resolve_sql35_table_path(sql35_dir, "USER"), department_map)
     roster_names = load_all_roster_names()
@@ -109,6 +119,14 @@ def build_report(detail_path: Path, sql35_dir: Path, top_n: int) -> Dict[str, An
     add_candidate("workflow_active_actors", lambda row: row.get("workflow_active_actor_values", []))
     add_candidate("vote_all_operators", lambda row: row.get("vote_all_operators", []))
     add_candidate("vote_valid_operators", lambda row: row.get("vote_valid_operators", []))
+    add_candidate(
+        "workflow_vote_union",
+        lambda row: _dedupe((row.get("workflow_all_actor_values") or []) + (row.get("vote_all_operators") or [])),
+    )
+    add_candidate(
+        "workflow_active_vote_valid_union",
+        lambda row: _dedupe((row.get("workflow_active_actor_values") or []) + (row.get("vote_valid_operators") or [])),
+    )
 
     for activity_name in activity_names:
         add_candidate(
@@ -161,6 +179,7 @@ def build_report(detail_path: Path, sql35_dir: Path, top_n: int) -> Dict[str, An
         "input": str(detail_path),
         "sql35_dir": str(sql35_dir),
         "row_count": len(rows),
+        "doc_type_filter": sorted(doc_type_filter),
         "doc_types": sorted({_clean_text(row.get("a_raw")) for row in rows if _clean_text(row.get("a_raw"))}),
         "activity_names": activity_names,
         "source_types": source_types,
@@ -175,9 +194,14 @@ def main() -> None:
     parser.add_argument("--sql35-dir", type=Path, default=Path("example/CIMS-SQL-3.5"))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--top-n", type=int, default=40)
+    parser.add_argument("--doc-types", nargs="*", help="Optional A-column doc types to score. Supports comma-separated values.")
     args = parser.parse_args()
 
-    report = build_report(args.input, args.sql35_dir, args.top_n)
+    doc_types: List[str] = []
+    for raw_value in args.doc_types or []:
+        doc_types.extend([item.strip() for item in raw_value.split(",") if item.strip()])
+
+    report = build_report(args.input, args.sql35_dir, args.top_n, doc_types=doc_types or None)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(

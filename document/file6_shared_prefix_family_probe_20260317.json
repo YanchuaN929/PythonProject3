@@ -1,0 +1,4971 @@
+{
+  "input": "document\\file6_send_workflow_probe_20260313_rel4_detail_rows.json",
+  "sql35_dir": "example\\CIMS-SQL-3.5",
+  "min_shared_prefixes": 6,
+  "shared_edges": [
+    {
+      "left": "CR",
+      "right": "TA",
+      "shared_prefix_count": 16,
+      "sample_prefixes": [
+        "EHHG",
+        "EHMC",
+        "EHST",
+        "EHZZ",
+        "FAPAG",
+        "FAPAX",
+        "FAPDB",
+        "FAPYS",
+        "JAPAD",
+        "JAPCC",
+        "JAPDN",
+        "JAPKP"
+      ]
+    },
+    {
+      "left": "CR",
+      "right": "文件传递单",
+      "shared_prefix_count": 11,
+      "sample_prefixes": [
+        "EHST",
+        "EHZZ",
+        "FAPAD",
+        "FAPAG",
+        "FAPAX",
+        "FAPDB",
+        "FAPSK",
+        "JAPDN",
+        "JAPQA",
+        "JDPCB",
+        "JDPCN"
+      ]
+    },
+    {
+      "left": "FU通知单",
+      "right": "IICS",
+      "shared_prefix_count": 8,
+      "sample_prefixes": [
+        "EDMB",
+        "FADGB",
+        "FADMB",
+        "JADEC",
+        "JADMB",
+        "JDDMB",
+        "SMDES",
+        "SMDMB"
+      ]
+    },
+    {
+      "left": "FU通知单",
+      "right": "IITF",
+      "shared_prefix_count": 6,
+      "sample_prefixes": [
+        "EDMB",
+        "FADMB",
+        "FADNC",
+        "JADEC",
+        "JADMB",
+        "JDDMB"
+      ]
+    },
+    {
+      "left": "FU通知单",
+      "right": "图文传真",
+      "shared_prefix_count": 10,
+      "sample_prefixes": [
+        "EDMB",
+        "FADGB",
+        "FADMB",
+        "FADNC",
+        "JADEC",
+        "JADMB",
+        "JADNS",
+        "JDDMB",
+        "SMDES",
+        "SMDMB"
+      ]
+    },
+    {
+      "left": "FU通知单",
+      "right": "文件传递单",
+      "shared_prefix_count": 8,
+      "sample_prefixes": [
+        "EDMB",
+        "FADGB",
+        "FADMB",
+        "JADEC",
+        "JADMB",
+        "JADNS",
+        "JDDMB",
+        "SMDMB"
+      ]
+    },
+    {
+      "left": "IICS",
+      "right": "IITF",
+      "shared_prefix_count": 29,
+      "sample_prefixes": [
+        "EDMB",
+        "EFDC",
+        "ESDT",
+        "FADMB",
+        "FAPCL",
+        "FAPDW",
+        "FAPLH",
+        "FAPXH",
+        "HXDMB",
+        "HXDNC",
+        "HXPCC",
+        "JADEC"
+      ]
+    },
+    {
+      "left": "IICS",
+      "right": "TA回复单",
+      "shared_prefix_count": 6,
+      "sample_prefixes": [
+        "EDMB",
+        "FADMB",
+        "HXDMB",
+        "JADMB",
+        "JDDMB",
+        "SMDMB"
+      ]
+    },
+    {
+      "left": "IICS",
+      "right": "图文传真",
+      "shared_prefix_count": 15,
+      "sample_prefixes": [
+        "EDMB",
+        "EDNC",
+        "FADGB",
+        "FADMB",
+        "HXDMB",
+        "HXDNC",
+        "JADEC",
+        "JADMB",
+        "JADNC",
+        "JDDES",
+        "JDDMB",
+        "JDDNC"
+      ]
+    },
+    {
+      "left": "IICS",
+      "right": "审查意见单",
+      "shared_prefix_count": 6,
+      "sample_prefixes": [
+        "EDMB",
+        "FADMB",
+        "HXDMB",
+        "JADMB",
+        "JDDMB",
+        "SMDMB"
+      ]
+    },
+    {
+      "left": "IICS",
+      "right": "审查意见答复单",
+      "shared_prefix_count": 8,
+      "sample_prefixes": [
+        "EFCS",
+        "FADMB",
+        "FAPLH",
+        "HXDMB",
+        "JADEC",
+        "JDDES",
+        "JDDMB",
+        "JDPLH"
+      ]
+    },
+    {
+      "left": "IICS",
+      "right": "文件传递单",
+      "shared_prefix_count": 17,
+      "sample_prefixes": [
+        "EDMB",
+        "EDNC",
+        "EFCS",
+        "EHKQ",
+        "EHWH",
+        "FADGB",
+        "FADMB",
+        "FAPLH",
+        "HXDMB",
+        "JADEC",
+        "JADMB",
+        "JDDES"
+      ]
+    },
+    {
+      "left": "IITF",
+      "right": "TA",
+      "shared_prefix_count": 6,
+      "sample_prefixes": [
+        "EHZZ",
+        "FAPDN",
+        "JAPAD",
+        "JAPBH",
+        "JAPKP",
+        "JDPCJ"
+      ]
+    },
+    {
+      "left": "IITF",
+      "right": "图文传真",
+      "shared_prefix_count": 13,
+      "sample_prefixes": [
+        "EDES",
+        "EDMB",
+        "FADMB",
+        "FADNC",
+        "HXDES",
+        "HXDMB",
+        "HXDNC",
+        "JADEC",
+        "JADMB",
+        "JADNC",
+        "JDDMB",
+        "JDDNC"
+      ]
+    },
+    {
+      "left": "IITF",
+      "right": "审查意见答复单",
+      "shared_prefix_count": 7,
+      "sample_prefixes": [
+        "EDES",
+        "FADMB",
+        "FAPLH",
+        "HXDMB",
+        "JADEC",
+        "JDDMB",
+        "JDPLH"
+      ]
+    },
+    {
+      "left": "IITF",
+      "right": "文件传递单",
+      "shared_prefix_count": 45,
+      "sample_prefixes": [
+        "EDES",
+        "EDMB",
+        "EHHJ",
+        "EHYH",
+        "EHZZ",
+        "ENJD",
+        "ENKL",
+        "ENSF",
+        "FADMB",
+        "FAPAJ",
+        "FAPAK",
+        "FAPAR"
+      ]
+    },
+    {
+      "left": "TA",
+      "right": "文件传递单",
+      "shared_prefix_count": 21,
+      "sample_prefixes": [
+        "EHHW",
+        "EHSH",
+        "EHST",
+        "EHWH",
+        "EHZZ",
+        "ESXH",
+        "FAPAG",
+        "FAPAX",
+        "FAPBT",
+        "FAPDB",
+        "FAPDN",
+        "FAPTD"
+      ]
+    },
+    {
+      "left": "TA回复单",
+      "right": "图文传真",
+      "shared_prefix_count": 6,
+      "sample_prefixes": [
+        "EDMB",
+        "FADMB",
+        "HXDMB",
+        "JADMB",
+        "JDDMB",
+        "SMDMB"
+      ]
+    },
+    {
+      "left": "TA回复单",
+      "right": "审查意见单",
+      "shared_prefix_count": 6,
+      "sample_prefixes": [
+        "EDMB",
+        "FADMB",
+        "HXDMB",
+        "JADMB",
+        "JDDMB",
+        "SMDMB"
+      ]
+    },
+    {
+      "left": "TA回复单",
+      "right": "文件传递单",
+      "shared_prefix_count": 6,
+      "sample_prefixes": [
+        "EDMB",
+        "FADMB",
+        "HXDMB",
+        "JADMB",
+        "JDDMB",
+        "SMDMB"
+      ]
+    },
+    {
+      "left": "图文传真",
+      "right": "审查意见单",
+      "shared_prefix_count": 9,
+      "sample_prefixes": [
+        "EDMB",
+        "FAANZ",
+        "FADMB",
+        "HPNPC",
+        "HXDMB",
+        "JADMB",
+        "JDANN",
+        "JDDMB",
+        "SMDMB"
+      ]
+    },
+    {
+      "left": "图文传真",
+      "right": "审查意见答复单",
+      "shared_prefix_count": 7,
+      "sample_prefixes": [
+        "EDES",
+        "FADES",
+        "FADMB",
+        "HXDMB",
+        "JADEC",
+        "JDDES",
+        "JDDMB"
+      ]
+    },
+    {
+      "left": "图文传真",
+      "right": "文件传递单",
+      "shared_prefix_count": 19,
+      "sample_prefixes": [
+        "ECZB",
+        "EDES",
+        "EDMB",
+        "EDNC",
+        "FADES",
+        "FADGB",
+        "FADMB",
+        "HXDES",
+        "HXDMB",
+        "JADEC",
+        "JADMB",
+        "JADNN"
+      ]
+    },
+    {
+      "left": "审查意见单",
+      "right": "文件传递单",
+      "shared_prefix_count": 6,
+      "sample_prefixes": [
+        "EDMB",
+        "FADMB",
+        "HXDMB",
+        "JADMB",
+        "JDDMB",
+        "SMDMB"
+      ]
+    },
+    {
+      "left": "审查意见答复单",
+      "right": "文件传递单",
+      "shared_prefix_count": 12,
+      "sample_prefixes": [
+        "EDES",
+        "EFCS",
+        "EHFS",
+        "ENYH",
+        "FADES",
+        "FADMB",
+        "FAPLH",
+        "HXDMB",
+        "JADEC",
+        "JDDES",
+        "JDDMB",
+        "JDPLH"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "doc_types": [
+        "CR",
+        "TA",
+        "文件传递单",
+        "IITF",
+        "FU通知单",
+        "IICS",
+        "TA回复单",
+        "图文传真",
+        "审查意见单",
+        "审查意见答复单"
+      ],
+      "row_count": 2580,
+      "type_reports": {
+        "CR": {
+          "row_count": 50,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 30,
+                "total": 49,
+                "rate": 0.612245
+              },
+              "V": {
+                "hit": 30,
+                "total": 49,
+                "rate": 0.612245
+              },
+              "W": {
+                "hit": 12,
+                "total": 17,
+                "rate": 0.705882
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 116.6,
+              "max_count": 473
+            },
+            "samples": [
+              {
+                "doc_type": "CR",
+                "e_raw": "EFCY-400000-ECZS-0251",
+                "prefix": "EFCY",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "仪控设计所.仪控二室"
+                ],
+                "predicted_w": [
+                  "仪控二室",
+                  "电气室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EFCY-400001-ECZS-0251",
+                "prefix": "EFCY",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "仪控设计所.仪控二室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控二室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EFCY-400002-ECZS-0251",
+                "prefix": "EFCY",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "仪控设计所.仪控二室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控二室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHLS-400011-ECZS-0021",
+                "prefix": "EHLS",
+                "predicted_v": [
+                  "工艺系统研究设计所.辅助系统室",
+                  "工艺系统研究设计所.安全系统室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHLS-400012-ECZS-0021",
+                "prefix": "EHLS",
+                "predicted_v": [
+                  "工艺系统研究设计所.辅助系统室",
+                  "工艺系统研究设计所.安全系统室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHLS-400013-ECZS-0021",
+                "prefix": "EHLS",
+                "predicted_v": [
+                  "工艺系统研究设计所.辅助系统室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400001-ECZS-0076",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400012-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "通信室",
+                  "设备室",
+                  "工艺室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400013-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400014-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400015-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400016-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400017-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400018-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400035-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400036-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400037-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "SMPKP-400001-SMPMB-361A",
+                "prefix": "SMPKP",
+                "predicted_v": [
+                  "核设备所.工艺及成套设备室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "SMPKP-400002-SMPMB-361A",
+                "prefix": "SMPKP",
+                "predicted_v": [
+                  "核设备所.工艺及成套设备室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "JDPCN-400000-JDPMB-147A",
+                "prefix": "JDPCN",
+                "predicted_v": [
+                  "工艺系统研究设计所.工艺设备室",
+                  "工艺系统研究设计所.总体布置室"
+                ],
+                "predicted_w": []
+              }
+            ]
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 39,
+                "total": 49,
+                "rate": 0.795918
+              },
+              "V": {
+                "hit": 38,
+                "total": 49,
+                "rate": 0.77551
+              },
+              "W": {
+                "hit": 13,
+                "total": 17,
+                "rate": 0.764706
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 191.4,
+              "max_count": 541
+            },
+            "samples": [
+              {
+                "doc_type": "CR",
+                "e_raw": "EFCY-400000-ECZS-0251",
+                "prefix": "EFCY",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "仪控设计所.仪控二室"
+                ],
+                "predicted_w": [
+                  "仪控二室",
+                  "电气室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EFCY-400001-ECZS-0251",
+                "prefix": "EFCY",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "仪控设计所.仪控二室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控二室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EFCY-400002-ECZS-0251",
+                "prefix": "EFCY",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "仪控设计所.仪控二室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控二室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHLS-400011-ECZS-0021",
+                "prefix": "EHLS",
+                "predicted_v": [
+                  "工艺系统研究设计所.辅助系统室",
+                  "工艺系统研究设计所.安全系统室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHLS-400012-ECZS-0021",
+                "prefix": "EHLS",
+                "predicted_v": [
+                  "工艺系统研究设计所.辅助系统室",
+                  "工艺系统研究设计所.安全系统室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHLS-400013-ECZS-0021",
+                "prefix": "EHLS",
+                "predicted_v": [
+                  "工艺系统研究设计所.辅助系统室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400001-ECZS-0076",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400012-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "通信室",
+                  "设备室",
+                  "工艺室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400013-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400014-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400015-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400016-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400017-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400018-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400035-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400036-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHMC-400037-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHST-400003-ECZS-0051",
+                "prefix": "EHST",
+                "predicted_v": [
+                  "河北分公司.核电工艺所",
+                  "工艺系统研究设计所.工艺设备室",
+                  "工艺系统研究设计所.辅助系统室"
+                ],
+                "predicted_w": [
+                  "工艺系统室",
+                  "结构一室",
+                  "工艺布置一室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "EHZZ-400001-ECZS-0054",
+                "prefix": "EHZZ",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "CR",
+                "e_raw": "SMPCT-400007-SMPMB-725A",
+                "prefix": "SMPCT",
+                "predicted_v": [
+                  "工艺系统研究设计所.辅助系统室",
+                  "工艺系统研究设计所.工艺设备室"
+                ],
+                "predicted_w": []
+              }
+            ]
+          }
+        },
+        "TA": {
+          "row_count": 81,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 48,
+                "total": 80,
+                "rate": 0.6
+              },
+              "V": {
+                "hit": 48,
+                "total": 80,
+                "rate": 0.6
+              },
+              "W": {
+                "hit": 20,
+                "total": 24,
+                "rate": 0.833333
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 137.77,
+              "max_count": 573
+            },
+            "samples": [
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420045-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420046-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420118-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420119-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420120-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420121-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420122-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420123-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420124-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420125-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420126-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHSH-420051-ECZS-0024",
+                "prefix": "EHSH",
+                "predicted_v": [
+                  "核设备所.非标设备室",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHSH-420052-ECZS-0024",
+                "prefix": "EHSH",
+                "predicted_v": [
+                  "核设备所.核燃料运输与工艺室",
+                  "核设备所.非标设备室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHWH-420002-ECZS-0033",
+                "prefix": "EHWH",
+                "predicted_v": [
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHWH-420003-ECZS-0033",
+                "prefix": "EHWH",
+                "predicted_v": [
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHZZ-420003-ECZS-0054",
+                "prefix": "EHZZ",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHZZ-420004-ECZS-0054",
+                "prefix": "EHZZ",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "SMPCT-420009-SMPMB-725A",
+                "prefix": "SMPCT",
+                "predicted_v": [
+                  "工艺系统研究设计所.辅助系统室",
+                  "工艺系统研究设计所.工艺设备室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "SMPCT-420010-SMPMB-725A",
+                "prefix": "SMPCT",
+                "predicted_v": [
+                  "工艺系统研究设计所.辅助系统室",
+                  "工艺系统研究设计所.工艺设备室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "SMPCT-420011-SMPMB-725A",
+                "prefix": "SMPCT",
+                "predicted_v": [
+                  "工艺系统研究设计所.辅助系统室",
+                  "工艺系统研究设计所.工艺设备室"
+                ],
+                "predicted_w": []
+              }
+            ]
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 59,
+                "total": 80,
+                "rate": 0.7375
+              },
+              "V": {
+                "hit": 60,
+                "total": 80,
+                "rate": 0.75
+              },
+              "W": {
+                "hit": 20,
+                "total": 24,
+                "rate": 0.833333
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 202.06,
+              "max_count": 573
+            },
+            "samples": [
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420045-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420046-ECZS-0077",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420118-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420119-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420120-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420121-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420122-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420123-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420124-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420125-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHMC-420126-ECZS-0075",
+                "prefix": "EHMC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHSH-420051-ECZS-0024",
+                "prefix": "EHSH",
+                "predicted_v": [
+                  "核设备所.非标设备室",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHSH-420052-ECZS-0024",
+                "prefix": "EHSH",
+                "predicted_v": [
+                  "核设备所.核燃料运输与工艺室",
+                  "核设备所.非标设备室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHST-420007-ECZS-0051",
+                "prefix": "EHST",
+                "predicted_v": [
+                  "河北分公司.核电工艺所",
+                  "工艺系统研究设计所.辅助系统室",
+                  "工艺系统研究设计所.总体布置室"
+                ],
+                "predicted_w": [
+                  "工艺系统室",
+                  "结构一室",
+                  "工艺布置一室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHWH-420002-ECZS-0033",
+                "prefix": "EHWH",
+                "predicted_v": [
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHWH-420003-ECZS-0033",
+                "prefix": "EHWH",
+                "predicted_v": [
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHZZ-420003-ECZS-0054",
+                "prefix": "EHZZ",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部"
+                ],
+                "predicted_w": [
+                  "工艺室",
+                  "设备室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "EHZZ-420004-ECZS-0054",
+                "prefix": "EHZZ",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.设计管理部"
+                ],
+                "predicted_w": [
+                  "工艺室",
+                  "设备室",
+                  "通信室"
+                ]
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "ESXH-420001-ECZS-0023",
+                "prefix": "ESXH",
+                "predicted_v": [
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "TA",
+                "e_raw": "SMPCJ-420021-SMPMB-210A",
+                "prefix": "SMPCJ",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "工艺系统研究设计所.总体布置室",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "工艺布置一室",
+                  "暖通室",
+                  "工艺布置二室"
+                ]
+              }
+            ]
+          }
+        },
+        "文件传递单": {
+          "row_count": 897,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 302,
+                "total": 425,
+                "rate": 0.710588
+              },
+              "V": {
+                "hit": 308,
+                "total": 425,
+                "rate": 0.724706
+              },
+              "W": {
+                "hit": 180,
+                "total": 238,
+                "rate": 0.756303
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 177.63,
+              "max_count": 884
+            },
+            "samples": [
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "ECZB-760009-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.核电工艺所",
+                  "河北分公司.设计管理部"
+                ],
+                "predicted_w": [
+                  "暖通室",
+                  "工艺系统室",
+                  "工艺布置一室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "ECZB-760010-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.核电工艺所",
+                  "河北分公司.设计管理部"
+                ],
+                "predicted_w": [
+                  "暖通室",
+                  "工艺系统室",
+                  "工艺布置一室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700473-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700474-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700475-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700476-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700477-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.核电工艺所",
+                  "河北分公司.建筑结构所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "暖通室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700478-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700479-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700481-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700482-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700483-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700484-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700485-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700486-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.核电工艺所",
+                  "河北分公司.建筑结构所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "暖通室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700487-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.核电工艺所",
+                  "河北分公司.建筑结构所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "暖通室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700490-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700491-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700492-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700493-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              }
+            ]
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 311,
+                "total": 425,
+                "rate": 0.731765
+              },
+              "V": {
+                "hit": 314,
+                "total": 425,
+                "rate": 0.738824
+              },
+              "W": {
+                "hit": 184,
+                "total": 238,
+                "rate": 0.773109
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 207.33,
+              "max_count": 838
+            },
+            "samples": [
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "ECZB-760009-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "河北分公司.设计管理部",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "设备室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "ECZB-760010-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "河北分公司.设计管理部",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "设备室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700473-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700474-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700475-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700477-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700478-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700479-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700481-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700482-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700483-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700484-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700485-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700486-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700487-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700490-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700491-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700492-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700493-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "文件传递单",
+                "e_raw": "EDES-700499-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              }
+            ]
+          }
+        },
+        "IITF": {
+          "row_count": 375,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "V": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "W": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 0.0,
+              "max_count": 0
+            },
+            "samples": []
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "V": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "W": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 96.32,
+              "max_count": 836
+            },
+            "samples": []
+          }
+        },
+        "FU通知单": {
+          "row_count": 98,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 3,
+                "total": 4,
+                "rate": 0.75
+              },
+              "V": {
+                "hit": 3,
+                "total": 4,
+                "rate": 0.75
+              },
+              "W": {
+                "hit": 3,
+                "total": 3,
+                "rate": 1.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 21.54,
+              "max_count": 371
+            },
+            "samples": [
+              {
+                "doc_type": "FU通知单",
+                "e_raw": "JADEC-180022-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "公用系统所.水工工艺二室"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "土建室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "FU通知单",
+                "e_raw": "JADEC-180023-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "公用系统所.水工工艺二室"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "土建室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "FU通知单",
+                "e_raw": "JADEC-180025-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "公用系统所.水工工艺二室"
+                ],
+                "predicted_w": [
+                  "土建室",
+                  "机务室"
+                ]
+              }
+            ]
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 4,
+                "total": 4,
+                "rate": 1.0
+              },
+              "V": {
+                "hit": 4,
+                "total": 4,
+                "rate": 1.0
+              },
+              "W": {
+                "hit": 3,
+                "total": 3,
+                "rate": 1.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 69.87,
+              "max_count": 726
+            },
+            "samples": [
+              {
+                "doc_type": "FU通知单",
+                "e_raw": "JADEC-180022-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "公用系统所.水工工艺二室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "土建室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "FU通知单",
+                "e_raw": "JADEC-180023-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "公用系统所.水工工艺二室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "土建室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "FU通知单",
+                "e_raw": "JADEC-180024-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "工程设计管理部.设计管理科",
+                  "公用系统所.水工工艺二室"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "土建室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "FU通知单",
+                "e_raw": "JADEC-180025-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "公用系统所.水工工艺二室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "土建室",
+                  "电气室"
+                ]
+              }
+            ]
+          }
+        },
+        "IICS": {
+          "row_count": 306,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "V": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "W": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 0.0,
+              "max_count": 0
+            },
+            "samples": []
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "V": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "W": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 81.36,
+              "max_count": 719
+            },
+            "samples": []
+          }
+        },
+        "TA回复单": {
+          "row_count": 57,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "V": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "W": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 0.0,
+              "max_count": 0
+            },
+            "samples": []
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "V": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "W": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 34.7,
+              "max_count": 314
+            },
+            "samples": []
+          }
+        },
+        "图文传真": {
+          "row_count": 274,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 77,
+                "total": 115,
+                "rate": 0.669565
+              },
+              "V": {
+                "hit": 74,
+                "total": 115,
+                "rate": 0.643478
+              },
+              "W": {
+                "hit": 51,
+                "total": 66,
+                "rate": 0.772727
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 247.9,
+              "max_count": 874
+            },
+            "samples": [
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001686-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.电气自动化所"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "建筑总图室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001687-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.电气自动化所"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "设备室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001688-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "设备室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001690-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.设计管理部"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "建筑总图室",
+                  "设备室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001691-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "设备室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001693-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "设备室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001694-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核工程研究设计所",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "设备室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001695-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "设备室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001699-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "设备室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001701-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核工程研究设计所",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "设备室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZS-000018-EDES",
+                "prefix": "ECZS",
+                "predicted_v": [
+                  "工程设计管理部.设计控制科",
+                  "工程设计管理部.设计管理科",
+                  "工艺系统研究设计所.辅助系统室"
+                ],
+                "predicted_w": [
+                  "仪控二室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZS-000098-EDMB",
+                "prefix": "ECZS",
+                "predicted_v": [
+                  "工程设计管理部.设计控制科",
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.电力工程研究设计所"
+                ],
+                "predicted_w": [
+                  "仪控二室",
+                  "仪控室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZS-000099-EDMB",
+                "prefix": "ECZS",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "工程设计管理部.设计控制科",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "仪控二室",
+                  "仪控室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZS-000100-EDMB",
+                "prefix": "ECZS",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "工程设计管理部.设计控制科",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "仪控二室",
+                  "仪控室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZS-000102-EDMB",
+                "prefix": "ECZS",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "工程设计管理部.设计控制科",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "仪控二室",
+                  "仪控室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "EDES-000246-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.设计管理部",
+                  "仪控设计所.仪控二室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "EDES-000248-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "仪控设计所.仪控二室",
+                  "仪控设计所.仪控一室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "EDMB-001242-ECZB",
+                "prefix": "EDMB",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "EDMB-001251-ECZB",
+                "prefix": "EDMB",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "HPNPC-000126-HXDMB",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": []
+              }
+            ]
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 78,
+                "total": 115,
+                "rate": 0.678261
+              },
+              "V": {
+                "hit": 73,
+                "total": 115,
+                "rate": 0.634783
+              },
+              "W": {
+                "hit": 52,
+                "total": 66,
+                "rate": 0.787879
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 274.43,
+              "max_count": 836
+            },
+            "samples": [
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001686-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.设计管理部",
+                  "河北分公司.建筑结构所",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "工艺布置一室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001687-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.设计管理部",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "工艺布置一室",
+                  "设备室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001688-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.设计管理部",
+                  "河北分公司.建筑结构所",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "工艺布置一室",
+                  "设备室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001691-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "河北分公司.设计管理部",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "工艺布置一室",
+                  "设备室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001692-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "河北分公司.设计管理部",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "工艺布置一室",
+                  "设备室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001693-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.设计管理部",
+                  "河北分公司.建筑结构所",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "工艺布置一室",
+                  "设备室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001695-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "河北分公司.设计管理部",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "设备室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZB-001699-EDMB",
+                "prefix": "ECZB",
+                "predicted_v": [
+                  "河北分公司.建筑结构所",
+                  "河北分公司.设计管理部",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "结构一室",
+                  "工艺布置一室",
+                  "设备室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZS-000018-EDES",
+                "prefix": "ECZS",
+                "predicted_v": [
+                  "工程设计管理部.设计控制科",
+                  "工程设计管理部.设计管理科",
+                  "工艺系统研究设计所.辅助系统室"
+                ],
+                "predicted_w": [
+                  "仪控二室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZS-000098-EDMB",
+                "prefix": "ECZS",
+                "predicted_v": [
+                  "工程设计管理部.设计控制科",
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.电力工程研究设计所"
+                ],
+                "predicted_w": [
+                  "仪控二室",
+                  "仪控室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZS-000099-EDMB",
+                "prefix": "ECZS",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "工程设计管理部.设计控制科",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "仪控二室",
+                  "仪控室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZS-000100-EDMB",
+                "prefix": "ECZS",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "工程设计管理部.设计控制科",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "仪控二室",
+                  "仪控室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "ECZS-000102-EDMB",
+                "prefix": "ECZS",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "工程设计管理部.设计控制科",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "仪控二室",
+                  "仪控室",
+                  "仪控一室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "EDES-000245-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "EDES-000246-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "EDMB-001242-ECZB",
+                "prefix": "EDMB",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "EDMB-001251-ECZB",
+                "prefix": "EDMB",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "HPNPC-000126-HXDMB",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "核设备所.核燃料运输与工艺室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "HPNPC-000153-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "核设备所.核燃料运输与工艺室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "图文传真",
+                "e_raw": "HXDMB-000151-HPNPC",
+                "prefix": "HXDMB",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": []
+              }
+            ]
+          }
+        },
+        "审查意见单": {
+          "row_count": 398,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 19,
+                "total": 30,
+                "rate": 0.633333
+              },
+              "V": {
+                "hit": 19,
+                "total": 30,
+                "rate": 0.633333
+              },
+              "W": {
+                "hit": 12,
+                "total": 14,
+                "rate": 0.857143
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 44.7,
+              "max_count": 658
+            },
+            "samples": [
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600927-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "工艺布置一室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600928-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600929-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600930-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600931-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.核电工艺所",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600934-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "水工室",
+                  "暖通室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600935-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.核电工艺所",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600937-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600938-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600942-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600943-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.核电工艺所",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600944-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.核电工艺所",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600945-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "FAANZ-600533-FADMB",
+                "prefix": "FAANZ",
+                "predicted_v": [
+                  "建筑结构所",
+                  "建筑结构所.结构三室",
+                  "核设备所.非标设备室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "通信室",
+                  "工艺室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "FAANZ-600534-FADMB",
+                "prefix": "FAANZ",
+                "predicted_v": [
+                  "核设备所.非标设备室",
+                  "工艺系统研究设计所",
+                  "工艺系统研究设计所.安全系统室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "通信室",
+                  "工艺室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "FAANZ-600536-FADMB",
+                "prefix": "FAANZ",
+                "predicted_v": [
+                  "核设备所.非标设备室",
+                  "建筑结构所",
+                  "建筑结构所.结构三室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "JDANN-601238-JDDMB",
+                "prefix": "JDANN",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "核设备所.工程焊接室",
+                  "核设备所.工艺及成套设备室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控二室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "JDANN-601239-JDDMB",
+                "prefix": "JDANN",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "河北分公司.电力工程研究设计所",
+                  "核设备所.工程焊接室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控室",
+                  "仪控二室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "JDANN-601240-JDDMB",
+                "prefix": "JDANN",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "河北分公司.电力工程研究设计所",
+                  "核设备所.工程焊接室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控室",
+                  "仪控二室"
+                ]
+              }
+            ]
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 15,
+                "total": 30,
+                "rate": 0.5
+              },
+              "V": {
+                "hit": 15,
+                "total": 30,
+                "rate": 0.5
+              },
+              "W": {
+                "hit": 9,
+                "total": 14,
+                "rate": 0.642857
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 65.26,
+              "max_count": 674
+            },
+            "samples": [
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600929-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.核工程研究设计所",
+                  "核设备所.核燃料运输与工艺室"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600930-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600933-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "核设备所.核燃料运输与工艺室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600937-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600938-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600939-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "核设备所.核燃料运输与工艺室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600941-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "河北分公司.核工程研究设计所",
+                  "核设备所.核燃料运输与工艺室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600942-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "HPNPC-600945-HPCXP",
+                "prefix": "HPNPC",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "设备室",
+                  "暖通室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "FAANZ-600533-FADMB",
+                "prefix": "FAANZ",
+                "predicted_v": [
+                  "建筑结构所",
+                  "建筑结构所.结构三室",
+                  "核设备所.非标设备室"
+                ],
+                "predicted_w": [
+                  "工艺布置一室",
+                  "电气室",
+                  "仪控室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "FAANZ-600534-FADMB",
+                "prefix": "FAANZ",
+                "predicted_v": [
+                  "核设备所.非标设备室",
+                  "总体所",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "工艺布置一室",
+                  "电气室",
+                  "仪控室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "FAANZ-600536-FADMB",
+                "prefix": "FAANZ",
+                "predicted_v": [
+                  "核设备所.非标设备室",
+                  "建筑结构所",
+                  "建筑结构所.结构三室"
+                ],
+                "predicted_w": [
+                  "工艺布置一室",
+                  "电气室",
+                  "仪控室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "JDANN-601238-JDDMB",
+                "prefix": "JDANN",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "河北分公司.设计管理部",
+                  "公用系统所.公用一室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控二室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "JDANN-601239-JDDMB",
+                "prefix": "JDANN",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "河北分公司.设计管理部",
+                  "公用系统所.公用一室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控室",
+                  "仪控二室"
+                ]
+              },
+              {
+                "doc_type": "审查意见单",
+                "e_raw": "JDANN-601240-JDDMB",
+                "prefix": "JDANN",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "河北分公司.设计管理部",
+                  "公用系统所.公用一室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控室",
+                  "仪控二室"
+                ]
+              }
+            ]
+          }
+        },
+        "审查意见答复单": {
+          "row_count": 44,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 21,
+                "total": 25,
+                "rate": 0.84
+              },
+              "V": {
+                "hit": 21,
+                "total": 25,
+                "rate": 0.84
+              },
+              "W": {
+                "hit": 13,
+                "total": 21,
+                "rate": 0.619048
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 183.61,
+              "max_count": 685
+            },
+            "samples": [
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EDES-600138-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "建筑总图室",
+                  "结构一室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EDES-600140-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "电气室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EDES-600141-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "建筑总图室",
+                  "结构一室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EDES-600142-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "建筑总图室",
+                  "结构一室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EFCS-600074-ECZS-0214",
+                "prefix": "EFCS",
+                "predicted_v": [
+                  "仪控设计所.仪控二室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EFCS-600075-ECZS-0214",
+                "prefix": "EFCS",
+                "predicted_v": [
+                  "仪控设计所.仪控二室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "FADES-600319-FADMB",
+                "prefix": "FADES",
+                "predicted_v": [
+                  "河北分公司.核电工艺所",
+                  "河北分公司.电力工程研究设计所"
+                ],
+                "predicted_w": [
+                  "暖通室",
+                  "工艺系统室",
+                  "工艺布置一室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "FADES-600326-FADMB",
+                "prefix": "FADES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "暖通室",
+                  "工艺系统室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "FADES-600327-FADMB",
+                "prefix": "FADES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "暖通室",
+                  "工艺系统室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "FADES-600328-FADMB",
+                "prefix": "FADES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "暖通室",
+                  "工艺系统室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "FADES-600329-FADMB",
+                "prefix": "FADES",
+                "predicted_v": [
+                  "河北分公司.核电工艺所",
+                  "河北分公司.电力工程研究设计所"
+                ],
+                "predicted_w": [
+                  "暖通室",
+                  "工艺系统室",
+                  "工艺布置一室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JDDES-600195-JDDMB",
+                "prefix": "JDDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JDDES-600196-JDDMB",
+                "prefix": "JDDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "机务室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JDDES-600197-JDDMB",
+                "prefix": "JDDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JADEC-600468-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JADEC-600469-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JADEC-600470-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JADEC-600471-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JADEC-600472-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JADEC-600473-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室"
+                ]
+              }
+            ]
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 22,
+                "total": 25,
+                "rate": 0.88
+              },
+              "V": {
+                "hit": 22,
+                "total": 25,
+                "rate": 0.88
+              },
+              "W": {
+                "hit": 15,
+                "total": 21,
+                "rate": 0.714286
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 376.77,
+              "max_count": 836
+            },
+            "samples": [
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EDES-600138-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EDES-600139-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EDES-600140-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EDES-600141-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EDES-600142-EDMB",
+                "prefix": "EDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "河北分公司.建筑结构所",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "土建室",
+                  "建筑总图室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EFCS-600074-ECZS-0214",
+                "prefix": "EFCS",
+                "predicted_v": [
+                  "仪控设计所.仪控二室",
+                  "河北分公司.电气自动化所",
+                  "仪控设计所.仪控一室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控二室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EFCS-600075-ECZS-0214",
+                "prefix": "EFCS",
+                "predicted_v": [
+                  "仪控设计所.仪控二室",
+                  "河北分公司.电气自动化所",
+                  "仪控设计所.仪控一室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控二室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "EHFS-600004-ECZS-112A",
+                "prefix": "EHFS",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "仪控设计所.仪控二室",
+                  "工艺系统研究设计所.工艺设备室"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "仪控二室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "ENYH-600001-ECZS-140",
+                "prefix": "ENYH",
+                "predicted_v": [
+                  "工艺系统研究设计所.辅助系统室",
+                  "工艺系统研究设计所.总体布置室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "FADES-600319-FADMB",
+                "prefix": "FADES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "工程设计管理部.设计控制科",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "工艺布置一室",
+                  "土建室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "FADES-600329-FADMB",
+                "prefix": "FADES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "工程设计管理部.设计控制科",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "工艺布置一室",
+                  "土建室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JDDES-600195-JDDMB",
+                "prefix": "JDDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "工程设计管理部.设计控制科",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "机务室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JDDES-600196-JDDMB",
+                "prefix": "JDDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "工程设计管理部.设计控制科",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "机务室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JDDES-600197-JDDMB",
+                "prefix": "JDDES",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "工程设计管理部.设计控制科",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "机务室",
+                  "水工室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JADEC-600468-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "公用系统所.水工工艺二室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "土建室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JADEC-600469-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "公用系统所.水工工艺二室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "土建室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JADEC-600470-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "公用系统所.水工工艺二室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "土建室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JADEC-600471-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "公用系统所.水工工艺二室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "土建室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JADEC-600472-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "公用系统所.水工工艺二室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "土建室",
+                  "电气室"
+                ]
+              },
+              {
+                "doc_type": "审查意见答复单",
+                "e_raw": "JADEC-600473-JADMB",
+                "prefix": "JADEC",
+                "predicted_v": [
+                  "河北分公司.电力工程研究设计所",
+                  "公用系统所.水工工艺二室",
+                  "工程设计管理部.设计管理科"
+                ],
+                "predicted_w": [
+                  "机务室",
+                  "土建室",
+                  "电气室"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "doc_types": [
+        "备忘录"
+      ],
+      "row_count": 298,
+      "type_reports": {
+        "备忘录": {
+          "row_count": 298,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 4,
+                "total": 168,
+                "rate": 0.02381
+              },
+              "V": {
+                "hit": 4,
+                "total": 168,
+                "rate": 0.02381
+              },
+              "W": {
+                "hit": 4,
+                "total": 69,
+                "rate": 0.057971
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 12.81,
+              "max_count": 781
+            },
+            "samples": [
+              {
+                "doc_type": "备忘录",
+                "e_raw": "2016BW252020260016",
+                "prefix": "2016BW252020260016",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "设备室",
+                  "暖通室"
+                ]
+              },
+              {
+                "doc_type": "备忘录",
+                "e_raw": "2016BW252020260016",
+                "prefix": "2016BW252020260016",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "设备室",
+                  "暖通室"
+                ]
+              },
+              {
+                "doc_type": "备忘录",
+                "e_raw": "2026BW310020260066",
+                "prefix": "2026BW310020260066",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "河北分公司.核电工艺所",
+                  "上海分公司"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "暖通室",
+                  "工艺系统室"
+                ]
+              },
+              {
+                "doc_type": "备忘录",
+                "e_raw": "2026BW310020260066",
+                "prefix": "2026BW310020260066",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "河北分公司.核电工艺所",
+                  "上海分公司"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "暖通室",
+                  "工艺系统室"
+                ]
+              }
+            ]
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 4,
+                "total": 168,
+                "rate": 0.02381
+              },
+              "V": {
+                "hit": 4,
+                "total": 168,
+                "rate": 0.02381
+              },
+              "W": {
+                "hit": 4,
+                "total": 69,
+                "rate": 0.057971
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 12.81,
+              "max_count": 781
+            },
+            "samples": [
+              {
+                "doc_type": "备忘录",
+                "e_raw": "2016BW252020260016",
+                "prefix": "2016BW252020260016",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "设备室",
+                  "暖通室"
+                ]
+              },
+              {
+                "doc_type": "备忘录",
+                "e_raw": "2016BW252020260016",
+                "prefix": "2016BW252020260016",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "核设备所.核燃料运输与工艺室",
+                  "河北分公司.核工程研究设计所"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "设备室",
+                  "暖通室"
+                ]
+              },
+              {
+                "doc_type": "备忘录",
+                "e_raw": "2026BW310020260066",
+                "prefix": "2026BW310020260066",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "河北分公司.核电工艺所",
+                  "上海分公司"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "暖通室",
+                  "工艺系统室"
+                ]
+              },
+              {
+                "doc_type": "备忘录",
+                "e_raw": "2026BW310020260066",
+                "prefix": "2026BW310020260066",
+                "predicted_v": [
+                  "河北分公司.电气自动化所",
+                  "河北分公司.核电工艺所",
+                  "上海分公司"
+                ],
+                "predicted_w": [
+                  "仪控一室",
+                  "暖通室",
+                  "工艺系统室"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "doc_types": [
+        "CR答复单"
+      ],
+      "row_count": 42,
+      "type_reports": {
+        "CR答复单": {
+          "row_count": 42,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "V": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "W": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 0.0,
+              "max_count": 0
+            },
+            "samples": []
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "V": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "W": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 0.0,
+              "max_count": 0
+            },
+            "samples": []
+          }
+        }
+      }
+    },
+    {
+      "doc_types": [
+        "外发纪要"
+      ],
+      "row_count": 14,
+      "type_reports": {
+        "外发纪要": {
+          "row_count": 14,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 4,
+                "total": 9,
+                "rate": 0.444444
+              },
+              "V": {
+                "hit": 4,
+                "total": 9,
+                "rate": 0.444444
+              },
+              "W": {
+                "hit": 1,
+                "total": 5,
+                "rate": 0.2
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 325.21,
+              "max_count": 751
+            },
+            "samples": [
+              {
+                "doc_type": "外发纪要",
+                "e_raw": "FACNZ-990100-FADMB",
+                "prefix": "FACNZ",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "工程设计管理部.设计控制科",
+                  "河北分公司.设计管理部"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "仪控二室",
+                  "机务室"
+                ]
+              },
+              {
+                "doc_type": "外发纪要",
+                "e_raw": "FACNZ-990106-FADMB",
+                "prefix": "FACNZ",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.设计管理部",
+                  "工程设计管理部.设计控制科"
+                ],
+                "predicted_w": [
+                  "工艺布置一室"
+                ]
+              },
+              {
+                "doc_type": "外发纪要",
+                "e_raw": "FACNZ-990111-FADMB",
+                "prefix": "FACNZ",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.设计管理部",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "工艺布置一室",
+                  "电气室",
+                  "仪控二室"
+                ]
+              },
+              {
+                "doc_type": "外发纪要",
+                "e_raw": "FACNZ-990112-FADMB",
+                "prefix": "FACNZ",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.设计管理部",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "工艺布置一室",
+                  "电气室",
+                  "仪控二室"
+                ]
+              }
+            ]
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 4,
+                "total": 9,
+                "rate": 0.444444
+              },
+              "V": {
+                "hit": 4,
+                "total": 9,
+                "rate": 0.444444
+              },
+              "W": {
+                "hit": 1,
+                "total": 5,
+                "rate": 0.2
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 325.21,
+              "max_count": 751
+            },
+            "samples": [
+              {
+                "doc_type": "外发纪要",
+                "e_raw": "FACNZ-990100-FADMB",
+                "prefix": "FACNZ",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "工程设计管理部.设计控制科",
+                  "河北分公司.设计管理部"
+                ],
+                "predicted_w": [
+                  "电气室",
+                  "仪控二室",
+                  "机务室"
+                ]
+              },
+              {
+                "doc_type": "外发纪要",
+                "e_raw": "FACNZ-990106-FADMB",
+                "prefix": "FACNZ",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.设计管理部",
+                  "工程设计管理部.设计控制科"
+                ],
+                "predicted_w": [
+                  "工艺布置一室"
+                ]
+              },
+              {
+                "doc_type": "外发纪要",
+                "e_raw": "FACNZ-990111-FADMB",
+                "prefix": "FACNZ",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.设计管理部",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "工艺布置一室",
+                  "电气室",
+                  "仪控二室"
+                ]
+              },
+              {
+                "doc_type": "外发纪要",
+                "e_raw": "FACNZ-990112-FADMB",
+                "prefix": "FACNZ",
+                "predicted_v": [
+                  "工程设计管理部.设计管理科",
+                  "河北分公司.设计管理部",
+                  "河北分公司.核电工艺所"
+                ],
+                "predicted_w": [
+                  "工艺布置一室",
+                  "电气室",
+                  "仪控二室"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "doc_types": [
+        "作废通知单"
+      ],
+      "row_count": 13,
+      "type_reports": {
+        "作废通知单": {
+          "row_count": 13,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "V": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "W": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 0.0,
+              "max_count": 0
+            },
+            "samples": []
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "V": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "W": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 0.0,
+              "max_count": 0
+            },
+            "samples": []
+          }
+        }
+      }
+    },
+    {
+      "doc_types": [
+        "NCR"
+      ],
+      "row_count": 6,
+      "type_reports": {
+        "NCR": {
+          "row_count": 6,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 2,
+                "total": 6,
+                "rate": 0.333333
+              },
+              "V": {
+                "hit": 2,
+                "total": 6,
+                "rate": 0.333333
+              },
+              "W": {
+                "hit": 0,
+                "total": 2,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 45.33,
+              "max_count": 217
+            },
+            "samples": [
+              {
+                "doc_type": "NCR",
+                "e_raw": "FAPAX-430008-FAPMB-725A",
+                "prefix": "FAPAX",
+                "predicted_v": [
+                  "工艺系统研究设计所.安全系统室",
+                  "工艺系统研究设计所.工艺设备室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "NCR",
+                "e_raw": "FAPAX-430009-FAPMB-725A",
+                "prefix": "FAPAX",
+                "predicted_v": [
+                  "工艺系统研究设计所",
+                  "工艺系统研究设计所.安全系统室",
+                  "工艺系统研究设计所.工艺设备室"
+                ],
+                "predicted_w": []
+              }
+            ]
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 2,
+                "total": 6,
+                "rate": 0.333333
+              },
+              "V": {
+                "hit": 2,
+                "total": 6,
+                "rate": 0.333333
+              },
+              "W": {
+                "hit": 0,
+                "total": 2,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 45.33,
+              "max_count": 217
+            },
+            "samples": [
+              {
+                "doc_type": "NCR",
+                "e_raw": "FAPAX-430008-FAPMB-725A",
+                "prefix": "FAPAX",
+                "predicted_v": [
+                  "工艺系统研究设计所.安全系统室",
+                  "工艺系统研究设计所.工艺设备室"
+                ],
+                "predicted_w": []
+              },
+              {
+                "doc_type": "NCR",
+                "e_raw": "FAPAX-430009-FAPMB-725A",
+                "prefix": "FAPAX",
+                "predicted_v": [
+                  "工艺系统研究设计所",
+                  "工艺系统研究设计所.安全系统室",
+                  "工艺系统研究设计所.工艺设备室"
+                ],
+                "predicted_w": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "doc_types": [
+        "NCR回复单"
+      ],
+      "row_count": 5,
+      "type_reports": {
+        "NCR回复单": {
+          "row_count": 5,
+          "same_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "V": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "W": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 0.0,
+              "max_count": 0
+            },
+            "samples": []
+          },
+          "cross_type_prefix_token_top3": {
+            "metrics": {
+              "X": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "V": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              },
+              "W": {
+                "hit": 0,
+                "total": 0,
+                "rate": 0.0
+              }
+            },
+            "predicted_name_scope": {
+              "avg_count": 0.0,
+              "max_count": 0
+            },
+            "samples": []
+          }
+        }
+      }
+    }
+  ]
+}

@@ -38,6 +38,21 @@ try:
         is_file1_db_source_list,
         is_file1_db_virtual_source,
     )
+    from core.sql.file2_db_source import (
+        build_file2_virtual_source,
+        is_file2_db_virtual_source,
+        prime_file2_db_cache,
+    )
+    from core.sql.file3_db_source import (
+        build_file3_virtual_source,
+        is_file3_db_virtual_source,
+        prime_file3_db_cache,
+    )
+    from core.sql.file4_db_source import (
+        build_file4_virtual_source,
+        is_file4_db_virtual_source,
+        prime_file4_db_cache,
+    )
 except Exception:
     def build_file1_virtual_source(project_id: str) -> str:
         return f"db://file1/{project_id}"
@@ -53,6 +68,33 @@ except Exception:
 
     def build_file1_export_dataframe(df):
         return df
+
+    def build_file2_virtual_source(project_id: str) -> str:
+        return f"db://file2/{project_id}"
+
+    def is_file2_db_virtual_source(path: str) -> bool:
+        return str(path or "").startswith("db://file2/")
+
+    def prime_file2_db_cache(project_ids, current_datetime, provider=None):
+        return {}
+
+    def build_file3_virtual_source(project_id: str) -> str:
+        return f"db://file3/{project_id}"
+
+    def is_file3_db_virtual_source(path: str) -> bool:
+        return str(path or "").startswith("db://file3/")
+
+    def prime_file3_db_cache(project_ids, current_datetime, provider=None):
+        return {}
+
+    def build_file4_virtual_source(project_id: str) -> str:
+        return f"db://file4/{project_id}"
+
+    def is_file4_db_virtual_source(path: str) -> bool:
+        return str(path or "").startswith("db://file4/")
+
+    def prime_file4_db_cache(project_ids, current_datetime, provider=None):
+        return {}
 
 try:
     from services.processing_diagnostics import write_processing_diagnostic_log
@@ -480,8 +522,8 @@ class ExcelProcessorApp:
         self.process_file2_var = tk.BooleanVar(master=self.root, value=True)
         self.process_file3_var = tk.BooleanVar(master=self.root, value=True)
         self.process_file4_var = tk.BooleanVar(master=self.root, value=True)
-        self.process_file5_var = tk.BooleanVar(master=self.root, value=True)
-        self.process_file6_var = tk.BooleanVar(master=self.root, value=True)
+        self.process_file5_var = tk.BooleanVar(master=self.root, value=False)
+        self.process_file6_var = tk.BooleanVar(master=self.root, value=False)
         
         # 初始化设置相关变量（必须在WindowManager之前）
         self.auto_startup_var = tk.BooleanVar(master=self.root, value=self.config.get("auto_startup", True))
@@ -996,6 +1038,19 @@ class ExcelProcessorApp:
             return bool((self.config or {}).get("file1_use_db_mode", True))
         except Exception:
             return True
+
+    @staticmethod
+    def _is_sql_virtual_source(path: str) -> bool:
+        text = str(path or "").strip()
+        return (
+            is_file1_db_virtual_source(text)
+            or is_file2_db_virtual_source(text)
+            or is_file3_db_virtual_source(text)
+            or is_file4_db_virtual_source(text)
+        )
+
+    def _is_sql_source_list(self, source_files) -> bool:
+        return bool(source_files) and all(self._is_sql_virtual_source(item) for item in source_files)
 
     @staticmethod
     def _format_file1_db_status(status: Dict[str, str]) -> str:
@@ -1548,6 +1603,7 @@ class ExcelProcessorApp:
         self.tab5_frame.rowconfigure(1, weight=1)
         self.tab5_check = ttk.Checkbutton(self.tab5_frame, text="处理三维提资接口", variable=self.process_file5_var)
         self.tab5_check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
+        self.tab5_check.state(['disabled'])
         # 选项卡6：收发文函
         self.tab6_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.tab6_frame, text="收发文函")
@@ -1555,6 +1611,7 @@ class ExcelProcessorApp:
         self.tab6_frame.rowconfigure(1, weight=1)
         self.tab6_check = ttk.Checkbutton(self.tab6_frame, text="处理收发文函", variable=self.process_file6_var)
         self.tab6_check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
+        self.tab6_check.state(['disabled'])
         # 为每个选项卡创建Excel预览控件
         self.create_excel_viewer(self.tab1_frame, "tab1")
         self.create_excel_viewer(self.tab2_frame, "tab2")
@@ -1562,6 +1619,8 @@ class ExcelProcessorApp:
         self.create_excel_viewer(self.tab4_frame, "tab4")
         self.create_excel_viewer(self.tab5_frame, "tab5")
         self.create_excel_viewer(self.tab6_frame, "tab6")
+        self.show_empty_message(self.tab5_viewer, "当前版本暂未启用")
+        self.show_empty_message(self.tab6_viewer, "当前版本暂未启用")
         # 绑定选项卡切换事件
         self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
         # 存储选项卡引用以便后续修改状态
@@ -1641,21 +1700,10 @@ class ExcelProcessorApp:
                 self.show_empty_message(self.tab4_viewer, "无外部需回复接口")
             else:
                 self.show_empty_message(self.tab4_viewer, "请点击开始处理生成结果")
-        elif selected_tab == 4 and (getattr(self, 'target_files5', None) or self.has_processed_results5):  # 三维提资接口
-            if self.has_processed_results5 and self.processing_results5 is not None and not self.processing_results5.empty:
-                self.display_results5(self.processing_results5, show_popup=False)
-            elif self.has_processed_results5:
-                # 【修复】处理后无数据，显示空提示，不显示原始数据
-                self.show_empty_message(self.tab5_viewer, "无三维接口")
-            else:
-                self.show_empty_message(self.tab5_viewer, "请点击开始处理生成结果")
-        elif selected_tab == 5 and (getattr(self, 'target_files6', None) or self.has_processed_results6):  # 收发文函
-            if self.has_processed_results6 and self.processing_results6 is not None and not self.processing_results6.empty:
-                self.display_results6(self.processing_results6, show_popup=False)
-            elif self.has_processed_results6:
-                self.show_empty_message(self.tab6_viewer, "无需要回复的文函")
-            else:
-                self.show_empty_message(self.tab6_viewer, "请点击开始处理生成结果")
+        elif selected_tab == 4:
+            self.show_empty_message(self.tab5_viewer, "当前版本暂未启用")
+        elif selected_tab == 5:
+            self.show_empty_message(self.tab6_viewer, "当前版本暂未启用")
 
     def _post_processing_select_and_render_active_tab(self, active_tab: int):
         """
@@ -1745,7 +1793,8 @@ class ExcelProcessorApp:
                 "收发文函": 6
             }
             file_type = file_type_map.get(tab_name)
-            is_file1_db_tab = (
+            is_sql_db_tab = self._is_sql_source_list(source_files)
+            skip_registry_filter = (
                 file_type == 1
                 and self._is_file1_db_mode_enabled()
                 and is_file1_db_source_list(source_files)
@@ -1754,19 +1803,19 @@ class ExcelProcessorApp:
             # 【修复】获取项目号到源文件的映射（支持多项目）
             project_source_map = self._get_project_source_file_map(tab_name)
             
-            if file_type and (project_source_map or source_files):
-                if not is_file1_db_tab:
-                    # 调用过滤函数，传入项目号到源文件的映射
-                    original_count = len(df)
-                    df = self._exclude_pending_confirmation_rows(df, source_files[0], file_type, None, project_source_map)
-                    filtered_count = original_count - len(df)
-                    
-                    if filtered_count > 0:
-                        print(f"[显示过滤] {tab_name}: 已过滤{filtered_count}行已完成/已确认任务，剩余{len(df)}行")
-                        
-                        # 更新original_row_numbers以匹配过滤后的df
-                        if "原始行号" in df.columns:
-                            original_row_numbers = list(df["原始行号"])
+            if file_type and (project_source_map or source_files) and not skip_registry_filter:
+                # 调用过滤函数，传入项目号到源文件的映射
+                original_count = len(df)
+                df = self._exclude_pending_confirmation_rows(df, source_files[0], file_type, None, project_source_map)
+                filtered_count = original_count - len(df)
+
+                if filtered_count > 0:
+                    label = "[显示过滤-DB]" if is_sql_db_tab else "[显示过滤]"
+                    print(f"{label} {tab_name}: 已过滤{filtered_count}行已完成/已确认任务，剩余{len(df)}行")
+
+                    # 更新original_row_numbers以匹配过滤后的df
+                    if "原始行号" in df.columns:
+                        original_row_numbers = list(df["原始行号"])
         
         # 【新增】获取当前用户的角色列表
         user_roles = getattr(self, 'user_roles', [])
@@ -3646,7 +3695,7 @@ class ExcelProcessorApp:
                     self.file1_db_status = file1_db_status
 
                 # 6) 构建输出文本（后台线程）
-                if self.excel_files:
+                if self.excel_files or self.target_files1 or self.target_files2 or self.target_files3 or self.target_files4:
                     file_info = ""
                     if self._is_file1_db_mode_enabled():
                         file_info += self._format_file1_db_status(file1_db_status) + "\n"
@@ -3654,7 +3703,10 @@ class ExcelProcessorApp:
                             enabled_project_text = "、".join(str(pid) for _, pid in self.target_files1)
                             file_info += f"  - 已启用项目: {enabled_project_text}\n"
                         file_info += "\n"
-                    file_info += f"找到 {len(self.excel_files)} 个Excel文件:\n"
+                    if self.excel_files:
+                        file_info += f"找到 {len(self.excel_files)} 个Excel文件:\n"
+                    else:
+                        file_info += "当前未发现Excel模板，文件2~4按SQL主工作流识别:\n"
                     total_identified_files = 0
                     project_summary = {}
 
@@ -3674,40 +3726,28 @@ class ExcelProcessorApp:
                                 project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
                             total_identified_files += len(self.target_files1)
                     if self.target_files2:
-                        file_info += f"✓ 待处理文件2 (内部需回复接口): {len(self.target_files2)} 个文件\n"
+                        file_info += f"✓ 待处理文件2 (内部需回复接口/SQL任务): {len(self.target_files2)} 个项目\n"
                         for fp, pid in self.target_files2:
                             disp_pid = pid if pid else "未知项目"
-                            file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
+                            file_info += f"  - {disp_pid}: {fp if self._is_sql_virtual_source(fp) else os.path.basename(fp)}\n"
                             project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
                         total_identified_files += len(self.target_files2)
                     if self.target_files3:
-                        file_info += f"✓ 待处理文件3 (外部需打开接口): {len(self.target_files3)} 个文件\n"
+                        file_info += f"✓ 待处理文件3 (外部需打开接口/SQL任务): {len(self.target_files3)} 个项目\n"
                         for fp, pid in self.target_files3:
                             disp_pid = pid if pid else "未知项目"
-                            file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
+                            file_info += f"  - {disp_pid}: {fp if self._is_sql_virtual_source(fp) else os.path.basename(fp)}\n"
                             project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
                         total_identified_files += len(self.target_files3)
                     if self.target_files4:
-                        file_info += f"✓ 待处理文件4 (外部需回复接口): {len(self.target_files4)} 个文件\n"
+                        file_info += f"✓ 待处理文件4 (外部需回复接口/SQL任务): {len(self.target_files4)} 个项目\n"
                         for fp, pid in self.target_files4:
                             disp_pid = pid if pid else "未知项目"
-                            file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
+                            file_info += f"  - {disp_pid}: {fp if self._is_sql_virtual_source(fp) else os.path.basename(fp)}\n"
                             project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
                         total_identified_files += len(self.target_files4)
-                    if self.target_files5:
-                        file_info += f"✓ 待处理文件5 (三维提资接口): {len(self.target_files5)} 个文件\n"
-                        for fp, pid in self.target_files5:
-                            disp_pid = pid if pid else "未知项目"
-                            file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
-                            project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
-                        total_identified_files += len(self.target_files5)
-                    if self.target_files6:
-                        file_info += f"✓ 待处理文件6 (收发文函): {len(self.target_files6)} 个文件\n"
-                        for fp, pid in self.target_files6:
-                            disp_pid = pid if pid else "未知项目"
-                            file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
-                            project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
-                        total_identified_files += len(self.target_files6)
+                    file_info += "○ 待处理文件5 (三维提资接口): 当前版本暂未启用\n"
+                    file_info += "○ 待处理文件6 (收发文函): 当前版本暂未启用\n"
 
                     if project_summary:
                         file_info += "\n📊 项目汇总:\n"
@@ -3736,11 +3776,14 @@ class ExcelProcessorApp:
                         else:
                             file_info += f"  内部需打开接口: {os.path.basename(self.target_file1)} (项目{self.target_file1_project_id})\n"
                     if self.target_file2:
-                        file_info += f"  内部需回复接口: {os.path.basename(self.target_file2)} (项目{self.target_file2_project_id})\n"
+                        label = self.target_file2 if self._is_sql_virtual_source(self.target_file2) else os.path.basename(self.target_file2)
+                        file_info += f"  内部需回复接口: {label} (项目{self.target_file2_project_id})\n"
                     if self.target_file3:
-                        file_info += f"  外部需打开接口: {os.path.basename(self.target_file3)} (项目{self.target_file3_project_id})\n"
+                        label = self.target_file3 if self._is_sql_virtual_source(self.target_file3) else os.path.basename(self.target_file3)
+                        file_info += f"  外部需打开接口: {label} (项目{self.target_file3_project_id})\n"
                     if self.target_file4:
-                        file_info += f"  外部需回复接口: {os.path.basename(self.target_file4)} (项目{self.target_file4_project_id})\n"
+                        label = self.target_file4 if self._is_sql_virtual_source(self.target_file4) else os.path.basename(self.target_file4)
+                        file_info += f"  外部需回复接口: {label} (项目{self.target_file4_project_id})\n"
 
                     file_info += "\n📁 全部Excel文件列表:\n"
                     for i, fp in enumerate(self.excel_files, 1):
@@ -3753,12 +3796,15 @@ class ExcelProcessorApp:
 
                     popup_message = self._generate_popup_message(project_summary, total_identified_files)
                 else:
-                    if self._is_file1_db_mode_enabled():
+                    if self._is_file1_db_mode_enabled() or self.target_files2 or self.target_files3 or self.target_files4:
                         file_info = self._format_file1_db_status(file1_db_status)
                         if self.target_files1:
                             enabled_project_text = "、".join(str(pid) for _, pid in self.target_files1)
                             file_info += f"\n已启用项目: {enabled_project_text}"
-                        file_info += "\n\n在指定路径下未找到Excel文件（文件2~6）"
+                        if self.target_files2 or self.target_files3 or self.target_files4:
+                            file_info += "\n\n已识别SQL任务，可直接处理文件1~4；文件5/6已停用。"
+                        else:
+                            file_info += "\n\n在指定路径下未找到Excel文件（文件2~6）"
                         popup_message = file_info
                     else:
                         file_info = "在指定路径下未找到Excel文件"
@@ -4053,8 +4099,8 @@ class ExcelProcessorApp:
             self.update_tab_color(1, "normal")
             self.update_tab_color(2, "normal")
             self.update_tab_color(3, "normal")
-        if not self.excel_files and not self._is_file1_db_mode_enabled():
-            return
+            self.update_tab_color(4, "normal")
+            self.update_tab_color(5, "normal")
         
         # 获取用户勾选的项目号（后台线程禁止读Tk变量）
         enabled_projects = enabled_projects_override
@@ -4112,100 +4158,39 @@ class ExcelProcessorApp:
                             self.target_file1 = None
                             self.target_file1_project_id = None
             
-            # 识别所有待处理文件
-            if hasattr(main, 'find_all_target_files2'):
-                all_files = main.find_all_target_files2(self.excel_files)
-                self.target_files2, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件2")
-                self.ignored_files.extend(ignored)
-                # 每项目只保留最新文件（按文件名时间）
-                self.target_files2, ignored_latest = select_latest_source_files_per_project(
-                    2, self.target_files2, "待处理文件2"
-                )
-                self.ignored_files.extend(ignored_latest)
-                if self.target_files2:
-                    self.target_file2, self.target_file2_project_id = self.target_files2[0]
-                    if update_ui:
-                        self.update_tab_color(1, "green")
-            elif hasattr(main, 'find_target_file2'):
-                self.target_file2, self.target_file2_project_id = main.find_target_file2(self.excel_files)
-                if self.target_file2:
-                    all_files = [(self.target_file2, self.target_file2_project_id)]
-                    self.target_files2, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件2")
-                    self.ignored_files.extend(ignored)
-                    if not self.target_files2:
-                        self.target_file2 = None
-                        self.target_file2_project_id = None
-                    else:
-                        if update_ui:
-                            self.update_tab_color(1, "green")
-            
-            if hasattr(main, 'find_all_target_files3'):
-                all_files = main.find_all_target_files3(self.excel_files)
-                self.target_files3, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件3")
-                self.ignored_files.extend(ignored)
-                # 每项目只保留最新文件（按文件名时间）
-                self.target_files3, ignored_latest = select_latest_source_files_per_project(
-                    3, self.target_files3, "待处理文件3"
-                )
-                self.ignored_files.extend(ignored_latest)
-                if self.target_files3:
-                    self.target_file3, self.target_file3_project_id = self.target_files3[0]
-                    if update_ui:
-                        self.update_tab_color(2, "green")
-            elif hasattr(main, 'find_target_file3'):
-                self.target_file3, self.target_file3_project_id = main.find_target_file3(self.excel_files)
-                if self.target_file3:
-                    all_files = [(self.target_file3, self.target_file3_project_id)]
-                    self.target_files3, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件3")
-                    self.ignored_files.extend(ignored)
-                    if not self.target_files3:
-                        self.target_file3 = None
-                        self.target_file3_project_id = None
-                    else:
-                        if update_ui:
-                            self.update_tab_color(2, "green")
-            
-            if hasattr(main, 'find_all_target_files4'):
-                all_files = main.find_all_target_files4(self.excel_files)
-                self.target_files4, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件4")
-                self.ignored_files.extend(ignored)
-                # 每项目只保留最新文件（按文件名时间）
-                self.target_files4, ignored_latest = select_latest_source_files_per_project(
-                    4, self.target_files4, "待处理文件4"
-                )
-                self.ignored_files.extend(ignored_latest)
-                if self.target_files4:
-                    self.target_file4, self.target_file4_project_id = self.target_files4[0]
-                    if update_ui:
-                        self.update_tab_color(3, "green")
-            elif hasattr(main, 'find_target_file4'):
-                self.target_file4, self.target_file4_project_id = main.find_target_file4(self.excel_files)
-                if self.target_file4:
-                    all_files = [(self.target_file4, self.target_file4_project_id)]
-                    self.target_files4, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件4")
-                    self.ignored_files.extend(ignored)
-                    if not self.target_files4:
-                        self.target_file4 = None
-                        self.target_file4_project_id = None
-                    else:
-                        if update_ui:
-                            self.update_tab_color(3, "green")
+            enabled_pids = [str(pid).strip() for pid in (enabled_projects or []) if str(pid).strip()]
 
-            if hasattr(main, 'find_all_target_files5'):
-                all_files = main.find_all_target_files5(self.excel_files)
-                self.target_files5, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件5")
-                self.ignored_files.extend(ignored)
-                if self.target_files5:
-                    if update_ui:
-                        self.update_tab_color(4, "green")
+            self.target_files2 = [(build_file2_virtual_source(pid), pid) for pid in enabled_pids]
+            if self.target_files2:
+                self.target_file2, self.target_file2_project_id = self.target_files2[0]
+                if update_ui:
+                    self.update_tab_color(1, "green")
+            else:
+                self.target_file2 = None
+                self.target_file2_project_id = None
 
-            if hasattr(main, 'find_all_target_files6'):
-                all_files = main.find_all_target_files6(self.excel_files)
-                self.target_files6, ignored = self._filter_files_by_project(all_files, enabled_projects, "待处理文件6")
-                self.ignored_files.extend(ignored)
-                if self.target_files6:
-                    if update_ui:
-                        self.update_tab_color(5, "green")
+            self.target_files3 = [(build_file3_virtual_source(pid), pid) for pid in enabled_pids]
+            if self.target_files3:
+                self.target_file3, self.target_file3_project_id = self.target_files3[0]
+                if update_ui:
+                    self.update_tab_color(2, "green")
+            else:
+                self.target_file3 = None
+                self.target_file3_project_id = None
+
+            self.target_files4 = [(build_file4_virtual_source(pid), pid) for pid in enabled_pids]
+            if self.target_files4:
+                self.target_file4, self.target_file4_project_id = self.target_files4[0]
+                if update_ui:
+                    self.update_tab_color(3, "green")
+            else:
+                self.target_file4 = None
+                self.target_file4_project_id = None
+
+            self.process_file5_var.set(False)
+            self.process_file6_var.set(False)
+            self.target_files5 = []
+            self.target_files6 = []
             
             # 【性能优化Step1】已确认：移除“并发预加载Excel”
             # 说明：预加载仅用于“未处理状态原始预览”，该功能已删除。
@@ -4227,6 +4212,19 @@ class ExcelProcessorApp:
             处理结果DataFrame，如果失败返回None
         """
         try:
+            if self._is_sql_virtual_source(file_path):
+                try:
+                    self._last_cache_hit_info = {
+                        "file_path": file_path,
+                        "project_id": str(project_id),
+                        "file_type": str(file_type),
+                        "hit": False,
+                        "source_kind": "sql",
+                    }
+                except Exception:
+                    pass
+                return process_func(file_path, *args)
+
             # 1. 尝试加载缓存
             cached_result = self.file_manager.load_cached_result(file_path, project_id, file_type)
             
@@ -4330,11 +4328,11 @@ class ExcelProcessorApp:
                     [f[0] for f in self.target_files1 if not is_file1_db_virtual_source(f[0])]
                 )
             if hasattr(self, 'target_files2') and self.target_files2:
-                all_file_paths.extend([f[0] for f in self.target_files2])
+                all_file_paths.extend([f[0] for f in self.target_files2 if not self._is_sql_virtual_source(f[0])])
             if hasattr(self, 'target_files3') and self.target_files3:
-                all_file_paths.extend([f[0] for f in self.target_files3])
+                all_file_paths.extend([f[0] for f in self.target_files3 if not self._is_sql_virtual_source(f[0])])
             if hasattr(self, 'target_files4') and self.target_files4:
-                all_file_paths.extend([f[0] for f in self.target_files4])
+                all_file_paths.extend([f[0] for f in self.target_files4 if not self._is_sql_virtual_source(f[0])])
             if hasattr(self, 'target_files5') and self.target_files5:
                 all_file_paths.extend([f[0] for f in self.target_files5])
             if hasattr(self, 'target_files6') and self.target_files6:
@@ -4444,6 +4442,8 @@ class ExcelProcessorApp:
             # 加载file2缓存
             if hasattr(self, 'target_files2') and self.target_files2:
                 for file_path, project_id in self.target_files2:
+                    if self._is_sql_virtual_source(file_path):
+                        continue
                     if file_path in changed_files:
                         continue
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file2')
@@ -4469,6 +4469,8 @@ class ExcelProcessorApp:
             # 加载file3缓存
             if hasattr(self, 'target_files3') and self.target_files3:
                 for file_path, project_id in self.target_files3:
+                    if self._is_sql_virtual_source(file_path):
+                        continue
                     if file_path in changed_files:
                         continue
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file3')
@@ -4494,6 +4496,8 @@ class ExcelProcessorApp:
             # 加载file4缓存
             if hasattr(self, 'target_files4') and self.target_files4:
                 for file_path, project_id in self.target_files4:
+                    if self._is_sql_virtual_source(file_path):
+                        continue
                     if file_path in changed_files:
                         continue
                     cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file4')
@@ -4707,11 +4711,11 @@ class ExcelProcessorApp:
                     [f[0] for f in self.target_files1 if not is_file1_db_virtual_source(f[0])]
                 )
             if hasattr(self, 'target_files2') and self.target_files2:
-                all_file_paths.extend([f[0] for f in self.target_files2])
+                all_file_paths.extend([f[0] for f in self.target_files2 if not self._is_sql_virtual_source(f[0])])
             if hasattr(self, 'target_files3') and self.target_files3:
-                all_file_paths.extend([f[0] for f in self.target_files3])
+                all_file_paths.extend([f[0] for f in self.target_files3 if not self._is_sql_virtual_source(f[0])])
             if hasattr(self, 'target_files4') and self.target_files4:
-                all_file_paths.extend([f[0] for f in self.target_files4])
+                all_file_paths.extend([f[0] for f in self.target_files4 if not self._is_sql_virtual_source(f[0])])
             if hasattr(self, 'target_files5') and self.target_files5:
                 all_file_paths.extend([f[0] for f in self.target_files5])
             if hasattr(self, 'target_files6') and self.target_files6:
@@ -4749,8 +4753,13 @@ class ExcelProcessorApp:
         process_file2 = self.process_file2_var.get()
         process_file3 = self.process_file3_var.get()
         process_file4 = self.process_file4_var.get()
-        process_file5 = self.process_file5_var.get()
-        process_file6 = self.process_file6_var.get()
+        process_file5 = False
+        process_file6 = False
+        try:
+            self.process_file5_var.set(False)
+            self.process_file6_var.set(False)
+        except Exception:
+            pass
         if not (process_file1 or process_file2 or process_file3 or process_file4 or process_file5 or process_file6):
             if not getattr(self, 'auto_mode', False):
                 messagebox.showwarning("警告", "请至少勾选一个需要处理的接口类型！")
@@ -4784,6 +4793,19 @@ class ExcelProcessorApp:
                 results2 = None
                 results3 = None
                 results4 = None
+
+                try:
+                    file2_projects = [pid for _, pid in getattr(self, "target_files2", []) if pid]
+                    file3_projects = [pid for _, pid in getattr(self, "target_files3", []) if pid]
+                    file4_projects = [pid for _, pid in getattr(self, "target_files4", []) if pid]
+                    if process_file2 and file2_projects:
+                        prime_file2_db_cache(file2_projects, self.current_datetime)
+                    if process_file3 and file3_projects:
+                        prime_file3_db_cache(file3_projects, self.current_datetime)
+                    if process_file4 and file4_projects:
+                        prime_file4_db_cache(file4_projects, self.current_datetime)
+                except Exception as e:
+                    print(f"[SQL预热] 文件2~4预热失败: {e}")
                 
                 # Step2：可复用 refresh 阶段缓存？
                 can_reuse_refresh_cache = False
@@ -6114,7 +6136,7 @@ class ExcelProcessorApp:
                         results = self._exclude_pending_confirmation_rows(results, original_file, 2, project_id)
                     # 保存过滤后的结果
                     self.filtered_results_multi2[project_id] = results
-                    if original_file and not results.empty:
+                    if original_file and (not self._is_sql_virtual_source(original_file)) and not results.empty:
                         pid_for_export = project_id if project_id else "未知项目"
                         export_tasks.append(('需打开接口', main.export_result_to_excel2, results, original_file, self.current_datetime, pid_for_export))
         
@@ -6138,7 +6160,7 @@ class ExcelProcessorApp:
                             results = self._exclude_pending_confirmation_rows(results, original_file, 3, project_id)
                         # 保存过滤后的结果
                         self.filtered_results_multi3[project_id] = results
-                        if original_file and not results.empty:
+                        if original_file and (not self._is_sql_virtual_source(original_file)) and not results.empty:
                             pid_for_export = project_id if project_id else "未知项目"
                             export_tasks.append(('外部接口ICM', main.export_result_to_excel3, results, original_file, self.current_datetime, pid_for_export))
         
@@ -6162,7 +6184,7 @@ class ExcelProcessorApp:
                             results = self._exclude_pending_confirmation_rows(results, original_file, 4, project_id)
                         # 保存过滤后的结果
                         self.filtered_results_multi4[project_id] = results
-                        if original_file and not results.empty:
+                        if original_file and (not self._is_sql_virtual_source(original_file)) and not results.empty:
                             pid_for_export = project_id if project_id else "未知项目"
                             export_tasks.append(('外部接口单', main.export_result_to_excel4, results, original_file, self.current_datetime, pid_for_export))
         # 导出待处理文件5的所有项目结果

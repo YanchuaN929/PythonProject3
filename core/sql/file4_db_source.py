@@ -85,9 +85,9 @@ def prime_file4_db_cache(project_ids, current_datetime: datetime.datetime, provi
     for project in projects:
         selected: Dict[str, Dict[str, Any]] = {}
         for send_id, row in iitf_by_project.get(project, {}).items():
-            selected[send_id] = row
+            _select_latest_branch(selected, send_id, row)
         for send_id, row in iics_by_project.get(project, {}).items():
-            selected[send_id] = row
+            _select_latest_branch(selected, send_id, row)
         selected_by_project[project] = selected
         all_send_ids.update(selected.keys())
 
@@ -109,24 +109,20 @@ def prime_file4_db_cache(project_ids, current_datetime: datetime.datetime, provi
                 continue
 
             branch_type = _clean(branch.get("_BRANCH_TYPE"))
-            org_value = _clean(branch.get("_ORG_VALUE"))
-            p_value = _clean(branch.get("_P_VALUE"))
+            af_value = _clean(branch.get("_AF_VALUE"))
+            p_value = _clean(branch.get("_P_VALUE_DISPLAY"))
             f_date = _parse_dt(branch.get("MODIFIED_ON"))
             if f_date is None:
                 continue
             due_date = f_date + datetime.timedelta(days=20)
 
-            owner_name = (
-                _resolve_owner(
-                    branch,
-                    direct_map_by_project.get(project, {}),
-                    route_map_by_project.get(project, {}),
-                    user_map,
-                )
-                or resolve_user_name(branch.get("CREATED_BY_ID"), user_map)
-                or "无"
+            owner_name, _owner_source = _resolve_owner(
+                branch,
+                direct_map_by_project.get(project, {}),
+                route_map_by_project.get(project, {}),
+                user_map,
             )
-            dept_name = _normalize_department(org_value)
+            dept_name = _normalize_department(af_value)
 
             rows.append(
                 {
@@ -175,9 +171,9 @@ def fetch_file4_db_dataframe(project_id: str, current_datetime: datetime.datetim
 
     selected_by_send: Dict[str, Dict[str, Any]] = {}
     for send_id, row in iitf_by_send.items():
-        selected_by_send[send_id] = row
+        _select_latest_branch(selected_by_send, send_id, row)
     for send_id, row in iics_by_send.items():
-        selected_by_send[send_id] = row
+        _select_latest_branch(selected_by_send, send_id, row)
     if not selected_by_send:
         return pd.DataFrame(columns=RESULT_COLUMNS)
 
@@ -200,15 +196,15 @@ def fetch_file4_db_dataframe(project_id: str, current_datetime: datetime.datetim
             continue
 
         branch_type = _clean(branch.get("_BRANCH_TYPE"))
-        org_value = _clean(branch.get("_ORG_VALUE"))
-        p_value = _clean(branch.get("_P_VALUE"))
+        af_value = _clean(branch.get("_AF_VALUE"))
+        p_value = _clean(branch.get("_P_VALUE_DISPLAY"))
         f_date = _parse_dt(branch.get("MODIFIED_ON"))
         if f_date is None:
             continue
         due_date = f_date + datetime.timedelta(days=20)
 
-        owner_name = _resolve_owner(branch, direct_map, route_map, user_map) or resolve_user_name(branch.get("CREATED_BY_ID"), user_map) or "无"
-        dept_name = _normalize_department(org_value)
+        owner_name, _owner_source = _resolve_owner(branch, direct_map, route_map, user_map)
+        dept_name = _normalize_department(af_value)
 
         rows.append(
             {
@@ -240,6 +236,7 @@ def _fetch_file4_live_dataframe(project: str, current_datetime: datetime.datetim
         "backend": provider.source_label(),
         "project_id": project,
         "query_date": current_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+        "stage": "init",
         "iics_query_rows": 0,
         "iics_selected_rows": 0,
         "iitf_query_rows": 0,
@@ -249,33 +246,64 @@ def _fetch_file4_live_dataframe(project: str, current_datetime: datetime.datetim
         "distribution_query_rows": 0,
         "distribution_direct_groups": 0,
         "distribution_route_groups": 0,
+        "iics_p1_rows": 0,
+        "iics_p2_rows": 0,
+        "iics_p3_rows": 0,
+        "iitf_p1_rows": 0,
+        "iitf_p2_rows": 0,
+        "iitf_p3_rows": 0,
+        "p4_answer_empty_rows": 0,
         "answered_skipped": 0,
         "missing_interface_id_skipped": 0,
         "missing_f_date_skipped": 0,
+        "owner_direct_leaf_rows": 0,
+        "owner_direct_latest_rows": 0,
+        "owner_route_leaf_rows": 0,
+        "owner_route_latest_rows": 0,
+        "owner_created_by_rows": 0,
         "final_rows": 0,
     }
 
-    iics_by_send = _collect_branch_rows_live(provider, "IICS", project, current_datetime, org_filter, debug)
-    iitf_by_send = _collect_branch_rows_live(provider, "IITF", project, current_datetime, org_filter, debug)
+    debug["stage"] = "load_branches"
+    try:
+        iics_by_send = _collect_branch_rows_live(provider, "IICS", project, current_datetime, org_filter, debug)
+        iitf_by_send = _collect_branch_rows_live(provider, "IITF", project, current_datetime, org_filter, debug)
+    except Exception as exc:
+        debug["error"] = str(exc)
+        _FILE4_DEBUG_SNAPSHOTS[project] = debug
+        return pd.DataFrame(columns=RESULT_COLUMNS)
 
     selected_by_send: Dict[str, Dict[str, Any]] = {}
     for send_id, row in iitf_by_send.items():
-        selected_by_send[send_id] = row
+        _select_latest_branch(selected_by_send, send_id, row)
     for send_id, row in iics_by_send.items():
-        selected_by_send[send_id] = row
+        _select_latest_branch(selected_by_send, send_id, row)
     debug["selected_send_rows"] = len(selected_by_send)
     if not selected_by_send:
         _FILE4_DEBUG_SNAPSHOTS[project] = debug
         return pd.DataFrame(columns=RESULT_COLUMNS)
 
-    send_rows = _collect_send_rows_live(provider, set(selected_by_send.keys()))
+    debug["stage"] = "load_send"
+    try:
+        send_rows = _collect_send_rows_live(provider, set(selected_by_send.keys()))
+    except Exception as exc:
+        debug["error"] = str(exc)
+        _FILE4_DEBUG_SNAPSHOTS[project] = debug
+        return pd.DataFrame(columns=RESULT_COLUMNS)
     debug["send_rows"] = len(send_rows)
     if not send_rows:
         _FILE4_DEBUG_SNAPSHOTS[project] = debug
         return pd.DataFrame(columns=RESULT_COLUMNS)
 
-    direct_map, route_map = _load_distribution_maps_live(provider, project, selected_by_send, user_map, debug)
+    debug["stage"] = "load_distribution"
+    try:
+        direct_map, route_map = _load_distribution_maps_live(provider, project, selected_by_send, user_map, debug)
+    except Exception as exc:
+        debug["error"] = str(exc)
+        _FILE4_DEBUG_SNAPSHOTS[project] = debug
+        return pd.DataFrame(columns=RESULT_COLUMNS)
 
+    debug["stage"] = "build_rows"
     rows: List[Dict[str, Any]] = []
     for send_id, branch in selected_by_send.items():
         send = send_rows.get(send_id)
@@ -284,6 +312,7 @@ def _fetch_file4_live_dataframe(project: str, current_datetime: datetime.datetim
         if _parse_dt(send.get("ANSWER_DATE")) is not None:
             debug["answered_skipped"] += 1
             continue
+        debug["p4_answer_empty_rows"] += 1
 
         interface_id = _clean(send.get("LETTER_SEND_NO")) or _clean(send.get("CORRESP_LETTER_REC_NO"))
         if not interface_id:
@@ -291,16 +320,26 @@ def _fetch_file4_live_dataframe(project: str, current_datetime: datetime.datetim
             continue
 
         branch_type = _clean(branch.get("_BRANCH_TYPE"))
-        org_value = _clean(branch.get("_ORG_VALUE"))
-        p_value = _clean(branch.get("_P_VALUE"))
+        af_value = _clean(branch.get("_AF_VALUE"))
+        p_value = _clean(branch.get("_P_VALUE_DISPLAY"))
         f_date = _parse_dt(branch.get("MODIFIED_ON"))
         if f_date is None:
             debug["missing_f_date_skipped"] += 1
             continue
         due_date = f_date + datetime.timedelta(days=20)
 
-        owner_name = _resolve_owner(branch, direct_map, route_map, user_map) or resolve_user_name(branch.get("CREATED_BY_ID"), user_map) or "无"
-        dept_name = _normalize_department(org_value)
+        owner_name, owner_source = _resolve_owner(branch, direct_map, route_map, user_map)
+        if owner_source == "direct_leaf":
+            debug["owner_direct_leaf_rows"] += 1
+        elif owner_source == "direct_latest":
+            debug["owner_direct_latest_rows"] += 1
+        elif owner_source == "route_leaf":
+            debug["owner_route_leaf_rows"] += 1
+        elif owner_source == "route_latest":
+            debug["owner_route_latest_rows"] += 1
+        else:
+            debug["owner_created_by_rows"] += 1
+        dept_name = _normalize_department(af_value)
 
         rows.append(
             {
@@ -346,26 +385,9 @@ def _collect_branch_rows(provider, table_name: str, project: str, current_dateti
         if not send_id:
             continue
 
-        if table_name == "IICS":
-            p_value = _clean(row.get("RELEASE_PARTY"))
-            org_value = _select_org_value(org_filter, row.get("RECEIVE_PARTY"), row.get("RELEASE_PARTY"))
-        else:
-            p_value = _clean(row.get("RECEIVE_PARTY"))
-            org_value = _select_org_value(org_filter, row.get("RELEASE_PARTY"), row.get("RECEIVE_PARTY"))
-        if p_value != "B":
+        candidate = _build_file4_branch_candidate(row, table_name, current_datetime, project, org_filter)
+        if candidate is None:
             continue
-
-        f_date = _parse_dt(row.get("MODIFIED_ON"))
-        if f_date is None:
-            continue
-        due_date = f_date + datetime.timedelta(days=20)
-        if not _in_time_window(due_date, current_datetime, project):
-            continue
-
-        candidate = dict(row)
-        candidate["_BRANCH_TYPE"] = table_name
-        candidate["_ORG_VALUE"] = org_value
-        candidate["_P_VALUE"] = p_value
         prev = result.get(send_id)
         if prev is None or _branch_sort_key(candidate) >= _branch_sort_key(prev):
             result[send_id] = candidate
@@ -377,7 +399,6 @@ def _collect_branch_rows_live(provider, table_name: str, project: str, current_d
 SELECT
     [ID],
     [ITEM_NUMBER],
-    [INTERFACE_INFO],
     [SEND_RECEIVE_DATA],
     [RELEASE_PARTY],
     [RECEIVE_PARTY],
@@ -398,27 +419,9 @@ WHERE [PROJ_NUM] = ?
         send_id = _clean(row.get("SEND_RECEIVE_DATA")).upper()
         if not send_id:
             continue
-
-        if table_name == "IICS":
-            p_value = _clean(row.get("RELEASE_PARTY"))
-            org_value = _select_org_value(org_filter, row.get("RECEIVE_PARTY"), row.get("RELEASE_PARTY"))
-        else:
-            p_value = _clean(row.get("RECEIVE_PARTY"))
-            org_value = _select_org_value(org_filter, row.get("RELEASE_PARTY"), row.get("RECEIVE_PARTY"))
-        if p_value != "B":
+        candidate = _build_file4_branch_candidate(row, table_name, current_datetime, project, org_filter, debug)
+        if candidate is None:
             continue
-
-        f_date = _parse_dt(row.get("MODIFIED_ON"))
-        if f_date is None:
-            continue
-        due_date = f_date + datetime.timedelta(days=20)
-        if not _in_time_window(due_date, current_datetime, project):
-            continue
-
-        candidate = dict(row)
-        candidate["_BRANCH_TYPE"] = table_name
-        candidate["_ORG_VALUE"] = org_value
-        candidate["_P_VALUE"] = p_value
         prev = result.get(send_id)
         if prev is None or _branch_sort_key(candidate) >= _branch_sort_key(prev):
             result[send_id] = candidate
@@ -454,26 +457,9 @@ def _collect_branch_rows_multi(
         if not send_id:
             continue
 
-        if table_name == "IICS":
-            p_value = _clean(row.get("RELEASE_PARTY"))
-            org_value = _select_org_value(org_filter, row.get("RECEIVE_PARTY"), row.get("RELEASE_PARTY"))
-        else:
-            p_value = _clean(row.get("RECEIVE_PARTY"))
-            org_value = _select_org_value(org_filter, row.get("RELEASE_PARTY"), row.get("RECEIVE_PARTY"))
-        if p_value != "B":
+        candidate = _build_file4_branch_candidate(row, table_name, current_datetime, project, org_filter)
+        if candidate is None:
             continue
-
-        f_date = _parse_dt(row.get("MODIFIED_ON"))
-        if f_date is None:
-            continue
-        due_date = f_date + datetime.timedelta(days=20)
-        if not _in_time_window(due_date, current_datetime, project):
-            continue
-
-        candidate = dict(row)
-        candidate["_BRANCH_TYPE"] = table_name
-        candidate["_ORG_VALUE"] = org_value
-        candidate["_P_VALUE"] = p_value
         prev = result[project].get(send_id)
         if prev is None or _branch_sort_key(candidate) >= _branch_sort_key(prev):
             result[project][send_id] = candidate
@@ -505,10 +491,7 @@ SELECT [ID], [LETTER_SEND_NO], [CORRESP_LETTER_REC_NO], [ANSWER_DATE], [IS_CURRE
 FROM [{schema}].[SENDRECEIVEDATA]
 WHERE [ID] IN ({placeholders})
 """
-    live_rows = provider.fetch_rows(
-        sql_template.format(placeholders=", ".join("?" for _ in send_ids)),
-        params=tuple(send_ids),
-    )
+    live_rows = _fetch_rows_in_chunks(provider, sql_template, send_ids)
     result: Dict[str, Dict[str, Any]] = {}
     for row in live_rows:
         if not _is_current(row):
@@ -517,6 +500,18 @@ WHERE [ID] IN ({placeholders})
         if row_id in send_ids:
             result[row_id] = row
     return result
+
+
+def _fetch_rows_in_chunks(provider, sql_template: str, values: Set[str], chunk_size: int = 500) -> List[Dict[str, Any]]:
+    items = [item for item in values if item]
+    if not items:
+        return []
+    rows: List[Dict[str, Any]] = []
+    for start in range(0, len(items), chunk_size):
+        chunk = items[start : start + chunk_size]
+        chunk_sql = sql_template.replace("{placeholders}", ", ".join("?" for _ in chunk))
+        rows.extend(provider.fetch_rows(chunk_sql, params=tuple(chunk)))
+    return rows
 
 
 def _load_distribution_maps(
@@ -749,14 +744,14 @@ def _resolve_owner(
     direct_map: Dict[str, Dict[str, Any]],
     route_map: Dict[Tuple[str, str], Dict[str, Any]],
     user_map: Dict[str, Dict[str, str]],
-) -> str:
+) -> Tuple[str, str]:
     source_id = _clean(branch.get("ID")).upper()
     direct = direct_map.get(source_id, {})
     leafs = direct.get("leaf_operators") or []
     if leafs:
-        return ",".join(leafs)
+        return ",".join(leafs), "direct_leaf"
     if direct.get("latest_operator"):
-        return _clean(direct.get("latest_operator"))
+        return _clean(direct.get("latest_operator")), "direct_latest"
 
     branch_type = _clean(branch.get("_BRANCH_TYPE")).upper()
     route_candidates = [
@@ -771,11 +766,22 @@ def _resolve_owner(
         payload = route_map.get((branch_type, route), {})
         leafs = payload.get("leaf_operators") or []
         if leafs:
-            return ",".join(leafs)
+            return ",".join(leafs), "route_leaf"
         if payload.get("latest_operator"):
-            return _clean(payload.get("latest_operator"))
+            return _clean(payload.get("latest_operator")), "route_latest"
 
-    return resolve_user_name(branch.get("CREATED_BY_ID"), user_map)
+    return resolve_user_name(branch.get("CREATED_BY_ID"), user_map) or "无", "created_by"
+
+
+def _select_latest_branch(selected: Dict[str, Dict[str, Any]], send_id: str, candidate: Dict[str, Any]) -> None:
+    previous = selected.get(send_id)
+    if previous is None:
+        selected[send_id] = candidate
+        return
+    prev_score = _branch_sort_key(previous) + (1 if _clean(previous.get("_BRANCH_TYPE")).upper() == "IICS" else 0,)
+    next_score = _branch_sort_key(candidate) + (1 if _clean(candidate.get("_BRANCH_TYPE")).upper() == "IICS" else 0,)
+    if next_score >= prev_score:
+        selected[send_id] = candidate
 
 
 def _clean(value: Any) -> str:
@@ -816,12 +822,67 @@ def _select_org_value(org_filter: str, primary: Any, secondary: Any) -> str:
     first = _clean(primary)
     second = _clean(secondary)
     for text in (first, second):
-        if org_filter and text.startswith(org_filter):
+        if _matches_branch_org(org_filter, text):
             return text
     for text in (first, second):
         if text and text != "B":
             return text
     return first or second
+
+
+def _matches_branch_org(org_filter: str, value: Any) -> bool:
+    text = _clean(value)
+    if not text or text == "B":
+        return False
+    return bool(org_filter and text.startswith(org_filter))
+
+
+def _build_file4_branch_candidate(
+    row: Dict[str, Any],
+    table_name: str,
+    current_datetime: datetime.datetime,
+    project: str,
+    org_filter: str,
+    debug: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    af_value, p_value_display, p_value_eval, ac_value = _derive_file4_process_values(table_name, row, org_filter)
+    if not _matches_branch_org(org_filter, af_value):
+        return None
+    if debug is not None:
+        debug[f"{table_name.lower()}_p1_rows"] = int(debug.get(f"{table_name.lower()}_p1_rows", 0)) + 1
+
+    if not (p_value_eval == "B" or (_clean(p_value_eval) == "" and _clean(ac_value) == "B")):
+        return None
+    if debug is not None:
+        debug[f"{table_name.lower()}_p2_rows"] = int(debug.get(f"{table_name.lower()}_p2_rows", 0)) + 1
+
+    f_date = _parse_dt(row.get("MODIFIED_ON"))
+    if f_date is None:
+        return None
+    due_date = f_date + datetime.timedelta(days=20)
+    if not _in_time_window(due_date, current_datetime, project):
+        return None
+    if debug is not None:
+        debug[f"{table_name.lower()}_p3_rows"] = int(debug.get(f"{table_name.lower()}_p3_rows", 0)) + 1
+
+    candidate = dict(row)
+    candidate["_BRANCH_TYPE"] = table_name
+    candidate["_AF_VALUE"] = af_value
+    candidate["_P_VALUE_DISPLAY"] = p_value_display
+    candidate["_P_VALUE_EVAL"] = p_value_eval
+    candidate["_AC_VALUE"] = ac_value
+    return candidate
+
+
+def _derive_file4_process_values(table_name: str, row: Dict[str, Any], org_filter: str) -> Tuple[str, str, str, str]:
+    branch_type = _clean(table_name).upper()
+    release_party = _clean(row.get("RELEASE_PARTY"))
+    receive_party = _clean(row.get("RECEIVE_PARTY"))
+    if branch_type == "IICS":
+        af_value = _select_org_value(org_filter, receive_party, release_party)
+        return af_value, release_party, release_party, receive_party
+    af_value = _select_org_value(org_filter, release_party, receive_party)
+    return af_value, "", "", receive_party
 
 
 def _normalize_route(value: Any) -> str:

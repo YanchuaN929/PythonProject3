@@ -88,49 +88,9 @@ def prime_file3_db_cache(project_ids, current_datetime: datetime.datetime, provi
         project = _clean(row.get("PROJ_NUM"))
         if project not in project_set:
             continue
-        item_number = _clean(row.get("ITEM_NUMBER"))
-        if not item_number:
-            continue
-        if _clean(row.get("RELEASE_PARTY")) != "B":
-            continue
-        resp_depart = _clean(row.get("RESP_DEPART"))
-        if not resp_depart.startswith(get_organization_filter()):
-            continue
-
-        final_forecast = _parse_dt(row.get("FINAL_FORECAST_DATE"))
-        pre_forecast = _parse_dt(row.get("PRE_FORECAST_DATE"))
-        final_open = _clean(row.get("FINAL_OPEN_DATE"))
-        pre_open = _clean(row.get("PRE_OPEN_DATE"))
-
-        route = ""
-        interface_time: Optional[datetime.datetime] = None
-        if final_forecast is not None and not final_open and _in_time_window(final_forecast, current_datetime, project):
-            route = "FINAL"
-            interface_time = final_forecast
-        elif pre_forecast is not None and not pre_open and _in_time_window(pre_forecast, current_datetime, project):
-            route = "PRE"
-            interface_time = pre_forecast
-        else:
-            continue
-
-        owner_name = resolve_user_name(row.get("RESP_SHEZONG"), user_map) or ""
-        rows_by_project[project].append(
-            {
-                "接口号": item_number,
-                "接口时间": interface_time.strftime("%Y.%m.%d") if interface_time else "",
-                "责任人": owner_name or "无",
-                "科室": _normalize_department(resp_depart),
-                "项目号": project,
-                "source_file": build_file3_virtual_source(project),
-                "发布方": _clean(row.get("RELEASE_PARTY")),
-                "主办所": resp_depart,
-                "初版预报日期": _fmt(pre_forecast),
-                "终版预报日期": _fmt(final_forecast),
-                "初版打开日期": _fmt(row.get("PRE_OPEN_DATE")),
-                "终版打开日期": _fmt(row.get("FINAL_OPEN_DATE")),
-                "_source_column": "M" if route == "FINAL" else "L",
-            }
-        )
+        result_row = _build_file3_result_row(row, project, current_datetime, user_map)
+        if result_row is not None:
+            rows_by_project[project].append(result_row)
 
     frames: Dict[str, pd.DataFrame] = {}
     for project in projects:
@@ -171,49 +131,9 @@ def fetch_file3_db_dataframe(project_id: str, current_datetime: datetime.datetim
             continue
         if _clean(row.get("PROJ_NUM")) != project:
             continue
-        item_number = _clean(row.get("ITEM_NUMBER"))
-        if not item_number:
-            continue
-        if _clean(row.get("RELEASE_PARTY")) != "B":
-            continue
-        resp_depart = _clean(row.get("RESP_DEPART"))
-        if not resp_depart.startswith(get_organization_filter()):
-            continue
-
-        final_forecast = _parse_dt(row.get("FINAL_FORECAST_DATE"))
-        pre_forecast = _parse_dt(row.get("PRE_FORECAST_DATE"))
-        final_open = _clean(row.get("FINAL_OPEN_DATE"))
-        pre_open = _clean(row.get("PRE_OPEN_DATE"))
-
-        route = ""
-        interface_time: Optional[datetime.datetime] = None
-        if final_forecast is not None and not final_open and _in_time_window(final_forecast, current_datetime, project):
-            route = "FINAL"
-            interface_time = final_forecast
-        elif pre_forecast is not None and not pre_open and _in_time_window(pre_forecast, current_datetime, project):
-            route = "PRE"
-            interface_time = pre_forecast
-        else:
-            continue
-
-        owner_name = resolve_user_name(row.get("RESP_SHEZONG"), user_map) or ""
-        rows.append(
-            {
-                "接口号": item_number,
-                "接口时间": interface_time.strftime("%Y.%m.%d") if interface_time else "",
-                "责任人": owner_name or "无",
-                "科室": _normalize_department(resp_depart),
-                "项目号": project,
-                "source_file": build_file3_virtual_source(project),
-                "发布方": _clean(row.get("RELEASE_PARTY")),
-                "主办所": resp_depart,
-                "初版预报日期": _fmt(pre_forecast),
-                "终版预报日期": _fmt(final_forecast),
-                "初版打开日期": _fmt(row.get("PRE_OPEN_DATE")),
-                "终版打开日期": _fmt(row.get("FINAL_OPEN_DATE")),
-                "_source_column": "M" if route == "FINAL" else "L",
-            }
-        )
+        result_row = _build_file3_result_row(row, project, current_datetime, user_map)
+        if result_row is not None:
+            rows.append(result_row)
 
     if not rows:
         return pd.DataFrame(columns=RESULT_COLUMNS)
@@ -230,12 +150,16 @@ def _fetch_file3_live_dataframe(project: str, current_datetime: datetime.datetim
         "query_date": current_datetime.strftime("%Y-%m-%d %H:%M:%S"),
         "query_rows_total": 0,
         "item_number_rows": 0,
-        "release_party_b_rows": 0,
-        "resp_depart_match_rows": 0,
-        "final_candidate_rows": 0,
-        "pre_candidate_rows": 0,
-        "window_match_rows": 0,
+        "p1_release_party_b_rows": 0,
+        "p2_resp_depart_prefix_rows": 0,
+        "p3_final_window_rows": 0,
+        "p4_pre_window_rows": 0,
+        "p5_pre_open_empty_rows": 0,
+        "p6_final_open_empty_rows": 0,
+        "route_final_rows": 0,
+        "route_pre_rows": 0,
         "final_rows": 0,
+        "sample_resp_depart_rows": [],
     }
     sql_template = """
 SELECT
@@ -263,51 +187,47 @@ WHERE [PROJ_NUM] = ?
         if not item_number:
             continue
         debug["item_number_rows"] += 1
+
         if _clean(row.get("RELEASE_PARTY")) != "B":
             continue
-        debug["release_party_b_rows"] += 1
+        debug["p1_release_party_b_rows"] += 1
+
         resp_depart = _clean(row.get("RESP_DEPART"))
-        if not resp_depart.startswith(get_organization_filter()):
+        if not _matches_file3_dept(resp_depart):
             continue
-        debug["resp_depart_match_rows"] += 1
+        debug["p2_resp_depart_prefix_rows"] += 1
+        if len(debug["sample_resp_depart_rows"]) < 5:
+            debug["sample_resp_depart_rows"].append(
+                {
+                    "item_number": item_number,
+                    "pre_forecast_date": _fmt(row.get("PRE_FORECAST_DATE")),
+                    "final_forecast_date": _fmt(row.get("FINAL_FORECAST_DATE")),
+                    "pre_open_date": _fmt(row.get("PRE_OPEN_DATE")),
+                    "final_open_date": _fmt(row.get("FINAL_OPEN_DATE")),
+                }
+            )
 
-        final_forecast = _parse_dt(row.get("FINAL_FORECAST_DATE"))
-        pre_forecast = _parse_dt(row.get("PRE_FORECAST_DATE"))
-        final_open = _clean(row.get("FINAL_OPEN_DATE"))
-        pre_open = _clean(row.get("PRE_OPEN_DATE"))
+        p3_final = _is_valid_file3_forecast(row.get("FINAL_FORECAST_DATE"), current_datetime, project)
+        p4_pre = _is_valid_file3_forecast(row.get("PRE_FORECAST_DATE"), current_datetime, project)
+        p5_pre_open_empty = _is_blank_excel_value(row.get("PRE_OPEN_DATE"))
+        p6_final_open_empty = _is_blank_excel_value(row.get("FINAL_OPEN_DATE"))
+        if p3_final:
+            debug["p3_final_window_rows"] += 1
+        if p4_pre:
+            debug["p4_pre_window_rows"] += 1
+        if p5_pre_open_empty:
+            debug["p5_pre_open_empty_rows"] += 1
+        if p6_final_open_empty:
+            debug["p6_final_open_empty_rows"] += 1
 
-        route = ""
-        interface_time: Optional[datetime.datetime] = None
-        if final_forecast is not None and not final_open and _in_time_window(final_forecast, current_datetime, project):
-            route = "FINAL"
-            interface_time = final_forecast
-            debug["final_candidate_rows"] += 1
-        elif pre_forecast is not None and not pre_open and _in_time_window(pre_forecast, current_datetime, project):
-            route = "PRE"
-            interface_time = pre_forecast
-            debug["pre_candidate_rows"] += 1
+        result_row = _build_file3_result_row(row, project, current_datetime, user_map)
+        if result_row is None:
+            continue
+        if result_row.get("_source_column") == "M":
+            debug["route_final_rows"] += 1
         else:
-            continue
-        debug["window_match_rows"] += 1
-
-        owner_name = resolve_user_name(row.get("RESP_SHEZONG"), user_map) or ""
-        rows.append(
-            {
-                "接口号": item_number,
-                "接口时间": interface_time.strftime("%Y.%m.%d") if interface_time else "",
-                "责任人": owner_name or "无",
-                "科室": _normalize_department(resp_depart),
-                "项目号": project,
-                "source_file": build_file3_virtual_source(project),
-                "发布方": _clean(row.get("RELEASE_PARTY")),
-                "主办所": resp_depart,
-                "初版预报日期": _fmt(pre_forecast),
-                "终版预报日期": _fmt(final_forecast),
-                "初版打开日期": _fmt(row.get("PRE_OPEN_DATE")),
-                "终版打开日期": _fmt(row.get("FINAL_OPEN_DATE")),
-                "_source_column": "M" if route == "FINAL" else "L",
-            }
-        )
+            debug["route_pre_rows"] += 1
+        rows.append(result_row)
 
     debug["final_rows"] = len(rows)
     debug["sample_interface_ids"] = [str(item.get("接口号", "")) for item in rows[:5]]
@@ -350,6 +270,72 @@ def _normalize_department(value: Any) -> str:
         return "请室主任确认"
     matched = match_department_name(text)
     return matched if matched and matched != text else "请室主任确认"
+
+
+def _matches_file3_dept(value: Any) -> bool:
+    text = _clean(value)
+    if not text:
+        return False
+    return text.startswith(get_organization_filter())
+
+
+def _is_blank_excel_value(value: Any) -> bool:
+    return _clean(value) == ""
+
+
+def _is_valid_file3_forecast(value: Any, current_datetime: datetime.datetime, project_id: str) -> bool:
+    text = _clean(value)
+    if not text or text.startswith("4444"):
+        return False
+    target = _parse_dt(value)
+    if target is None:
+        return False
+    return _in_time_window(target, current_datetime, project_id)
+
+
+def _build_file3_result_row(
+    row: Dict[str, Any],
+    project: str,
+    current_datetime: datetime.datetime,
+    user_map: Dict[str, Dict[str, str]],
+) -> Optional[Dict[str, Any]]:
+    item_number = _clean(row.get("ITEM_NUMBER"))
+    if not item_number:
+        return None
+    if _clean(row.get("RELEASE_PARTY")) != "B":
+        return None
+
+    resp_depart = _clean(row.get("RESP_DEPART"))
+    if not _matches_file3_dept(resp_depart):
+        return None
+
+    final_match = _is_valid_file3_forecast(row.get("FINAL_FORECAST_DATE"), current_datetime, project) and _is_blank_excel_value(
+        row.get("FINAL_OPEN_DATE")
+    )
+    pre_match = _is_valid_file3_forecast(row.get("PRE_FORECAST_DATE"), current_datetime, project) and _is_blank_excel_value(
+        row.get("PRE_OPEN_DATE")
+    )
+    if not final_match and not pre_match:
+        return None
+
+    route = "M" if final_match else "L"
+    interface_time = _parse_dt(row.get("FINAL_FORECAST_DATE")) if route == "M" else _parse_dt(row.get("PRE_FORECAST_DATE"))
+    owner_name = resolve_user_name(row.get("RESP_SHEZONG"), user_map) or ""
+    return {
+        "接口号": item_number,
+        "接口时间": interface_time.strftime("%Y.%m.%d") if interface_time else "",
+        "责任人": owner_name or "无",
+        "科室": _normalize_department(resp_depart),
+        "项目号": project,
+        "source_file": build_file3_virtual_source(project),
+        "发布方": _clean(row.get("RELEASE_PARTY")),
+        "主办所": resp_depart,
+        "初版预报日期": _fmt(row.get("PRE_FORECAST_DATE")),
+        "终版预报日期": _fmt(row.get("FINAL_FORECAST_DATE")),
+        "初版打开日期": _fmt(row.get("PRE_OPEN_DATE")),
+        "终版打开日期": _fmt(row.get("FINAL_OPEN_DATE")),
+        "_source_column": route,
+    }
 
 
 def _in_time_window(target_date: datetime.datetime, current_datetime: datetime.datetime, project_id: str) -> bool:
