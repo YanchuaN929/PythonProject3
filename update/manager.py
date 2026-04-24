@@ -350,7 +350,6 @@ class UpdateManager:
             False: 更新失败
         """
         import shutil
-        import filecmp
         
         remote_root = self._resolve_remote_dir(folder_path)
         if not remote_root:
@@ -385,9 +384,14 @@ class UpdateManager:
                 self._log(f"复制 {self.update_executable} 失败: {e}")
                 return False
         
-        # 比较文件是否相同
+        # 比较文件是否相同：优先用大小 + 修改时间，避免网络盘 filecmp 深度读文件。
         try:
-            if filecmp.cmp(local_update_exe, remote_update_exe, shallow=False):
+            local_stat = os.stat(local_update_exe)
+            remote_stat = os.stat(remote_update_exe)
+            if (
+                local_stat.st_size == remote_stat.st_size
+                and int(local_stat.st_mtime) == int(remote_stat.st_mtime)
+            ):
                 # 文件相同，无需更新
                 return True
         except Exception as e:

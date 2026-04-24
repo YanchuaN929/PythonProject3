@@ -150,6 +150,59 @@ def test_sync_directory_skips_unchanged_file(tmp_path):
     assert updater_cli._should_copy_file(str(src_file), str(dst_file)) is False
 
 
+def test_copy_file_with_retry_recovers_from_transient_permission_error(monkeypatch, tmp_path):
+    source = tmp_path / "source.txt"
+    target = tmp_path / "target.txt"
+    source.write_text("new-content", encoding="utf-8")
+
+    calls = {"count": 0}
+    real_copy2 = updater_cli.shutil.copy2
+
+    def flaky_copy2(src, dst):
+        calls["count"] += 1
+        if calls["count"] < 3:
+            raise PermissionError("locked")
+        return real_copy2(src, dst)
+
+    monkeypatch.setattr(updater_cli.shutil, "copy2", flaky_copy2)
+    monkeypatch.setattr(updater_cli.time, "sleep", lambda _seconds: None)
+
+    status = updater_cli._copy_file_with_retry(str(source), str(target))
+
+    assert status == "copied"
+    assert calls["count"] == 3
+    assert target.read_text(encoding="utf-8") == "new-content"
+
+
+def test_restart_main_program_detaches_stdio(monkeypatch, tmp_path):
+    executable = tmp_path / "接口筛选.exe"
+    executable.write_text("stub", encoding="utf-8")
+    captured = {}
+
+    def fake_popen(cmd, cwd=None, close_fds=None, stdin=None, stdout=None, stderr=None):
+        captured["cmd"] = cmd
+        captured["cwd"] = cwd
+        captured["close_fds"] = close_fds
+        captured["stdin"] = stdin
+        captured["stdout"] = stdout
+        captured["stderr"] = stderr
+
+        class _DummyProc:
+            pass
+
+        return _DummyProc()
+
+    monkeypatch.setattr(updater_cli.subprocess, "Popen", fake_popen)
+
+    assert updater_cli.restart_main_program(str(tmp_path), "接口筛选.exe", "startup", True) is True
+    assert captured["cmd"][0] == str(executable)
+    assert captured["cwd"] == str(tmp_path)
+    assert captured["close_fds"] is True
+    assert captured["stdin"] is updater_cli.subprocess.DEVNULL
+    assert captured["stdout"] is updater_cli.subprocess.DEVNULL
+    assert captured["stderr"] is updater_cli.subprocess.DEVNULL
+
+
 def test_resolve_update_folder_path_falls_back_to_defaults():
     from base import ExcelProcessorApp
 
@@ -312,7 +365,11 @@ def test_update_fails_when_critical_locked_files_remain(monkeypatch, tmp_path):
 
     monkeypatch.setattr(updater_cli, "get_current_executable", lambda: "update.exe")
     monkeypatch.setattr(updater_cli, "wait_for_main_exit", lambda *_args, **_kwargs: True)
-    monkeypatch.setattr(updater_cli, "copy_directory_atomic", lambda *_args, **_kwargs: ["_internal\\python38.dll"])
+    monkeypatch.setattr(
+        updater_cli,
+        "copy_directory_atomic",
+        lambda *_args, **_kwargs: updater_cli.SyncResult(locked_files=["_internal\\python38.dll"]),
+    )
 
     restart_calls = []
     monkeypatch.setattr(
@@ -323,6 +380,67 @@ def test_update_fails_when_critical_locked_files_remain(monkeypatch, tmp_path):
 
     assert updater_cli.perform_update(Args()) is False
     assert restart_calls == []
+
+
+def test_update_fails_when_copy_errors_occur(monkeypatch, tmp_path):
+    remote_dir = tmp_path / "remote" / "EXE"
+    local_dir = tmp_path / "local"
+    remote_dir.mkdir(parents=True, exist_ok=True)
+    local_dir.mkdir(parents=True, exist_ok=True)
+
+    class Args:
+        remote = str(remote_dir)
+        local = str(local_dir)
+        version = "1.2.3"
+        resume = "startup"
+        main_exe = "接口筛选.exe"
+        main_pid = 123
+        auto_mode = False
+
+    monkeypatch.setattr(updater_cli, "get_current_executable", lambda: "update.exe")
+    monkeypatch.setattr(updater_cli, "wait_for_main_exit", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        updater_cli,
+        "copy_directory_atomic",
+        lambda *_args, **_kwargs: updater_cli.SyncResult(error_count=2),
+    )
+
+    restart_calls = []
+    monkeypatch.setattr(
+        updater_cli,
+        "restart_main_program",
+        lambda *_args, **_kwargs: restart_calls.append("restart") or True,
+    )
+
+    assert updater_cli.perform_update(Args()) is False
+    assert restart_calls == []
+
+
+def test_update_fails_when_restart_target_missing(monkeypatch, tmp_path):
+    remote_dir = tmp_path / "remote" / "EXE"
+    local_dir = tmp_path / "local"
+    remote_dir.mkdir(parents=True, exist_ok=True)
+    local_dir.mkdir(parents=True, exist_ok=True)
+
+    class Args:
+        remote = str(remote_dir)
+        local = str(local_dir)
+        version = "1.2.3"
+        resume = "startup"
+        main_exe = "接口筛选.exe"
+        main_pid = 123
+        auto_mode = False
+
+    monkeypatch.setattr(updater_cli, "get_current_executable", lambda: "update.exe")
+    monkeypatch.setattr(updater_cli, "wait_for_main_exit", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        updater_cli,
+        "copy_directory_atomic",
+        lambda *_args, **_kwargs: updater_cli.SyncResult(updated_count=3),
+    )
+    monkeypatch.setattr(updater_cli, "restart_main_program", lambda *_args, **_kwargs: False)
+
+    assert updater_cli.perform_update(Args()) is False
 
 
 def test_schedule_exit_for_update_has_thread_fallback(monkeypatch):

@@ -34,8 +34,6 @@ a = Analysis(
         ('version.json', '.'),
         # 更新脚本（CLI 更新）
         ('update/updater_cli.py', 'update'),
-        # 打包虚拟环境（用于 CLI 更新）
-        ('.venv', 'python'),
         # 文档文件
         ('document/4_使用说明.md', 'document'),
         # 资源文件
@@ -43,6 +41,7 @@ a = Analysis(
         ('excel_bin/姓名角色表.xlsx', 'excel_bin'),
         ('excel_bin/姓名角色表-电力工程研究设计所.xlsx', 'excel_bin'),
         ('excel_bin/姓名角色表——核工程所通信专业+设备专业.xlsx', 'excel_bin'),
+        ('excel_bin/姓名角色表-核电工艺所.xlsx', 'excel_bin'),
         ('excel_bin/姓名角色表-电气自动化所.xlsx', 'excel_bin'),
     ],
     hiddenimports=[

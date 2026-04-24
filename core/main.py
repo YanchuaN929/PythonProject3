@@ -1286,19 +1286,36 @@ def process_target_file2(file_path, current_datetime, project_id=None):
             wal = bool(cfg.get("registry_wal", False))
             conn = get_connection(db_path, wal)
             try:
-                # 【方案A】只查询"待审查"状态的任务（设计人员已填写回文单号，等待确认）
+                # 先拉取该文件类型所有候选状态，再按 interface_id + project_id
+                # 只保留“最新一条”状态，避免旧待审查记录在最新已归档后继续误命中。
                 cursor = conn.execute("""
-                    SELECT interface_id, project_id, display_status
+                    SELECT interface_id, project_id, display_status, status, last_seen_at
                     FROM tasks
                     WHERE file_type = 2
-                      AND display_status IN ('待审查', '待指派人审查')
                       AND (ignored = 0 OR ignored IS NULL)
-                      AND status != 'archived'
+                    ORDER BY last_seen_at DESC
                 """)
-                registry_tasks = cursor.fetchall()
+                raw_registry_tasks = cursor.fetchall()
             finally:
                 close_connection_after_use()
-            print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个有状态的任务")
+            latest_registry_tasks = {}
+            for reg_interface_id, reg_project_id, reg_display_status, reg_status, reg_last_seen_at in raw_registry_tasks:
+                key = (reg_interface_id, reg_project_id)
+                if key in latest_registry_tasks:
+                    continue
+                latest_registry_tasks[key] = (
+                    reg_display_status,
+                    reg_status,
+                    reg_last_seen_at,
+                )
+
+            registry_tasks = [
+                (reg_interface_id, reg_project_id, reg_display_status)
+                for (reg_interface_id, reg_project_id), (reg_display_status, reg_status, _reg_last_seen_at) in latest_registry_tasks.items()
+                if reg_display_status in ('待审查', '待指派人审查')
+                and reg_status != 'archived'
+            ]
+            print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个最新待审查任务")
             
             # 【优化】从文件名提取项目号，建立Excel索引
             filename = os.path.basename(file_path)
@@ -1328,6 +1345,9 @@ def process_target_file2(file_path, current_datetime, project_id=None):
                     for idx in matched_indices:
                         # 【关键】必须通过科室筛选
                         if idx not in process1_rows:
+                            continue
+                        # 【关键修复】当前Excel若已填写回复日期，则绝不能因旧Registry状态被加回。
+                        if idx not in process4_rows:
                             continue
                         
                         if idx not in final_rows:

@@ -15,6 +15,7 @@ import subprocess
 import sys
 import time
 import traceback
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Iterable, Optional
 
@@ -25,6 +26,21 @@ LOG_FILE: Optional[str] = None
 # 等待主程序退出的默认超时（秒）
 # 说明：主程序若未能及时退出，更新器仍会继续尝试更新（会打印 WARNING）。
 DEFAULT_MAIN_EXIT_TIMEOUT_SECONDS = 30
+DEFAULT_COPY_RETRY_COUNT = 3
+DEFAULT_COPY_RETRY_DELAY_SECONDS = 0.4
+LOCKED_FILE_LOG_SAMPLE_LIMIT = 10
+
+
+@dataclass
+class SyncResult:
+    """记录一次目录同步的结果，便于决定是否允许重启。"""
+
+    updated_count: int = 0
+    skipped_count: int = 0
+    unchanged_count: int = 0
+    error_count: int = 0
+    total_candidates: int = 0
+    locked_files: list[str] = field(default_factory=list)
 
 
 def init_log_file(local_dir: str) -> None:
@@ -292,7 +308,7 @@ def get_current_executable() -> Optional[str]:
         return None
 
 
-def copy_directory_atomic(remote_dir: str, local_dir: str, skip_files: Optional[set] = None) -> list:
+def copy_directory_atomic(remote_dir: str, local_dir: str, skip_files: Optional[set] = None) -> SyncResult:
     """
     同步远程目录到本地目录（增量复制）。
     
@@ -302,7 +318,7 @@ def copy_directory_atomic(remote_dir: str, local_dir: str, skip_files: Optional[
         skip_files: 要跳过的文件名集合（如正在运行的 update.exe）
     
     Returns:
-        被占用而跳过的文件列表
+        同步结果（包含被占用文件、失败数等）
     """
     skip_files = skip_files or set()
 
@@ -311,9 +327,9 @@ def copy_directory_atomic(remote_dir: str, local_dir: str, skip_files: Optional[
         log(f"跳过文件: {skip_files}")
 
     # 直接做增量同步，避免“远程->临时->本地”双倍复制导致更新过慢。
-    locked_files = sync_directory(remote_dir, local_dir, skip_files)
+    sync_result = sync_directory(remote_dir, local_dir, skip_files)
     log("文件复制完成")
-    return locked_files
+    return sync_result
 
 
 def _should_copy_file(src_file: str, dst_file: str) -> bool:
@@ -330,62 +346,95 @@ def _should_copy_file(src_file: str, dst_file: str) -> bool:
         return True
 
 
-def sync_directory(source: str, target: str, skip_files: Optional[set] = None) -> list:
+def _sync_priority(rel_path: str) -> tuple:
+    normalized = str(rel_path).replace("/", "\\").lower()
+    if normalized.startswith("_internal\\python\\"):
+        return (3, normalized)
+    if normalized.startswith("_internal\\"):
+        return (2, normalized)
+    if "\\" in normalized:
+        return (1, normalized)
+    return (0, normalized)
+
+
+def _copy_file_with_retry(src_file: str, dst_file: str) -> str:
+    last_error: Optional[Exception] = None
+    for attempt in range(1, DEFAULT_COPY_RETRY_COUNT + 1):
+        try:
+            os.makedirs(os.path.dirname(dst_file), exist_ok=True)
+            shutil.copy2(src_file, dst_file)
+            return "copied"
+        except PermissionError as exc:
+            last_error = exc
+            if attempt < DEFAULT_COPY_RETRY_COUNT:
+                time.sleep(DEFAULT_COPY_RETRY_DELAY_SECONDS * attempt)
+                continue
+            return "locked"
+        except Exception as exc:
+            last_error = exc
+            log(f"  同步文件失败: {os.path.basename(src_file)} - {exc}", "ERROR")
+            return "error"
+
+    if last_error:
+        log(f"  同步文件失败: {os.path.basename(src_file)} - {last_error}", "ERROR")
+    return "error"
+
+
+def sync_directory(source: str, target: str, skip_files: Optional[set] = None) -> SyncResult:
     """
     同步目录
     
     返回:
-        被占用而跳过的文件列表（相对路径）
+        目录同步结果
     """
     skip_files = skip_files or set()
     skip_lower = {f.lower() for f in skip_files}
     
     os.makedirs(target, exist_ok=True)
     
-    file_count = 0
-    skip_count = 0
-    unchanged_count = 0
-    error_count = 0
-    locked_files = []  # 记录被占用的文件
-    
+    result = SyncResult()
+    file_entries = []
+
     for root, dirs, files in os.walk(source):
         rel_root = os.path.relpath(root, source)
         target_root = target if rel_root == "." else os.path.join(target, rel_root)
         os.makedirs(target_root, exist_ok=True)
-
         for file_name in files:
-            # 检查是否需要跳过
-            if file_name.lower() in skip_lower:
-                skip_count += 1
-                continue
-            
             src_file = os.path.join(root, file_name)
             dst_file = os.path.join(target_root, file_name)
             rel_path = os.path.join(rel_root, file_name) if rel_root != "." else file_name
+            file_entries.append((rel_path, src_file, dst_file, file_name))
 
-            # 增量复制：未变化文件直接跳过
-            if not _should_copy_file(src_file, dst_file):
-                unchanged_count += 1
-                continue
+    file_entries.sort(key=lambda item: _sync_priority(item[0]))
 
-            try:
-                os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-                shutil.copy2(src_file, dst_file)
-                file_count += 1
-            except PermissionError:
-                # 文件被占用，记录下来
-                log(f"  文件被占用，跳过: {file_name}", "WARNING")
-                locked_files.append(rel_path)
-                skip_count += 1
-            except Exception as e:
-                log(f"  同步文件失败: {file_name} - {e}", "ERROR")
-                error_count += 1
+    result.total_candidates = len(file_entries)
+    log(f"待检查文件: {result.total_candidates} 个")
+
+    for rel_path, src_file, dst_file, file_name in file_entries:
+        # 检查是否需要跳过
+        if file_name.lower() in skip_lower:
+            result.skipped_count += 1
+            continue
+
+        # 增量复制：未变化文件直接跳过
+        if not _should_copy_file(src_file, dst_file):
+            result.unchanged_count += 1
+            continue
+
+        copy_status = _copy_file_with_retry(src_file, dst_file)
+        if copy_status == "copied":
+            result.updated_count += 1
+        elif copy_status == "locked":
+            result.locked_files.append(rel_path)
+            result.skipped_count += 1
+        else:
+            result.error_count += 1
     
     log(
-        f"同步完成: 更新 {file_count} 个, 未变化 {unchanged_count} 个, "
-        f"跳过 {skip_count} 个, 失败 {error_count} 个"
+        f"同步完成: 更新 {result.updated_count} 个, 未变化 {result.unchanged_count} 个, "
+        f"跳过 {result.skipped_count} 个, 失败 {result.error_count} 个"
     )
-    return locked_files
+    return result
 
 
 def restart_main_program(
@@ -393,7 +442,7 @@ def restart_main_program(
     main_executable: Optional[str],
     resume_action: str,
     auto_mode: bool,
-) -> None:
+) -> bool:
     """重启主程序"""
     cmd: list[str] = []
 
@@ -413,7 +462,7 @@ def restart_main_program(
             log(f"使用Python脚本启动: {base_script}")
         else:
             log("找不到可启动的程序", "ERROR")
-            return
+            return False
 
     if auto_mode and "--auto" not in cmd:
         cmd.append("--auto")
@@ -424,8 +473,16 @@ def restart_main_program(
     log(f"启动命令: {' '.join(cmd)}")
     
     try:
-        subprocess.Popen(cmd, cwd=local_dir, close_fds=False)
+        subprocess.Popen(
+            cmd,
+            cwd=local_dir,
+            close_fds=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         log("主程序启动成功")
+        return True
     except Exception as e:
         log(f"启动主程序失败: {e}", "ERROR")
         raise
@@ -486,6 +543,36 @@ def analyze_locked_files(locked_files: list) -> dict:
     return result
 
 
+def log_locked_files_summary(analysis: dict, *, sample_limit: int = LOCKED_FILE_LOG_SAMPLE_LIMIT) -> None:
+    total_locked = (
+        len(analysis.get("critical", []))
+        + len(analysis.get("safe", []))
+        + len(analysis.get("unknown", []))
+    )
+    if total_locked <= 0:
+        return
+
+    log("-" * 40)
+    log(f"检测到 {total_locked} 个被占用文件，以下显示摘要：", "WARNING")
+
+    sections = [
+        ("critical", "关键运行文件", "ERROR"),
+        ("unknown", "其他待确认文件", "WARNING"),
+        ("safe", "可安全跳过文件", "INFO"),
+    ]
+    for key, title, level in sections:
+        items = analysis.get(key, [])
+        if not items:
+            continue
+        log(f"  [{title}] {len(items)} 个", level)
+        for sample in items[:sample_limit]:
+            log(f"    - {sample}", level)
+        remaining = len(items) - min(len(items), sample_limit)
+        if remaining > 0:
+            log(f"    ... 另有 {remaining} 个，详见 update_log.txt", level)
+    log("-" * 40)
+
+
 def _has_restart_blocking_locks(analysis: dict) -> bool:
     """判断被占用文件是否会导致重启后程序不完整。"""
     if analysis.get("critical"):
@@ -543,32 +630,21 @@ def perform_update(args) -> bool:
         
         # 复制文件
         log("步骤 2/3: 复制更新文件...")
-        locked_files = copy_directory_atomic(remote_dir, local_dir, skip_files)
+        copy_started_at = time.time()
+        sync_result = copy_directory_atomic(remote_dir, local_dir, skip_files)
+        log(f"复制阶段耗时: {time.time() - copy_started_at:.1f} 秒")
+
+        if sync_result.error_count > 0:
+            log(
+                f"复制阶段出现 {sync_result.error_count} 个失败项，为避免安装不完整，本次更新终止。",
+                "ERROR",
+            )
+            return False
         
         # 分析被锁定的文件
-        if locked_files:
-            log("-" * 40)
-            log("被占用文件分析:")
-            analysis = analyze_locked_files(locked_files)
-            
-            if analysis["safe"]:
-                log(f"  [安全] 运行时库文件 (无影响): {len(analysis['safe'])} 个")
-                for f in analysis["safe"]:
-                    log(f"    - {f}")
-            
-            if analysis["critical"]:
-                log(f"  [注意] Python核心文件: {len(analysis['critical'])} 个", "WARNING")
-                for f in analysis["critical"]:
-                    log(f"    - {f}")
-                log("  提示: 这些文件通常只在Python版本升级时需要更新", "WARNING")
-                log("  如果遇到问题，请手动复制这些文件", "WARNING")
-            
-            if analysis["unknown"]:
-                log(f"  [未知] 其他文件: {len(analysis['unknown'])} 个")
-                for f in analysis["unknown"]:
-                    log(f"    - {f}")
-            
-            log("-" * 40)
+        if sync_result.locked_files:
+            analysis = analyze_locked_files(sync_result.locked_files)
+            log_locked_files_summary(analysis)
 
             if _has_restart_blocking_locks(analysis):
                 log("检测到关键运行文件仍被占用，本次更新终止，避免重启后出现运行时损坏。", "ERROR")
@@ -577,7 +653,9 @@ def perform_update(args) -> bool:
         
         # 重启主程序
         log("步骤 3/3: 重启主程序...")
-        restart_main_program(local_dir, args.main_exe, args.resume, args.auto_mode)
+        if not restart_main_program(local_dir, args.main_exe, args.resume, args.auto_mode):
+            log("未找到可重启的主程序，本次更新终止。", "ERROR")
+            return False
         
         log("=" * 60)
         log("更新流程完成！")
