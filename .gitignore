@@ -30,7 +30,14 @@ update_log.txt
 # Test / cache / coverage
 # =========================
 .pytest_cache/
+.pytest_run_*/
+.pytest_stage_*/
+.probe_runtime/
+.smoke_runtime/
+.pytest_tmp/
 .coverage
+scripts/run_pending_review_smoke.py
+tests/test_registry_pending_and_window_consistency.py
 .coverage.*
 htmlcov/
 .ruff_cache/
