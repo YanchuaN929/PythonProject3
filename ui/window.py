@@ -29,6 +29,68 @@ except ImportError:
     set_db_status_indicator = None
 
 
+def _normalize_registry_status_text(status_text):
+    """去除 UI 装饰后的 Registry 状态文本。"""
+    clean_status = str(status_text or "")
+    for token in ("⏳", "📌", "❗", "（已延期）"):
+        clean_status = clean_status.replace(token, "")
+    return clean_status.strip()
+
+
+def _is_confirmed_registry_status(status_text):
+    return _normalize_registry_status_text(status_text) == "已审查"
+
+
+def _should_hide_registry_row_for_roles(status_text, current_user_roles):
+    """按当前角色决定该 Registry 状态是否应从列表中隐藏。"""
+    clean_status = _normalize_registry_status_text(status_text)
+    roles = [str(role or "").strip() for role in (current_user_roles or []) if str(role or "").strip()]
+
+    is_designer = "设计人员" in roles
+    is_superior = any(keyword in " ".join(roles) for keyword in ("所领导", "室主任", "接口工程师"))
+
+    if is_designer and not is_superior:
+        return clean_status in {
+            "",
+            "待审查",
+            "待指派人审查",
+            "待上级确认",
+            "待指派人确认",
+            "已审查",
+        }
+
+    return clean_status in {"", "已审查"}
+
+
+def _resolve_response_source_column(file_type, metadata_source_column, original_df=None, item_index=None):
+    """
+    统一解析回文写回所需的 source_column。
+
+    文件3优先使用处理阶段已计算好的 metadata；
+    仅当 metadata 缺失时，才回退到 original_df。
+    """
+    if file_type != 3:
+        return None
+
+    source_column = str(metadata_source_column or "").strip()
+    if source_column:
+        return source_column
+
+    if original_df is None or item_index is None:
+        return None
+    if '_source_column' not in original_df.columns:
+        return None
+    if item_index < 0 or item_index >= len(original_df):
+        return None
+
+    try:
+        value = original_df.iloc[item_index]['_source_column']
+    except Exception:
+        return None
+    value = str(value or "").strip()
+    return value or None
+
+
 def get_resource_path(relative_path):
     """获取资源文件的绝对路径，兼容开发环境和打包环境"""
     if hasattr(sys, '_MEIPASS'):
@@ -608,8 +670,6 @@ class WindowManager:
         try:
             from registry import hooks as registry_hooks
             from registry.util import extract_interface_id, extract_project_id
-            from registry.db import get_connection, close_connection_after_use
-            from registry.config import load_config
             
             # 根据tab_name确定file_type
             file_type_map = {
@@ -639,18 +699,23 @@ class WindowManager:
                             if pd.notna(time_val) and str(time_val).strip():
                                 interface_time = str(time_val).strip()
                         
-                        # 【修复Bug】遍历所有源文件查找匹配的任务
-                        # 因为我们不知道每行数据来自哪个文件，所以尝试所有文件
+                        row_source_file = ""
+                        try:
+                            if idx < len(filtered_df) and "source_file" in filtered_df.columns:
+                                row_source_file = str(filtered_df.iloc[idx].get("source_file", "") or "").strip()
+                        except Exception:
+                            row_source_file = ""
+
+                        candidate_source_files = [row_source_file] if row_source_file else list(source_files)
                         if interface_id and project_id:
-                            for source_file in source_files:
-                                from registry.util import make_task_id
+                            for source_file in candidate_source_files:
                                 task_key = {
                                     'file_type': file_type,
                                     'project_id': project_id,
                                     'interface_id': interface_id,
                                     'source_file': source_file,
                                     'row_index': row_index,
-                                    'interface_time': interface_time  # 新增：传递接口时间
+                                    'interface_time': interface_time
                                 }
                                 task_keys.append((idx, task_key))
                     except Exception:
@@ -662,49 +727,28 @@ class WindowManager:
                     # 【新增】传递当前用户角色列表
                     user_roles_str = ','.join(current_user_roles) if current_user_roles else ''
                     registry_status_map_raw = registry_hooks.get_display_status(task_keys_only, user_roles_str)
-                    
-                    # 【新增】查询确认状态（confirmed_at, confirmed_by）
-                    # 必须与 hooks.get_display_status 使用同一套 data_folder，否则会出现“状态查得到/confirmed 查不到”或反之。
-                    folder_path = ""
-                    try:
-                        folder_path = (getattr(self.app, "config", {}) or {}).get("folder_path", "") or ""
-                        folder_path = folder_path.strip()
-                    except Exception:
-                        folder_path = ""
-                    cfg = load_config(data_folder=folder_path or None)
-                    db_path = cfg.get('registry_db_path', 'registry/task_registry.db')
-                    wal = cfg.get('registry_wal', False)
-                    conn = get_connection(db_path, wal)
-                    try:
-                        current_user_name = getattr(self.app, 'user_name', '').strip()
-                        
-                        # 映射回display_df的索引（取第一个匹配的状态）
-                        for df_idx, task_key in task_keys:
-                            from registry.util import make_task_id
-                            tid = make_task_id(
-                                task_key['file_type'],
-                                task_key['project_id'],
-                                task_key['interface_id'],
-                                task_key['source_file'],
-                                task_key['row_index']
-                            )
-                            if tid in registry_status_map_raw and df_idx not in registry_status_map:
-                                # 只使用第一个匹配的状态（避免重复）
-                                registry_status_map[df_idx] = registry_status_map_raw[tid]
-                            
-                            # 查询confirmed_by
-                            if df_idx not in registry_confirmed_map:
-                                try:
-                                    row = conn.execute(
-                                        "SELECT confirmed_by FROM tasks WHERE id = ?",
-                                        (tid,)
-                                    ).fetchone()
-                                    if row and row[0]:
-                                        registry_confirmed_map[df_idx] = (row[0], current_user_name)
-                                except Exception:
-                                    pass
-                    finally:
-                        close_connection_after_use()
+                    current_user_name = getattr(self.app, 'user_name', '').strip()
+
+                    # 映射回display_df的索引（取第一个匹配的状态）
+                    for df_idx, task_key in task_keys:
+                        from registry.util import make_task_id
+                        tid = make_task_id(
+                            task_key['file_type'],
+                            task_key['project_id'],
+                            task_key['interface_id'],
+                            task_key['source_file'],
+                            task_key['row_index']
+                        )
+                        if tid in registry_status_map_raw and df_idx not in registry_status_map:
+                            registry_status_map[df_idx] = registry_status_map_raw[tid]
+
+                        if df_idx not in registry_confirmed_map:
+                            task_snapshot = registry_hooks.get_task_snapshot(task_key)
+                            if task_snapshot and task_snapshot.get("confirmed_by"):
+                                registry_confirmed_map[df_idx] = (
+                                    task_snapshot["confirmed_by"],
+                                    current_user_name,
+                                )
         except Exception as e:
             print(f"[Registry] 状态查询失败（不影响主流程）: {e}")
         
@@ -751,11 +795,13 @@ class WindowManager:
             if "状态" in display_df.columns:
                 display_df["状态"] = status_values
         
-        # 【新增】过滤掉已确认的任务（status_map中值为空字符串''）
+        # 【统一】按角色过滤 Registry 状态：
+        # - 设计人员隐藏待审查/已审查，写回后退出自己的主列表
+        # - 上级保留待审查，仅隐藏已审查
         if registry_status_map:
             exclude_indices = []
             for idx, status_text in registry_status_map.items():
-                if status_text == '':  # 空字符串表示已确认
+                if _should_hide_registry_row_for_roles(status_text, current_user_roles):
                     exclude_indices.append(idx)
             
             if exclude_indices:
@@ -1104,42 +1150,15 @@ class WindowManager:
                             'row_index': original_row
                         }
                         
-                        # 【关键修复】查询任务的当前状态，确保只能确认已完成的任务
-                        from registry.util import make_task_id
-                        from registry.db import get_connection, close_connection_after_use
-                        
-                        # 获取Registry配置
-                        try:
-                            cfg = registry_hooks._cfg()
-                            db_path = cfg.get('registry_db_path')
-                            wal = False
-                        except Exception:
-                            print("[Registry] 无法获取数据库配置")
-                            return
-                        
-                        # 查询任务状态
-                        tid = make_task_id(
-                            file_type, project_id, interface_id_clean,
-                            source_file, original_row
-                        )
-                        
-                        conn = get_connection(db_path, wal)
-                        try:
-                            cursor = conn.execute(
-                                "SELECT status, confirmed_at FROM tasks WHERE id = ?",
-                                (tid,)
-                            )
-                            task_row = cursor.fetchone()
-                        finally:
-                            close_connection_after_use()
-                        
-                        if not task_row:
+                        task_snapshot = registry_hooks.get_task_snapshot(task_key)
+                        if not task_snapshot:
                             print(f"[Registry] 警告：找不到任务记录 {interface_id_clean}")
                             import tkinter.messagebox as messagebox
                             messagebox.showwarning("提示", f"找不到任务记录：{interface_id_clean}")
                             return
-                        
-                        task_status, confirmed_at = task_row
+
+                        task_status = task_snapshot.get("status")
+                        confirmed_at = task_snapshot.get("confirmed_at")
                         
                         if is_currently_checked:
                             # 当前已勾选 → 取消确认
@@ -1319,10 +1338,11 @@ class WindowManager:
                     }
                 
                 # 从元数据提取信息
+                item_index = int(metadata.get('original_index', viewer.index(item_id)))
                 original_row = metadata['original_row']
                 source_file = metadata['source_file']
                 project_id = str(metadata['project_id'])
-                source_column = metadata['source_column']
+                source_column = metadata.get('source_column')
                 
                 # 获取行数据
                 item_values = viewer.item(item_id, "values")
@@ -1363,14 +1383,13 @@ class WindowManager:
                     messagebox.showwarning("警告", "无法获取当前用户姓名", parent=viewer)
                     return
                 
-                # 文件3需要获取source_column
-                source_column = None
-                if file_type == 3 and '_source_column' in original_df.columns:
-                    try:
-                        if item_index < len(original_df):
-                            source_column = original_df.iloc[item_index]['_source_column']
-                    except Exception:
-                        pass
+                # 文件3需要根据处理阶段已算好的 metadata 传递 source_column。
+                source_column = _resolve_response_source_column(
+                    file_type,
+                    source_column,
+                    original_df=original_df,
+                    item_index=item_index,
+                )
                 
                 # 显示输入对话框
                 from ui.input_handler import InterfaceInputDialog

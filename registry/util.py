@@ -120,7 +120,7 @@ def extract_project_id(df_row: pd.Series, file_type: int) -> str:
         project_id = str(df_row["项目号"]).strip()
     elif "source_file" in df_row.index:
         # 尝试从source_file列提取项目号
-        source_file = str(df_row["source_file"])
+        source_file = os.path.basename(str(df_row["source_file"] or ""))
         import re
         match = re.search(r'(\d{4})', source_file)
         project_id = match.group(1) if match else ""

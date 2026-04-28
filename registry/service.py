@@ -41,6 +41,10 @@ def find_task_by_business_id(
     try:
         preferred_columns = [
             "id",
+            "business_id",
+            "file_type",
+            "project_id",
+            "interface_id",
             "source_file",
             "row_index",
             "interface_time",
@@ -53,6 +57,7 @@ def find_task_by_business_id(
             "completed_at",
             "completed_by",
             "confirmed_at",
+            "last_seen_at",
             "ignored",
             "ignored_at",
             "ignored_by",
@@ -88,10 +93,12 @@ def find_task_by_business_id(
                     "responsible_person": None,
                     "assigned_by": None,
                     "assigned_at": None,
+                    "role": "",
                     "confirmed_by": None,
                     "completed_at": None,
                     "completed_by": None,
                     "confirmed_at": None,
+                    "last_seen_at": None,
                     "ignored": 0,
                     "ignored_at": None,
                     "ignored_by": None,
@@ -100,6 +107,139 @@ def find_task_by_business_id(
                 },
             )
         return None
+    finally:
+        if owns_conn:
+            close_connection_after_use()
+
+
+def _get_task_lookup_columns(conn) -> List[str]:
+    preferred_columns = [
+        "id",
+        "business_id",
+        "file_type",
+        "project_id",
+        "interface_id",
+        "source_file",
+        "row_index",
+        "interface_time",
+        "status",
+        "display_status",
+        "assigned_by",
+        "assigned_at",
+        "role",
+        "confirmed_at",
+        "confirmed_by",
+        "responsible_person",
+        "completed_at",
+        "completed_by",
+        "response_number",
+        "last_seen_at",
+        "ignored",
+    ]
+    return select_available_columns(conn, "tasks", preferred_columns)
+
+
+def _task_row_to_dict(row, selected_columns) -> Dict[str, Any]:
+    return row_to_dict(
+        row,
+        selected_columns,
+        defaults={
+            "business_id": None,
+            "file_type": None,
+            "project_id": None,
+            "interface_id": None,
+            "source_file": None,
+            "row_index": None,
+            "interface_time": None,
+            "status": "open",
+            "display_status": None,
+            "assigned_by": None,
+            "assigned_at": None,
+            "role": "",
+            "confirmed_at": None,
+            "confirmed_by": None,
+            "responsible_person": None,
+            "completed_at": None,
+            "completed_by": None,
+            "response_number": None,
+            "last_seen_at": None,
+            "ignored": 0,
+        },
+    )
+
+
+def _fetch_task_by_exact_id(conn, selected_columns: List[str], task_id: str) -> Optional[Dict[str, Any]]:
+    if not selected_columns:
+        return None
+    row = conn.execute(
+        f"""
+        SELECT {", ".join(selected_columns)}
+        FROM tasks
+        WHERE id = ?
+        """,
+        (task_id,),
+    ).fetchone()
+    if not row:
+        return None
+    return _task_row_to_dict(row, selected_columns)
+
+
+def resolve_task_record(
+    db_path: str,
+    wal: bool,
+    key: Dict[str, Any],
+    conn=None,
+) -> Optional[Dict[str, Any]]:
+    """
+    统一解析当前任务记录。
+
+    口径：
+    1. 先查精确 task_id
+    2. 若未命中，或命中的是旧/已归档记录，则回退到最新非归档 business_id
+    """
+    owns_conn = conn is None
+    conn = conn or get_connection(db_path, wal)
+    try:
+        selected_columns = _get_task_lookup_columns(conn)
+        if not selected_columns:
+            return None
+
+        exact_task_id = make_task_id(
+            key['file_type'],
+            key['project_id'],
+            key['interface_id'],
+            key['source_file'],
+            key['row_index'],
+        )
+        exact_task = _fetch_task_by_exact_id(conn, selected_columns, exact_task_id)
+        latest_task = find_task_by_business_id(
+            db_path,
+            wal,
+            key['file_type'],
+            key['project_id'],
+            key['interface_id'],
+            conn=conn,
+        )
+
+        if latest_task is None:
+            return exact_task
+        if exact_task is None:
+            return latest_task
+        if exact_task.get("id") == latest_task.get("id"):
+            return latest_task
+
+        exact_status = str(exact_task.get("status") or "").strip().lower()
+        exact_last_seen = str(exact_task.get("last_seen_at") or "").strip()
+        latest_last_seen = str(latest_task.get("last_seen_at") or "").strip()
+
+        if exact_status == Status.ARCHIVED:
+            return latest_task
+        if latest_last_seen and not exact_last_seen:
+            return latest_task
+        if latest_last_seen and exact_last_seen and latest_last_seen > exact_last_seen:
+            return latest_task
+
+        return exact_task
     finally:
         if owns_conn:
             close_connection_after_use()
@@ -592,25 +732,14 @@ def mark_completed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, 
     owns_conn = conn is None
     conn = conn or get_connection(db_path, wal)
     
-    # 【版本化修复】使用business_id查找最新的非归档任务
-    business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
-    
-    cursor = conn.execute("""
-        SELECT id FROM tasks
-        WHERE business_id = ?
-          AND status != 'archived'
-        ORDER BY last_seen_at DESC
-        LIMIT 1
-    """, (business_id,))
-    
-    row = cursor.fetchone()
-    if not row:
+    task = resolve_task_record(db_path, wal, key, conn=conn)
+    if not task:
         print(f"[Registry] mark_completed警告: 找不到非归档任务 {key['interface_id']}")
         if owns_conn:
             close_connection_after_use()
         return
-    
-    tid = row[0]
+
+    tid = task["id"]
     
     conn.execute(
         "UPDATE tasks SET status = ?, completed_at = ? WHERE id = ?",
@@ -636,27 +765,14 @@ def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, 
     owns_conn = conn is None
     conn = conn or get_connection(db_path, wal)
     
-    # 【版本化修复】使用business_id查找最新的非归档任务，而不是使用计算的tid
-    # 因为归档后旧记录的id已被修改，直接用tid可能找不到记录
-    business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
-    
-    # 查找最新的非归档任务
-    cursor = conn.execute("""
-        SELECT id FROM tasks
-        WHERE business_id = ?
-          AND status != 'archived'
-        ORDER BY last_seen_at DESC
-        LIMIT 1
-    """, (business_id,))
-    
-    row = cursor.fetchone()
-    if not row:
+    task = resolve_task_record(db_path, wal, key, conn=conn)
+    if not task:
         print(f"[Registry] mark_confirmed警告: 找不到非归档任务 {key['interface_id']}")
         if owns_conn:
             close_connection_after_use()
         return
-    
-    tid = row[0]
+
+    tid = task["id"]
     
     # 【状态提醒】确认时设置confirmed_by，并更新display_status为"已审查"
     # 【修复】确认后，display_status应该反映真实状态"已审查"
@@ -681,25 +797,14 @@ def mark_unconfirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime
     owns_conn = conn is None
     conn = conn or get_connection(db_path, wal)
     
-    # 【版本化修复】使用business_id查找最新的非归档任务
-    business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
-    
-    cursor = conn.execute("""
-        SELECT id FROM tasks
-        WHERE business_id = ?
-          AND status != 'archived'
-        ORDER BY last_seen_at DESC
-        LIMIT 1
-    """, (business_id,))
-    
-    row = cursor.fetchone()
-    if not row:
+    task = resolve_task_record(db_path, wal, key, conn=conn)
+    if not task:
         print(f"[Registry] mark_unconfirmed警告: 找不到非归档任务 {key['interface_id']}")
         if owns_conn:
             close_connection_after_use()
         return
-    
-    tid = row[0]
+
+    tid = task["id"]
     
     # 取消确认：清除confirmed_at和confirmed_by，status改回COMPLETED，display_status改回"待审查"
     conn.execute(
@@ -913,7 +1018,17 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
         selected_columns = select_available_columns(
             conn,
             "tasks",
-            ["status", "display_status", "assigned_by", "role", "confirmed_at", "responsible_person", "ignored"],
+            [
+                "status",
+                "display_status",
+                "assigned_by",
+                "role",
+                "confirmed_at",
+                "responsible_person",
+                "ignored",
+                "confirmed_by",
+                "last_seen_at",
+            ],
         )
         if not selected_columns:
             return {}
@@ -931,34 +1046,11 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
             interface_time = key.get('interface_time', '')
             is_overdue = is_date_overdue(interface_time) if interface_time and interface_time != '-' else False
             
-            # 查询任务信息
-            cursor = conn.execute(
-                f"""
-                SELECT {", ".join(selected_columns)}
-                FROM tasks
-                WHERE id = ?
-                """,
-                (tid,)
-            )
-            row = cursor.fetchone()
-            
-            if not row:
+            task = resolve_task_record(db_path, wal, key, conn=conn)
+            if not task:
                 # 任务不存在，不显示状态
                 continue
-            
-            task = row_to_dict(
-                row,
-                selected_columns,
-                defaults={
-                    "status": "open",
-                    "display_status": None,
-                    "assigned_by": None,
-                    "role": "",
-                    "confirmed_at": None,
-                    "responsible_person": None,
-                    "ignored": 0,
-                },
-            )
+
             display_status = task["display_status"]
             role = task["role"]
             confirmed_at = task["confirmed_at"]
@@ -1790,4 +1882,3 @@ def find_tasks_for_force_assign(
         return []
     finally:
         close_connection_after_use()
-

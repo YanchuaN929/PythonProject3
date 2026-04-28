@@ -18,7 +18,13 @@ try:
 except ImportError:
     def get_superior_keywords():
         return ['一室主任', '二室主任', '建筑总图室主任', '所长', '所领导', '接口工程师']
-from .service import write_event, mark_completed, mark_confirmed, batch_upsert_tasks
+from .service import (
+    write_event,
+    mark_completed,
+    mark_confirmed,
+    batch_upsert_tasks,
+    resolve_task_record,
+)
 from .db import close_connection, close_connection_after_use, MaintenanceModeError, _diag_log
 from .models import EventType
 from .util import (
@@ -278,6 +284,29 @@ def get_display_status(task_keys: List[Dict[str, Any]], current_user_roles_str: 
         import traceback
         traceback.print_exc()
         return {}
+
+
+def get_task_snapshot(key: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """统一读取任务快照，先查精确 task_id，再回退到最新 business 记录。"""
+    try:
+        _ensure_data_folder_from_path(key.get("source_file"))
+        cfg = _cfg()
+        if not _enabled(cfg):
+            return None
+
+        db_path = cfg['registry_db_path']
+        wal = bool(cfg.get('registry_wal', False))
+        return resolve_task_record(db_path, wal, key)
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
+    except Exception as e:
+        print(f"[Registry] get_task_snapshot 澶辫触: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        close_connection_after_use()
+    return None
+
 
 def _cfg():
     """加载配置（内部辅助函数）"""
@@ -635,28 +664,14 @@ def on_response_written(
         }
         
         def _do_response_write():
-            from .util import make_business_id, make_task_id
             from .db import get_connection
             from .service import upsert_task
 
             conn = get_connection(db_path, wal)
             try:
-                # 【状态提醒】查询任务是否有指派人
-                tid = make_task_id(
-                    key['file_type'],
-                    key['project_id'],
-                    key['interface_id'],
-                    key['source_file'],
-                    key['row_index']
-                )
-                try:
-                    cursor = conn.execute("SELECT assigned_by FROM tasks WHERE id=?", (tid,))
-                    task_row = cursor.fetchone()
-                    has_assignor = task_row and task_row[0]  # 是否有指派人
-                except Exception as e:
-                    # 如果表结构不存在或查询失败，假设没有指派人
-                    print(f"[Registry] 查询指派人失败（可能是旧数据库）: {e}")
-                    has_assignor = False
+                # 【统一解析】先查精确 task_id，再回退到最新 business 记录
+                task_snapshot = resolve_task_record(db_path, wal, key, conn=conn)
+                has_assignor = bool(task_snapshot and task_snapshot.get('assigned_by'))
 
                 # 确定display_status
                 if has_assignor:
@@ -669,17 +684,8 @@ def on_response_written(
                 # 【修复】查询旧任务的interface_time，避免误判为时间变化
                 # 使用business_id查询，确保能找到同一接口的历史任务（即使row_index变化）
                 old_interface_time = ''
-                try:
-                    business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
-                    cursor = conn.execute(
-                        "SELECT interface_time FROM tasks WHERE business_id=? ORDER BY last_seen_at DESC LIMIT 1",
-                        (business_id,)
-                    )
-                    row = cursor.fetchone()
-                    if row and row[0]:
-                        old_interface_time = row[0]
-                except Exception as e:
-                    print(f"[Registry] 查询旧interface_time失败: {e}")
+                if task_snapshot and task_snapshot.get('interface_time'):
+                    old_interface_time = task_snapshot['interface_time']
 
                 # 【关键】判断是否为上级角色（自动确认逻辑）
                 superior_roles = get_superior_keywords()
@@ -1065,4 +1071,3 @@ def shutdown():
         
     except Exception as e:
         print(f"[Registry] shutdown 失败: {e}")
-

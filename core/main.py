@@ -192,6 +192,164 @@ def _filter_rows_by_highest_version(df, file_type, rows, version_col_index):
     return keep_rows
 
 
+def _extract_file_project_id(file_path):
+    """从文件名提取四位项目号，失败时返回空字符串。"""
+    filename = os.path.basename(file_path or "")
+    match = re.search(r'(\d{4})', filename)
+    return match.group(1) if match else ""
+
+
+def _load_latest_registry_pending_tasks(file_type, db_path, wal):
+    """
+    读取指定 file_type 在 Registry 中“最新一条”的待审查任务。
+
+    统一口径：
+    - 仅取非 archived、未 ignored 的记录
+    - 按 business 维度（file_type + project_id + interface_id）只保留最新一条
+    - 仅返回 display_status 为待审查 / 待指派人审查 的记录
+    """
+    from registry.db import get_connection, close_connection_after_use
+
+    pending_tasks = []
+    if not db_path or not os.path.exists(db_path):
+        return pending_tasks
+
+    conn = get_connection(db_path, wal)
+    try:
+        cursor = conn.execute("""
+            SELECT interface_id, project_id, display_status, status, last_seen_at
+            FROM tasks
+            WHERE file_type = ?
+              AND (ignored = 0 OR ignored IS NULL)
+              AND status != 'archived'
+            ORDER BY last_seen_at DESC, rowid DESC
+        """, (file_type,))
+        rows = cursor.fetchall()
+    finally:
+        close_connection_after_use()
+
+    latest_registry_tasks = {}
+    for interface_id, project_id, display_status, status, last_seen_at in rows:
+        key = (str(interface_id or "").strip(), str(project_id or "").strip())
+        if key in latest_registry_tasks:
+            continue
+        latest_registry_tasks[key] = (
+            display_status,
+            status,
+            last_seen_at,
+        )
+
+    for (interface_id, project_id), (display_status, status, last_seen_at) in latest_registry_tasks.items():
+        if display_status in ('待审查', '待指派人审查'):
+            pending_tasks.append(
+                (interface_id, project_id, display_status, status, last_seen_at)
+            )
+
+    return pending_tasks
+
+
+def _build_registry_excel_index(df, file_type, file_path, allow_interface_only_fallback=False):
+    """为 Registry 加回逻辑建立当前 Excel 的接口索引。"""
+    from registry.util import extract_interface_id, extract_project_id
+
+    file_project_id = _extract_file_project_id(file_path)
+    excel_index = {}
+    excel_index_by_iface = {}
+
+    for idx in range(len(df)):
+        if idx == 0:
+            continue
+        try:
+            row_data = df.iloc[idx]
+            interface_id = extract_interface_id(row_data, file_type)
+            if not interface_id:
+                continue
+
+            row_project_id = extract_project_id(row_data, file_type) or ""
+            project_id = row_project_id or file_project_id
+            if project_id:
+                key = (interface_id, project_id)
+                if key not in excel_index:
+                    excel_index[key] = []
+                excel_index[key].append(idx)
+            elif allow_interface_only_fallback:
+                if interface_id not in excel_index_by_iface:
+                    excel_index_by_iface[interface_id] = []
+                excel_index_by_iface[interface_id].append(idx)
+        except Exception:
+            continue
+
+    return file_project_id, excel_index, excel_index_by_iface
+
+
+def _merge_registry_pending_rows(
+    file_type,
+    file_path,
+    df,
+    final_rows,
+    allowed_rows,
+    allow_interface_only_fallback=False,
+):
+    """
+    将 Registry 中仍待审查的任务统一加回当前处理结果。
+
+    参数说明：
+    - allowed_rows: 各文件类型自己的业务基筛条件
+
+    说明：
+    - 这里统一负责“按最新 business 记录找回待审查任务”
+    - “设计人员写回后应退出主列表、上级仍可见待审查”的角色差异，
+      交给显示层按 Registry 状态过滤，避免在原始处理层直接切断上级审查链路
+    """
+    from registry.hooks import _cfg
+
+    pending_rows = set()
+
+    cfg = _cfg()
+    db_path = cfg.get('registry_db_path')
+    wal = bool(cfg.get("registry_wal", False))
+    registry_tasks = _load_latest_registry_pending_tasks(file_type, db_path, wal)
+    if not registry_tasks:
+        return final_rows, pending_rows
+
+    file_project_id, excel_index, excel_index_by_iface = _build_registry_excel_index(
+        df,
+        file_type,
+        file_path,
+        allow_interface_only_fallback=allow_interface_only_fallback,
+    )
+
+    print(f"[Registry] 文件类型{file_type}最新待审查任务数: {len(registry_tasks)}")
+    print(
+        f"[Registry] 文件类型{file_type} Excel索引建立完成"
+        f"(项目={file_project_id or 'N/A'})，唯一接口{len(excel_index)}个"
+    )
+
+    for reg_interface_id, reg_project_id, reg_display_status, _reg_status, _reg_last_seen_at in registry_tasks:
+        key = (reg_interface_id, reg_project_id)
+        matched_indices = excel_index.get(key, []) or []
+        if not matched_indices and allow_interface_only_fallback and not file_project_id:
+            matched_indices = excel_index_by_iface.get(reg_interface_id, []) or []
+
+        for idx in matched_indices:
+            if idx not in allowed_rows:
+                continue
+            if idx in final_rows:
+                continue
+            pending_rows.add(idx)
+            print(
+                f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx + 2}, 状态:{reg_display_status}"
+            )
+
+    if pending_rows:
+        final_rows = final_rows | pending_rows
+        print(f"[Registry] 共加回{len(pending_rows)}条待审查任务")
+    else:
+        print("[Registry] 未找到需加回的待审查任务")
+
+    return final_rows, pending_rows
+
+
 def process_excel_files(excel_files, current_datetime):
     """
     处理Excel文件的主函数
@@ -550,107 +708,22 @@ def process_target_file(file_path, current_datetime):
     
     print(f"筛选统计 - P1:{len(process1_rows)}行 P2:{len(process2_rows)}行 P3:{len(process3_rows)}行 P4(排除):{len(process4_rows)}行 → 结果:{len(final_rows)}行")
     
-    # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
+    # 【统一】Registry 查询：只按最新 business 记录加回待审查任务，角色可见性留给显示层处理
     print("\n========== [Registry] 开始查询待审查任务 ==========")
     print(f"[Registry] 总行数: {len(df)}, 原始筛选结果: {len(final_rows)}行")
-    
     try:
-        from registry.util import extract_interface_id
-        from registry.db import get_connection, close_connection_after_use
-        
-        # 【修复】直接查询数据库中有display_status的任务，按business_id匹配
-        # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
-        from registry.hooks import _cfg
-        cfg = _cfg()
-        db_path = cfg.get('registry_db_path')
-        
-        if db_path and os.path.exists(db_path):
-            wal = bool(cfg.get("registry_wal", False))
-            conn = get_connection(db_path, wal)
-            try:
-                # 【方案A】只查询"待审查"状态的任务（设计人员已填写回文单号，等待确认）
-                # 不加回"待完成"或"请指派"状态，这些应该依赖Excel筛选条件
-                cursor = conn.execute("""
-                    SELECT interface_id, project_id, display_status, row_index, source_file
-                    FROM tasks
-                    WHERE file_type = 1
-                      AND display_status IN ('待审查', '待指派人审查')
-                      AND (ignored = 0 OR ignored IS NULL)
-                      AND status != 'archived'
-                """)
-                registry_tasks = cursor.fetchall()
-            finally:
-                close_connection_after_use()
-            print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个有状态的任务（包括待完成、待审查等）")
-            
-            # 在当前Excel中查找这些接口号
-            pending_rows = set()
-            
-            # 【调试】输出前3个数据库任务的详细信息
-            if len(registry_tasks) > 0:
-                print("[Registry调试] 数据库任务示例（前3个）:")
-                for i, task in enumerate(registry_tasks[:3]):
-                    print(f"  {i+1}. 接口={task[0][:40]}, 项目={task[1]}, display_status={task[2]}")
-            
-            # 【优化】先建立Excel接口号索引，提升性能
-            # 【修复】项目号从文件名提取，不从df_row中提取
-            filename = os.path.basename(file_path)
-            match = re.search(r'(\d{4})', filename)
-            file_project_id = match.group(1) if match else ""
-            
-            excel_index = {}  # {(interface_id, project_id): [idx1, idx2, ...]}
-            for idx in range(len(df)):
-                if idx == 0:
-                    continue
-                try:
-                    row_data = df.iloc[idx]
-                    df_interface_id = extract_interface_id(row_data, 1)
-                    
-                    if df_interface_id and file_project_id:
-                        key = (df_interface_id, file_project_id)
-                        if key not in excel_index:
-                            excel_index[key] = []
-                        excel_index[key].append(idx)
-                except Exception:
-                    continue
-            
-            print(f"[Registry] Excel索引建立完成（项目{file_project_id}），共{len(excel_index)}个唯一接口")
-            
-            # 【修复】按索引查找，避免双重循环
-            # 【方案A】加回时必须通过科室筛选（process1_rows）
-            for reg_interface_id, reg_project_id, reg_display_status, reg_row_index, _ in registry_tasks:
-                key = (reg_interface_id, reg_project_id)
-                
-                if key in excel_index:
-                    # 找到匹配的行
-                    matched_indices = excel_index[key]
-                    for idx in matched_indices:
-                        # 【关键】必须通过科室筛选
-                        if idx not in process1_rows:
-                            continue
-                        
-                        if idx not in final_rows:
-                            pending_rows.add(idx)
-                            print(f"[Registry] ✓ 发现待审查任务：第{idx+2}行 接口{reg_interface_id[:30]} 状态:{reg_display_status}")
-                        else:
-                            # 已经在final_rows中（可能M列实际为空）
-                            print(f"[Registry提示] 接口{reg_interface_id[:30]}已在原始筛选结果中，跳过")
-            
-            print(f"\n[Registry] 统计: 数据库中{len(registry_tasks)}个待审查，在Excel中匹配到{len(pending_rows)}行")
-        
-            if pending_rows:
-                final_rows = final_rows | pending_rows
-                print(f"[Registry] ✓ 合并{len(pending_rows)}条待审查任务到结果")
-            else:
-                print("[Registry] 未找到待审查任务")
-        else:
-            print("[Registry] 数据库不存在或未配置，跳过待审查任务查询")
-        
+        final_rows, _ = _merge_registry_pending_rows(
+            file_type=1,
+            file_path=file_path,
+            df=df,
+            final_rows=final_rows,
+            allowed_rows=process1_rows,
+        )
     except Exception as e:
         print(f"[Registry] ❌ 查询待审查任务失败（不影响主流程）: {e}")
         import traceback
         traceback.print_exc()
-    
+
     print("========== [Registry] 查询完成 ==========\n")
     
     # 记录到监控器
@@ -1268,96 +1341,16 @@ def process_target_file2(file_path, current_datetime, project_id=None):
     
     print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
     
-    # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
+    # 【统一】Registry 查询：沿用最新 business 记录口径，加回待审查任务
     print("\n========== [Registry] 开始查询待审查任务（文件类型2） ==========")
     try:
-        from registry.util import extract_interface_id
-        from registry.db import get_connection, close_connection_after_use
-        
-        # 【修复】直接查询数据库中有display_status的任务，按business_id匹配
-        # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
-        from registry.hooks import _cfg
-        cfg = _cfg()
-        db_path = cfg.get('registry_db_path')
-        
-        pending_rows = set()
-        
-        if db_path and os.path.exists(db_path):
-            wal = bool(cfg.get("registry_wal", False))
-            conn = get_connection(db_path, wal)
-            try:
-                # 先拉取该文件类型所有候选状态，再按 interface_id + project_id
-                # 只保留“最新一条”状态，避免旧待审查记录在最新已归档后继续误命中。
-                cursor = conn.execute("""
-                    SELECT interface_id, project_id, display_status, status, last_seen_at
-                    FROM tasks
-                    WHERE file_type = 2
-                      AND (ignored = 0 OR ignored IS NULL)
-                    ORDER BY last_seen_at DESC
-                """)
-                raw_registry_tasks = cursor.fetchall()
-            finally:
-                close_connection_after_use()
-            latest_registry_tasks = {}
-            for reg_interface_id, reg_project_id, reg_display_status, reg_status, reg_last_seen_at in raw_registry_tasks:
-                key = (reg_interface_id, reg_project_id)
-                if key in latest_registry_tasks:
-                    continue
-                latest_registry_tasks[key] = (
-                    reg_display_status,
-                    reg_status,
-                    reg_last_seen_at,
-                )
-
-            registry_tasks = [
-                (reg_interface_id, reg_project_id, reg_display_status)
-                for (reg_interface_id, reg_project_id), (reg_display_status, reg_status, _reg_last_seen_at) in latest_registry_tasks.items()
-                if reg_display_status in ('待审查', '待指派人审查')
-                and reg_status != 'archived'
-            ]
-            print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个最新待审查任务")
-            
-            # 【优化】从文件名提取项目号，建立Excel索引
-            filename = os.path.basename(file_path)
-            match = re.search(r'(\d{4})', filename)
-            file_project_id = match.group(1) if match else project_id
-            
-            excel_index = {}
-            for idx in range(len(df)):
-                if idx == 0:
-                    continue
-                try:
-                    row_data = df.iloc[idx]
-                    df_interface_id = extract_interface_id(row_data, 2)
-                    if df_interface_id and file_project_id:
-                        key = (df_interface_id, file_project_id)
-                        if key not in excel_index:
-                            excel_index[key] = []
-                        excel_index[key].append(idx)
-                except Exception:
-                    continue
-            
-            # 【方案A】按索引查找，必须通过科室筛选
-            for reg_interface_id, reg_project_id, reg_display_status in registry_tasks:
-                key = (reg_interface_id, reg_project_id)
-                if key in excel_index:
-                    matched_indices = excel_index[key]
-                    for idx in matched_indices:
-                        # 【关键】必须通过科室筛选
-                        if idx not in process1_rows:
-                            continue
-                        # 【关键修复】当前Excel若已填写回复日期，则绝不能因旧Registry状态被加回。
-                        if idx not in process4_rows:
-                            continue
-                        
-                        if idx not in final_rows:
-                            pending_rows.add(idx)
-                            print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
-        
-        if pending_rows:
-            final_rows = final_rows | pending_rows
-            print(f"[Registry] 共加回{len(pending_rows)}条待审查任务")
-        
+        final_rows, _ = _merge_registry_pending_rows(
+            file_type=2,
+            file_path=file_path,
+            df=df,
+            final_rows=final_rows,
+            allowed_rows=process1_rows,
+        )
     except Exception as e:
         print(f"[Registry] 查询待确认任务失败（不影响主流程）: {e}")
     
@@ -1776,77 +1769,20 @@ def process_target_file3(file_path, current_datetime):
     
     print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
     
-    # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
+    # 【统一】Registry 查询：待审查加回统一按最新 business 记录处理
     print("\n========== [Registry] 开始查询待审查任务（文件类型3） ==========")
     try:
-        from registry.util import extract_interface_id
-        from registry.db import get_connection, close_connection_after_use
-        
-        # 【修复】直接查询数据库中有display_status的任务，按business_id匹配
-        # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
-        from registry.hooks import _cfg
-        cfg = _cfg()
-        db_path = cfg.get('registry_db_path')
-        
-        pending_rows = set()
-        
-        if db_path and os.path.exists(db_path):
-            conn = get_connection(db_path, True)
-            try:
-                # 【方案A】只查询"待审查"状态的任务
-                cursor = conn.execute("""
-                    SELECT interface_id, project_id, display_status
-                    FROM tasks
-                    WHERE file_type = 3
-                      AND display_status IN ('待审查', '待指派人审查')
-                      AND (ignored = 0 OR ignored IS NULL)
-                      AND status != 'archived'
-                """)
-                registry_tasks = cursor.fetchall()
-            finally:
-                close_connection_after_use()
-            print(f"[Registry] 数据库中该文件类型有{len(registry_tasks)}个有状态的任务")
-            
-            # 【优化】从文件名提取项目号，建立Excel索引
-            filename = os.path.basename(file_path)
-            match = re.search(r'(\d{4})', filename)
-            file_project_id = match.group(1) if match else ""
-            
-            excel_index = {}
-            for idx in range(len(df)):
-                if idx == 0:
-                    continue
-                try:
-                    row_data = df.iloc[idx]
-                    df_interface_id = extract_interface_id(row_data, 3)
-                    if df_interface_id and file_project_id:
-                        key = (df_interface_id, file_project_id)
-                        if key not in excel_index:
-                            excel_index[key] = []
-                        excel_index[key].append(idx)
-                except Exception:
-                    continue
-            
-            # 【方案A】按索引查找：
-            # - 必须通过科室筛选(process1_rows & process2_rows)
-            # - 必须通过时间窗口筛选(process3_rows 或 process4_rows)，避免把远未来(如2028)的数据加回
-            base_filter = process1_rows & process2_rows & (process3_rows | process4_rows)
-            for reg_interface_id, reg_project_id, reg_display_status in registry_tasks:
-                key = (reg_interface_id, reg_project_id)
-                if key in excel_index:
-                    for idx in excel_index[key]:
-                        # 【关键】必须通过科室筛选
-                        if idx not in base_filter:
-                            continue
-                        
-                        if idx not in final_rows:
-                            pending_rows.add(idx)
-                            print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
-        
-        if pending_rows:
-            final_rows = final_rows | pending_rows
-            print(f"[Registry] 共加回{len(pending_rows)}条待审查任务")
-        
+        source_m_rows = process1_rows & process2_rows & process3_rows
+        source_l_rows = process1_rows & process2_rows & process4_rows
+        base_filter = process1_rows & process2_rows & (process3_rows | process4_rows)
+
+        final_rows, _ = _merge_registry_pending_rows(
+            file_type=3,
+            file_path=file_path,
+            df=df,
+            final_rows=final_rows,
+            allowed_rows=base_filter,
+        )
     except Exception as e:
         print(f"[Registry] 查询待审查任务失败: {e}")
         import traceback
@@ -2659,91 +2595,16 @@ def process_target_file4(file_path, current_datetime):
     
     print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
     
-    # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
+    # 【统一】Registry 查询：待审查加回统一按最新 business 记录处理
     try:
-        from registry.util import extract_interface_id, extract_project_id
-        from registry.db import get_connection, close_connection_after_use
-        from registry.hooks import _cfg
-        
-        # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
-        cfg = _cfg()
-        db_path = cfg.get('registry_db_path')
-        pending_rows = set()
-        
-        if db_path and os.path.exists(db_path):
-            conn = get_connection(db_path, True)
-            try:
-                # 【方案A】只查询"待审查"状态的任务
-                cursor = conn.execute("""
-                    SELECT interface_id, project_id, display_status
-                    FROM tasks
-                    WHERE file_type = 4
-                      AND display_status IN ('待审查', '待指派人审查')
-                      AND (ignored = 0 OR ignored IS NULL)
-                      AND status != 'archived'
-                """)
-                registry_tasks = cursor.fetchall()
-            finally:
-                close_connection_after_use()
-            
-            # Excel索引优化：
-            # - 优先从行数据提取项目号（更稳，测试文件名可能不含4位项目号）
-            # - 文件名项目号仅作为兜底
-            # - 若仍取不到项目号，则退化为按 interface_id 匹配（避免"历史待审查但主界面加不回"）
-            filename = os.path.basename(file_path)
-            match = re.search(r'(\d{4})', filename)
-            file_project_id = match.group(1) if match else ""
-            
-            excel_index = {}          # {(interface_id, project_id): [idx...]}
-            excel_index_by_iface = {} # {interface_id: [idx...]} 当无法得到project_id时使用
-            for idx in range(len(df)):
-                if idx == 0:
-                    continue
-                try:
-                    row_data = df.iloc[idx]
-                    df_interface_id = extract_interface_id(row_data, 4)
-                    if not df_interface_id:
-                        continue
-                    row_project_id = extract_project_id(row_data, 4) or ""
-                    pid = row_project_id or file_project_id
-                    if pid:
-                        key = (df_interface_id, pid)
-                        if key not in excel_index:
-                            excel_index[key] = []
-                        excel_index[key].append(idx)
-                    else:
-                        if df_interface_id not in excel_index_by_iface:
-                            excel_index_by_iface[df_interface_id] = []
-                        excel_index_by_iface[df_interface_id].append(idx)
-                except Exception:
-                    continue
-            
-            # 【待审查加回】上级审查优先：不受时间窗口影响
-            # 只要求通过科室/类别筛选(process1_rows & process2_rows)，避免把无关科室混入。
-            # 注意：这里不再强制要求process3_rows（时间窗口），否则"已待审查"会被接口工程师看不到。
-            base_filter = process1_rows & process2_rows
-            for reg_interface_id, reg_project_id, _ in registry_tasks:
-                key = (reg_interface_id, reg_project_id)
-                matched = []
-                if key in excel_index:
-                    matched = excel_index.get(key) or []
-                elif not file_project_id:
-                    # 文件名未能提取项目号时，退化为按接口号匹配
-                    matched = excel_index_by_iface.get(reg_interface_id, []) or []
-                if matched:
-                    for idx in matched:
-                        # 【关键】必须通过科室筛选
-                        if idx not in base_filter:
-                            continue
-                        
-                        if idx not in final_rows:
-                            pending_rows.add(idx)
-                            print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
-        
-        if pending_rows:
-            final_rows = final_rows | pending_rows
-            print(f"[Registry] 共加回{len(pending_rows)}条待审查任务")
-        
+        final_rows, _ = _merge_registry_pending_rows(
+            file_type=4,
+            file_path=file_path,
+            df=df,
+            final_rows=final_rows,
+            allowed_rows=process1_rows & process2_rows,
+            allow_interface_only_fallback=True,
+        )
     except Exception as e:
         print(f"[Registry] 查询待审查任务失败: {e}")
     
@@ -3372,70 +3233,15 @@ def process_target_file5(file_path, current_datetime):
     
     print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
     
-    # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
+    # 【统一】Registry 查询：待审查加回统一按最新 business 记录处理
     try:
-        from registry.util import extract_interface_id
-        from registry.db import get_connection, close_connection_after_use
-        from registry.hooks import _cfg
-        
-        # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
-        cfg = _cfg()
-        db_path = cfg.get('registry_db_path')
-        pending_rows = set()
-        
-        if db_path and os.path.exists(db_path):
-            conn = get_connection(db_path, True)
-            try:
-                # 【方案A】只查询"待审查"状态的任务
-                cursor = conn.execute("""
-                    SELECT interface_id, project_id, display_status
-                    FROM tasks
-                    WHERE file_type = 5
-                      AND display_status IN ('待审查', '待指派人审查')
-                      AND (ignored = 0 OR ignored IS NULL)
-                      AND status != 'archived'
-                """)
-                registry_tasks = cursor.fetchall()
-            finally:
-                close_connection_after_use()
-            
-            # Excel索引优化+从文件名提取项目号
-            filename = os.path.basename(file_path)
-            match = re.search(r'(\d{4})', filename)
-            file_project_id = match.group(1) if match else ""
-            
-            excel_index = {}
-            for idx in range(len(df)):
-                if idx == 0:
-                    continue
-                try:
-                    row_data = df.iloc[idx]
-                    df_interface_id = extract_interface_id(row_data, 5)
-                    if df_interface_id and file_project_id:
-                        key = (df_interface_id, file_project_id)
-                        if key not in excel_index:
-                            excel_index[key] = []
-                        excel_index[key].append(idx)
-                except Exception:
-                    continue
-            
-            # 【方案A】必须通过科室筛选(p1)
-            for reg_interface_id, reg_project_id, _ in registry_tasks:
-                key = (reg_interface_id, reg_project_id)
-                if key in excel_index:
-                    for idx in excel_index[key]:
-                        # 【关键】必须通过科室筛选
-                        if idx not in p1:
-                            continue
-                        
-                        if idx not in final_rows:
-                            pending_rows.add(idx)
-                            print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
-        
-        if pending_rows:
-            final_rows = final_rows | pending_rows
-            print(f"[Registry] 共加回{len(pending_rows)}条待审查任务")
-        
+        final_rows, _ = _merge_registry_pending_rows(
+            file_type=5,
+            file_path=file_path,
+            df=df,
+            final_rows=final_rows,
+            allowed_rows=p1,
+        )
     except Exception as e:
         print(f"[Registry] 查询待审查任务失败: {e}")
     
@@ -3872,69 +3678,15 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
         final_rows = p1 & p_i_not_empty & p3 & p4
         print(f"最终完成处理数据（原始筛选，普通模式）: {len(final_rows)} 行")
     
-    # 【新增】Registry查询：查找有display_status的待审查任务（使用business_id匹配）
+    # 【统一】Registry 查询：文件6写回后不再被旧 pending 重新加回
     try:
-        from registry.util import extract_interface_id
-        from registry.db import get_connection, close_connection_after_use
-        from registry.hooks import _cfg
-        
-        # 【修复】通过registry_hooks._cfg()获取正确的配置（包含data_folder）
-        cfg = _cfg()
-        db_path = cfg.get('registry_db_path')
-        pending_rows = set()
-        
-        if db_path and os.path.exists(db_path):
-            conn = get_connection(db_path, True)
-            try:
-                # 【方案A】只查询"待审查"状态的任务
-                cursor = conn.execute("""
-                    SELECT interface_id, project_id, display_status
-                    FROM tasks
-                    WHERE file_type = 6
-                      AND display_status IN ('待审查', '待指派人审查')
-                      AND (ignored = 0 OR ignored IS NULL)
-                      AND status != 'archived'
-                """)
-                registry_tasks = cursor.fetchall()
-            finally:
-                close_connection_after_use()
-            
-            # Excel索引优化+从文件名提取项目号
-            filename = os.path.basename(file_path)
-            match = re.search(r'(\d{4})', filename)
-            file_project_id = match.group(1) if match else ""
-            
-            excel_index = {}
-            for idx in range(len(df)):
-                if idx == 0:
-                    continue
-                try:
-                    row_data = df.iloc[idx]
-                    df_interface_id = extract_interface_id(row_data, 6)
-                    if df_interface_id and file_project_id:
-                        key = (df_interface_id, file_project_id)
-                        if key not in excel_index:
-                            excel_index[key] = []
-                        excel_index[key].append(idx)
-                except Exception:
-                    continue
-            
-            # 【方案A】必须通过科室筛选(p1)
-            for reg_interface_id, reg_project_id, _ in registry_tasks:
-                key = (reg_interface_id, reg_project_id)
-                if key in excel_index:
-                    for idx in excel_index[key]:
-                        # 【关键】必须通过科室筛选
-                        if idx not in p1:
-                            continue
-                        if idx not in final_rows:
-                            pending_rows.add(idx)
-                            print(f"[Registry] 加回待审查任务: {reg_interface_id}, 行{idx+2}")
-        
-        if pending_rows:
-            final_rows = final_rows | pending_rows
-            print(f"[Registry] 共加回{len(pending_rows)}条待审查任务")
-        
+        final_rows, _ = _merge_registry_pending_rows(
+            file_type=6,
+            file_path=file_path,
+            df=df,
+            final_rows=final_rows,
+            allowed_rows=p1,
+        )
     except Exception as e:
         print(f"[Registry] 查询待审查任务失败: {e}")
     
