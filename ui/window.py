@@ -39,9 +39,16 @@ except ImportError:
 def _normalize_registry_status_text(status_text):
     """去除 UI 装饰后的 Registry 状态文本。"""
     clean_status = str(status_text or "")
-    for token in ("⏳", "📌", "❗", "（已延期）"):
+    for token in ("⏳", "📌", "❗", "⚠️", "⚠", "!", "（已延期）"):
         clean_status = clean_status.replace(token, "")
     return clean_status.strip()
+
+
+def _generate_registry_status_sort_key(status_text):
+    """按真实状态文本排序，忽略 UI 图标和延期装饰。"""
+    raw_status = str(status_text or "").strip()
+    clean_status = _normalize_registry_status_text(raw_status)
+    return (1 if not clean_status else 0, clean_status, raw_status)
 
 
 def _is_confirmed_registry_status(status_text):
@@ -2181,12 +2188,9 @@ class WindowManager:
                 else:
                     return '0'
             
-            # 特殊列：状态（⚠️在前，空值在后）
+            # 特殊列：状态（按去除图标/延期标记后的真实状态文本排序）
             if column_name == '状态':
-                if str(sort_value) == '⚠️':
-                    return '0'
-                else:
-                    return '1'
+                return _generate_registry_status_sort_key(sort_value)
             
             # 其他列：字符串排序（中文按拼音）
             return str(sort_value) if sort_value is not None else ''

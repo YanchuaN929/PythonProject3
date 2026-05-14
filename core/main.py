@@ -141,9 +141,33 @@ def _filter_rows_by_highest_version(df, file_type, rows, version_col_index):
         print(f"警告：文件列数不足，无法访问版次列(索引{version_col_index})，跳过版次筛选")
         return rows
 
+    interface_col_map = {
+        1: 0,
+        2: 17,
+        3: 2,
+        4: 4,
+        5: 0,
+        6: 4,
+    }
+
+    interface_values = None
     try:
-        from registry.util import extract_interface_id
+        if "接口号" in df.columns:
+            interface_values = df["接口号"]
+        else:
+            interface_col_index = interface_col_map.get(file_type)
+            if interface_col_index is not None and len(df.columns) > interface_col_index:
+                interface_values = df.iloc[:, interface_col_index]
+        version_values = df.iloc[:, version_col_index]
     except Exception:
+        interface_values = None
+
+    if interface_values is None:
+        try:
+            from registry.util import extract_interface_id
+        except Exception:
+            extract_interface_id = None
+    else:
         extract_interface_id = None
 
     best_rank = {}
@@ -153,22 +177,29 @@ def _filter_rows_by_highest_version(df, file_type, rows, version_col_index):
     for idx in rows:
         if idx < 0 or idx >= len(df):
             continue
-        row_data = df.iloc[idx]
-        interface_id = ""
-        if extract_interface_id:
+        if interface_values is not None:
             try:
-                interface_id = extract_interface_id(row_data, file_type) or ""
+                interface_id = str(interface_values.iat[idx]).strip()
+                interface_id = re.sub(r'\([^)]*\)$', '', interface_id).strip()
             except Exception:
                 interface_id = ""
-        elif hasattr(row_data, "get"):
-            interface_id = str(row_data.get("接口号", "") or "").strip()
+        else:
+            row_data = df.iloc[idx]
+            interface_id = ""
+            if extract_interface_id:
+                try:
+                    interface_id = extract_interface_id(row_data, file_type) or ""
+                except Exception:
+                    interface_id = ""
+            elif hasattr(row_data, "get"):
+                interface_id = str(row_data.get("接口号", "") or "").strip()
 
         interface_id = str(interface_id).strip()
         if not interface_id:
             keep_rows.add(idx)
             continue
 
-        version_value = df.iloc[idx, version_col_index]
+        version_value = version_values.iat[idx] if interface_values is not None else df.iloc[idx, version_col_index]
         rank = _get_version_rank(version_value)
         current_rank = best_rank.get(interface_id)
         if current_rank is None or rank > current_rank:
@@ -250,22 +281,63 @@ def _load_latest_registry_pending_tasks(file_type, db_path, wal):
 
 def _build_registry_excel_index(df, file_type, file_path, allow_interface_only_fallback=False):
     """为 Registry 加回逻辑建立当前 Excel 的接口索引。"""
-    from registry.util import extract_interface_id, extract_project_id
-
     file_project_id = _extract_file_project_id(file_path)
     excel_index = {}
     excel_index_by_iface = {}
+    interface_col_map = {
+        1: 0,
+        2: 17,
+        3: 2,
+        4: 4,
+        5: 0,
+        6: 4,
+    }
+
+    interface_values = None
+    project_values = None
+    source_file_values = None
+    try:
+        if "接口号" in df.columns:
+            interface_values = df["接口号"]
+        else:
+            interface_col_index = interface_col_map.get(file_type)
+            if interface_col_index is not None and len(df.columns) > interface_col_index:
+                interface_values = df.iloc[:, interface_col_index]
+        if "项目号" in df.columns:
+            project_values = df["项目号"]
+        if "source_file" in df.columns:
+            source_file_values = df["source_file"]
+    except Exception:
+        interface_values = None
+
+    if interface_values is None:
+        from registry.util import extract_interface_id, extract_project_id
+    else:
+        extract_interface_id = None
+        extract_project_id = None
 
     for idx in range(len(df)):
         if idx == 0:
             continue
         try:
-            row_data = df.iloc[idx]
-            interface_id = extract_interface_id(row_data, file_type)
+            if interface_values is not None:
+                interface_id = str(interface_values.iat[idx]).strip()
+                interface_id = re.sub(r'\([^)]*\)$', '', interface_id).strip()
+            else:
+                row_data = df.iloc[idx]
+                interface_id = extract_interface_id(row_data, file_type)
             if not interface_id:
                 continue
 
-            row_project_id = extract_project_id(row_data, file_type) or ""
+            if project_values is not None:
+                row_project_id = str(project_values.iat[idx]).strip()
+            elif source_file_values is not None:
+                source_basename = os.path.basename(str(source_file_values.iat[idx] or ""))
+                match = re.search(r'(\d{4})', source_basename)
+                row_project_id = match.group(1) if match else ""
+            else:
+                row_project_id = extract_project_id(row_data, file_type) if extract_project_id else ""
+            row_project_id = row_project_id or ""
             project_id = row_project_id or file_project_id
             if project_id:
                 key = (interface_id, project_id)
