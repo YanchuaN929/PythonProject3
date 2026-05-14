@@ -11,6 +11,7 @@ import tkinter.scrolledtext as scrolledtext
 import pandas as pd
 import os
 import sys
+import uuid
 from utils.date_utils import is_date_overdue
 
 try:
@@ -20,6 +21,12 @@ except ImportError:
         return "建筑结构所"
 
 from write_tasks.task_panel import TaskRecordPanel
+from write_tasks.models import WriteTask, utc_now_iso
+
+try:
+    from write_tasks.shared_log import upsert_task as shared_log_upsert_task
+except Exception:
+    shared_log_upsert_task = None
 
 # 导入数据库状态显示器
 try:
@@ -47,7 +54,7 @@ def _should_hide_registry_row_for_roles(status_text, current_user_roles):
     roles = [str(role or "").strip() for role in (current_user_roles or []) if str(role or "").strip()]
 
     is_designer = "设计人员" in roles
-    is_superior = any(keyword in " ".join(roles) for keyword in ("所领导", "室主任", "接口工程师"))
+    is_superior = any(keyword in " ".join(roles) for keyword in ("所领导", "室主任", "接口工程师", "管理员"))
 
     if is_designer and not is_superior:
         return clean_status in {
@@ -60,6 +67,21 @@ def _should_hide_registry_row_for_roles(status_text, current_user_roles):
         }
 
     return clean_status in {"", "已审查"}
+
+
+def _drop_display_rows_with_source_indices(display_df, source_indices, exclude_indices):
+    """删除显示行时同步保留其原始 filtered_df 索引，避免点击后写错 Registry 任务。"""
+    if not exclude_indices:
+        return display_df, source_indices
+
+    exclude_set = {idx for idx in exclude_indices if 0 <= idx < len(display_df)}
+    if not exclude_set:
+        return display_df, source_indices
+
+    keep_indices = [idx for idx in range(len(display_df)) if idx not in exclude_set]
+    display_df = display_df.iloc[keep_indices].reset_index(drop=True)
+    source_indices = [source_indices[idx] for idx in keep_indices if idx < len(source_indices)]
+    return display_df, source_indices
 
 
 def _resolve_response_source_column(file_type, metadata_source_column, original_df=None, item_index=None):
@@ -663,6 +685,7 @@ class WindowManager:
         
         # 优化显示列（仅显示关键列）
         display_df = self._create_optimized_display(filtered_df, tab_name, completed_rows=completed_rows_set)
+        source_indices = list(range(len(display_df)))
         
         # 【Registry状态提醒】批量查询任务状态和确认状态
         registry_status_map = {}
@@ -805,7 +828,11 @@ class WindowManager:
                     exclude_indices.append(idx)
             
             if exclude_indices:
-                display_df = display_df.drop(display_df.index[exclude_indices]).reset_index(drop=True)
+                display_df, source_indices = _drop_display_rows_with_source_indices(
+                    display_df,
+                    source_indices,
+                    exclude_indices,
+                )
                 print(f"[Registry] 过滤掉{len(exclude_indices)}个已确认的任务，剩余{len(display_df)}行")
         
         # 【新增】处理"责任人"列：空值显示为"无"
@@ -899,14 +926,22 @@ class WindowManager:
         
         # 添加数据行
         max_rows = len(display_df) if show_all else min(20, len(display_df))
+        visible_original_row_numbers = []
+        for visible_idx in range(len(display_df)):
+            source_idx = source_indices[visible_idx] if visible_idx < len(source_indices) else visible_idx
+            if original_row_numbers and source_idx < len(original_row_numbers):
+                visible_original_row_numbers.append(original_row_numbers[source_idx])
+            else:
+                visible_original_row_numbers.append(source_idx + 2)
         
         for index in range(max_rows):
             # 用于显示的行（display_df）
             display_row = display_df.iloc[index]
+            source_idx = source_indices[index] if index < len(source_indices) else index
             
             # 【关键修复】用于元数据的行（filtered_df，包含完整原始数据）
             # display_df可能不包含source_file等列，必须从filtered_df读取
-            metadata_row = filtered_df.iloc[index] if index < len(filtered_df) else display_row
+            metadata_row = filtered_df.iloc[source_idx] if source_idx < len(filtered_df) else display_row
             
             # 处理数据显示格式（仅显示过滤后的列，不包括"接口时间"）
             display_values = []
@@ -933,11 +968,12 @@ class WindowManager:
                     is_overdue_flag = False
             
             # 确定行号显示
-            if original_row_numbers and index < len(original_row_numbers):
-                row_number_display = original_row_numbers[index]
+            if index < len(visible_original_row_numbers):
+                row_number_display = visible_original_row_numbers[index]
                 display_text = str(row_number_display)
             else:
-                display_text = str(index + 1)
+                row_number_display = source_idx + 2
+                display_text = str(row_number_display)
             
             # 应用标签
             tags = ('overdue',) if is_overdue_flag else ()
@@ -964,8 +1000,8 @@ class WindowManager:
                     break
             
             metadata = {
-                'original_index': index,  # 在filtered_df中的索引
-                'original_row': original_row_numbers[index] if original_row_numbers and index < len(original_row_numbers) else index + 2,
+                'original_index': source_idx,  # 在filtered_df中的索引
+                'original_row': row_number_display,
                 'source_file': metadata_row.get('source_file', '') if 'source_file' in metadata_row.index else '',
                 'project_id': project_id_val,
                 'interface_id': interface_id_val,
@@ -1004,13 +1040,13 @@ class WindowManager:
         # 绑定点击事件处理勾选功能
         if file_manager and source_files and "是否已完成" in columns:
             self._bind_checkbox_click_event(viewer, df, display_df, columns, 
-                                           original_row_numbers, source_files, 
+                                           visible_original_row_numbers, source_files, 
                                            file_manager, tab_name)
         
         # 【新增】绑定接口号点击事件（用于回文单号输入）
         if "接口号" in columns:
             self._bind_interface_click_event(viewer, df, display_df, columns,
-                                            original_row_numbers, tab_name, file_manager)
+                                            visible_original_row_numbers, tab_name, file_manager)
         
         print(f"{tab_name}数据加载完成：{len(df)} 行，{len(df.columns)} 列 -> 显示：{max_rows} 行，{len(display_df.columns)} 列")
         
@@ -1026,6 +1062,113 @@ class WindowManager:
             except Exception as sort_e:
                 print(f"[默认排序] 排序失败: {sort_e}")
     
+    def _selected_confirmation_items(self, viewer, clicked_item_id):
+        """返回本次勾选应处理的 Treeview item：蓝色选中多行优先，否则只处理当前行。"""
+        try:
+            selected_items = list(viewer.selection())
+        except Exception:
+            selected_items = []
+        if clicked_item_id in selected_items:
+            return selected_items
+        return [clicked_item_id]
+
+    def _build_checkbox_task_context(self, viewer, item_id, original_df, original_row_numbers, source_files, file_type):
+        """从 Treeview item 元数据构造 Registry task_key。"""
+        import re
+
+        metadata = self._item_metadata.get((viewer, item_id)) if hasattr(self, '_item_metadata') else None
+        item_index = viewer.index(item_id)
+
+        if metadata:
+            original_row = metadata.get('original_row')
+            source_file = metadata.get('source_file', '')
+            project_id = metadata.get('project_id', '')
+            interface_id = metadata.get('interface_id', '')
+        else:
+            print("[警告] 未找到item元数据（勾选框），使用位置索引（可能不准确）")
+            original_row = original_row_numbers[item_index] if original_row_numbers and item_index < len(original_row_numbers) else item_index + 2
+            source_file = source_files[0] if len(source_files) == 1 else self._find_source_file(original_df, item_index, source_files)
+            row_data = original_df.iloc[item_index] if item_index < len(original_df) else {}
+            project_id = str(row_data.get('项目号', '') if hasattr(row_data, 'get') else '')
+            interface_id = str(row_data.get('接口号', '') if hasattr(row_data, 'get') else '')
+
+        if not source_file:
+            return None, "无法确定源文件"
+        if not project_id or not interface_id:
+            return None, "无法获取项目号或接口号"
+
+        interface_id_clean = re.sub(r'\([^)]*\)$', '', str(interface_id)).strip()
+        task_key = {
+            'file_type': file_type,
+            'project_id': str(project_id).strip(),
+            'interface_id': interface_id_clean,
+            'source_file': source_file,
+            'row_index': int(original_row or 0),
+        }
+        return {
+            'metadata': metadata,
+            'original_row': int(original_row or 0),
+            'source_file': source_file,
+            'project_id': str(project_id).strip(),
+            'interface_id': str(interface_id),
+            'interface_id_clean': interface_id_clean,
+            'task_key': task_key,
+        }, None
+
+    def _record_confirmation_task_log(self, confirmations, user_name):
+        """把上级审查确认写入右上角“写入任务记录”的共享日志。"""
+        if not confirmations or not shared_log_upsert_task:
+            return
+
+        submitted_by = (user_name or "").strip() or "未知用户"
+        submitted_at = utc_now_iso()
+        count = len(confirmations)
+        first_interface = str(confirmations[0].get("interface_id", "") or "").strip()
+        if count == 1:
+            description = f"{submitted_by} 审查确认 {first_interface}"
+        else:
+            description = f"{submitted_by} 批量审查确认 {count} 条（首条 {first_interface}）"
+
+        task = WriteTask(
+            task_id=str(uuid.uuid4()),
+            task_type="confirmation",
+            payload={"confirmations": confirmations},
+            submitted_by=submitted_by,
+            description=description,
+            submitted_at=submitted_at,
+            status="completed",
+            started_at=submitted_at,
+            completed_at=submitted_at,
+        )
+
+        try:
+            from registry import hooks as registry_hooks
+            cfg = registry_hooks._cfg()
+            if not cfg.get("registry_enabled", True):
+                return
+            db_path = cfg.get("registry_db_path")
+            if not db_path:
+                return
+            wal = bool(cfg.get("registry_wal", False))
+            from registry.db import open_isolated_connection
+
+            conn = open_isolated_connection(db_path, wal)
+            try:
+                shared_log_upsert_task(conn, task)
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+        except Exception as exc:
+            print(f"[WriteTaskLog] 审查确认记录写入失败(已忽略): {exc}")
+
+        try:
+            if hasattr(self, "task_panel") and self.task_panel:
+                self.task_panel.refresh_tasks()
+        except Exception:
+            pass
+
     def _bind_checkbox_click_event(self, viewer, original_df, display_df, columns, 
                                     original_row_numbers, source_files, file_manager, tab_name):
         """
@@ -1071,43 +1214,22 @@ class WindowManager:
                 if col_num != (checkbox_col_idx + 1):
                     return
                 
-                # 【关键修复】从元数据映射字典获取数据，不受排序影响
-                metadata = self._item_metadata.get((viewer, item_id))
-                if not metadata:
-                    # 兜底：使用旧逻辑（位置索引）
-                    print("[警告] 未找到item元数据（勾选框），使用位置索引（可能不准确）")
-                    item_index = viewer.index(item_id)
-                    original_row = original_row_numbers[item_index] if original_row_numbers and item_index < len(original_row_numbers) else item_index + 2
-                    source_file = source_files[0] if len(source_files) == 1 else self._find_source_file(original_df, item_index, source_files)
-                else:
-                    # 从元数据提取信息
-                    original_row = metadata['original_row']
-                    source_file = metadata['source_file']
-                
                 if not source_files:
                     print("未提供源文件信息")
                     return
-                
-                if not source_file:
-                    print("[错误] 无法确定源文件")
-                    return
-                
-                # 【重大修复】勾选框逻辑从Registry读取和写入，不再使用缓存
+
+                # 勾选框逻辑从 Registry 读取和写入，不再使用本地缓存状态。
                 user_name = getattr(self.app, 'user_name', '').strip()
                 user_roles = getattr(self.app, 'user_roles', [])
-                
-                # 判断是否为上级角色
-                is_superior = any(keyword in ''.join(user_roles) for keyword in ['所领导', '室主任', '接口工程师'])
-                
-                # 获取当前勾选状态（从UI读取）
+                is_superior = any(keyword in ''.join(user_roles) for keyword in ['所领导', '室主任', '接口工程师', '管理员'])
+
                 current_values = list(viewer.item(item_id, "values"))
                 if checkbox_col_idx >= len(current_values):
                     return
-                
+
                 current_checkbox = current_values[checkbox_col_idx]
                 is_currently_checked = (current_checkbox == "☑")
-                
-                # 【核心逻辑】上级角色点击勾选框 = 确认/取消确认
+
                 if is_superior:
                     try:
                         from registry import hooks as registry_hooks
@@ -1126,89 +1248,144 @@ class WindowManager:
                         if not file_type:
                             print(f"[错误] 无法识别tab_name: {tab_name}")
                             return
-                        
-                        # 从元数据获取项目号和接口号
-                        project_id = metadata.get('project_id', '')
-                        interface_id = metadata.get('interface_id', '')
-                        
-                        if not project_id or not interface_id:
-                            print("[错误] 无法获取项目号或接口号")
-                            return
-                        
-                        # 【关键修复】去除接口号中的角色后缀（如"(一室主任)"）
-                        # 因为Registry中存储的接口号不含角色后缀
-                        import re
-                        interface_id_clean = re.sub(r'\([^)]*\)$', '', interface_id).strip()
-                        print(f"[Registry] 接口号处理: {interface_id} -> {interface_id_clean}")
-                        
-                        # 构造task_key（使用清理后的接口号）
-                        task_key = {
-                            'file_type': file_type,
-                            'project_id': project_id,
-                            'interface_id': interface_id_clean,
-                            'source_file': source_file,
-                            'row_index': original_row
-                        }
-                        
-                        task_snapshot = registry_hooks.get_task_snapshot(task_key)
-                        if not task_snapshot:
-                            print(f"[Registry] 警告：找不到任务记录 {interface_id_clean}")
-                            import tkinter.messagebox as messagebox
-                            messagebox.showwarning("提示", f"找不到任务记录：{interface_id_clean}")
-                            return
 
-                        task_status = task_snapshot.get("status")
-                        confirmed_at = task_snapshot.get("confirmed_at")
+                        context, context_error = self._build_checkbox_task_context(
+                            viewer,
+                            item_id,
+                            original_df,
+                            original_row_numbers,
+                            source_files,
+                            file_type,
+                        )
+                        if context_error:
+                            print(f"[错误] {context_error}")
+                            return
+                        task_key = context['task_key']
+                        interface_id_clean = context['interface_id_clean']
                         
                         if is_currently_checked:
-                            # 当前已勾选 → 取消确认
-                            # 只有已确认的任务（status='confirmed'）才能取消确认
+                            # 兼容旧数据：确认后尚未归档的记录仍允许单行取消确认。
+                            task_snapshot = registry_hooks.get_task_snapshot(task_key)
+                            if not task_snapshot:
+                                import tkinter.messagebox as messagebox
+                                messagebox.showwarning("提示", f"找不到任务记录：{interface_id_clean}")
+                                return
+                            task_status = task_snapshot.get("status")
                             if task_status != 'confirmed':
                                 print(f"[Registry] 错误：任务状态不是已确认，无法取消确认 (status={task_status})")
                                 import tkinter.messagebox as messagebox
                                 messagebox.showwarning("操作失败", f"该任务状态不是已确认，无法取消确认\n当前状态：{task_status}")
                                 return
                             
-                            registry_hooks.on_unconfirmed_by_superior(
+                            unconfirm_ok = registry_hooks.on_unconfirmed_by_superior(
                                 key=task_key,
                                 user_name=user_name
                             )
+                            if unconfirm_ok is False:
+                                import tkinter.messagebox as messagebox
+                                messagebox.showwarning("操作失败", f"取消确认写入失败，请稍后重试\n接口号：{interface_id_clean}")
+                                return
                             print(f"[Registry] 取消确认：{interface_id_clean}")
                             
                             # 更新UI
                             current_values[checkbox_col_idx] = "☐"
                             viewer.item(item_id, values=current_values)
                         else:
-                            # 当前未勾选 → 确认
-                            # 【严格权限控制】只有已完成的任务（status='completed'）才能被确认
-                            if task_status != 'completed':
-                                print(f"[Registry] 权限检查失败：任务状态不是待审查，无法确认 (status={task_status})")
-                                import tkinter.messagebox as messagebox
-                                if task_status == 'open':
-                                    messagebox.showwarning(
-                                        "操作失败", 
-                                        f"该任务尚未完成，无法确认\n\n接口号：{interface_id_clean}\n当前状态：待完成\n\n只有设计人员完成后（状态变为\"待审查\"），上级才能进行确认。"
-                                    )
-                                elif task_status == 'confirmed':
-                                    messagebox.showinfo("提示", f"该任务已经被确认过了\n接口号：{interface_id_clean}")
+                            target_items = self._selected_confirmation_items(viewer, item_id)
+                            confirmed_items = []
+                            confirmed_log_items = []
+                            failed_messages = []
+                            skipped_count = 0
+
+                            for target_item_id in target_items:
+                                target_values = list(viewer.item(target_item_id, "values"))
+                                if checkbox_col_idx < len(target_values) and target_values[checkbox_col_idx] == "☑":
+                                    skipped_count += 1
+                                    continue
+
+                                target_context, target_error = self._build_checkbox_task_context(
+                                    viewer,
+                                    target_item_id,
+                                    original_df,
+                                    original_row_numbers,
+                                    source_files,
+                                    file_type,
+                                )
+                                if target_error:
+                                    failed_messages.append(target_error)
+                                    continue
+
+                                target_key = target_context['task_key']
+                                target_interface = target_context['interface_id_clean']
+                                task_snapshot = registry_hooks.get_task_snapshot(target_key)
+                                if not task_snapshot:
+                                    failed_messages.append(f"找不到任务记录：{target_interface}")
+                                    continue
+
+                                task_status = task_snapshot.get("status")
+                                if task_status != 'completed':
+                                    if task_status == 'open':
+                                        failed_messages.append(f"{target_interface}: 尚未完成，不能审查确认")
+                                    elif task_status == 'confirmed':
+                                        skipped_count += 1
+                                    else:
+                                        failed_messages.append(f"{target_interface}: 状态异常({task_status})")
+                                    continue
+
+                                confirm_ok = registry_hooks.on_confirmed_by_superior(
+                                    file_type=file_type,
+                                    file_path=target_context['source_file'],
+                                    row_index=target_context['original_row'],
+                                    user_name=user_name,
+                                    project_id=target_context['project_id'],
+                                    interface_id=target_interface
+                                )
+                                if confirm_ok is False:
+                                    failed_messages.append(f"{target_interface}: Registry写入失败")
+                                    continue
+
+                                confirmed_items.append((target_item_id, target_interface))
+                                confirmed_log_items.append({
+                                    "file_type": file_type,
+                                    "file_path": target_context['source_file'],
+                                    "source_file": target_context['source_file'],
+                                    "row_index": target_context['original_row'],
+                                    "project_id": target_context['project_id'],
+                                    "interface_id": target_interface,
+                                })
+
+                            for confirmed_item_id, _target_interface in confirmed_items:
+                                if _should_hide_registry_row_for_roles("已审查", user_roles):
+                                    try:
+                                        viewer.delete(confirmed_item_id)
+                                    except Exception:
+                                        pass
+                                    if hasattr(self, '_item_metadata'):
+                                        self._item_metadata.pop((viewer, confirmed_item_id), None)
                                 else:
-                                    messagebox.showwarning("操作失败", f"该任务状态异常，无法确认\n接口号：{interface_id_clean}\n当前状态：{task_status}")
+                                    item_values = list(viewer.item(confirmed_item_id, "values"))
+                                    if checkbox_col_idx < len(item_values):
+                                        item_values[checkbox_col_idx] = "☑"
+                                        viewer.item(confirmed_item_id, values=item_values)
+
+                            if confirmed_items:
+                                print(f"[Registry] 批量确认并归档成功：{len(confirmed_items)} 条")
+                                self._record_confirmation_task_log(confirmed_log_items, user_name)
+
+                            if failed_messages:
+                                import tkinter.messagebox as messagebox
+                                details = "\n".join(failed_messages[:8])
+                                remaining = len(failed_messages) - min(len(failed_messages), 8)
+                                if remaining > 0:
+                                    details += f"\n...另有 {remaining} 条失败"
+                                messagebox.showwarning(
+                                    "部分确认失败" if confirmed_items else "操作失败",
+                                    f"成功确认并归档：{len(confirmed_items)} 条\n跳过：{skipped_count} 条\n\n{details}"
+                                )
+                            elif not confirmed_items:
+                                import tkinter.messagebox as messagebox
+                                messagebox.showinfo("提示", "没有可确认的选中任务")
                                 return
-                            
-                            # 状态检查通过，执行确认
-                            registry_hooks.on_confirmed_by_superior(
-                                file_type=file_type,
-                                file_path=source_file,
-                                row_index=original_row,
-                                user_name=user_name,
-                                project_id=project_id,
-                                interface_id=interface_id_clean
-                            )
-                            print(f"[Registry] 确认成功：{interface_id_clean} (status=completed -> confirmed)")
-                            
-                            # 更新UI：先标记为已勾选
-                            current_values[checkbox_col_idx] = "☑"
-                            viewer.item(item_id, values=current_values)
                         
                         # 【关键修复】确认/取消确认后，延迟刷新整个tab显示
                         # 这样已确认的任务会被过滤掉，不再显示

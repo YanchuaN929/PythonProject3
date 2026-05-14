@@ -749,11 +749,41 @@ def mark_completed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, 
     if owns_conn:
         close_connection_after_use()
 
-def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, confirmed_by: str = None, conn=None) -> None:
+def _build_archived_task_identity(conn, task: Dict[str, Any], now: datetime) -> tuple:
+    """为归档记录生成新的 task_id/row_index，释放原精确行给下一轮新任务。"""
+    old_id = str(task["id"])
+    source_file = str(task.get("source_file") or "")
+    file_type = int(task.get("file_type") or 0)
+    project_id = str(task.get("project_id") or "")
+    interface_id = str(task.get("interface_id") or "")
+    seed = int(now.timestamp() * 1000000) % 1000000000
+    stable_hash = abs(hash(old_id)) % 100000
+
+    for attempt in range(1000):
+        archived_row_index = -1000000000 - seed - stable_hash - attempt
+        archived_id = make_task_id(
+            file_type,
+            project_id,
+            interface_id,
+            source_file,
+            archived_row_index,
+        )
+        exists = conn.execute(
+            "SELECT 1 FROM tasks WHERE id = ? AND id != ? LIMIT 1",
+            (archived_id, old_id),
+        ).fetchone()
+        if not exists:
+            return archived_id, archived_row_index
+
+    raise RuntimeError(f"无法为归档任务生成唯一ID: {old_id}")
+
+
+def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, confirmed_by: str = None, conn=None) -> Optional[Dict[str, Any]]:
     """
-    标记任务为已确认
+    标记任务为已确认并立即归档。
     
-    将任务状态从 completed 更新为 confirmed，并记录 confirmed_at
+    上级确认代表本轮任务闭环完成：写入 confirmed_at/confirmed_by 后直接归档，
+    同时移动归档记录的 row_index/id，确保下次源文件再次扫描到同一业务接口时创建新任务。
     
     参数:
         db_path: 数据库路径
@@ -770,19 +800,50 @@ def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, 
         print(f"[Registry] mark_confirmed警告: 找不到非归档任务 {key['interface_id']}")
         if owns_conn:
             close_connection_after_use()
-        return
+        return None
 
     tid = task["id"]
+    original_row_index = int(task.get("row_index") or key.get("row_index") or 0)
+    archived_tid, archived_row_index = _build_archived_task_identity(conn, task, now)
+    now_str = now.isoformat()
     
-    # 【状态提醒】确认时设置confirmed_by，并更新display_status为"已审查"
-    # 【修复】确认后，display_status应该反映真实状态"已审查"
+    # 确认即归档：释放原 task_id/row_index，使下一轮同业务接口可以作为新任务进入。
     conn.execute(
-        "UPDATE tasks SET status = ?, confirmed_at = ?, confirmed_by = ?, display_status = ? WHERE id = ?",
-        (Status.CONFIRMED, now.isoformat(), confirmed_by, '已审查', tid)
+        """
+        UPDATE tasks
+        SET id = ?,
+            row_index = ?,
+            status = ?,
+            confirmed_at = ?,
+            confirmed_by = ?,
+            display_status = ?,
+            archive_reason = ?,
+            archived_at = ?,
+            missing_since = NULL
+        WHERE id = ?
+        """,
+        (
+            archived_tid,
+            archived_row_index,
+            Status.ARCHIVED,
+            now_str,
+            confirmed_by,
+            '已审查',
+            'confirmed_by_superior',
+            now_str,
+            tid,
+        ),
     )
     conn.commit()
     if owns_conn:
         close_connection_after_use()
+    return {
+        "original_id": tid,
+        "archived_id": archived_tid,
+        "original_row_index": original_row_index,
+        "archived_row_index": archived_row_index,
+        "archive_reason": "confirmed_by_superior",
+    }
 
 def mark_unconfirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, conn=None) -> None:
     """
@@ -992,7 +1053,7 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
         from utils.dept_config import get_superior_keywords
         _superior_kw = get_superior_keywords()
     except Exception:
-        _superior_kw = ['所领导', '室主任', '接口工程师']
+        _superior_kw = ['所领导', '室主任', '接口工程师', '管理员']
 
     is_designer = False
     is_superior = False

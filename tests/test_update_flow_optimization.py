@@ -73,6 +73,41 @@ def test_resolve_update_runner_does_not_fallback_to_cli_when_frozen(monkeypatch,
     assert runner is None
 
 
+def test_launch_update_prefers_remote_update_exe(monkeypatch, tmp_path):
+    local_dir = tmp_path / "local"
+    remote_dir = tmp_path / "remote" / "EXE"
+    local_dir.mkdir(parents=True)
+    remote_dir.mkdir(parents=True)
+    remote_update = remote_dir / "update.exe"
+    remote_update.write_text("remote", encoding="utf-8")
+
+    manager = UpdateManager(str(local_dir), log_fn=lambda _msg: None)
+    context = type(
+        "Ctx",
+        (),
+        {
+            "remote_root": str(remote_dir),
+            "local_root": str(local_dir),
+            "remote_version": "1.2.3",
+            "resume_action": "startup",
+            "auto_mode": False,
+        },
+    )()
+    captured = {}
+
+    def fake_launch(exe_path, arguments):
+        captured["exe_path"] = exe_path
+        captured["arguments"] = arguments
+        return True
+
+    monkeypatch.setattr(manager, "_launch_update_executable", fake_launch)
+
+    assert manager._launch_update_exe(context) is True
+    assert captured["exe_path"] == str(remote_update)
+    assert "--local" in captured["arguments"]
+    assert str(local_dir) in captured["arguments"]
+
+
 def test_launch_update_executable_uses_visible_detached_process(monkeypatch, tmp_path):
     manager = UpdateManager(str(tmp_path), log_fn=lambda _msg: None)
     update_exe = tmp_path / "update.exe"
@@ -346,6 +381,63 @@ def test_fill_missing_args_supports_double_click(monkeypatch, tmp_path):
     assert os.path.normpath(args.remote) == os.path.normpath(str(remote_dir))
     assert args.version == "1.2.3"
     assert args.main_exe == "接口筛选.exe"
+
+
+def test_detect_local_root_from_internal_update_script(monkeypatch, tmp_path):
+    local_dir = tmp_path / "app"
+    script_path = local_dir / "_internal" / "update" / "updater_cli.py"
+    script_path.parent.mkdir(parents=True)
+    script_path.write_text("# stub", encoding="utf-8")
+
+    monkeypatch.setattr(updater_cli.sys, "frozen", False, raising=False)
+    monkeypatch.setattr(updater_cli, "__file__", str(script_path))
+
+    assert updater_cli._detect_local_root() == str(local_dir)
+
+
+def test_local_update_delegates_to_remote_update(monkeypatch, tmp_path):
+    local_dir = tmp_path / "local"
+    remote_dir = tmp_path / "remote" / "EXE"
+    local_dir.mkdir(parents=True)
+    remote_dir.mkdir(parents=True)
+    local_update = local_dir / "update.exe"
+    remote_update = remote_dir / "update.exe"
+    local_update.write_text("local", encoding="utf-8")
+    remote_update.write_text("remote", encoding="utf-8")
+
+    captured = {}
+
+    def fake_popen(cmd, cwd=None, env=None, close_fds=None):
+        captured["cmd"] = list(cmd)
+        captured["cwd"] = cwd
+        captured["env"] = env
+        captured["close_fds"] = close_fds
+
+        class _DummyProc:
+            pass
+
+        return _DummyProc()
+
+    args = updater_cli.parse_args(
+        [
+            "--remote",
+            str(remote_dir),
+            "--local",
+            str(local_dir),
+            "--version",
+            "1.2.3",
+        ]
+    )
+    monkeypatch.setattr(updater_cli.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(updater_cli.sys, "executable", str(local_update))
+    monkeypatch.delenv("UPDATE_REMOTE_REEXEC", raising=False)
+    monkeypatch.setattr(updater_cli.subprocess, "Popen", fake_popen)
+
+    assert updater_cli._reexec_with_remote_update_if_frozen(args) is True
+    assert captured["cmd"][0] == str(remote_update)
+    assert "--local" in captured["cmd"]
+    assert str(local_dir) in captured["cmd"]
+    assert captured["env"]["UPDATE_REMOTE_REEXEC"] == "1"
 
 
 def test_update_fails_when_critical_locked_files_remain(monkeypatch, tmp_path):

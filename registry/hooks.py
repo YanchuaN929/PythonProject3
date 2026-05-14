@@ -17,7 +17,7 @@ try:
     from utils.dept_config import get_superior_keywords
 except ImportError:
     def get_superior_keywords():
-        return ['一室主任', '二室主任', '建筑总图室主任', '所长', '所领导', '接口工程师']
+        return ['一室主任', '二室主任', '建筑总图室主任', '所长', '所领导', '接口工程师', '管理员']
 from .service import (
     write_event,
     mark_completed,
@@ -284,6 +284,8 @@ def get_display_status(task_keys: List[Dict[str, Any]], current_user_roles_str: 
         import traceback
         traceback.print_exc()
         return {}
+    finally:
+        close_connection_after_use()
 
 
 def get_task_snapshot(key: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -719,10 +721,26 @@ def on_response_written(
                 # 更新状态为completed
                 mark_completed(db_path, wal, key, now, conn=conn)
 
-                # 如果是上级角色，同时更新状态为confirmed
+                # 如果是上级角色，同时完成确认并归档
                 if is_superior:
-                    mark_confirmed(db_path, wal, key, now, confirmed_by=user_name, conn=conn)
-                    print(f"[Registry] 上级角色{role}自动确认完成")
+                    archive_info = mark_confirmed(db_path, wal, key, now, confirmed_by=user_name, conn=conn)
+                    if not archive_info:
+                        raise RuntimeError(f"上级自动确认失败，未找到任务: {key['interface_id']}")
+                    write_event(db_path, wal, EventType.ARCHIVED, {
+                        'file_type': file_type,
+                        'project_id': key['project_id'],
+                        'interface_id': key['interface_id'],
+                        'source_file': key['source_file'],
+                        'row_index': key['row_index'],
+                        'extra': {
+                            'reason': archive_info.get('archive_reason'),
+                            'confirmed_by': user_name,
+                            'archived_task_id': archive_info.get('archived_id'),
+                            'original_task_id': archive_info.get('original_id'),
+                            'archived_row_index': archive_info.get('archived_row_index'),
+                        }
+                    }, now, conn=conn)
+                    print(f"[Registry] 上级角色{role}自动确认并归档完成")
 
                 # 写入response_written事件
                 write_event(db_path, wal, EventType.RESPONSE_WRITTEN, {
@@ -741,6 +759,7 @@ def on_response_written(
                 close_connection_after_use()
 
         _retry_on_lock("回文单号写入", _do_response_write)
+        invalidate_cache()
         
         # 控制台输出优化：已验证逻辑，默认不输出
         
@@ -763,11 +782,11 @@ def on_confirmed_by_superior(
     interface_id: Optional[str] = None,
     role: Optional[str] = None,
     now: Optional[datetime] = None
-) -> None:
+) -> bool:
     """
     上级确认钩子
     
-    当上级点击"已完成"勾选框确认任务时调用，将任务状态从 completed 更新为 confirmed
+    当上级点击"已完成"勾选框确认任务时调用，将任务状态从 completed 直接归档
     
     参数:
         file_type: 文件类型（1-6）
@@ -783,7 +802,7 @@ def on_confirmed_by_superior(
         _ensure_data_folder_from_path(file_path)
         cfg = _cfg()
         if not _enabled(cfg):
-            return
+            return False
         
         now = now or safe_now()
         db_path = cfg['registry_db_path']
@@ -799,8 +818,9 @@ def on_confirmed_by_superior(
         }
         
         def _do_confirm_write():
-            # 【修复】更新状态为confirmed，传递确认人姓名
-            mark_confirmed(db_path, wal, key, now, confirmed_by=user_name)
+            archive_info = mark_confirmed(db_path, wal, key, now, confirmed_by=user_name)
+            if not archive_info:
+                raise RuntimeError(f"确认失败，未找到任务: {key['interface_id']}")
 
             # 写入confirmed事件
             write_event(db_path, wal, EventType.CONFIRMED, {
@@ -812,24 +832,44 @@ def on_confirmed_by_superior(
                 'extra': {'user_name': user_name}
             }, now)
 
+            # 确认即归档，记录归档事件，便于后续审计。
+            write_event(db_path, wal, EventType.ARCHIVED, {
+                'file_type': file_type,
+                'project_id': key['project_id'],
+                'interface_id': key['interface_id'],
+                'source_file': key['source_file'],
+                'row_index': key['row_index'],
+                'extra': {
+                    'reason': archive_info.get('archive_reason'),
+                    'confirmed_by': user_name,
+                    'archived_task_id': archive_info.get('archived_id'),
+                    'original_task_id': archive_info.get('original_id'),
+                    'archived_row_index': archive_info.get('archived_row_index'),
+                }
+            }, now)
+
         _retry_on_lock("上级确认写入", _do_confirm_write)
+        invalidate_cache()
+        return True
         
         # 控制台输出优化：已验证逻辑，默认不输出
         
     except MaintenanceModeError as e:
         _handle_maintenance_mode(e)
+        return False
     except Exception as e:
         print(f"[Registry] on_confirmed_by_superior 失败: {e}")
         import traceback
         traceback.print_exc()
         _handle_runtime_registry_error(e)
+        return False
     finally:
         close_connection_after_use()
 
 def on_unconfirmed_by_superior(
     key: Dict[str, Any],
     user_name: str = None
-) -> None:
+) -> bool:
     """
     上级角色取消确认（取消勾选）
     
@@ -846,7 +886,7 @@ def on_unconfirmed_by_superior(
         
         cfg = _cfg()
         if not _enabled(cfg):
-            return
+            return False
         
         now = safe_now()
         db_path = cfg['registry_db_path']
@@ -855,14 +895,18 @@ def on_unconfirmed_by_superior(
         print(f"[Registry] 上级取消确认: 文件类型={key['file_type']}, 项目={key['project_id']}, 接口={key['interface_id']}, 用户={user_name}")
         
         _retry_on_lock("上级取消确认写入", lambda: mark_unconfirmed(db_path, wal, key, now))
+        invalidate_cache()
+        return True
         
     except MaintenanceModeError as e:
         _handle_maintenance_mode(e)
+        return False
     except Exception as e:
         print(f"[Registry] on_unconfirmed_by_superior 失败: {e}")
         import traceback
         traceback.print_exc()
         _handle_runtime_registry_error(e)
+        return False
     finally:
         close_connection_after_use()
 

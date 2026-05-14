@@ -1909,7 +1909,7 @@ class ExcelProcessorApp:
             
             # 判断是否为设计人员
             is_designer = '设计人员' in user_roles
-            is_superior = any(keyword in ' '.join(user_roles) for keyword in ['所领导', '室主任', '接口工程师'])
+            is_superior = any(keyword in ' '.join(user_roles) for keyword in ['所领导', '室主任', '接口工程师', '管理员'])
             
             exclude_indices = []
             
@@ -3050,10 +3050,16 @@ class ExcelProcessorApp:
         # 创建设置菜单窗口
         settings_menu = tk.Toplevel(self.root)
         settings_menu.title("设置")
-        settings_menu.geometry("560x520")  # 增加高度以适应新增选项
+        settings_menu.geometry("580x610")  # 留出底部按钮空间，避免高 DPI 下文字被裁切
         settings_menu.transient(self.root)
         settings_menu.grab_set()
         settings_menu.resizable(False, False)
+        try:
+            settings_menu.minsize(580, 610)
+            style = ttk.Style(settings_menu)
+            style.configure("Settings.TButton", padding=(14, 8), font=("Microsoft YaHei UI", 10))
+        except Exception:
+            pass
         
         # 设置窗口图标
         try:
@@ -3345,12 +3351,31 @@ class ExcelProcessorApp:
                 except Exception:
                     pass
         
-        cache_button = ttk.Button(frame, text="清除缓存", command=on_clear_cache, width=14)
-        cache_button.pack(pady=(10, 0))
+        button_frame = ttk.Frame(frame)
+        button_frame.pack(fill=tk.X, pady=(18, 0))
+
+        cache_button = ttk.Button(
+            button_frame,
+            text="清除缓存",
+            command=on_clear_cache,
+            width=16,
+            style="Settings.TButton",
+        )
+        cache_button.pack(pady=(0, 8), ipadx=8, ipady=2)
         
         # 关闭按钮
-        close_button = ttk.Button(frame, text="确定", command=settings_menu.destroy, width=14)
-        close_button.pack(pady=(5, 0))
+        close_button = ttk.Button(
+            button_frame,
+            text="确定",
+            command=settings_menu.destroy,
+            width=16,
+            style="Settings.TButton",
+        )
+        close_button.pack(ipadx=8, ipady=2)
+        try:
+            close_button.focus_set()
+        except Exception:
+            pass
 
     def show_waiting_dialog(self, title, message):
         """显示等待对话框"""

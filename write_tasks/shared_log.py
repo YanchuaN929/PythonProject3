@@ -31,6 +31,14 @@ def _extract_fields(task: WriteTask) -> dict:
             file_type = task.payload.get("file_type")
             project_id = str(task.payload.get("project_id", "") or "")
             row_index = task.payload.get("row_index")
+        elif task.task_type == "confirmation":
+            confirmations = task.payload.get("confirmations") or []
+            if confirmations:
+                first = confirmations[0] or {}
+                file_path = str(first.get("file_path", "") or first.get("source_file", "") or "")
+                file_type = first.get("file_type")
+                project_id = str(first.get("project_id", "") or "")
+                row_index = first.get("row_index")
         elif task.task_type == "assignment":
             # 指派任务可能涉及多条，记录第一条用于快速定位
             assignments = task.payload.get("assignments") or []

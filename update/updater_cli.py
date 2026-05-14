@@ -28,6 +28,7 @@ LOG_FILE: Optional[str] = None
 DEFAULT_MAIN_EXIT_TIMEOUT_SECONDS = 30
 DEFAULT_COPY_RETRY_COUNT = 3
 DEFAULT_COPY_RETRY_DELAY_SECONDS = 0.4
+DEFAULT_LOCK_RECOVERY_TIMEOUT_SECONDS = 15
 LOCKED_FILE_LOG_SAMPLE_LIMIT = 10
 
 
@@ -113,7 +114,73 @@ def _detect_local_root() -> str:
             return os.path.dirname(os.path.abspath(sys.executable))
     except Exception:
         pass
-    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(script_dir)
+    if (
+        os.path.basename(script_dir).lower() == "update"
+        and os.path.basename(parent_dir).lower() == "_internal"
+    ):
+        return os.path.dirname(parent_dir)
+    return parent_dir
+
+
+def _normalize_path(path: str) -> str:
+    try:
+        return os.path.normcase(os.path.abspath(path))
+    except Exception:
+        return os.path.normcase(str(path))
+
+
+def _same_file(path_a: str, path_b: str) -> bool:
+    try:
+        return os.path.samefile(path_a, path_b)
+    except Exception:
+        return _normalize_path(path_a) == _normalize_path(path_b)
+
+
+def _is_path_inside(path: str, parent: str) -> bool:
+    try:
+        path_norm = _normalize_path(path)
+        parent_norm = _normalize_path(parent)
+        return os.path.commonpath([path_norm, parent_norm]) == parent_norm
+    except Exception:
+        return False
+
+
+def _current_executable_inside(local_dir: str) -> bool:
+    try:
+        return _is_path_inside(sys.executable, local_dir)
+    except Exception:
+        return False
+
+
+def _args_to_argv(args) -> list[str]:
+    argv: list[str] = []
+    if args.remote:
+        argv += ["--remote", args.remote]
+    if args.local:
+        argv += ["--local", args.local]
+    if args.version:
+        argv += ["--version", args.version]
+    if args.resume:
+        argv += ["--resume", args.resume]
+    if args.main_exe:
+        argv += ["--main-exe", args.main_exe]
+    if args.main_pid:
+        argv += ["--main-pid", str(args.main_pid)]
+    if args.auto_mode:
+        argv.append("--auto-mode")
+    return argv
+
+
+def _resolve_remote_update_exe(remote_dir: str) -> str:
+    for candidate in (
+        os.path.join(remote_dir, "update.exe"),
+        os.path.join(remote_dir, "_internal", "update.exe"),
+    ):
+        if candidate and os.path.exists(candidate):
+            return os.path.abspath(candidate)
+    return ""
 
 
 def _load_folder_path_from_config(local_dir: str) -> str:
@@ -192,6 +259,8 @@ def _is_process_running(process_name: str) -> bool:
             ['tasklist', '/FI', f'IMAGENAME eq {process_name}', '/NH'],
             capture_output=True,
             text=True,
+            encoding="mbcs" if os.name == "nt" else None,
+            errors="replace",
             timeout=10,
             creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
         )
@@ -214,6 +283,8 @@ def _is_pid_running(pid: int) -> bool:
             ["tasklist", "/FI", f"PID eq {pid}", "/NH"],
             capture_output=True,
             text=True,
+            encoding="mbcs" if os.name == "nt" else None,
+            errors="replace",
             timeout=10,
             creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0,
         )
@@ -225,6 +296,33 @@ def _is_pid_running(pid: int) -> bool:
         return False
 
 
+def _terminate_pid(pid: int) -> bool:
+    """只强制结束触发更新的主程序 PID，避免误杀同名程序。"""
+    if not pid or int(pid) <= 0:
+        return False
+    pid = int(pid)
+    if pid == os.getpid():
+        log("拒绝结束当前更新器进程", "ERROR")
+        return False
+    try:
+        result = subprocess.run(
+            ["taskkill", "/PID", str(pid), "/T", "/F"],
+            capture_output=True,
+            text=True,
+            encoding="mbcs" if os.name == "nt" else None,
+            errors="replace",
+            timeout=15,
+            creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0,
+        )
+        if result.returncode == 0:
+            log(f"已强制结束主程序 PID: {pid}", "WARNING")
+            return True
+        log(f"结束主程序 PID 失败: {result.stderr or result.stdout}", "WARNING")
+    except Exception as e:
+        log(f"结束主程序 PID 异常: {e}", "WARNING")
+    return False
+
+
 def _is_file_locked(filepath: str) -> bool:
     """检测文件是否被锁定（正在被使用）"""
     try:
@@ -233,6 +331,41 @@ def _is_file_locked(filepath: str) -> bool:
             return False  # 能打开，说明未锁定
     except (OSError, PermissionError):
         return True  # 打不开，说明被锁定
+
+
+def _critical_runtime_paths(local_dir: str) -> list[str]:
+    """列出本地 PyInstaller 运行时关键文件。"""
+    internal_dir = os.path.join(local_dir, "_internal")
+    paths = [os.path.join(internal_dir, "base_library.zip")]
+    try:
+        if os.path.isdir(internal_dir):
+            for name in os.listdir(internal_dir):
+                lower = name.lower()
+                if lower.startswith("python") and lower.endswith(".dll"):
+                    paths.append(os.path.join(internal_dir, name))
+    except Exception:
+        pass
+    return paths
+
+
+def _wait_for_runtime_locks_released(
+    local_dir: str,
+    timeout: int = DEFAULT_LOCK_RECOVERY_TIMEOUT_SECONDS,
+) -> bool:
+    """等待本地关键运行时文件锁释放。"""
+    deadline = time.time() + timeout
+    while time.time() <= deadline:
+        locked = [
+            path
+            for path in _critical_runtime_paths(local_dir)
+            if os.path.exists(path) and _is_file_locked(path)
+        ]
+        if not locked:
+            return True
+        rel_locked = ", ".join(os.path.relpath(path, local_dir) for path in locked)
+        log(f"等待关键运行时文件释放: {rel_locked}", "WARNING")
+        time.sleep(1)
+    return False
 
 
 def wait_for_main_exit(
@@ -295,10 +428,12 @@ def wait_for_main_exit(
     return False
 
 
-def get_current_executable() -> Optional[str]:
+def get_current_executable(local_dir: Optional[str] = None) -> Optional[str]:
     """获取当前正在运行的可执行文件名"""
     try:
         if getattr(sys, 'frozen', False):
+            if local_dir and not _current_executable_inside(local_dir):
+                return None
             # PyInstaller 打包后的 exe
             return os.path.basename(sys.executable)
         else:
@@ -388,7 +523,7 @@ def sync_directory(source: str, target: str, skip_files: Optional[set] = None) -
         目录同步结果
     """
     skip_files = skip_files or set()
-    skip_lower = {f.lower() for f in skip_files}
+    skip_lower = {str(f).replace("/", "\\").lower() for f in skip_files}
     
     os.makedirs(target, exist_ok=True)
     
@@ -411,8 +546,9 @@ def sync_directory(source: str, target: str, skip_files: Optional[set] = None) -
     log(f"待检查文件: {result.total_candidates} 个")
 
     for rel_path, src_file, dst_file, file_name in file_entries:
+        rel_lower = str(rel_path).replace("/", "\\").lower()
         # 检查是否需要跳过
-        if file_name.lower() in skip_lower:
+        if file_name.lower() in skip_lower or rel_lower in skip_lower:
             result.skipped_count += 1
             continue
 
@@ -435,6 +571,53 @@ def sync_directory(source: str, target: str, skip_files: Optional[set] = None) -
         f"跳过 {result.skipped_count} 个, 失败 {result.error_count} 个"
     )
     return result
+
+
+def retry_locked_files(
+    remote_dir: str,
+    local_dir: str,
+    locked_files: list[str],
+    skip_files: Optional[set] = None,
+) -> list[str]:
+    """对第一次同步被锁的文件做定点重试，返回仍未成功的相对路径。"""
+    skip_lower = {f.lower() for f in (skip_files or set())}
+    remaining: list[str] = []
+
+    for rel_path in locked_files:
+        if os.path.basename(rel_path).lower() in skip_lower:
+            continue
+
+        src_file = os.path.join(remote_dir, rel_path)
+        dst_file = os.path.join(local_dir, rel_path)
+        if not os.path.exists(src_file):
+            remaining.append(rel_path)
+            continue
+
+        status = _copy_file_with_retry(src_file, dst_file)
+        if status == "copied":
+            log(f"  被占用文件重试成功: {rel_path}")
+        else:
+            remaining.append(rel_path)
+
+    return remaining
+
+
+def cleanup_nested_internal_dir(local_dir: str) -> None:
+    """清理旧错误版本可能生成的 _internal/_internal 嵌套目录。"""
+    nested_internal = os.path.join(local_dir, "_internal", "_internal")
+    try:
+        local_abs = os.path.abspath(local_dir)
+        nested_abs = os.path.abspath(nested_internal)
+        if (
+            not os.path.isdir(nested_abs)
+            or not _is_path_inside(nested_abs, local_abs)
+            or os.path.normcase(nested_abs) == os.path.normcase(local_abs)
+        ):
+            return
+        shutil.rmtree(nested_abs)
+        log(f"已清理异常嵌套目录: {os.path.relpath(nested_abs, local_abs)}", "WARNING")
+    except Exception as exc:
+        log(f"清理异常嵌套目录失败: {exc}", "WARNING")
 
 
 def restart_main_program(
@@ -581,10 +764,92 @@ def _has_restart_blocking_locks(analysis: dict) -> bool:
     blocking_suffixes = (".dll", ".pyd", ".exe", ".zip")
     for file_path in analysis.get("unknown", []):
         normalized = str(file_path).replace("/", "\\").lower()
+        if normalized.startswith("_internal\\python\\"):
+            continue
         if normalized.endswith(blocking_suffixes):
             return True
         if "\\_internal\\" in normalized:
             return True
+    return False
+
+
+def _reexec_with_remote_update_if_frozen(args) -> bool:
+    """
+    本地 update.exe 会占用本地 _internal 运行时。若远程包内有 update.exe，
+    先切换到远程 update.exe，由它更新本地目录，避免本地运行时文件被锁。
+    """
+    if not getattr(sys, "frozen", False):
+        return False
+    if os.environ.get("UPDATE_REMOTE_REEXEC") == "1":
+        return False
+
+    local_dir = os.path.abspath(args.local or _detect_local_root())
+    if not _current_executable_inside(local_dir):
+        return False
+
+    remote_dir = os.path.abspath(args.remote) if args.remote else ""
+    remote_update_exe = _resolve_remote_update_exe(remote_dir)
+    if not remote_update_exe:
+        return False
+    if _same_file(remote_update_exe, sys.executable):
+        return False
+
+    cmd = [remote_update_exe] + _args_to_argv(args)
+    env = os.environ.copy()
+    env["UPDATE_REMOTE_REEXEC"] = "1"
+    log("检测到本地 update.exe 会占用本地 PyInstaller 运行时，切换到远程 update.exe")
+    log(f"切换命令: {' '.join(cmd)}")
+    subprocess.Popen(cmd, cwd=local_dir, env=env, close_fds=True)
+    return True
+
+
+def _reexec_with_cli_python_if_frozen(args, argv: Optional[Iterable[str]] = None) -> bool:
+    """
+    PyInstaller 版 update.exe 会占用本地 _internal/python*.dll。
+    发现普通 Python 更新器时，先切换过去，再退出当前 update.exe。
+    """
+    if not getattr(sys, "frozen", False):
+        return False
+    if os.environ.get("UPDATE_CLI_REEXEC") == "1":
+        return False
+
+    local_dir = os.path.abspath(args.local or _detect_local_root())
+    if not _current_executable_inside(local_dir):
+        return False
+
+    remote_dir = os.path.abspath(args.remote) if args.remote else ""
+    candidates = [
+        (
+            os.path.join(remote_dir, "_internal", "python", "Scripts", "python.exe"),
+            os.path.join(remote_dir, "_internal", "update", "updater_cli.py"),
+        ),
+        (
+            os.path.join(local_dir, "_internal", "python", "Scripts", "python.exe"),
+            os.path.join(local_dir, "_internal", "update", "updater_cli.py"),
+        ),
+        (
+            os.path.join(local_dir, "python", "Scripts", "python.exe"),
+            os.path.join(local_dir, "update", "updater_cli.py"),
+        ),
+        (
+            os.path.join(local_dir, ".venv", "Scripts", "python.exe"),
+            os.path.join(local_dir, "update", "updater_cli.py"),
+        ),
+    ]
+
+    for python_exe, script_path in candidates:
+        if not (os.path.exists(python_exe) and os.path.exists(script_path)):
+            continue
+
+        cmd = [python_exe, script_path] + _args_to_argv(args)
+        env = os.environ.copy()
+        env["UPDATE_CLI_REEXEC"] = "1"
+        log("检测到 update.exe 会占用本地 PyInstaller 运行时，切换到普通 Python 更新器")
+        log(f"切换命令: {' '.join(cmd)}")
+        subprocess.Popen(cmd, cwd=local_dir, env=env, close_fds=True)
+        return True
+
+    log("未找到普通 Python 更新器，将继续使用 update.exe；若运行时文件被占用会中止更新", "WARNING")
     return False
 
 
@@ -613,7 +878,10 @@ def perform_update(args) -> bool:
 
     try:
         # 获取当前运行的可执行文件名（需要跳过）
-        current_exe = get_current_executable()
+        try:
+            current_exe = get_current_executable(local_dir)
+        except TypeError:
+            current_exe = get_current_executable()
         skip_files = set()
         if current_exe:
             skip_files.add(current_exe)
@@ -627,12 +895,16 @@ def perform_update(args) -> bool:
         log("步骤 1/3: 等待主程序退出...")
         if not wait_for_main_exit(main_exe_path, main_pid=args.main_pid or None):
             log("主程序未能正常退出，继续尝试更新", "WARNING")
+            if args.main_pid:
+                _terminate_pid(args.main_pid)
+                _wait_for_runtime_locks_released(local_dir)
         
         # 复制文件
         log("步骤 2/3: 复制更新文件...")
         copy_started_at = time.time()
         sync_result = copy_directory_atomic(remote_dir, local_dir, skip_files)
         log(f"复制阶段耗时: {time.time() - copy_started_at:.1f} 秒")
+        cleanup_nested_internal_dir(local_dir)
 
         if sync_result.error_count > 0:
             log(
@@ -644,6 +916,19 @@ def perform_update(args) -> bool:
         # 分析被锁定的文件
         if sync_result.locked_files:
             analysis = analyze_locked_files(sync_result.locked_files)
+            if _has_restart_blocking_locks(analysis):
+                log("检测到关键运行文件被占用，尝试释放主程序并定点重试复制", "WARNING")
+                if args.main_pid and _is_pid_running(args.main_pid):
+                    _terminate_pid(args.main_pid)
+                _wait_for_runtime_locks_released(local_dir)
+                sync_result.locked_files = retry_locked_files(
+                    remote_dir,
+                    local_dir,
+                    sync_result.locked_files,
+                    skip_files,
+                )
+                analysis = analyze_locked_files(sync_result.locked_files)
+
             log_locked_files_summary(analysis)
 
             if _has_restart_blocking_locks(analysis):
@@ -674,6 +959,10 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         args = parse_args(argv)
         args = fill_missing_args(args)
         init_log_file(args.local or _detect_local_root())
+        if _reexec_with_remote_update_if_frozen(args):
+            return 0
+        if _reexec_with_cli_python_if_frozen(args, argv):
+            return 0
 
         missing_args = []
         if not args.remote:

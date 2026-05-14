@@ -150,7 +150,9 @@ class UpdateManager:
             pass
 
     def _launch_update_exe(self, context: UpdateContext) -> bool:
-        update_runner = self._resolve_update_runner()
+        update_runner = self._resolve_remote_update_runner(context.remote_root)
+        if not update_runner:
+            update_runner = self._resolve_update_runner()
         if not update_runner:
             self._log("未找到可用的 update.exe，无法执行更新")
             return False
@@ -190,6 +192,23 @@ class UpdateManager:
         except Exception as exc:
             self._log(f"启动 update 失败: {exc}")
             return False
+
+    def _resolve_remote_update_runner(self, remote_root: str):
+        for candidate in (
+            os.path.join(remote_root, self.update_executable),
+            os.path.join(remote_root, "_internal", self.update_executable),
+        ):
+            if os.path.exists(candidate):
+                local_candidate = os.path.join(self.app_root, self.update_executable)
+                try:
+                    if os.path.samefile(candidate, local_candidate):
+                        continue
+                except Exception:
+                    if os.path.normcase(os.path.abspath(candidate)) == os.path.normcase(os.path.abspath(local_candidate)):
+                        continue
+                self._log(f"更新器入口: {candidate}（远程运行，避免占用本地运行时）")
+                return [candidate]
+        return None
 
     def _resolve_update_runner(self):
         exe_path = os.path.join(self.app_root, self.update_executable)
@@ -416,4 +435,3 @@ class UpdateManager:
         except Exception as e:
             self._log(f"更新 {self.update_executable} 失败: {e}")
             return False
-
