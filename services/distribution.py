@@ -433,20 +433,13 @@ def save_assignments_batch(assignments):
                     })
                 continue
             
-            df = None
             wb = None
             try:
                 # 3. 打开Excel文件（只打开一次）
                 wb = open_workbook_for_edit(file_path)
                 ws = wb.active
 
-                # 4. 读取DataFrame用于Registry（只读一次，可失败；Registry 将优先使用 payload 兜底）
-                try:
-                    df = pd.read_excel(file_path, sheet_name=0)
-                except Exception as e:
-                    print(f"[指派] 读取DataFrame失败: {e}")
-
-                # 5. 批量写入责任人
+                # 4. 批量写入责任人
                 for assignment in file_assignments:
                     try:
                         file_type = assignment['file_type']
@@ -474,7 +467,7 @@ def save_assignments_batch(assignments):
                             'reason': str(e)
                         })
 
-                # 6. 保存Excel（只保存一次）
+                # 5. 保存Excel（只保存一次）
                 atomic_save_workbook(wb, file_path)
             finally:
                 if wb is not None:
@@ -483,32 +476,16 @@ def save_assignments_batch(assignments):
                     except Exception:
                         pass
             
-            # 7. 批量调用Registry钩子（不依赖 DataFrame 一定成功；优先使用 assignment payload 的接口号/项目号兜底）
+            # 6. 批量调用Registry钩子：只使用界面传入的精确 payload，避免为了兜底再全表读取Excel。
             try:
                 from registry import hooks as registry_hooks
-                from registry.util import extract_interface_id, extract_project_id
 
                 for assignment in file_assignments:
                     try:
                         row_index = assignment['row_index']
 
-                        # 兜底：先用 payload（更稳定，也避免行号映射不准导致“更新 0”）
                         interface_id = str(assignment.get("interface_id", "") or "").strip()
                         project_id = str(assignment.get("project_id", "") or "").strip()
-
-                        # 若 df 可用，且能正确映射到行，则以 df 提取结果为准（更贴近真实Excel内容）
-                        if df is not None:
-                            try:
-                                df_row_idx = row_index - 2  # Excel行号（含表头） -> df 行索引
-                                if 0 <= df_row_idx < len(df):
-                                    row_data = df.iloc[df_row_idx]
-                                    df_interface_id = extract_interface_id(row_data, assignment['file_type'])
-                                    df_project_id = extract_project_id(row_data, assignment['file_type'])
-                                    if df_interface_id and df_project_id:
-                                        interface_id = str(df_interface_id or "").strip()
-                                        project_id = str(df_project_id or "").strip()
-                            except Exception:
-                                pass
 
                         if interface_id and project_id:
                             assigned_by = assignment.get('assigned_by', '系统用户')
@@ -1306,4 +1283,3 @@ if __name__ == "__main__":
             print(f"    科室: {get_department(roles)}")
         if is_interface_engineer(roles):
             print(f"    项目号: {parse_interface_engineer_project(roles)}")
-

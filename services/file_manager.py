@@ -469,6 +469,15 @@ class FileIdentityManager:
             # 加载缓存
             with open(cache_file, 'rb') as f:
                 dataframe = pickle.load(f)
+
+            # 精简列流式读取后的缓存必须带 schema 标记；旧完整行缓存不再兼容。
+            if isinstance(dataframe, pd.DataFrame) and str(file_type).startswith("file"):
+                if "_stream_schema_version" not in dataframe.columns:
+                    try:
+                        os.remove(cache_file)
+                    except Exception:
+                        pass
+                    return None
             
             # 控制台输出优化：已验证逻辑，默认不输出
             return dataframe

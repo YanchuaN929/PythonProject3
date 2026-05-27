@@ -176,6 +176,10 @@ def extract_completed_column_value(df_row: pd.Series, file_type: int) -> str:
     返回:
         列值字符串（去除前后空格），如果为空返回空字符串
     """
+    if "_completed_col_value" in df_row.index:
+        val = df_row.get("_completed_col_value")
+        return str(val).strip() if pd.notna(val) else ""
+
     col_map = {
         1: 12,   # M列
         2: 13,   # N列

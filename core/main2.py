@@ -177,24 +177,31 @@ def write_export_summary(
                 else:
                     time_series = ["未知"] * len(df)
                 
-                # 确定接口号列索引（使用列索引而非列名）
-                interface_col_letter = interface_column_map.get(category_name, "A")
-                # 将字母转换为索引：A=0, B=1, C=2, ..., R=17
-                col_index_map = {
-                    "A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5,
-                    "G": 6, "H": 7, "I": 8, "J": 9, "K": 10, "L": 11,
-                    "M": 12, "N": 13, "O": 14, "P": 15, "Q": 16, "R": 17
-                }
-                col_idx = col_index_map.get(interface_col_letter, 0)
-                
-                # 使用iloc通过索引获取列数据
-                if col_idx < len(df.columns):
+                # 精简列结果优先使用标准“接口号”，旧完整行缓存才回退到原始列索引。
+                if "接口号" in getattr(df, 'columns', []):
                     interface_series = [
                         (str(v).strip() if v is not None and str(v).strip() and str(v) != 'nan' else "")
-                        for v in df.iloc[:, col_idx].tolist()
+                        for v in df["接口号"].tolist()
                     ]
                 else:
-                    interface_series = [""] * len(df)
+                    # 确定接口号列索引（使用列索引而非列名）
+                    interface_col_letter = interface_column_map.get(category_name, "A")
+                    # 将字母转换为索引：A=0, B=1, C=2, ..., R=17
+                    col_index_map = {
+                        "A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5,
+                        "G": 6, "H": 7, "I": 8, "J": 9, "K": 10, "L": 11,
+                        "M": 12, "N": 13, "O": 14, "P": 15, "Q": 16, "R": 17
+                    }
+                    col_idx = col_index_map.get(interface_col_letter, 0)
+
+                    # 使用iloc通过索引获取列数据
+                    if col_idx < len(df.columns):
+                        interface_series = [
+                            (str(v).strip() if v is not None and str(v).strip() and str(v) != 'nan' else "")
+                            for v in df.iloc[:, col_idx].tolist()
+                        ]
+                    else:
+                        interface_series = [""] * len(df)
                 
                 # 获取角色来源列（如果存在）
                 if "角色来源" in getattr(df, 'columns', []):

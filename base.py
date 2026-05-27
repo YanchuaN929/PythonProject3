@@ -50,7 +50,7 @@ except ImportError:
     def get_director_roles():
         return ["一室主任", "二室主任", "建筑总图室主任"]
     def get_projects():
-        return ["1818", "1907", "1915", "1916", "2016", "2026", "2306"]
+        return ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"]
     def get_role_table_file():
         return "excel_bin/姓名角色表.xlsx"
     def get_time_window_roles():

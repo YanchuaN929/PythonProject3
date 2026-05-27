@@ -765,7 +765,7 @@ class TestProjectsAndRoleTableDefault:
         with patch("utils.dept_config._get_config_path",
                     return_value="/nonexistent"):
             projects = get_projects()
-        assert projects == ["1818", "1907", "1915", "1916", "2016", "2026", "2306"]
+        assert projects == ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"]
 
     def test_get_role_table_file_default(self):
         from utils.dept_config import get_role_table_file
@@ -934,13 +934,13 @@ class TestProjectsAndRoleTableSwitching:
             "department_profile": "建筑结构所",
             "department_profiles": {
                 "建筑结构所": {
-                    "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306"],
+                    "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"],
                     "director_role_mapping": {"一室主任": "结构一室"},
                 },
             },
         }
         with patch_config_path(config_building):
-            assert get_projects() == ["1818", "1907", "1915", "1916", "2016", "2026", "2306"]
+            assert get_projects() == ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"]
 
         # 切换到电力工程研究设计所
         dc._profile_cache = None
@@ -1162,7 +1162,7 @@ class TestThreeProfileSwitching:
             "department_profiles": {
                 "建筑结构所": {
                     "department_codes": ["25C1", "25C2", "25C3"],
-                    "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306"],
+                    "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"],
                     "role_table_file": "excel_bin/姓名角色表.xlsx",
                     "director_role_mapping": {"一室主任": "结构一室"},
                 },

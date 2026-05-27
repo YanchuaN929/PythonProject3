@@ -4,6 +4,7 @@
 import sqlite3
 import threading
 
+import pandas as pd
 import pytest
 from openpyxl import Workbook
 
@@ -288,3 +289,56 @@ def test_save_assignments_batch_keeps_workbook_valid(tmp_path, monkeypatch):
         assert verify_wb.active["R2"].value == "张三"
     finally:
         verify_wb.close()
+
+
+def test_registry_accepts_2416_without_touching_existing_project(tmp_path, monkeypatch):
+    from registry import db as registry_db
+    from registry import hooks
+
+    data_folder = tmp_path / "data"
+    data_folder.mkdir()
+    monkeypatch.setattr(hooks, "_DATA_FOLDER", str(data_folder))
+    monkeypatch.setattr(hooks, "_RUNTIME_DISABLED_REASON", "")
+    monkeypatch.setattr(hooks, "_RUNTIME_DISABLE_NOTIFIED", False)
+
+    old_df = pd.DataFrame([{
+        "项目号": "2026",
+        "接口号": "S-OLD-01",
+        "接口时间": "2026.05.27",
+        "科室": "结构一室",
+        "责任人": "张三",
+        "原始行号": 2,
+        "_completed_col_value": "",
+    }])
+    new_df = pd.DataFrame([{
+        "项目号": "2416",
+        "接口号": "S-NEW-01",
+        "接口时间": "2026.05.27",
+        "科室": "结构一室",
+        "责任人": "李四",
+        "原始行号": 2,
+        "_completed_col_value": "",
+    }])
+
+    hooks.on_process_done(1, "2026", str(tmp_path / "2026按项目导出IDI手册2026-05-27.xlsx"), old_df)
+    hooks.on_process_done(1, "2416", str(tmp_path / "2416按项目导出IDI手册2026-05-27.xlsx"), new_df)
+    registry_db.close_connection_after_use()
+
+    db_path = data_folder / ".registry" / "registry.db"
+    conn = sqlite3.connect(str(db_path))
+    try:
+        task_rows = conn.execute(
+            "SELECT project_id, interface_id, business_id FROM tasks ORDER BY project_id"
+        ).fetchall()
+        event_rows = conn.execute(
+            "SELECT event, project_id FROM events WHERE event = 'process_done' ORDER BY project_id"
+        ).fetchall()
+    finally:
+        conn.close()
+        registry_db.close_connection_after_use()
+
+    assert task_rows == [
+        ("2026", "S-OLD-01", "1|2026|S-OLD-01"),
+        ("2416", "S-NEW-01", "1|2416|S-NEW-01"),
+    ]
+    assert event_rows == [("process_done", "2026"), ("process_done", "2416")]

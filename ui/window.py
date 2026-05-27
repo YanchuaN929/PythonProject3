@@ -1768,6 +1768,41 @@ class WindowManager:
             completed_rows: 已完成行的集合（原始行号）
         """
         try:
+            # 精简列流式处理结果优先使用标准业务列，不再按原始Excel列索引取接口号。
+            if "接口号" in df.columns:
+                if completed_rows is None:
+                    completed_rows = set()
+
+                interface_values = df["接口号"].copy()
+                if "角色来源" in df.columns:
+                    role_values = df["角色来源"].astype(str)
+                    combined_values = []
+                    for interface, role in zip(interface_values, role_values):
+                        interface_str = str(interface) if not pd.isna(interface) else ""
+                        role_str = str(role).strip() if not pd.isna(role) and str(role).strip() else ""
+                        if interface_str and role_str and role_str.lower() != "nan":
+                            combined_values.append(f"{interface_str}({role_str})")
+                        else:
+                            combined_values.append(interface_str)
+                else:
+                    combined_values = interface_values
+
+                if "原始行号" in df.columns:
+                    original_rows = df["原始行号"].tolist()
+                    completed_status = ["☑" if row in completed_rows else "☐" for row in original_rows]
+                else:
+                    completed_status = ["☐"] * len(df)
+
+                result = pd.DataFrame({
+                    "状态": df["状态"] if "状态" in df.columns else [""] * len(df),
+                    "项目号": df["项目号"] if "项目号" in df.columns else [""] * len(df),
+                    "接口号": combined_values,
+                    "接口时间": df["接口时间"] if "接口时间" in df.columns else ["-"] * len(df),
+                    "责任人": df["责任人"] if "责任人" in df.columns else [""] * len(df),
+                    "是否已完成": completed_status,
+                })
+                return result
+
             # 定义接口号列映射（使用列索引）
             interface_column_index = {
                 "内部需打开接口": 0,   # A列 = 索引0
