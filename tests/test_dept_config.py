@@ -158,7 +158,7 @@ AUTOMATION_ENGINEERING_PROFILE = {
         "管理员": None,
         "设计人员": None,
     },
-    "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306"],
+    "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"],
     "projects_standard_filter": ["1907", "2016"],
     "role_table_file": "excel_bin/姓名角色表-电气自动化所.xlsx",
     "default_folder_path": "//10.102.2.7/文件服务器/电气自动化所/自动化室/21 接口管理",
@@ -765,7 +765,7 @@ class TestProjectsAndRoleTableDefault:
         with patch("utils.dept_config._get_config_path",
                     return_value="/nonexistent"):
             projects = get_projects()
-        assert projects == ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"]
+        assert projects == ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"]
 
     def test_get_role_table_file_default(self):
         from utils.dept_config import get_role_table_file
@@ -934,13 +934,13 @@ class TestProjectsAndRoleTableSwitching:
             "department_profile": "建筑结构所",
             "department_profiles": {
                 "建筑结构所": {
-                    "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"],
+                    "projects": ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"],
                     "director_role_mapping": {"一室主任": "结构一室"},
                 },
             },
         }
         with patch_config_path(config_building):
-            assert get_projects() == ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"]
+            assert get_projects() == ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"]
 
         # 切换到电力工程研究设计所
         dc._profile_cache = None
@@ -1162,7 +1162,7 @@ class TestThreeProfileSwitching:
             "department_profiles": {
                 "建筑结构所": {
                     "department_codes": ["25C1", "25C2", "25C3"],
-                    "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"],
+                    "projects": ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"],
                     "role_table_file": "excel_bin/姓名角色表.xlsx",
                     "director_role_mapping": {"一室主任": "结构一室"},
                 },
@@ -1272,7 +1272,7 @@ class TestAutomationEngineeringProfile:
 
     def test_projects_and_standard_filter(self):
         from utils.dept_config import get_projects, get_projects_standard_filter
-        assert get_projects() == ["1818", "1907", "1915", "1916", "2016", "2026", "2306"]
+        assert get_projects() == ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"]
         assert get_projects_standard_filter() == ["1907", "2016"]
 
     def test_role_table_and_folder_path(self):

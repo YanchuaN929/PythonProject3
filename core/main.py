@@ -10,6 +10,7 @@ import datetime
 import os
 import warnings
 import re
+import unicodedata
 from copy import copy
 
 # 忽略pandas警告
@@ -122,7 +123,7 @@ def apply_assignment_memory(result_df, file_type):
 def _get_version_rank(version_value):
     if version_value is None:
         return 0
-    version_str = str(version_value).strip()
+    version_str = unicodedata.normalize("NFKC", str(version_value)).strip()
     if not version_str or version_str.lower() in ("nan", "none"):
         return 0
     match = re.search(r"[A-Za-z]", version_str)
@@ -263,12 +264,30 @@ def _load_latest_registry_pending_tasks(file_type, db_path, wal):
     conn = get_connection(db_path, wal)
     try:
         cursor = conn.execute("""
-            SELECT interface_id, project_id, display_status, status, last_seen_at
-            FROM tasks
-            WHERE file_type = ?
-              AND (ignored = 0 OR ignored IS NULL)
-              AND status != 'archived'
-            ORDER BY last_seen_at DESC, rowid DESC
+            SELECT current.interface_id, current.project_id, current.display_status,
+                   current.status, current.last_seen_at
+            FROM tasks AS current
+            WHERE current.file_type = ?
+              AND (current.ignored = 0 OR current.ignored IS NULL)
+              AND current.status != 'archived'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM tasks AS confirmed
+                  WHERE confirmed.business_id = current.business_id
+                    AND confirmed.status = 'archived'
+                    AND confirmed.archive_reason IN (
+                        'confirmed_by_superior',
+                        'completed_in_new_source'
+                    )
+                    AND confirmed.confirmed_at IS NOT NULL
+                    AND COALESCE(
+                            confirmed.archived_at,
+                            confirmed.confirmed_at,
+                            confirmed.last_seen_at,
+                            ''
+                        ) >= COALESCE(current.last_seen_at, current.first_seen_at, '')
+              )
+            ORDER BY current.last_seen_at DESC, current.rowid DESC
         """, (file_type,))
         rows = cursor.fetchall()
     finally:
@@ -294,6 +313,40 @@ def _load_latest_registry_pending_tasks(file_type, db_path, wal):
     return pending_tasks
 
 
+def _load_latest_confirmed_archive_times(file_type, project_id, db_path, wal):
+    """Return the latest confirmed archive plan time for each business interface."""
+    from registry.db import get_connection, close_connection_after_use
+
+    archive_times = {}
+    if not db_path or not os.path.exists(db_path):
+        return archive_times
+
+    conn = get_connection(db_path, wal)
+    try:
+        rows = conn.execute(
+            """
+            SELECT interface_id, interface_time
+            FROM tasks
+            WHERE file_type = ?
+              AND project_id = ?
+              AND status = 'archived'
+              AND archive_reason = 'confirmed_by_superior'
+              AND confirmed_at IS NOT NULL
+            ORDER BY archived_at DESC, last_seen_at DESC, rowid DESC
+            """,
+            (int(file_type), str(project_id or "").strip()),
+        ).fetchall()
+        for interface_id, interface_time in rows:
+            key = str(interface_id or "").strip()
+            if key and key not in archive_times:
+                archive_times[key] = str(interface_time or "").strip()
+    except Exception:
+        return {}
+    finally:
+        close_connection_after_use()
+    return archive_times
+
+
 def _build_registry_records_index(records, file_type, file_path, project_id=None, allow_interface_only_fallback=False):
     """为流式精简记录建立 Registry 加回索引，避免额外构造 DataFrame。"""
     if file_type == 5:
@@ -302,7 +355,11 @@ def _build_registry_records_index(records, file_type, file_path, project_id=None
         file_project_id = project_id or _extract_file_project_id(file_path)
     excel_index = {}
     excel_index_by_iface = {}
-    spec = STREAM_FILE_SPECS.get(file_type) if "STREAM_FILE_SPECS" in globals() else None
+    spec = None
+    if records:
+        spec = records[0].get("_stream_spec")
+    if not spec:
+        spec = STREAM_FILE_SPECS.get(file_type) if "STREAM_FILE_SPECS" in globals() else None
     if not spec:
         return file_project_id, excel_index, excel_index_by_iface
     interface_alias = spec["columns"][spec["interface"]]
@@ -312,10 +369,12 @@ def _build_registry_records_index(records, file_type, file_path, project_id=None
             idx = int(record.get("_df_index", -1))
         except Exception:
             continue
-        if idx <= 0:
+        if idx < 0:
             continue
         raw = record.get("_raw") or {}
-        interface_id = _normalize_interface_id(raw.get(interface_alias))
+        interface_id = _normalize_interface_id(
+            record.get("接口号") or raw.get(interface_alias)
+        )
         if not interface_id:
             continue
         row_project_id = str(record.get("项目号") or "").strip()
@@ -482,63 +541,9 @@ def _merge_registry_pending_rows(
     return final_rows, pending_rows
 
 
-def process_excel_files(excel_files, current_datetime):
-    """
-    处理Excel文件的主函数
-    
-    参数:
-        excel_files (list): Excel文件路径列表
-        current_datetime (datetime): 当前日期时间
-    
-    返回:
-        pandas.DataFrame: 处理后的结果数据
-    """
-    print(f"开始处理 {len(excel_files)} 个Excel文件...")
-    print(f"处理时间: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    # 记录到监控器
-    try:
-        from core import Monitor
-        Monitor.log_info(f"开始处理 {len(excel_files)} 个Excel文件")
-        Monitor.log_info(f"处理时间: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-    except Exception:
-        pass
-    
-    # 查找待处理文件1（特定格式的文件）
-    target_file, project_id = find_target_file(excel_files)
-    
-    if target_file is None:
-        error_msg = "未找到符合格式要求的待处理文件（四位数字+按项目导出IDI手册+日期格式）"
-        print(error_msg)
-        try:
-            from core import Monitor
-            Monitor.log_error(error_msg)
-        except Exception:
-            pass
-        return pd.DataFrame({'错误信息': ['未找到符合格式的文件']})
-    
-    print(f"找到待处理文件1: {os.path.basename(target_file)}")
-    try:
-        from core import Monitor
-        Monitor.log_success(f"找到待处理文件1: {os.path.basename(target_file)}")
-    except Exception:
-        pass
-    
-    try:
-        # 处理特定文件
-        result = process_target_file(target_file, current_datetime)
-        
-        if result is not None and not result.empty:
-            print(f"待处理文件1处理完成，生成 {len(result)} 行完成处理数据")
-            return result
-        else:
-            print("处理完成，但没有符合条件的数据")
-            return pd.DataFrame({'信息': ['没有符合条件的数据']})
-                
-    except Exception as e:
-        print(f"处理待处理文件1时发生错误: {str(e)}")
-        return pd.DataFrame({'错误信息': [str(e)]})
-
+# ============================================================
+# 文件识别与项目号提取
+# ============================================================
 
 def find_target_file(excel_files):
     """
@@ -559,18 +564,18 @@ def find_all_target_files1(excel_files):
     例如：2016按项目导出IDI手册2025-08-01-17_55_52
     返回：[(文件路径, 项目号), ...] 列表
     """
-    pattern = r'^(\d{4})按项目导出IDI手册\d{4}-\d{2}-\d{2}.*\.(xlsx|xls)$'
+    pattern = r'^(\d{4})按项目导出IDI手册\d{4}-\d{2}-\d{2}.*\.(xlsx|xlsm|xls)$'
     matched_files = []
-    
+
     try:
         from core import Monitor
         Monitor.log_process("开始批量识别待处理文件1...")
     except Exception:
         pass
-    
+
     for file_path in excel_files:
         file_name = os.path.basename(file_path)
-        m = re.match(pattern, file_name)
+        m = re.match(pattern, file_name, flags=re.IGNORECASE)
         if m:
             project_id = m.group(1)
             matched_files.append((file_path, project_id))
@@ -580,7 +585,7 @@ def find_all_target_files1(excel_files):
                 Monitor.log_success(f"找到待处理文件1: 项目{project_id} - {file_name}")
             except Exception:
                 pass
-    
+
     if matched_files:
         print(f"总共找到 {len(matched_files)} 个待处理文件1")
         try:
@@ -595,7 +600,7 @@ def find_all_target_files1(excel_files):
             Monitor.log_warning("未找到任何符合格式的待处理文件1")
         except Exception:
             pass
-    
+
     return matched_files
 
 
@@ -618,18 +623,18 @@ def find_all_target_files2(excel_files):
     例如：内部接口信息单报表201612345678
     返回：[(文件路径, 项目号), ...] 列表
     """
-    pattern = r'^内部接口信息单报表(\d{4})\d{8}\.(xlsx|xls)$'
+    pattern = r'^内部接口信息单报表(\d{4})\d{8}\.(xlsx|xlsm|xls)$'
     matched_files = []
-    
+
     try:
         from core import Monitor
         Monitor.log_process("开始批量识别待处理文件2...")
     except Exception:
         pass
-    
+
     for file_path in excel_files:
         file_name = os.path.basename(file_path)
-        m = re.match(pattern, file_name)
+        m = re.match(pattern, file_name, flags=re.IGNORECASE)
         if m:
             project_id = m.group(1)
             matched_files.append((file_path, project_id))
@@ -639,7 +644,7 @@ def find_all_target_files2(excel_files):
                 Monitor.log_success(f"找到待处理文件2: 项目{project_id} - {file_name}")
             except Exception:
                 pass
-    
+
     if matched_files:
         print(f"总共找到 {len(matched_files)} 个待处理文件2")
         try:
@@ -654,7 +659,7 @@ def find_all_target_files2(excel_files):
             Monitor.log_warning("未找到任何符合格式的待处理文件2")
         except Exception:
             pass
-    
+
     return matched_files
 
 
@@ -677,18 +682,18 @@ def find_all_target_files3(excel_files):
     例如：外部接口ICM报表201620250801.xlsx
     返回：[(文件路径, 项目号), ...] 列表
     """
-    pattern = r'^外部接口ICM报表(\d{4})\d{8}\.(xlsx|xls)$'
+    pattern = r'^外部接口ICM报表(\d{4})\d{8}\.(xlsx|xlsm|xls)$'
     matched_files = []
-    
+
     try:
         from core import Monitor
         Monitor.log_process("开始批量识别待处理文件3...")
     except Exception:
         pass
-    
+
     for file_path in excel_files:
         file_name = os.path.basename(file_path)
-        m = re.match(pattern, file_name)
+        m = re.match(pattern, file_name, flags=re.IGNORECASE)
         if m:
             project_id = m.group(1)
             matched_files.append((file_path, project_id))
@@ -698,7 +703,6 @@ def find_all_target_files3(excel_files):
                 Monitor.log_success(f"找到待处理文件3: 项目{project_id} - {file_name}")
             except Exception:
                 pass
-    
     if matched_files:
         print(f"总共找到 {len(matched_files)} 个待处理文件3")
         try:
@@ -713,7 +717,6 @@ def find_all_target_files3(excel_files):
             Monitor.log_warning("未找到任何符合格式的待处理文件3")
         except Exception:
             pass
-    
     return matched_files
 
 
@@ -736,18 +739,18 @@ def find_all_target_files4(excel_files):
     例如：外部接口单报表201620250801.xlsx
     返回：[(文件路径, 项目号), ...] 列表
     """
-    pattern = r'^外部接口单报表(\d{4})\d{8}\.(xlsx|xls)$'
+    pattern = r'^外部接口单报表(\d{4})\d{8}\.(xlsx|xlsm|xls)$'
     matched_files = []
-    
+
     try:
         from core import Monitor
         Monitor.log_process("开始批量识别待处理文件4...")
     except Exception:
         pass
-    
+
     for file_path in excel_files:
         file_name = os.path.basename(file_path)
-        m = re.match(pattern, file_name)
+        m = re.match(pattern, file_name, flags=re.IGNORECASE)
         if m:
             project_id = m.group(1)
             matched_files.append((file_path, project_id))
@@ -757,7 +760,7 @@ def find_all_target_files4(excel_files):
                 Monitor.log_success(f"找到待处理文件4: 项目{project_id} - {file_name}")
             except Exception:
                 pass
-    
+
     if matched_files:
         print(f"总共找到 {len(matched_files)} 个待处理文件4")
         try:
@@ -772,2518 +775,10 @@ def find_all_target_files4(excel_files):
             Monitor.log_warning("未找到任何符合格式的待处理文件4")
         except Exception:
             pass
-    
+
     return matched_files
 
 
-def process_target_file(file_path, current_datetime):
-    """
-    处理待处理文件1的主函数
-    
-    参数:
-        file_path (str): 待处理文件1的路径
-        current_datetime (datetime): 当前日期时间
-    
-    返回:
-        pandas.DataFrame: 完成处理数据
-    """
-    print(f"开始处理待处理文件1: {os.path.basename(file_path)}")
-    try:
-        from core import Monitor
-        Monitor.log_process(f"开始处理待处理文件1: {os.path.basename(file_path)}")
-    except Exception:
-        pass
-    
-    # 读取Excel文件的第一个工作表（不强制Sheet1）
-    if file_path.endswith('.xlsx'):
-        df = pd.read_excel(file_path, sheet_name=0, engine='openpyxl')
-    else:
-        df = pd.read_excel(file_path, sheet_name=0, engine='xlrd')
-        
-    if df.empty:
-        print("文件为空")
-        try:
-            from core import Monitor
-            Monitor.log_error("文件为空，无法处理")
-        except Exception:
-            pass
-            return pd.DataFrame()
-        
-    print(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
-    try:
-        from core import Monitor
-        Monitor.log_info(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
-    except Exception:
-        pass
-    
-    # 显示前几行的数据概览，确保数据正确加载
-    print("数据概览（前3行）：")
-    for i in range(min(3, len(df))):
-        if i == 0:
-            print(f"第{i+1}行（表头）: {list(df.iloc[i])[:5]}...")  # 只显示前5列
-        else:
-            print(f"第{i+1}行（数据）: {list(df.iloc[i])[:5]}...")  # 只显示前5列
-    
-    # 【新增】提取项目号（用于1818项目特殊日期逻辑）
-    filename = os.path.basename(file_path)
-    match = re.search(r'(\d{4})', filename)
-    project_id = match.group(1) if match else None
-
-    # 执行四个处理步骤
-    process1_rows = execute_process1(df)  # H列25C1/25C2/25C3筛选
-    process2_rows = execute_process2(df, current_datetime, project_id)  # K列日期筛选
-    process3_rows = execute_process3(df)  # M列空值且A列非空筛选
-    process4_rows = execute_process4(df)  # 作废数据筛选
-    
-    # 计算最终结果：满足处理1、处理2、处理3，但排除处理4
-    final_rows = process1_rows & process2_rows & process3_rows - process4_rows
-    
-    print(f"筛选统计 - P1:{len(process1_rows)}行 P2:{len(process2_rows)}行 P3:{len(process3_rows)}行 P4(排除):{len(process4_rows)}行 → 结果:{len(final_rows)}行")
-    
-    # 【统一】Registry 查询：按当前仍未闭环的业务基筛加回待审查任务
-    print("\n========== [Registry] 开始查询待审查任务（文件类型1） ==========")
-    try:
-        final_rows, _ = _merge_registry_pending_rows(
-            file_type=1,
-            file_path=file_path,
-            df=df,
-            final_rows=final_rows,
-            allowed_rows=(process1_rows & process2_rows) - process4_rows,
-        )
-    except Exception as e:
-        print(f"[Registry] ❌ 查询待审查任务失败（不影响主流程）: {e}")
-        import traceback
-        traceback.print_exc()
-
-    print("========== [Registry] 查询完成 ==========\n")
-    
-    # 记录到监控器
-    try:
-        from core import Monitor
-        Monitor.log_info(f"处理1符合条件: {len(process1_rows)} 行")
-        Monitor.log_info(f"处理2符合条件: {len(process2_rows)} 行")
-        Monitor.log_info(f"处理3符合条件: {len(process3_rows)} 行")
-        Monitor.log_info(f"处理4需排除: {len(process4_rows)} 行")
-        if len(final_rows) > 0:
-            Monitor.log_success(f"最终完成处理数据: {len(final_rows)} 行")
-        else:
-            Monitor.log_warning("经过四步筛选后，无符合条件的数据")
-    except Exception:
-        pass
-    
-    if not final_rows:
-        return pd.DataFrame()
-    
-    # 获取最终结果数据（排除第一行标题行）
-    final_indices = [i for i in final_rows if i > 0]  # 排除第一行
-    
-    result_df = df.iloc[final_indices].copy()
-    
-    # 添加行号信息 - 修正行号计算以匹配用户期望
-    excel_row_numbers = [i + 2 for i in final_indices]  # pandas索引+2 = Excel行号
-    result_df['原始行号'] = excel_row_numbers
-    # 新增“科室”列（基于H列：25C1/25C2/25C3）
-    try:
-        department_values = []
-        for idx in result_df.index:
-            cell_str = str(df.iloc[idx, 7]) if 7 < len(df.columns) else ""
-            department_values.append(map_code_to_department(cell_str))
-        result_df["科室"] = department_values
-    except Exception:
-        result_df["科室"] = ""
-
-    # 新增“接口时间”列（基于K列：索引10），格式 mm.dd
-    try:
-        time_values = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 10] if 10 < len(df.columns) else None
-            # 解析日期
-            try:
-                if isinstance(cell_val, str):
-                    # 多格式尝试
-                    parsed = pd.to_datetime(cell_val, errors='coerce')
-                else:
-                    parsed = pd.to_datetime(cell_val, errors='coerce')
-                if pd.isna(parsed):
-                    time_values.append("")
-                else:
-                    # 【修复】保留完整年份，支持跨年延期判断
-                    time_values.append(parsed.strftime('%Y.%m.%d'))
-            except Exception:
-                time_values.append("")
-        result_df["接口时间"] = time_values
-    except Exception:
-        result_df["接口时间"] = ""
-
-    # 新增"责任人"列（基于R列：索引17，提取中文）
-    try:
-        zh_pattern = re.compile(r"[\u4e00-\u9fa5]+")
-        owners = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 17] if 17 < len(df.columns) else None
-            s = str(cell_val) if cell_val is not None else ""
-            found = zh_pattern.findall(s)
-            owners.append("".join(found))
-        result_df['责任人'] = owners
-    except Exception:
-        result_df['责任人'] = ""
-    
-    # 【新增】添加source_file列（用于回文单号输入时定位源文件）
-    result_df['source_file'] = os.path.abspath(file_path)
-
-    # 【新增】应用指派记忆
-    result_df = apply_assignment_memory(result_df, file_type=1)
-
-    return result_df
-
-
-def execute_process1(df):
-    """
-    处理1：H列数据筛选，筛选出包含"25C1"、"25C2"、"25C3"的数据
-    
-    参数:
-        df (pandas.DataFrame): 原始数据
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    result_rows = set()
-    
-    # 记录处理开始
-    try:
-        from core import Monitor
-        Monitor.log_process("开始执行处理1：筛选H列数据（25C1、25C2、25C3）")
-    except Exception:
-        pass
-    
-    # 检查H列是否存在（列索引7，因为从0开始）
-    if len(df.columns) <= 7:
-        warning_msg = "警告：数据列数不足，无H列"
-        print(warning_msg)
-        try:
-            from core import Monitor
-            Monitor.log_warning(warning_msg)
-        except Exception:
-            pass
-        return result_rows
-    
-    h_column = df.iloc[:, 7]  # H列是第8列（索引7）
-    
-    # 搜索包含指定科室编码的行（从配置读取）
-    target_values = get_department_codes()
-    
-    for idx, cell_value in h_column.items():
-        if idx == 0:  # 跳过第一行标题
-            continue
-            
-        cell_str = str(cell_value) if cell_value is not None else ""
-        
-        for target in target_values:
-            if target in cell_str:
-                result_rows.add(idx)
-                break
-    
-    print(f"处理1完成：共找到 {len(result_rows)} 行符合H列筛选条件")
-    try:
-        from core import Monitor
-        Monitor.log_success(f"处理1完成：共找到 {len(result_rows)} 行符合H列筛选条件")
-    except Exception:
-        pass
-    return result_rows
-
-
-def execute_process2(df, current_datetime, project_id=None):
-    """
-    处理2：K列日期筛选逻辑
-    根据当前日期决定筛选范围：
-    - 如果今天是1-19号：筛选同年同月数据
-    - 如果今天是20-31号：筛选同年同月及次月数据
-    
-    【特殊逻辑】1818项目：日期减6天后再进行筛选
-    
-    参数:
-        df (pandas.DataFrame): 原始数据
-        current_datetime (datetime): 当前日期时间
-        project_id (str): 项目号，用于特殊项目日期调整
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    result_rows = set()
-    
-    # 记录处理开始
-    try:
-        from core import Monitor
-        Monitor.log_process("开始执行处理2：筛选K列日期数据")
-    except Exception:
-        pass
-    
-    # 检查K列是否存在（列索引10，因为从0开始）
-    if len(df.columns) <= 10:
-        warning_msg = "警告：数据列数不足，无K列"
-        print(warning_msg)
-        try:
-            from core import Monitor
-            Monitor.log_warning(warning_msg)
-        except Exception:
-            pass
-        return result_rows
-    
-    k_column = df.iloc[:, 10]  # K列是第11列（索引10）
-    
-    # 获取当前日期信息
-    current_day = current_datetime.day
-    current_year = current_datetime.year
-    current_month = current_datetime.month
-    
-    print(f"当前日期：{current_datetime.strftime('%Y-%m-%d')}，今天是{current_day}号")
-    
-    # 新逻辑：
-    # 1~19：当年1月1日 ~ 当月末
-    # 20~31：当年1月1日 ~ 次月末
-    start_date = datetime.datetime(current_year, 1, 1)
-    if current_day <= 19:
-        if current_month == 12:
-            end_date = datetime.datetime(current_year, 12, 31)
-        else:
-            end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
-    else:
-        if current_month == 12:
-            end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-        elif current_month == 11:
-            end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-        else:
-            end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
-    print(f"当日为{current_day}号，筛选范围：{start_date.strftime('%Y-%m-%d')} 至 {end_date.strftime('%Y-%m-%d')}")
-    
-    # 遍历K列数据进行筛选
-    for idx, cell_value in k_column.items():
-        if idx == 0:  # 跳过第一行标题
-            continue
-        
-        if pd.isna(cell_value):
-            continue
-        
-        try:
-            # 尝试解析日期，支持多种格式
-            if isinstance(cell_value, str):
-                # 尝试多种日期格式
-                date_formats = ['%Y-%m-%d', '%Y/%m/%d', '%Y-%m-%d %H:%M:%S', '%Y/%m/%d %H:%M:%S']
-                cell_date = None
-                
-                for fmt in date_formats:
-                    try:
-                        cell_date = pd.to_datetime(cell_value, format=fmt, errors='raise')
-                        break
-                    except Exception:
-                        continue
-                
-                # 如果固定格式都失败，使用智能解析
-                if cell_date is None or pd.isna(cell_date):
-                    cell_date = pd.to_datetime(cell_value, errors='coerce')
-            else:
-                cell_date = pd.to_datetime(cell_value, errors='coerce')
-            
-            if pd.isna(cell_date):
-                continue
-            
-            # 【1818特殊逻辑】日期减6天后再进行筛选
-            cell_date = adjust_date_for_project(cell_date, project_id)
-            
-            # 检查日期是否在筛选范围内
-            if start_date <= cell_date <= end_date:
-                result_rows.add(idx)
-                
-        except Exception as e:
-            print(f"处理2：第{idx+1}行K列日期解析失败: {cell_value}, 错误: {e}")
-            continue
-    
-    print(f"处理2完成：共找到 {len(result_rows)} 行符合K列日期筛选条件")
-    try:
-        from core import Monitor
-        Monitor.log_success(f"处理2完成：共找到 {len(result_rows)} 行符合K列日期筛选条件")
-    except Exception:
-        pass
-    return result_rows
-
-
-def execute_process3(df):
-    """
-    【修复】处理3：M列空值且A列非空筛选 + Registry待确认任务合并
-    
-    筛选逻辑：
-    1. 原始筛选：M列为空值，同时A列不为空值的数据
-    2. Registry查询：M列已填充但在Registry中有display_status（待确认）的任务
-    3. 合并两部分结果
-    
-    参数:
-        df (pandas.DataFrame): 原始数据
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    result_rows = set()
-    
-    # 记录处理开始
-    try:
-        from core import Monitor
-        Monitor.log_process("开始执行处理3：筛选M列空值且A列非空数据")
-    except Exception:
-        pass
-    
-    # 检查A列和M列是否存在
-    if len(df.columns) <= 0:
-        warning_msg = "警告：数据列数不足，无A列"
-        print(warning_msg)
-        try:
-            from core import Monitor
-            Monitor.log_warning(warning_msg)
-        except Exception:
-            pass
-        return result_rows
-    
-    if len(df.columns) <= 12:
-        warning_msg = "警告：数据列数不足，无M列"
-        print(warning_msg)
-        try:
-            from core import Monitor
-            Monitor.log_warning(warning_msg)
-        except Exception:
-            pass
-        return result_rows
-    
-    a_column = df.iloc[:, 0]   # A列是第1列（索引0）
-    m_column = df.iloc[:, 12]  # M列是第13列（索引12）
-    
-    # 【阶段1】原始筛选：M列为空且A列不为空
-    for idx in range(len(df)):
-        if idx == 0:  # 跳过第一行标题
-            continue
-            
-        a_value = a_column.iloc[idx]
-        m_value = m_column.iloc[idx]
-        
-        # 检查A列不为空且M列为空
-        a_not_empty = not (pd.isna(a_value) or str(a_value).strip() == "")
-        m_is_empty = pd.isna(m_value) or str(m_value).strip() == ""
-        
-        if a_not_empty and m_is_empty:
-            result_rows.add(idx)
-    
-    print(f"处理3完成（原始筛选）：共找到 {len(result_rows)} 行符合M列空值且A列非空条件")
-    
-    # 【阶段2】Registry查询：M列已填充但待确认的任务
-    # 注意：这个函数在process_target_file中被调用，文件路径需要从上层传递
-    # 由于这里无法直接获取文件路径，我们返回原始结果，让调用层处理Registry逻辑
-    # 实际的Registry合并逻辑应该在process_target_file中实现
-    
-    try:
-        from core import Monitor
-        Monitor.log_success(f"处理3完成：共找到 {len(result_rows)} 行符合M列空值且A列非空条件")
-    except Exception:
-        pass
-    return result_rows
-
-
-def execute_process4(df):
-    """
-    处理4：筛选"作废"数据
-    仅检查B列中是否包含"作废"标记
-    
-    参数:
-        df (pandas.DataFrame): 原始数据
-    
-    返回:
-        set: 符合条件的行索引集合（需要排除的行）
-    """
-    result_rows = set()
-    
-    # 记录处理开始
-    try:
-        from core import Monitor
-        Monitor.log_process("开始执行处理4：筛选B列作废数据")
-    except Exception:
-        pass
-    
-    # 检查B列是否存在（列索引1，因为从0开始）
-    if len(df.columns) <= 1:
-        warning_msg = "警告：数据列数不足，无B列"
-        print(warning_msg)
-        try:
-            from core import Monitor
-            Monitor.log_warning(warning_msg)
-        except Exception:
-            pass
-        return result_rows
-    
-    # 仅检查B列查找"作废"标记
-    b_column = df.iloc[:, 1]  # B列是第2列（索引1）
-    
-    for idx, cell_value in b_column.items():
-        if idx == 0:  # 跳过第一行标题
-            continue
-            
-        cell_str = str(cell_value) if cell_value is not None else ""
-        
-        if "作废" in cell_str:
-            result_rows.add(idx)
-    
-    print(f"处理4完成：共找到 {len(result_rows)} 行B列包含作废标记（需要排除）")
-    try:
-        from core import Monitor
-        if len(result_rows) > 0:
-            Monitor.log_warning(f"处理4完成：共找到 {len(result_rows)} 行B列包含作废标记（需要排除）")
-        else:
-            Monitor.log_success("处理4完成：未发现作废数据")
-    except Exception:
-        pass
-    return result_rows
-
-
-def export_result_to_excel(df, original_file_path, current_datetime, output_dir, project_id=None):
-    """
-    导出完成处理数据到Excel文件
-    新建空白Excel文件，重命名Sheet1，复制表头格式和内容，写入符合条件的完整数据，设置列宽
-    
-    参数:
-        df (pandas.DataFrame): 完成处理数据（包含原始行号）
-        original_file_path (str): 原始文件路径  
-        current_datetime (datetime): 当前日期时间
-        output_dir (str): 输出目录
-        project_id (str): 项目号，用于创建结果文件夹
-    
-    返回:
-        str: 导出文件路径
-    """
-    from openpyxl import Workbook, load_workbook
-    
-    try:
-        # 根据项目号创建结果文件夹
-        if project_id:
-            result_folder_name = f"{project_id}结果文件"
-            result_folder_path = os.path.join(output_dir, result_folder_name)
-            
-            # 如果文件夹不存在则创建
-            if not os.path.exists(result_folder_path):
-                os.makedirs(result_folder_path)
-                print(f"创建结果文件夹: {result_folder_path}")
-            
-            # 使用结果文件夹作为输出目录
-            final_output_dir = result_folder_path
-        else:
-            # 如果没有项目号，使用原始输出目录
-            final_output_dir = output_dir
-        
-        # 生成输出文件名，处理重名文件
-        date_str = current_datetime.strftime('%Y-%m-%d')
-        base_filename = f"内部需打开接口{date_str}"
-        output_filename = f"{base_filename}.xlsx"
-        output_path = os.path.join(final_output_dir, output_filename)
-        
-        # 处理重名文件，自动加序号
-        counter = 1
-        while os.path.exists(output_path):
-            output_filename = f"{base_filename}({counter}).xlsx"
-            output_path = os.path.join(final_output_dir, output_filename)
-            counter += 1
-        
-        # 第一步：新建空白Excel文件
-        wb = Workbook()
-        ws = wb.active
-        
-        # 第二步：重命名Sheet1为"内部需打开接口"
-        ws.title = "内部需打开接口"
-        
-        # 第三步：读取原始文件用于复制格式和数据
-        original_wb = load_workbook(original_file_path)
-        # 使用第一个工作表
-        original_ws = original_wb.worksheets[0]
-        
-        # 读取原始数据（用于获取行数据）
-        if original_file_path.endswith('.xlsx'):
-            original_df = pd.read_excel(original_file_path, sheet_name=0, engine='openpyxl', header=None)
-        else:
-            original_df = pd.read_excel(original_file_path, sheet_name=0, engine='xlrd', header=None)
-        
-        # 第四步：复制原Excel第一行的数据格式和内容（表头）
-        if original_ws.max_row > 0:
-            max_col = max(original_ws.max_column, len(original_df.columns))
-            print(f"导出表头：从第1列到第{max_col}列")
-            
-            # 复制第一行的所有单元格（包括格式和内容）
-            for col_idx in range(1, max_col + 1):
-                source_cell = original_ws.cell(row=1, column=col_idx)
-                target_cell = ws.cell(row=1, column=col_idx)
-                
-                # 复制值
-                target_cell.value = source_cell.value
-                
-                # 复制格式
-                try:
-                    if source_cell.font:
-                        target_cell.font = copy(source_cell.font)
-                    if source_cell.fill:
-                        target_cell.fill = copy(source_cell.fill)
-                    if source_cell.border:
-                        target_cell.border = copy(source_cell.border)
-                    if source_cell.alignment:
-                        target_cell.alignment = copy(source_cell.alignment)
-                    if source_cell.number_format:
-                        target_cell.number_format = source_cell.number_format
-                except Exception as style_error:
-                    print(f"样式复制失败，仅复制值: {style_error}")
-            
-            print("已复制表头（格式和内容）")
-        
-        # 第五步：复制处理结果后的原Excel行数据
-        if not df.empty and '原始行号' in df.columns:
-            qualified_rows = df['原始行号'].tolist()
-            print(f"准备导出 {len(qualified_rows)} 行符合条件的数据")
-            
-            write_row = 2  # 从第二行开始写入数据
-            max_col = max(original_ws.max_column, len(original_df.columns))
-            
-            for excel_row_num in sorted(qualified_rows):
-                # 确保行号在有效范围内
-                if excel_row_num > 1 and excel_row_num <= len(original_df):
-                    # 复制整行数据和格式
-                    for col_idx in range(1, max_col + 1):
-                        source_cell = original_ws.cell(row=excel_row_num, column=col_idx)
-                        target_cell = ws.cell(row=write_row, column=col_idx)
-                        
-                        # 复制值
-                        target_cell.value = source_cell.value
-                        
-                        # 复制格式
-                        try:
-                            if source_cell.font:
-                                target_cell.font = copy(source_cell.font)
-                            if source_cell.fill:
-                                target_cell.fill = copy(source_cell.fill)
-                            if source_cell.border:
-                                target_cell.border = copy(source_cell.border)
-                            if source_cell.alignment:
-                                target_cell.alignment = copy(source_cell.alignment)
-                            if source_cell.number_format:
-                                target_cell.number_format = source_cell.number_format
-                        except Exception as style_error:
-                            print(f"数据行样式复制失败，仅复制值: {style_error}")
-                    
-                    write_row += 1
-            
-            print(f"已写入 {write_row - 2} 行数据")
-        else:
-            print("没有符合条件的数据行需要导出")
-        
-        # 第六步：设置列宽（能完全显示1~4行数据，乘以1.2系数）
-        max_col = max(original_ws.max_column, len(original_df.columns))
-        for col_idx in range(1, max_col + 1):
-            # 计算该列1~4行数据的最大显示宽度
-            max_width = 8  # 最小宽度
-            
-            for row_idx in range(1, min(5, ws.max_row + 1)):  # 检查1~4行
-                cell = ws.cell(row=row_idx, column=col_idx)
-                if cell.value is not None:
-                    # 计算单元格内容的显示宽度
-                    cell_width = len(str(cell.value)) * 1.2  # 粗略估算
-                    max_width = max(max_width, cell_width)
-            
-            # 应用1.2系数并设置列宽
-            final_width = max_width * 1.2
-            # openpyxl列宽限制在1-255之间
-            final_width = min(max(final_width, 8), 100)
-            
-            # 设置列宽
-            col_letter = ws.cell(row=1, column=col_idx).column_letter
-            ws.column_dimensions[col_letter].width = final_width
-        
-        print("已设置列宽")
-        
-        # 保存文件
-        original_wb.close()
-        wb.save(output_path)
-        wb.close()
-        
-        print(f"内部需打开接口导出完成！文件保存到: {output_path}")
-        try:
-            from core import Monitor
-            Monitor.log_success(f"内部需打开接口导出完成！文件保存到: {output_path}")
-        except Exception:
-            pass
-        
-        return output_path
-    except Exception as e:
-        print(f"导出数据时发生错误: {str(e)}")
-        raise
-
-
-# ===================== 待处理文件2（内部需回复接口）相关处理 =====================
-def process_target_file2(file_path, current_datetime, project_id=None):
-    """
-    处理待处理文件2（内部需回复接口）的主函数
-    返回：pandas.DataFrame，包含原始行号
-    
-    筛选逻辑根据项目号决定：
-    - 1907和2016项目：final = P1 & P2 & P4
-    - 其他项目：final = P1 & P2 & P4 - P3
-    """
-    print(f"开始处理待处理文件2: {os.path.basename(file_path)}")
-    try:
-        from core import Monitor
-        Monitor.log_process(f"开始处理待处理文件2: {os.path.basename(file_path)}")
-    except Exception:
-        pass
-
-    # 读取Excel文件的第一个工作表（不强制Sheet1）
-    if file_path.endswith('.xlsx'):
-        df = pd.read_excel(file_path, sheet_name=0, engine='openpyxl')
-    else:
-        df = pd.read_excel(file_path, sheet_name=0, engine='xlrd')
-
-    if df.empty:
-        print("文件为空")
-        try:
-            from core import Monitor
-            Monitor.log_error("文件为空，无法处理")
-        except Exception:
-            pass
-        return pd.DataFrame()
-
-    # 版次筛选：先确定同接口号最高版本（文件2：E列）
-    version_allowed_rows = _filter_rows_by_highest_version(df, 2, set(range(1, len(df))), 4)
-
-    # 处理1
-    process1_rows = execute2_process1(df)
-    # 处理2（传入project_id用于1818特殊日期逻辑）
-    process2_rows = execute2_process2(df, current_datetime, project_id)
-    # 处理3（用于排除）
-    process3_rows = execute2_process3(df)
-    # 处理4
-    process4_rows = execute2_process4(df)
-
-    # 根据项目号决定筛选逻辑（标准/扩展逻辑由 config.json 参数化）
-    standard_projects = get_projects_standard_filter()
-    if project_id in standard_projects:
-        final_rows = process1_rows & process2_rows & process4_rows
-        print(f"项目{project_id}使用标准逻辑（不排除process3）")
-    else:
-        final_rows = process1_rows & process2_rows & process4_rows - process3_rows
-        print(f"项目{project_id}使用扩展逻辑（排除process3：{len(process3_rows)}行）")
-    
-    print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
-    
-    # 【统一】Registry 查询：沿用最新 business 记录口径，加回待审查任务
-    print("\n========== [Registry] 开始查询待审查任务（文件类型2） ==========")
-    try:
-        base_filter = process1_rows & process2_rows
-        if project_id not in standard_projects:
-            base_filter = base_filter - process3_rows
-        final_rows, _ = _merge_registry_pending_rows(
-            file_type=2,
-            file_path=file_path,
-            df=df,
-            final_rows=final_rows,
-            allowed_rows=base_filter,
-        )
-    except Exception as e:
-        print(f"[Registry] 查询待确认任务失败（不影响主流程）: {e}")
-    
-    # 版次筛选：同接口号只保留最高版本（文件2：E列）
-    final_rows = final_rows & version_allowed_rows
-
-    print(f"最终完成处理数据（含待确认）: {len(final_rows)} 行")
-
-    # 日志
-    try:
-        from core import Monitor
-        Monitor.log_info(f"处理1符合条件: {len(process1_rows)} 行")
-        Monitor.log_info(f"处理2符合条件: {len(process2_rows)} 行")
-        Monitor.log_info(f"处理3(排除项)符合条件: {len(process3_rows)} 行")
-        Monitor.log_info(f"处理4符合条件: {len(process4_rows)} 行")
-        if len(final_rows) > 0:
-            Monitor.log_success(f"最终完成处理数据: {len(final_rows)} 行")
-        else:
-            Monitor.log_warning("经过筛选后，无符合条件的数据")
-    except Exception:
-        pass
-
-    if not final_rows:
-        return pd.DataFrame()
-
-    final_indices = [i for i in final_rows if i > 0]
-    excel_row_numbers = [i + 2 for i in final_indices]  # pandas索引+2=Excel行号
-    result_df = df.iloc[final_indices].copy()
-    result_df['原始行号'] = excel_row_numbers
-    
-    # 新增"责任人"列（基于AM列：索引38，提取中文）
-    try:
-        zh_pattern = re.compile(r"[\u4e00-\u9fa5]+")
-        owners = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 38] if 38 < len(df.columns) else None
-            s = str(cell_val) if cell_val is not None else ""
-            found = zh_pattern.findall(s)
-            owner_str = "".join(found)
-            # 空值显示"无"
-            owners.append(owner_str if owner_str else "无")
-        result_df['责任人'] = owners
-    except Exception:
-        result_df['责任人'] = "无"
-    
-    # 【新增】添加source_file列
-    result_df['source_file'] = os.path.abspath(file_path)
-    # 新增"科室"列（基于I列内容包含：结构一室/结构二室/建筑总图室）
-    try:
-        department_values = []
-        for idx in result_df.index:
-            cell_str = str(df.iloc[idx, 8]) if 8 < len(df.columns) else ""
-            matched = match_department_name(cell_str)
-            department_values.append(matched if matched != cell_str else "")
-        result_df["科室"] = department_values
-    except Exception:
-        result_df["科室"] = ""
-
-    # 新增"接口时间"列（基于M列：索引12），格式 yyyy.mm.dd
-    try:
-        time_values = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 12] if 12 < len(df.columns) else None
-            try:
-                parsed = pd.to_datetime(cell_val, errors='coerce')
-                if pd.isna(parsed):
-                    time_values.append("")
-                else:
-                    # 【修复】保留完整年份，支持跨年延期判断
-                    time_values.append(parsed.strftime('%Y.%m.%d'))
-            except Exception:
-                time_values.append("")
-        result_df["接口时间"] = time_values
-    except Exception:
-        result_df["接口时间"] = ""
-
-    # 【新增】应用指派记忆
-    result_df = apply_assignment_memory(result_df, file_type=2)
-
-    return result_df
-
-def execute2_process1(df):
-    """I列包含“河北分公司-建筑结构所”或包含“25C1/25C2/25C3”"""
-    result_rows = set()
-    if len(df.columns) <= 8:
-        return result_rows
-    i_column = df.iloc[:, 8]
-    for idx, val in i_column.items():
-        if idx == 0:
-            continue
-        s = str(val)
-        if (get_organization_filter() in s) or contains_department_code(s):
-            result_rows.add(idx)
-    return result_rows
-
-def execute2_process2(df, current_datetime, project_id=None):
-    """M列日期筛选，逻辑同文件1的K列。【特殊逻辑】1818项目：日期减6天后再进行筛选"""
-    result_rows = set()
-    if len(df.columns) <= 12:
-        return result_rows
-    m_column = df.iloc[:, 12]
-    current_day = current_datetime.day
-    current_year = current_datetime.year
-    current_month = current_datetime.month
-    start_date = datetime.datetime(current_year, 1, 1)
-    if current_day <= 19:
-        if current_month == 12:
-            end_date = datetime.datetime(current_year, 12, 31)
-        else:
-            end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
-    else:
-        if current_month == 12:
-            end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-        elif current_month == 11:
-            end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-        else:
-            end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
-    for idx, val in m_column.items():
-        if idx == 0:
-            continue
-        cell_date = None
-        try:
-            if isinstance(val, str):
-                for fmt in ['%Y-%m-%d', '%Y/%m/%d', '%Y-%m-%d %H:%M:%S', '%Y/%m/%d %H:%M:%S']:
-                    try:
-                        cell_date = pd.to_datetime(val, format=fmt, errors='raise')
-                        break
-                    except Exception:
-                        continue
-                if cell_date is None or pd.isna(cell_date):
-                    cell_date = pd.to_datetime(val, errors='coerce')
-            else:
-                cell_date = pd.to_datetime(val, errors='coerce')
-            if pd.isna(cell_date):
-                continue
-            # 【1818特殊逻辑】日期减6天后再进行筛选
-            cell_date = adjust_date_for_project(cell_date, project_id)
-            if start_date <= cell_date <= end_date:
-                result_rows.add(idx)
-        except Exception:
-            continue
-    return result_rows
-
-def execute2_process3(df):
-    """AB列以4444开头，且F列为“传递”"""
-    result_rows = set()
-    if len(df.columns) <= 27 or len(df.columns) <= 5:
-        return result_rows
-    ab_column = df.iloc[:, 27]
-    f_column = df.iloc[:, 5]
-    for idx in range(len(df)):
-        if idx == 0:
-            continue
-        ab_val = ab_column.iloc[idx]
-        f_val = f_column.iloc[idx]
-        if str(ab_val).startswith("4444") and str(f_val) == "传递":
-            result_rows.add(idx)
-    return result_rows
-
-def execute2_process4(df):
-    """N列为空且A列不为空"""
-    result_rows = set()
-    if len(df.columns) <= 13 or len(df.columns) <= 0:
-        return result_rows
-    n_column = df.iloc[:, 13]
-    a_column = df.iloc[:, 0]
-    for idx in range(len(df)):
-        if idx == 0:
-            continue
-        n_val = n_column.iloc[idx]
-        a_val = a_column.iloc[idx]
-        a_not_empty = not (pd.isna(a_val) or str(a_val).strip() == "")
-        n_is_empty = pd.isna(n_val) or str(n_val).strip() == ""
-        if a_not_empty and n_is_empty:
-            result_rows.add(idx)
-    return result_rows
-
-def export_result_to_excel2(df, original_file_path, current_datetime, output_dir, project_id=None):
-    """
-    导出内部需回复接口处理结果到Excel文件
-    新建空白Excel文件，重命名Sheet1，复制表头格式和内容，写入符合条件的完整数据，设置列宽
-    
-    参数:
-        df (pandas.DataFrame): 完成处理数据（包含原始行号）
-        original_file_path (str): 原始文件路径  
-        current_datetime (datetime): 当前日期时间
-        output_dir (str): 输出目录
-        project_id (str): 项目号，用于创建结果文件夹
-    
-    返回:
-        str: 导出文件路径
-    """
-    from openpyxl import Workbook, load_workbook
-    
-    try:
-        # 根据项目号创建结果文件夹
-        if project_id:
-            result_folder_name = f"{project_id}结果文件"
-            result_folder_path = os.path.join(output_dir, result_folder_name)
-            
-            # 如果文件夹不存在则创建
-            if not os.path.exists(result_folder_path):
-                os.makedirs(result_folder_path)
-                print(f"创建结果文件夹: {result_folder_path}")
-            
-            # 使用结果文件夹作为输出目录
-            final_output_dir = result_folder_path
-        else:
-            # 如果没有项目号，使用原始输出目录
-            final_output_dir = output_dir
-        
-        # 生成输出文件名，处理重名文件
-        date_str = current_datetime.strftime('%Y-%m-%d')
-        base_filename = f"内部需回复接口{date_str}"
-        output_filename = f"{base_filename}.xlsx"
-        output_path = os.path.join(final_output_dir, output_filename)
-        
-        counter = 1
-        while os.path.exists(output_path):
-            output_filename = f"{base_filename}({counter}).xlsx"
-            output_path = os.path.join(final_output_dir, output_filename)
-            counter += 1
-        
-        # 第一步：新建空白Excel文件
-        wb = Workbook()
-        ws = wb.active
-        
-        # 第二步：重命名Sheet1为"内部需回复接口"
-        ws.title = "内部需回复接口"
-        
-        # 第三步：读取原始文件用于复制格式和数据
-        original_wb = load_workbook(original_file_path)
-        # 使用第一个工作表
-        original_ws = original_wb.worksheets[0]
-        
-        # 读取原始数据
-        if original_file_path.endswith('.xlsx'):
-            original_df = pd.read_excel(original_file_path, sheet_name=0, engine='openpyxl', header=None)
-        else:
-            original_df = pd.read_excel(original_file_path, sheet_name=0, engine='xlrd', header=None)
-        
-        # 第四步：复制原Excel第一行的数据格式和内容（表头）
-        if original_ws.max_row > 0:
-            max_col = max(original_ws.max_column, len(original_df.columns))
-            print(f"导出表头：从第1列到第{max_col}列")
-            
-            # 复制第一行的所有单元格（包括格式和内容）
-            for col_idx in range(1, max_col + 1):
-                source_cell = original_ws.cell(row=1, column=col_idx)
-                target_cell = ws.cell(row=1, column=col_idx)
-                
-                # 复制值
-                target_cell.value = source_cell.value
-                
-                # 复制格式
-                try:
-                    if source_cell.font:
-                        target_cell.font = copy(source_cell.font)
-                    if source_cell.fill:
-                        target_cell.fill = copy(source_cell.fill)
-                    if source_cell.border:
-                        target_cell.border = copy(source_cell.border)
-                    if source_cell.alignment:
-                        target_cell.alignment = copy(source_cell.alignment)
-                    if source_cell.number_format:
-                        target_cell.number_format = source_cell.number_format
-                except Exception as style_error:
-                    print(f"样式复制失败，仅复制值: {style_error}")
-            
-            print("已复制表头（格式和内容）")
-        
-        # 第五步：复制处理结果后的原Excel行数据
-        if not df.empty and '原始行号' in df.columns:
-            qualified_rows = df['原始行号'].tolist()
-            print(f"准备导出 {len(qualified_rows)} 行符合条件的数据")
-            
-            write_row = 2  # 从第二行开始写入数据
-            max_col = max(original_ws.max_column, len(original_df.columns))
-            
-            for excel_row_num in sorted(qualified_rows):
-                # 确保行号在有效范围内
-                if excel_row_num > 1 and excel_row_num <= len(original_df):
-                    # 复制整行数据和格式
-                    for col_idx in range(1, max_col + 1):
-                        source_cell = original_ws.cell(row=excel_row_num, column=col_idx)
-                        target_cell = ws.cell(row=write_row, column=col_idx)
-                        
-                        # 复制值
-                        target_cell.value = source_cell.value
-                        
-                        # 复制格式
-                        try:
-                            if source_cell.font:
-                                target_cell.font = copy(source_cell.font)
-                            if source_cell.fill:
-                                target_cell.fill = copy(source_cell.fill)
-                            if source_cell.border:
-                                target_cell.border = copy(source_cell.border)
-                            if source_cell.alignment:
-                                target_cell.alignment = copy(source_cell.alignment)
-                            if source_cell.number_format:
-                                target_cell.number_format = source_cell.number_format
-                        except Exception as style_error:
-                            print(f"数据行样式复制失败，仅复制值: {style_error}")
-                    
-                    write_row += 1
-            
-            print(f"已写入 {write_row - 2} 行数据")
-        else:
-            print("没有符合条件的数据行需要导出")
-        
-        # 第六步：设置列宽（能完全显示1~4行数据，乘以1.2系数）
-        max_col = max(original_ws.max_column, len(original_df.columns))
-        for col_idx in range(1, max_col + 1):
-            # 计算该列1~4行数据的最大显示宽度
-            max_width = 8  # 最小宽度
-            
-            for row_idx in range(1, min(5, ws.max_row + 1)):  # 检查1~4行
-                cell = ws.cell(row=row_idx, column=col_idx)
-                if cell.value is not None:
-                    # 计算单元格内容的显示宽度
-                    cell_width = len(str(cell.value)) * 1.2  # 粗略估算
-                    max_width = max(max_width, cell_width)
-            
-            # 应用1.2系数并设置列宽
-            final_width = max_width * 1.2
-            # openpyxl列宽限制在1-255之间
-            final_width = min(max(final_width, 8), 100)
-            
-            # 设置列宽
-            col_letter = ws.cell(row=1, column=col_idx).column_letter
-            ws.column_dimensions[col_letter].width = final_width
-        
-        print("已设置列宽")
-        
-        # 保存文件
-        original_wb.close()
-        wb.save(output_path)
-        wb.close()
-        
-        print(f"内部需回复接口导出完成！文件保存到: {output_path}")
-        try:
-            from core import Monitor
-            Monitor.log_success(f"内部需回复接口导出完成！文件保存到: {output_path}")
-        except Exception:
-            pass
-        
-        return output_path
-    except Exception as e:
-        print(f"导出数据时发生错误: {str(e)}")
-        raise
-
-
-# ===================== 待处理文件3（外部需打开接口）相关处理 =====================
-def process_target_file3(file_path, current_datetime):
-    """
-    处理待处理文件3（外部需打开接口）的主函数
-    
-    参数:
-        file_path (str): 待处理文件3的路径
-        current_datetime (datetime): 当前日期时间
-    
-    返回:
-        pandas.DataFrame: 完成处理数据，包含原始行号
-    """
-    print(f"开始处理待处理文件3: {os.path.basename(file_path)}")
-    try:
-        from core import Monitor
-        Monitor.log_process(f"开始处理待处理文件3: {os.path.basename(file_path)}")
-    except Exception:
-        pass
-    
-    # 读取Excel文件的第一个工作表（不强制Sheet1）
-    if file_path.endswith('.xlsx'):
-        df = pd.read_excel(file_path, sheet_name=0, engine='openpyxl')
-    else:
-        df = pd.read_excel(file_path, sheet_name=0, engine='xlrd')
-        
-    if df.empty:
-        print("文件为空")
-        try:
-            from core import Monitor
-            Monitor.log_error("文件为空，无法处理")
-        except Exception:
-            pass
-        return pd.DataFrame()
-        
-    print(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
-    try:
-        from core import Monitor
-        Monitor.log_info(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
-    except Exception:
-        pass
-    
-    # 【新增】提取项目号（用于1818项目特殊日期逻辑）
-    filename = os.path.basename(file_path)
-    match = re.search(r'(\d{4})', filename)
-    project_id = match.group(1) if match else None
-
-    # 版次筛选：先确定同接口号最高版本（文件3：AC列）
-    version_allowed_rows = _filter_rows_by_highest_version(df, 3, set(range(1, len(df))), 28)
-    
-    # 执行六个处理步骤
-    process1_rows = execute3_process1(df)  # I列为"B"的数据
-    process2_rows = execute3_process2(df)  # AL列以"河北分公司-建筑结构所"开头的数据
-    process3_rows = execute3_process3(df, current_datetime, project_id)  # M列时间数据筛选
-    process4_rows = execute3_process4(df, current_datetime, project_id)  # L列时间数据筛选
-    process5_rows = execute3_process5(df)  # Q列为空值的数据
-    process6_rows = execute3_process6(df)  # T列为空值的数据
-    
-    # 最终汇总逻辑：
-    # (处理1 AND 处理2 AND 处理3 AND 处理6) OR (处理1 AND 处理2 AND 处理4 AND 处理5)
-    group1 = process1_rows & process2_rows & process3_rows & process6_rows
-    group2 = process1_rows & process2_rows & process4_rows & process5_rows
-    final_rows = group1 | group2  # 并集关系
-    
-    print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
-    
-    # 【统一】Registry 查询：待审查加回统一按最新 business 记录处理
-    print("\n========== [Registry] 开始查询待审查任务（文件类型3） ==========")
-    try:
-        source_m_rows = process1_rows & process2_rows & process3_rows
-        source_l_rows = process1_rows & process2_rows & process4_rows
-        base_filter = process1_rows & process2_rows & (process3_rows | process4_rows)
-
-        final_rows, _ = _merge_registry_pending_rows(
-            file_type=3,
-            file_path=file_path,
-            df=df,
-            final_rows=final_rows,
-            allowed_rows=base_filter,
-        )
-    except Exception as e:
-        print(f"[Registry] 查询待审查任务失败: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    # 版次筛选：同接口号只保留最高版本（文件3：AC列）
-    final_rows = final_rows & version_allowed_rows
-
-    print(f"最终完成处理数据（含待审查）: {len(final_rows)} 行")
-    
-    # 日志记录
-    try:
-        from core import Monitor
-        Monitor.log_info(f"处理1(I列为B): {len(process1_rows)} 行")
-        Monitor.log_info(f"处理2(AL列河北分公司-建筑结构所开头): {len(process2_rows)} 行")
-        Monitor.log_info(f"处理3(M列时间筛选): {len(process3_rows)} 行")
-        Monitor.log_info(f"处理4(L列时间筛选): {len(process4_rows)} 行")
-        Monitor.log_info(f"处理5(Q列为空): {len(process5_rows)} 行")
-        Monitor.log_info(f"处理6(T列为空): {len(process6_rows)} 行")
-        Monitor.log_info(f"组1(1&2&3-6): {len(group1)} 行")
-        Monitor.log_info(f"组2(1&2&4-5): {len(group2)} 行")
-        if len(final_rows) > 0:
-            Monitor.log_success(f"最终完成处理数据: {len(final_rows)} 行")
-        else:
-            Monitor.log_warning("经过筛选后，无符合条件的数据")
-    except Exception:
-        pass
-    
-    if not final_rows:
-        return pd.DataFrame()
-    
-    # 转换为最终结果DataFrame
-    final_indices = [i for i in final_rows if i >= 0]
-    excel_row_numbers = [i + 2 for i in final_indices]  # pandas索引+2=Excel行号
-    result_df = df.iloc[final_indices].copy()
-    result_df['原始行号'] = excel_row_numbers
-    
-    # 【新增】添加来源标记（用于回文单号输入时判断写入列）
-    source_columns = []
-    for idx in final_indices:
-        if idx in group1 and idx not in group2:
-            source_columns.append('M')  # M列筛选路径
-        elif idx in group2 and idx not in group1:
-            source_columns.append('L')  # L列筛选路径
-        else:
-            source_columns.append('M')  # 两者都匹配，优先M列
-    result_df['_source_column'] = source_columns
-    # 新增“科室”列（基于AO列：匹配三种科室，空值则“请室主任确认”，否则保留原值）
-    try:
-        department_values = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 40] if 40 < len(df.columns) else None
-            cell_str = "" if (cell_val is None or (isinstance(cell_val, float) and pd.isna(cell_val))) else str(cell_val).strip()
-            if cell_str == "":
-                department_values.append("请室主任确认")
-            else:
-                matched = match_department_name(cell_str)
-                department_values.append(matched)
-        result_df["科室"] = department_values
-    except Exception:
-        result_df["科室"] = "请室主任确认"
-
-    # 新增"接口时间"列：
-    # - 必须与筛选路径一致：若该行来自 M 路径（group1）则取 M 列；来自 L 路径（group2）则取 L 列
-    # - 避免出现“筛选用的是L列日期，但展示却优先显示M列(可能是2027/2028)”的错觉
-    # 格式 yyyy.mm.dd
-    try:
-        time_values = []
-        for idx in result_df.index:
-            # 根据来源列决定取值
-            source_col = None
-            try:
-                if '_source_column' in result_df.columns:
-                    source_col = str(result_df.loc[idx, '_source_column']).strip()
-            except Exception:
-                source_col = None
-
-            m_val = df.iloc[idx, 12] if 12 < len(df.columns) else None
-            l_val = df.iloc[idx, 11] if 11 < len(df.columns) else None
-
-            # 默认按来源列取值；若来源列异常则回退到“优先M、其次L”的旧策略
-            if source_col == 'L':
-                primary_val = l_val
-                fallback_val = None  # 展示层不再回退到另一列，保持与筛选一致
-            elif source_col == 'M':
-                primary_val = m_val
-                fallback_val = None
-            else:
-                primary_val = m_val
-                fallback_val = l_val
-            parsed = None
-            try:
-                parsed = pd.to_datetime(primary_val, errors='coerce')
-            except Exception:
-                parsed = None
-            if parsed is None or pd.isna(parsed):
-                if fallback_val is not None:
-                    try:
-                        parsed = pd.to_datetime(fallback_val, errors='coerce')
-                    except Exception:
-                        parsed = None
-            if parsed is None or pd.isna(parsed):
-                time_values.append("")
-            else:
-                # 【修复】保留完整年份，支持跨年延期判断
-                time_values.append(parsed.strftime('%Y.%m.%d'))
-        result_df["接口时间"] = time_values
-    except Exception:
-        result_df["接口时间"] = ""
-    # 新增"责任人"列（基于AP列：索引41，提取中文）
-    try:
-        zh_pattern = re.compile(r"[\u4e00-\u9fa5]+")
-        owners = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 41] if 41 < len(df.columns) else None
-            s = str(cell_val) if cell_val is not None else ""
-            found = zh_pattern.findall(s)
-            owners.append("".join(found))
-        result_df['责任人'] = owners
-    except Exception:
-        result_df['责任人'] = ""
-    # 【新增】添加source_file列
-    result_df['source_file'] = os.path.abspath(file_path)
-
-    # 【新增】应用指派记忆
-    result_df = apply_assignment_memory(result_df, file_type=3)
-
-    return result_df
-
-
-def execute3_process1(df):
-    """
-    处理1：读取待处理文件3中的I列的数据，筛选这一列中为"B"的数据
-    
-    参数:
-        df (pandas.DataFrame): 输入数据
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    print("执行处理1：筛选I列为'B'的数据")
-    try:
-        from core import Monitor
-        Monitor.log_process("处理1：筛选I列为'B'的数据")
-    except Exception:
-        pass
-    
-    qualified_rows = set()
-    
-    if len(df.columns) <= 8:  # I列索引为8
-        print("警告：文件列数不足，无法访问I列")
-        try:
-            from core import Monitor
-            Monitor.log_warning("文件列数不足，无法访问I列")
-        except Exception:
-            pass
-        return qualified_rows
-    
-    try:
-        # I列索引为8（从0开始）
-        i_column = df.iloc[:, 8]
-        
-        for index, value in enumerate(i_column):
-            if pd.notna(value) and str(value).strip() == "B":
-                qualified_rows.add(index)
-        
-        print(f"处理1完成：找到 {len(qualified_rows)} 行符合条件")
-        try:
-            from core import Monitor
-            Monitor.log_info(f"处理1完成：找到 {len(qualified_rows)} 行符合条件")
-        except Exception:
-            pass
-            
-    except Exception as e:
-        print(f"处理1执行出错: {e}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"处理1执行出错: {e}")
-        except Exception:
-            pass
-    
-    return qualified_rows
-
-
-def execute3_process2(df):
-    """
-    处理2：读取待处理文件3中AL列的数据，筛选这一列中以"河北分公司-建筑结构所"开头的数据
-    
-    参数:
-        df (pandas.DataFrame): 输入数据
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    print("执行处理2：筛选AL列以'河北分公司-建筑结构所'开头的数据")
-    try:
-        from core import Monitor
-        Monitor.log_process("处理2：筛选AL列以'河北分公司-建筑结构所'开头的数据")
-    except Exception:
-        pass
-    
-    qualified_rows = set()
-    
-    if len(df.columns) <= 37:  # AL列索引为37
-        print("警告：文件列数不足，无法访问AL列")
-        try:
-            from core import Monitor
-            Monitor.log_warning("文件列数不足，无法访问AL列")
-        except Exception:
-            pass
-        return qualified_rows
-    
-    try:
-        # AL列索引为37（从0开始）
-        al_column = df.iloc[:, 37]
-        target_prefix = get_organization_filter()
-        
-        for index, value in enumerate(al_column):
-            if pd.notna(value) and str(value).strip().startswith(target_prefix):
-                qualified_rows.add(index)
-        
-        print(f"处理2完成：找到 {len(qualified_rows)} 行符合条件")
-        try:
-            from core import Monitor
-            Monitor.log_info(f"处理2完成：找到 {len(qualified_rows)} 行符合条件")
-        except Exception:
-            pass
-            
-    except Exception as e:
-        print(f"处理2执行出错: {e}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"处理2执行出错: {e}")
-        except Exception:
-            pass
-    
-    return qualified_rows
-
-
-def execute3_process3(df, current_datetime, project_id=None):
-    """
-    处理3：读取处理文件3中M列的数据，根据当前日期进行时间筛选
-    
-    【特殊逻辑】1818项目：日期减6天后再进行筛选
-    
-    参数:
-        df (pandas.DataFrame): 输入数据
-        current_datetime (datetime): 当前日期时间
-        project_id (str): 项目号，用于特殊项目日期调整
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    print("执行处理3：筛选M列时间数据（4444年份视为无效，直接排除）")
-    try:
-        from core import Monitor
-        Monitor.log_process("处理3：筛选M列时间数据（4444年份视为无效，直接排除）")
-    except Exception:
-        pass
-    
-    qualified_rows = set()
-    
-    if len(df.columns) <= 12:  # M列索引为12
-        print("警告：文件列数不足，无法访问M列")
-        try:
-            from core import Monitor
-            Monitor.log_warning("文件列数不足，无法访问M列")
-        except Exception:
-            pass
-        return qualified_rows
-    
-    try:
-        # M列索引为12（从0开始）
-        m_column = df.iloc[:, 12]
-        current_day = current_datetime.day
-        current_year = current_datetime.year
-        current_month = current_datetime.month
-        
-        start_date = datetime.datetime(current_year, 1, 1)
-        if 1 <= current_day <= 19:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year, 12, 31)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
-        else:
-            if current_month == 11:
-                end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-            elif current_month == 12:
-                end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
-        
-        print(f"筛选日期范围: {start_date.strftime('%Y-%m-%d')} 到 {end_date.strftime('%Y-%m-%d')}")
-        
-        for index, value in enumerate(m_column):
-            if pd.notna(value):
-                try:
-                    # 尝试解析日期，支持多种格式
-                    date_value = None
-                    value_str = str(value).strip()
-                    
-                    # 业务规则：4444 作为年份表示"无效占位"，不应进入处理结果
-                    # 因此直接排除该行（不参与时间窗口判断）
-                    if value_str.startswith('4444'):
-                        continue
-                    
-                    # 尝试不同的日期格式
-                    date_formats = [
-                        '%Y-%m-%d', '%Y/%m/%d', '%Y.%m.%d',
-                        '%Y-%m-%d %H:%M:%S', '%Y/%m/%d %H:%M:%S'
-                    ]
-                    
-                    for fmt in date_formats:
-                        try:
-                            date_value = datetime.datetime.strptime(value_str, fmt)
-                            break
-                        except ValueError:
-                            continue
-                    
-                    # 如果是pandas的Timestamp对象
-                    if date_value is None and hasattr(value, 'year'):
-                        date_value = datetime.datetime(value.year, value.month, value.day)
-                    
-                    if date_value:
-                        # 【1818特殊逻辑】日期减6天后再进行筛选
-                        date_value = adjust_date_for_project(date_value, project_id)
-                        if start_date <= date_value <= end_date:
-                            qualified_rows.add(index)
-                        
-                except Exception as parse_error:
-                    print(f"日期解析失败（第{index+1}行）: {value} - {parse_error}")
-                    continue
-        
-        print(f"处理3完成：找到 {len(qualified_rows)} 行符合条件")
-        try:
-            from core import Monitor
-            Monitor.log_info(f"处理3完成：找到 {len(qualified_rows)} 行符合条件")
-        except Exception:
-            pass
-            
-    except Exception as e:
-        print(f"处理3执行出错: {e}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"处理3执行出错: {e}")
-        except Exception:
-            pass
-    
-    return qualified_rows
-
-
-def execute3_process4(df, current_datetime, project_id=None):
-    """
-    处理4：读取处理文件3中L列的数据，进行时间筛选（4444年份视为无效，直接排除）
-    
-    【特殊逻辑】1818项目：日期减6天后再进行筛选
-    
-    参数:
-        df (pandas.DataFrame): 输入数据
-        current_datetime (datetime): 当前日期时间
-        project_id (str): 项目号，用于特殊项目日期调整
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    print("执行处理4：筛选L列时间数据（4444年份视为无效，直接排除）")
-    try:
-        from core import Monitor
-        Monitor.log_process("处理4：筛选L列时间数据（4444年份视为无效，直接排除）")
-    except Exception:
-        pass
-    
-    qualified_rows = set()
-    
-    if len(df.columns) <= 11:  # L列索引为11
-        print("警告：文件列数不足，无法访问L列")
-        try:
-            from core import Monitor
-            Monitor.log_warning("文件列数不足，无法访问L列")
-        except Exception:
-            pass
-        return qualified_rows
-    
-    try:
-        # L列索引为11（从0开始）
-        l_column = df.iloc[:, 11]
-        current_day = current_datetime.day
-        current_year = current_datetime.year
-        current_month = current_datetime.month
-        
-        start_date = datetime.datetime(current_year, 1, 1)
-        if 1 <= current_day <= 19:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year, 12, 31)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
-        else:
-            if current_month == 11:
-                end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-            elif current_month == 12:
-                end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
-        
-        print(f"筛选日期范围: {start_date.strftime('%Y-%m-%d')} 到 {end_date.strftime('%Y-%m-%d')}")
-        
-        for index, value in enumerate(l_column):
-            if pd.notna(value):
-                try:
-                    value_str = str(value).strip()
-                    date_value = None
-                    
-                    # 业务规则：4444 作为年份表示“无效占位”，不应进入处理结果
-                    # 因此直接排除该行（不参与时间窗口判断）
-                    if value_str.startswith('4444'):
-                        continue
-                    
-                    # 尝试不同的日期格式
-                    date_formats = [
-                        '%Y-%m-%d', '%Y/%m/%d', '%Y.%m.%d',
-                        '%Y-%m-%d %H:%M:%S', '%Y/%m/%d %H:%M:%S'
-                    ]
-                    
-                    for fmt in date_formats:
-                        try:
-                            date_value = datetime.datetime.strptime(value_str, fmt)
-                            break
-                        except ValueError:
-                            continue
-                    
-                    # 如果是pandas的Timestamp对象
-                    if date_value is None and hasattr(value, 'year'):
-                        date_value = datetime.datetime(value.year, value.month, value.day)
-                    
-                    if date_value:
-                        # 【1818特殊逻辑】日期减6天后再进行筛选
-                        date_value = adjust_date_for_project(date_value, project_id)
-                        if start_date <= date_value <= end_date:
-                            qualified_rows.add(index)
-                        
-                except Exception as parse_error:
-                    print(f"日期解析失败（第{index+1}行）: {value} - {parse_error}")
-                    continue
-        
-        print(f"处理4完成：找到 {len(qualified_rows)} 行符合条件")
-        try:
-            from core import Monitor
-            Monitor.log_info(f"处理4完成：找到 {len(qualified_rows)} 行符合条件")
-        except Exception:
-            pass
-            
-    except Exception as e:
-        print(f"处理4执行出错: {e}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"处理4执行出错: {e}")
-        except Exception:
-            pass
-    
-    return qualified_rows
-
-
-def execute3_process5(df):
-    """
-    处理5：读取待处理文件3中Q列的数据，筛选这一列中为空值的数据
-    
-    参数:
-        df (pandas.DataFrame): 输入数据
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    print("执行处理5：筛选Q列为空值的数据")
-    try:
-        from core import Monitor
-        Monitor.log_process("处理5：筛选Q列为空值的数据")
-    except Exception:
-        pass
-    
-    qualified_rows = set()
-    
-    if len(df.columns) <= 16:  # Q列索引为16
-        print("警告：文件列数不足，无法访问Q列")
-        try:
-            from core import Monitor
-            Monitor.log_warning("文件列数不足，无法访问Q列")
-        except Exception:
-            pass
-        return qualified_rows
-    
-    try:
-        # Q列索引为16（从0开始）
-        q_column = df.iloc[:, 16]
-        
-        for index, value in enumerate(q_column):
-            if pd.isna(value) or str(value).strip() == '':
-                qualified_rows.add(index)
-        
-        print(f"处理5完成：找到 {len(qualified_rows)} 行符合条件")
-        try:
-            from core import Monitor
-            Monitor.log_info(f"处理5完成：找到 {len(qualified_rows)} 行符合条件")
-        except Exception:
-            pass
-            
-    except Exception as e:
-        print(f"处理5执行出错: {e}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"处理5执行出错: {e}")
-        except Exception:
-            pass
-    
-    return qualified_rows
-
-
-def execute3_process6(df):
-    """
-    处理6：读取待处理文件3中T列的数据，筛选这一列中为空值的数据
-    
-    参数:
-        df (pandas.DataFrame): 输入数据
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    print("执行处理6：筛选T列为空值的数据")
-    try:
-        from core import Monitor
-        Monitor.log_process("处理6：筛选T列为空值的数据")
-    except Exception:
-        pass
-    
-    qualified_rows = set()
-    
-    if len(df.columns) <= 19:  # T列索引为19
-        print("警告：文件列数不足，无法访问T列")
-        try:
-            from core import Monitor
-            Monitor.log_warning("文件列数不足，无法访问T列")
-        except Exception:
-            pass
-        return qualified_rows
-    
-    try:
-        # T列索引为19（从0开始）
-        t_column = df.iloc[:, 19]
-        
-        for index, value in enumerate(t_column):
-            if pd.isna(value) or str(value).strip() == '':
-                qualified_rows.add(index)
-        
-        print(f"处理6完成：找到 {len(qualified_rows)} 行符合条件")
-        try:
-            from core import Monitor
-            Monitor.log_info(f"处理6完成：找到 {len(qualified_rows)} 行符合条件")
-        except Exception:
-            pass
-            
-    except Exception as e:
-        print(f"处理6执行出错: {e}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"处理6执行出错: {e}")
-        except Exception:
-            pass
-    
-    return qualified_rows
-
-
-def export_result_to_excel3(df, original_file_path, current_datetime, output_dir, project_id=None):
-    """
-    导出外部需打开接口处理结果到Excel文件
-    新建空白Excel文件，重命名Sheet1，复制表头格式和内容，写入符合条件的完整数据，设置列宽
-    
-    参数:
-        df (pandas.DataFrame): 完成处理数据（包含原始行号）
-        original_file_path (str): 原始文件路径  
-        current_datetime (datetime): 当前日期时间
-        output_dir (str): 输出目录
-        project_id (str): 项目号，用于创建结果文件夹
-    
-    返回:
-        str: 导出文件路径
-    """
-    from openpyxl import Workbook, load_workbook
-    
-    try:
-        # 根据项目号创建结果文件夹
-        if project_id:
-            result_folder_name = f"{project_id}结果文件"
-            result_folder_path = os.path.join(output_dir, result_folder_name)
-            
-            # 如果文件夹不存在则创建
-            if not os.path.exists(result_folder_path):
-                os.makedirs(result_folder_path)
-                print(f"创建结果文件夹: {result_folder_path}")
-            
-            # 使用结果文件夹作为输出目录
-            final_output_dir = result_folder_path
-        else:
-            # 如果没有项目号，使用原始输出目录
-            final_output_dir = output_dir
-        
-        # 生成输出文件名，处理重名文件
-        date_str = current_datetime.strftime('%Y-%m-%d')
-        base_filename = f"外部需打开接口{date_str}"
-        output_filename = f"{base_filename}.xlsx"
-        output_path = os.path.join(final_output_dir, output_filename)
-        
-        counter = 1
-        while os.path.exists(output_path):
-            output_filename = f"{base_filename}({counter}).xlsx"
-            output_path = os.path.join(final_output_dir, output_filename)
-            counter += 1
-        
-        # 第一步：新建空白Excel文件
-        wb = Workbook()
-        ws = wb.active
-        
-        # 第二步：重命名Sheet1为"外部需打开接口"
-        ws.title = "外部需打开接口"
-        
-        # 第三步：读取原始文件用于复制格式和数据
-        original_wb = load_workbook(original_file_path)
-        # 使用第一个工作表
-        original_ws = original_wb.worksheets[0]
-        
-        # 读取原始数据
-        if original_file_path.endswith('.xlsx'):
-            original_df = pd.read_excel(original_file_path, sheet_name=0, engine='openpyxl', header=None)
-        else:
-            original_df = pd.read_excel(original_file_path, sheet_name=0, engine='xlrd', header=None)
-        
-        # 第四步：复制原Excel第一行的数据格式和内容（表头）
-        if original_ws.max_row > 0:
-            max_col = max(original_ws.max_column, len(original_df.columns))
-            print(f"导出表头：从第1列到第{max_col}列")
-            
-            # 复制第一行的所有单元格（包括格式和内容）
-            for col_idx in range(1, max_col + 1):
-                source_cell = original_ws.cell(row=1, column=col_idx)
-                target_cell = ws.cell(row=1, column=col_idx)
-                
-                # 复制值
-                target_cell.value = source_cell.value
-                
-                # 复制格式
-                try:
-                    if source_cell.font:
-                        target_cell.font = copy(source_cell.font)
-                    if source_cell.fill:
-                        target_cell.fill = copy(source_cell.fill)
-                    if source_cell.border:
-                        target_cell.border = copy(source_cell.border)
-                    if source_cell.alignment:
-                        target_cell.alignment = copy(source_cell.alignment)
-                    if source_cell.number_format:
-                        target_cell.number_format = source_cell.number_format
-                except Exception as style_error:
-                    print(f"样式复制失败，仅复制值: {style_error}")
-            
-            print("已复制表头（格式和内容）")
-        
-        # 第五步：复制处理结果后的原Excel行数据
-        if not df.empty and '原始行号' in df.columns:
-            qualified_rows = df['原始行号'].tolist()
-            print(f"准备导出 {len(qualified_rows)} 行符合条件的数据")
-            
-            write_row = 2  # 从第二行开始写入数据
-            max_col = max(original_ws.max_column, len(original_df.columns))
-            
-            for excel_row_num in sorted(qualified_rows):
-                # 确保行号在有效范围内
-                if excel_row_num > 1 and excel_row_num <= len(original_df):
-                    # 复制整行数据和格式
-                    for col_idx in range(1, max_col + 1):
-                        source_cell = original_ws.cell(row=excel_row_num, column=col_idx)
-                        target_cell = ws.cell(row=write_row, column=col_idx)
-                        
-                        # 复制值
-                        target_cell.value = source_cell.value
-                        
-                        # 复制格式
-                        try:
-                            if source_cell.font:
-                                target_cell.font = copy(source_cell.font)
-                            if source_cell.fill:
-                                target_cell.fill = copy(source_cell.fill)
-                            if source_cell.border:
-                                target_cell.border = copy(source_cell.border)
-                            if source_cell.alignment:
-                                target_cell.alignment = copy(source_cell.alignment)
-                            if source_cell.number_format:
-                                target_cell.number_format = source_cell.number_format
-                        except Exception as style_error:
-                            print(f"数据行样式复制失败，仅复制值: {style_error}")
-                    
-                    write_row += 1
-            
-            print(f"已写入 {write_row - 2} 行数据")
-        else:
-            print("没有符合条件的数据行需要导出")
-        
-        # 第六步：设置列宽（能完全显示1~4行数据，乘以1.2系数）
-        max_col = max(original_ws.max_column, len(original_df.columns))
-        for col_idx in range(1, max_col + 1):
-            # 计算该列1~4行数据的最大显示宽度
-            max_width = 8  # 最小宽度
-            
-            for row_idx in range(1, min(5, ws.max_row + 1)):  # 检查1~4行
-                cell = ws.cell(row=row_idx, column=col_idx)
-                if cell.value is not None:
-                    # 计算单元格内容的显示宽度
-                    cell_width = len(str(cell.value)) * 1.2  # 粗略估算
-                    max_width = max(max_width, cell_width)
-            
-            # 应用1.2系数并设置列宽
-            final_width = max_width * 1.2
-            # openpyxl列宽限制在1-255之间
-            final_width = min(max(final_width, 8), 100)
-            
-            # 设置列宽
-            col_letter = ws.cell(row=1, column=col_idx).column_letter
-            ws.column_dimensions[col_letter].width = final_width
-        
-        print("已设置列宽")
-        
-        # 保存文件
-        original_wb.close()
-        wb.save(output_path)
-        wb.close()
-        
-        print(f"外部需打开接口导出完成！文件保存到: {output_path}")
-        try:
-            from core import Monitor
-            Monitor.log_success(f"外部需打开接口导出完成！文件保存到: {output_path}")
-        except Exception:
-            pass
-        
-        return output_path
-        
-    except Exception as e:
-        print(f"导出外部需打开接口数据时发生错误: {str(e)}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"导出外部需打开接口数据时发生错误: {str(e)}")
-        except Exception:
-            pass
-        raise
-
-
-# ===================== 待处理文件4（外部需回复接口）相关处理 =====================
-def process_target_file4(file_path, current_datetime):
-    """
-    处理待处理文件4（外部需回复接口）的主函数
-    
-    参数:
-        file_path (str): 待处理文件4的路径
-        current_datetime (datetime): 当前日期时间
-    
-    返回:
-        pandas.DataFrame: 完成处理数据，包含原始行号
-    """
-    print(f"开始处理待处理文件4: {os.path.basename(file_path)}")
-    try:
-        from core import Monitor
-        Monitor.log_process(f"开始处理待处理文件4: {os.path.basename(file_path)}")
-    except Exception:
-        pass
-    
-    # 读取Excel文件的Sheet1
-    if file_path.endswith('.xlsx'):
-        df = pd.read_excel(file_path, sheet_name=0, engine='openpyxl')
-    else:
-        df = pd.read_excel(file_path, sheet_name=0, engine='xlrd')
-        
-    if df.empty:
-        print("文件为空")
-        try:
-            from core import Monitor
-            Monitor.log_error("文件为空，无法处理")
-        except Exception:
-            pass
-        return pd.DataFrame()
-        
-    print(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
-    try:
-        from core import Monitor
-        Monitor.log_info(f"读取到数据：{len(df)} 行，{len(df.columns)} 列")
-    except Exception:
-        pass
-    
-    # 【新增】提取项目号（用于1818项目特殊日期逻辑）
-    filename = os.path.basename(file_path)
-    match = re.search(r'(\d{4})', filename)
-    project_id = match.group(1) if match else None
-
-    # 版次筛选：先确定同接口号最高版本（文件4：I列）
-    version_allowed_rows = _filter_rows_by_highest_version(df, 4, set(range(1, len(df))), 8)
-    
-    # 执行四个处理步骤
-    process1_rows = execute4_process1(df)  # AF列以"河北分公司-建筑结构所"开头的数据
-    process2_rows = execute4_process2(df)  # P列为"B"或P列为空且AC列为"B"的数据
-    process3_rows = execute4_process3(df, current_datetime, project_id)  # S列时间数据筛选
-    process4_rows = execute4_process4(df)  # V列为空值的数据
-    
-    # 最终汇总逻辑：满足处理1、2、3，4
-    final_rows = process1_rows & process2_rows & process3_rows & process4_rows
-    
-    print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
-    
-    # 【统一】Registry 查询：待审查加回统一按最新 business 记录处理
-    try:
-        final_rows, _ = _merge_registry_pending_rows(
-            file_type=4,
-            file_path=file_path,
-            df=df,
-            final_rows=final_rows,
-            allowed_rows=process1_rows & process2_rows & process3_rows,
-            allow_interface_only_fallback=True,
-        )
-    except Exception as e:
-        print(f"[Registry] 查询待审查任务失败: {e}")
-    
-    # 版次筛选：同接口号只保留最高版本（文件4：I列）
-    final_rows = final_rows & version_allowed_rows
-
-    print(f"最终完成处理数据（含待确认）: {len(final_rows)} 行")
-    
-    # 日志记录
-    try:
-        from core import Monitor
-        Monitor.log_info(f"处理1(AF列河北分公司-建筑结构所开头): {len(process1_rows)} 行")
-        Monitor.log_info(f"处理2(P列为B或P列为空且AC列为B): {len(process2_rows)} 行")
-        Monitor.log_info(f"处理3(S列时间筛选): {len(process3_rows)} 行")
-        Monitor.log_info(f"处理4(V列为空): {len(process4_rows)} 行")
-        if len(final_rows) > 0:
-            Monitor.log_success(f"最终完成处理数据: {len(final_rows)} 行")
-        else:
-            Monitor.log_warning("经过筛选后，无符合条件的数据")
-    except Exception:
-        pass
-    
-    if not final_rows:
-        return pd.DataFrame()
-    
-    # 转换为最终结果DataFrame
-    final_indices = [i for i in final_rows if i >= 0]
-    excel_row_numbers = [i + 2 for i in final_indices]  # pandas索引+2=Excel行号
-    result_df = df.iloc[final_indices].copy()
-    result_df['原始行号'] = excel_row_numbers
-    # 新增“科室”列（基于AG列：匹配三种科室，空值则“请室主任确认”，否则保留原值）
-    try:
-        department_values = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 32] if 32 < len(df.columns) else None
-            cell_str = "" if (cell_val is None or (isinstance(cell_val, float) and pd.isna(cell_val))) else str(cell_val).strip()
-            if cell_str == "":
-                department_values.append("请室主任确认")
-            else:
-                matched = match_department_name(cell_str)
-                department_values.append(matched)
-        result_df["科室"] = department_values
-    except Exception:
-        result_df["科室"] = "请室主任确认"
-
-    # 新增"接口时间"列（基于S列：索引18），格式 yyyy.mm.dd
-    try:
-        time_values = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 18] if 18 < len(df.columns) else None
-            try:
-                parsed = pd.to_datetime(cell_val, errors='coerce')
-                if pd.isna(parsed):
-                    time_values.append("")
-                else:
-                    # 【修复】保留完整年份，支持跨年延期判断
-                    time_values.append(parsed.strftime('%Y.%m.%d'))
-            except Exception:
-                time_values.append("")
-        result_df["接口时间"] = time_values
-    except Exception:
-        result_df["接口时间"] = ""
-    # 新增"责任人"列（基于AH列：索引33，提取中文）
-    try:
-        zh_pattern = re.compile(r"[\u4e00-\u9fa5]+")
-        owners = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 33] if 33 < len(df.columns) else None
-            s = str(cell_val) if cell_val is not None else ""
-            found = zh_pattern.findall(s)
-            owners.append("".join(found))
-        result_df['责任人'] = owners
-    except Exception:
-        result_df['责任人'] = ""
-    # 【新增】添加source_file列
-    result_df['source_file'] = os.path.abspath(file_path)
-
-    # 【新增】应用指派记忆
-    result_df = apply_assignment_memory(result_df, file_type=4)
-
-    return result_df
-
-
-def execute4_process1(df):
-    """
-    处理1：读取待处理文件4中的AF列的数据，筛选这一列中以"河北分公司-建筑结构所"开头的数据
-    
-    参数:
-        df (pandas.DataFrame): 输入数据
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    print("执行处理1：筛选AF列以'河北分公司-建筑结构所'开头的数据")
-    try:
-        from core import Monitor
-        Monitor.log_process("处理1：筛选AF列以'河北分公司-建筑结构所'开头的数据")
-    except Exception:
-        pass
-    
-    qualified_rows = set()
-    
-    if len(df.columns) <= 31:  # AF列索引为31
-        print("警告：文件列数不足，无法访问AF列")
-        try:
-            from core import Monitor
-            Monitor.log_warning("文件列数不足，无法访问AF列")
-        except Exception:
-            pass
-        return qualified_rows
-    
-    try:
-        # AF列索引为31（从0开始）
-        af_column = df.iloc[:, 31]
-        target_prefix = get_organization_filter()
-        
-        for index, value in enumerate(af_column):
-            if pd.notna(value) and str(value).strip().startswith(target_prefix):
-                qualified_rows.add(index)
-        
-        print(f"处理1完成：找到 {len(qualified_rows)} 行符合条件")
-        try:
-            from core import Monitor
-            Monitor.log_info(f"处理1完成：找到 {len(qualified_rows)} 行符合条件")
-        except Exception:
-            pass
-            
-    except Exception as e:
-        print(f"处理1执行出错: {e}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"处理1执行出错: {e}")
-        except Exception:
-            pass
-    
-    return qualified_rows
-
-
-def execute4_process2(df):
-    """
-    处理2：读取待处理文件4中的P列或AC列的数据，筛选其中为"B"的数据
-    
-    参数:
-        df (pandas.DataFrame): 输入数据
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    print("执行处理2：筛选P列为'B'或P列为空且AC列为'B'的数据")
-    try:
-        from core import Monitor
-        Monitor.log_process("处理2：筛选P列为'B'或P列为空且AC列为'B'的数据")
-    except Exception:
-        pass
-    
-    qualified_rows = set()
-    
-    has_p = len(df.columns) > 15   # P列索引为15
-    has_ac = len(df.columns) > 28  # AC列索引为28
-    if not has_p and not has_ac:
-        print("警告：文件列数不足，无法访问P列/AC列")
-        try:
-            from core import Monitor
-            Monitor.log_warning("文件列数不足，无法访问P列/AC列")
-        except Exception:
-            pass
-        return qualified_rows
-    
-    try:
-        p_column = df.iloc[:, 15] if has_p else None
-        ac_column = df.iloc[:, 28] if has_ac else None
-        
-        for index in range(len(df)):
-            p_value = p_column.iloc[index] if p_column is not None else None
-            p_is_b = pd.notna(p_value) and str(p_value).strip() == "B"
-            p_is_empty = p_column is None or pd.isna(p_value) or str(p_value).strip() == ""
-
-            ac_value = ac_column.iloc[index] if ac_column is not None else None
-            ac_is_b = pd.notna(ac_value) and str(ac_value).strip() == "B"
-
-            if p_is_b or (p_is_empty and ac_is_b):
-                qualified_rows.add(index)
-        
-        print(f"处理2完成：找到 {len(qualified_rows)} 行符合条件")
-        try:
-            from core import Monitor
-            Monitor.log_info(f"处理2完成：找到 {len(qualified_rows)} 行符合条件")
-        except Exception:
-            pass
-            
-    except Exception as e:
-        print(f"处理2执行出错: {e}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"处理2执行出错: {e}")
-        except Exception:
-            pass
-    
-    return qualified_rows
-
-
-def execute4_process3(df, current_datetime, project_id=None):
-    """
-    处理3：读取待处理文件4中S列的数据，根据当前日期进行时间筛选
-    
-    【特殊逻辑】1818项目：日期减6天后再进行筛选
-    
-    参数:
-        df (pandas.DataFrame): 输入数据
-        current_datetime (datetime): 当前日期时间
-        project_id (str): 项目号，用于特殊项目日期调整
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    print("执行处理3：筛选S列时间数据")
-    try:
-        from core import Monitor
-        Monitor.log_process("处理3：筛选S列时间数据")
-    except Exception:
-        pass
-    
-    qualified_rows = set()
-    
-    if len(df.columns) <= 18:  # S列索引为18
-        print("警告：文件列数不足，无法访问S列")
-        try:
-            from core import Monitor
-            Monitor.log_warning("文件列数不足，无法访问S列")
-        except Exception:
-            pass
-        return qualified_rows
-    
-    try:
-        # S列索引为18（从0开始）
-        s_column = df.iloc[:, 18]
-        current_day = current_datetime.day
-        current_year = current_datetime.year
-        current_month = current_datetime.month
-        
-        # 新逻辑：1~19号 → 当年1月1日至当月末；20~31号 → 当年1月1日至次月月末
-        start_date = datetime.datetime(current_year, 1, 1)
-        if 1 <= current_day <= 19:
-            if current_month == 12:
-                end_date = datetime.datetime(current_year, 12, 31)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
-        else:
-            if current_month == 11:
-                end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-            elif current_month == 12:
-                end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-            else:
-                end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
-        
-        print(f"筛选日期范围: {start_date.strftime('%Y-%m-%d')} 到 {end_date.strftime('%Y-%m-%d')}")
-        
-        for index, value in enumerate(s_column):
-            if pd.notna(value):
-                try:
-                    # 尝试解析日期，支持多种格式
-                    date_value = None
-                    value_str = str(value).strip()
-                    
-                    # 尝试不同的日期格式
-                    date_formats = [
-                        '%Y-%m-%d', '%Y/%m/%d', '%Y.%m.%d',
-                        '%Y-%m-%d %H:%M:%S', '%Y/%m/%d %H:%M:%S'
-                    ]
-                    
-                    for fmt in date_formats:
-                        try:
-                            date_value = datetime.datetime.strptime(value_str, fmt)
-                            break
-                        except ValueError:
-                            continue
-                    
-                    # 如果是pandas的Timestamp对象
-                    if date_value is None and hasattr(value, 'year'):
-                        date_value = datetime.datetime(value.year, value.month, value.day)
-                    
-                    if date_value:
-                        # 【1818特殊逻辑】日期减6天后再进行筛选
-                        date_value = adjust_date_for_project(date_value, project_id)
-                        if start_date <= date_value <= end_date:
-                            qualified_rows.add(index)
-                        
-                except Exception as parse_error:
-                    print(f"日期解析失败（第{index+1}行）: {value} - {parse_error}")
-                    continue
-        
-        print(f"处理3完成：找到 {len(qualified_rows)} 行符合条件")
-        try:
-            from core import Monitor
-            Monitor.log_info(f"处理3完成：找到 {len(qualified_rows)} 行符合条件")
-        except Exception:
-            pass
-            
-    except Exception as e:
-        print(f"处理3执行出错: {e}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"处理3执行出错: {e}")
-        except Exception:
-            pass
-    
-    return qualified_rows
-
-
-def execute4_process4(df):
-    """
-    处理4：读取待处理文件4中V列的数据，筛选这一列中为空值的数据
-    
-    参数:
-        df (pandas.DataFrame): 输入数据
-    
-    返回:
-        set: 符合条件的行索引集合
-    """
-    print("执行处理4：筛选V列为空值的数据")
-    try:
-        from core import Monitor
-        Monitor.log_process("处理4：筛选V列为空值的数据")
-    except Exception:
-        pass
-    
-    qualified_rows = set()
-    
-    if len(df.columns) <= 21:  # V列索引为21
-        print("警告：文件列数不足，无法访问V列")
-        try:
-            from core import Monitor
-            Monitor.log_warning("文件列数不足，无法访问V列")
-        except Exception:
-            pass
-        return qualified_rows
-    
-    try:
-        # V列索引为21（从0开始）
-        v_column = df.iloc[:, 21]
-        
-        for index, value in enumerate(v_column):
-            if pd.isna(value) or str(value).strip() == '':
-                qualified_rows.add(index)
-        
-        print(f"处理4完成：找到 {len(qualified_rows)} 行符合条件")
-        try:
-            from core import Monitor
-            Monitor.log_info(f"处理4完成：找到 {len(qualified_rows)} 行符合条件")
-        except Exception:
-            pass
-            
-    except Exception as e:
-        print(f"处理4执行出错: {e}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"处理4执行出错: {e}")
-        except Exception:
-            pass
-    
-    return qualified_rows
-
-
-def export_result_to_excel4(df, original_file_path, current_datetime, output_dir, project_id=None):
-    """
-    导出外部需回复接口处理结果到Excel文件
-    新建空白Excel文件，重命名Sheet1，复制表头格式和内容，写入符合条件的完整数据，设置列宽
-    
-    参数:
-        df (pandas.DataFrame): 完成处理数据（包含原始行号）
-        original_file_path (str): 原始文件路径  
-        current_datetime (datetime): 当前日期时间
-        output_dir (str): 输出目录
-        project_id (str): 项目号，用于创建结果文件夹
-    
-    返回:
-        str: 导出文件路径
-    """
-    from openpyxl import Workbook, load_workbook
-    
-    try:
-        # 根据项目号创建结果文件夹
-        if project_id:
-            result_folder_name = f"{project_id}结果文件"
-            result_folder_path = os.path.join(output_dir, result_folder_name)
-            
-            # 如果文件夹不存在则创建
-            if not os.path.exists(result_folder_path):
-                os.makedirs(result_folder_path)
-                print(f"创建结果文件夹: {result_folder_path}")
-            
-            # 使用结果文件夹作为输出目录
-            final_output_dir = result_folder_path
-        else:
-            # 如果没有项目号，使用原始输出目录
-            final_output_dir = output_dir
-        
-        # 生成输出文件名，处理重名文件
-        date_str = current_datetime.strftime('%Y-%m-%d')
-        base_filename = f"外部需回复接口{date_str}"
-        output_filename = f"{base_filename}.xlsx"
-        output_path = os.path.join(final_output_dir, output_filename)
-        
-        counter = 1
-        while os.path.exists(output_path):
-            output_filename = f"{base_filename}({counter}).xlsx"
-            output_path = os.path.join(final_output_dir, output_filename)
-            counter += 1
-        
-        # 第一步：新建空白Excel文件
-        wb = Workbook()
-        ws = wb.active
-        
-        # 第二步：重命名Sheet1为"外部需回复接口"
-        ws.title = "外部需回复接口"
-        
-        # 第三步：读取原始文件用于复制格式和数据
-        original_wb = load_workbook(original_file_path)
-        original_ws = original_wb.worksheets[0]
-        
-        # 读取原始数据
-        if original_file_path.endswith('.xlsx'):
-            original_df = pd.read_excel(original_file_path, sheet_name=0, engine='openpyxl', header=None)
-        else:
-            original_df = pd.read_excel(original_file_path, sheet_name=0, engine='xlrd', header=None)
-        
-        # 第四步：复制原Excel第一行的数据格式和内容（表头）
-        if original_ws.max_row > 0:
-            max_col = max(original_ws.max_column, len(original_df.columns))
-            print(f"导出表头：从第1列到第{max_col}列")
-            
-            # 复制第一行的所有单元格（包括格式和内容）
-            for col_idx in range(1, max_col + 1):
-                source_cell = original_ws.cell(row=1, column=col_idx)
-                target_cell = ws.cell(row=1, column=col_idx)
-                
-                # 复制值
-                target_cell.value = source_cell.value
-                
-                # 复制格式
-                try:
-                    if source_cell.font:
-                        target_cell.font = copy(source_cell.font)
-                    if source_cell.fill:
-                        target_cell.fill = copy(source_cell.fill)
-                    if source_cell.border:
-                        target_cell.border = copy(source_cell.border)
-                    if source_cell.alignment:
-                        target_cell.alignment = copy(source_cell.alignment)
-                    if source_cell.number_format:
-                        target_cell.number_format = source_cell.number_format
-                except Exception as style_error:
-                    print(f"样式复制失败，仅复制值: {style_error}")
-            
-            print("已复制表头（格式和内容）")
-        
-        # 第五步：复制处理结果后的原Excel行数据
-        if not df.empty and '原始行号' in df.columns:
-            qualified_rows = df['原始行号'].tolist()
-            print(f"准备导出 {len(qualified_rows)} 行符合条件的数据")
-            
-            write_row = 2  # 从第二行开始写入数据
-            max_col = max(original_ws.max_column, len(original_df.columns))
-            
-            for excel_row_num in sorted(qualified_rows):
-                # 确保行号在有效范围内
-                if excel_row_num > 1 and excel_row_num <= len(original_df):
-                    # 复制整行数据和格式
-                    for col_idx in range(1, max_col + 1):
-                        source_cell = original_ws.cell(row=excel_row_num, column=col_idx)
-                        target_cell = ws.cell(row=write_row, column=col_idx)
-                        
-                        # 复制值
-                        target_cell.value = source_cell.value
-                        
-                        # 复制格式
-                        try:
-                            if source_cell.font:
-                                target_cell.font = copy(source_cell.font)
-                            if source_cell.fill:
-                                target_cell.fill = copy(source_cell.fill)
-                            if source_cell.border:
-                                target_cell.border = copy(source_cell.border)
-                            if source_cell.alignment:
-                                target_cell.alignment = copy(source_cell.alignment)
-                            if source_cell.number_format:
-                                target_cell.number_format = source_cell.number_format
-                        except Exception as style_error:
-                            print(f"数据行样式复制失败，仅复制值: {style_error}")
-                    
-                    write_row += 1
-            
-            print(f"已写入 {write_row - 2} 行数据")
-        else:
-            print("没有符合条件的数据行需要导出")
-        
-        # 第六步：设置列宽（能完全显示1~4行数据，乘以1.2系数）
-        max_col = max(original_ws.max_column, len(original_df.columns))
-        for col_idx in range(1, max_col + 1):
-            # 计算该列1~4行数据的最大显示宽度
-            max_width = 8  # 最小宽度
-            
-            for row_idx in range(1, min(5, ws.max_row + 1)):  # 检查1~4行
-                cell = ws.cell(row=row_idx, column=col_idx)
-                if cell.value is not None:
-                    # 计算单元格内容的显示宽度
-                    cell_width = len(str(cell.value)) * 1.2  # 粗略估算
-                    max_width = max(max_width, cell_width)
-            
-            # 应用1.2系数并设置列宽
-            final_width = max_width * 1.2
-            # openpyxl列宽限制在1-255之间
-            final_width = min(max(final_width, 8), 100)
-            
-            # 设置列宽
-            col_letter = ws.cell(row=1, column=col_idx).column_letter
-            ws.column_dimensions[col_letter].width = final_width
-        
-        print("已设置列宽")
-        
-        # 保存文件
-        original_wb.close()
-        wb.save(output_path)
-        wb.close()
-        
-        print(f"外部需回复接口导出完成！文件保存到: {output_path}")
-        try:
-            from core import Monitor
-            Monitor.log_success(f"外部需回复接口导出完成！文件保存到: {output_path}")
-        except Exception:
-            pass
-        
-        return output_path
-        
-    except Exception as e:
-        print(f"导出外部需回复接口数据时发生错误: {str(e)}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"导出外部需回复接口数据时发生错误: {str(e)}")
-        except Exception:
-            pass
-        raise
-
-
-# ===================== 待处理文件5（三维提资接口）相关处理 =====================
 def find_target_file5(excel_files):
     """
     查找符合特定格式的待处理文件5（兼容性函数，返回第一个匹配的文件）
@@ -3325,340 +820,6 @@ def find_all_target_files5(excel_files):
     return matched_files
 
 
-def process_target_file5(file_path, current_datetime):
-    """
-    处理待处理文件5（三维提资接口）的主函数
-    最终条件：处理1 & 处理2 & 处理3
-    - 处理1：G列为 25C1/25C2/25C3
-    - 处理2：L列日期筛选（同文件1的K列逻辑）
-    - 处理3：N列为空值
-    """
-    print(f"开始处理待处理文件5: {os.path.basename(file_path)}")
-    try:
-        from core import Monitor
-        Monitor.log_process(f"开始处理待处理文件5: {os.path.basename(file_path)}")
-    except Exception:
-        pass
-
-    # 读取Excel文件的Sheet1
-    if file_path.endswith('.xlsx'):
-        df = pd.read_excel(file_path, sheet_name=0, engine='openpyxl')
-    else:
-        df = pd.read_excel(file_path, sheet_name=0, engine='xlrd')
-
-    if df.empty:
-        try:
-            from core import Monitor
-            Monitor.log_warning("文件5为空，无法处理")
-        except Exception:
-            pass
-        return pd.DataFrame()
-
-    # 【新增】提取项目号（用于1818项目特殊日期逻辑）
-    filename = os.path.basename(file_path)
-    match = re.search(r'(\d{4})', filename)
-    project_id = match.group(1) if match else None
-
-    p1 = execute5_process1(df)
-    p2 = execute5_process2(df, current_datetime, project_id)
-    p3 = execute5_process3(df)
-
-    final_rows = p1 & p2 & p3
-    
-    print(f"最终完成处理数据（原始筛选）: {len(final_rows)} 行")
-    
-    # 【统一】Registry 查询：待审查加回统一按最新 business 记录处理
-    try:
-        final_rows, _ = _merge_registry_pending_rows(
-            file_type=5,
-            file_path=file_path,
-            df=df,
-            final_rows=final_rows,
-            allowed_rows=p1 & p2,
-        )
-    except Exception as e:
-        print(f"[Registry] 查询待审查任务失败: {e}")
-    
-    print(f"最终完成处理数据（含待确认）: {len(final_rows)} 行")
-    
-    try:
-        from core import Monitor
-        Monitor.log_info(f"文件5处理1(G列25C1/25C2/25C3): {len(p1)} 行")
-        Monitor.log_info(f"文件5处理2(L列日期): {len(p2)} 行")
-        Monitor.log_info(f"文件5处理3(N列为空): {len(p3)} 行")
-        Monitor.log_success(f"文件5最终完成处理数据: {len(final_rows)} 行")
-    except Exception:
-        pass
-
-    if not final_rows:
-        return pd.DataFrame()
-
-    final_indices = [i for i in final_rows if i > 0]
-    excel_row_numbers = [i + 2 for i in final_indices]
-    result_df = df.iloc[final_indices].copy()
-    result_df['原始行号'] = excel_row_numbers
-
-    # 新增“科室”列（基于G列：25C1/25C2/25C3）
-    try:
-        department_values = []
-        for idx in result_df.index:
-            cell_str = str(df.iloc[idx, 6]) if 6 < len(df.columns) else ""
-            department_values.append(map_code_to_department(cell_str))
-        result_df["科室"] = department_values
-    except Exception:
-        result_df["科室"] = ""
-
-    # 新增"接口时间"列（基于L列：索引11），格式 yyyy.mm.dd
-    try:
-        time_values = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 11] if 11 < len(df.columns) else None
-            try:
-                parsed = pd.to_datetime(cell_val, errors='coerce')
-                if pd.isna(parsed):
-                    time_values.append("")
-                else:
-                    # 【修复】保留完整年份，支持跨年延期判断
-                    time_values.append(parsed.strftime('%Y.%m.%d'))
-            except Exception:
-                time_values.append("")
-        result_df["接口时间"] = time_values
-    except Exception:
-        result_df["接口时间"] = ""
-
-    # 新增"责任人"列（基于K列：索引10，提取中文）
-    try:
-        zh_pattern = re.compile(r"[\u4e00-\u9fa5]+")
-        owners = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 10] if 10 < len(df.columns) else None
-            s = str(cell_val) if cell_val is not None else ""
-            found = zh_pattern.findall(s)
-            owners.append("".join(found))
-        result_df['责任人'] = owners
-    except Exception:
-        result_df['责任人'] = ""
-    
-    # 【新增】添加source_file列
-    result_df['source_file'] = os.path.abspath(file_path)
-
-    # 【新增】应用指派记忆
-    result_df = apply_assignment_memory(result_df, file_type=5)
-
-    return result_df
-
-
-def execute5_process1(df):
-    """G列为 25C1/25C2/25C3"""
-    result_rows = set()
-    if len(df.columns) <= 6:
-        return result_rows
-    g_column = df.iloc[:, 6]
-    for idx, val in g_column.items():
-        if idx == 0:
-            continue
-        s = str(val) if val is not None else ""
-        if contains_department_code(s):
-            result_rows.add(idx)
-    return result_rows
-
-
-def execute5_process2(df, current_datetime, project_id=None):
-    """L列日期筛选，逻辑同文件1的K列。【特殊逻辑】1818项目：日期减6天后再进行筛选"""
-    result_rows = set()
-    if len(df.columns) <= 11:
-        return result_rows
-    l_column = df.iloc[:, 11]
-    current_day = current_datetime.day
-    current_year = current_datetime.year
-    current_month = current_datetime.month
-    start_date = datetime.datetime(current_year, 1, 1)
-    if current_day <= 19:
-        if current_month == 12:
-            end_date = datetime.datetime(current_year, 12, 31)
-        else:
-            end_date = datetime.datetime(current_year, current_month + 1, 1) - datetime.timedelta(days=1)
-    else:
-        if current_month == 12:
-            end_date = datetime.datetime(current_year + 1, 2, 1) - datetime.timedelta(days=1)
-        elif current_month == 11:
-            end_date = datetime.datetime(current_year + 1, 1, 1) - datetime.timedelta(days=1)
-        else:
-            end_date = datetime.datetime(current_year, current_month + 2, 1) - datetime.timedelta(days=1)
-    for idx, val in l_column.items():
-        if idx == 0:
-            continue
-        cell_date = None
-        try:
-            if isinstance(val, str):
-                for fmt in ['%Y-%m-%d', '%Y/%m/%d', '%Y-%m-%d %H:%M:%S', '%Y/%m/%d %H:%M:%S']:
-                    try:
-                        cell_date = pd.to_datetime(val, format=fmt, errors='raise')
-                        break
-                    except Exception:
-                        continue
-                if cell_date is None or pd.isna(cell_date):
-                    cell_date = pd.to_datetime(val, errors='coerce')
-            else:
-                cell_date = pd.to_datetime(val, errors='coerce')
-            if pd.isna(cell_date):
-                continue
-            # 【1818特殊逻辑】日期减6天后再进行筛选
-            cell_date = adjust_date_for_project(cell_date, project_id)
-            if start_date <= cell_date <= end_date:
-                result_rows.add(idx)
-        except Exception:
-            continue
-    return result_rows
-
-
-def execute5_process3(df):
-    """N列为空值"""
-    result_rows = set()
-    if len(df.columns) <= 13:
-        return result_rows
-    n_column = df.iloc[:, 13]
-    for idx, val in n_column.items():
-        if idx == 0:
-            continue
-        if pd.isna(val) or str(val).strip() == "":
-            result_rows.add(idx)
-    return result_rows
-
-
-def export_result_to_excel5(df, original_file_path, current_datetime, output_dir, project_id=None):
-    """
-    导出三维提资接口处理结果到Excel文件
-    结构与其他导出函数一致；当源为.xls时仅复制值，不复制样式
-    """
-    from openpyxl import Workbook, load_workbook
-    try:
-        # 根据项目号创建结果文件夹
-        if project_id:
-            result_folder_name = f"{project_id}结果文件"
-            result_folder_path = os.path.join(output_dir, result_folder_name)
-            if not os.path.exists(result_folder_path):
-                os.makedirs(result_folder_path)
-            final_output_dir = result_folder_path
-        else:
-            final_output_dir = output_dir
-
-        # 生成输出文件路径（避免重名）
-        date_str = current_datetime.strftime('%Y-%m-%d')
-        base_filename = f"三维提资接口{date_str}"
-        output_filename = f"{base_filename}.xlsx"
-        output_path = os.path.join(final_output_dir, output_filename)
-        counter = 1
-        while os.path.exists(output_path):
-            output_filename = f"{base_filename}({counter}).xlsx"
-            output_path = os.path.join(final_output_dir, output_filename)
-            counter += 1
-
-        # 新建目标工作簿
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "三维提资接口"
-
-        # 读取源文件（xlsx用openpyxl，xls回退仅复制值）
-        if original_file_path.endswith('.xlsx'):
-            original_wb = load_workbook(original_file_path)
-            original_ws = original_wb.worksheets[0]
-            original_df = pd.read_excel(original_file_path, sheet_name=0, engine='openpyxl', header=None)
-        else:
-            original_wb = None
-            original_ws = None
-            original_df = pd.read_excel(original_file_path, sheet_name=0, engine='xlrd', header=None)
-
-        # 复制表头
-        if original_ws is not None and original_ws.max_row > 0:
-            max_col = max(original_ws.max_column, len(original_df.columns))
-            for col_idx in range(1, max_col + 1):
-                source_cell = original_ws.cell(row=1, column=col_idx)
-                target_cell = ws.cell(row=1, column=col_idx)
-                target_cell.value = source_cell.value
-                try:
-                    if source_cell.font:
-                        target_cell.font = copy(source_cell.font)
-                    if source_cell.fill:
-                        target_cell.fill = copy(source_cell.fill)
-                    if source_cell.border:
-                        target_cell.border = copy(source_cell.border)
-                    if source_cell.alignment:
-                        target_cell.alignment = copy(source_cell.alignment)
-                    if source_cell.number_format:
-                        target_cell.number_format = source_cell.number_format
-                except Exception:
-                    pass
-        else:
-            max_col = len(original_df.columns)
-            for col_idx in range(1, max_col + 1):
-                ws.cell(row=1, column=col_idx).value = original_df.iat[0, col_idx - 1]
-
-        # 复制数据行
-        if not df.empty and '原始行号' in df.columns:
-            qualified_rows = df['原始行号'].tolist()
-            write_row = 2
-            max_col = max((original_ws.max_column if original_ws is not None else 0), len(original_df.columns))
-            for excel_row_num in sorted(qualified_rows):
-                if excel_row_num > 1 and excel_row_num <= len(original_df):
-                    for col_idx in range(1, max_col + 1):
-                        target_cell = ws.cell(row=write_row, column=col_idx)
-                        if original_ws is not None:
-                            source_cell = original_ws.cell(row=excel_row_num, column=col_idx)
-                            target_cell.value = source_cell.value
-                            try:
-                                if source_cell.font:
-                                    target_cell.font = copy(source_cell.font)
-                                if source_cell.fill:
-                                    target_cell.fill = copy(source_cell.fill)
-                                if source_cell.border:
-                                    target_cell.border = copy(source_cell.border)
-                                if source_cell.alignment:
-                                    target_cell.alignment = copy(source_cell.alignment)
-                                if source_cell.number_format:
-                                    target_cell.number_format = source_cell.number_format
-                            except Exception:
-                                pass
-                        else:
-                            # 从DataFrame复制纯值（xls场景）
-                            val = original_df.iat[excel_row_num - 1, col_idx - 1] if col_idx - 1 < len(original_df.columns) else None
-                            target_cell.value = val
-                    write_row += 1
-
-        # 设置列宽
-        max_col = max((original_ws.max_column if original_ws is not None else 0), len(original_df.columns))
-        for col_idx in range(1, max_col + 1):
-            max_width = 8
-            for row_idx in range(1, min(5, ws.max_row + 1)):
-                cell = ws.cell(row=row_idx, column=col_idx)
-                if cell.value is not None:
-                    cell_width = len(str(cell.value)) * 1.2
-                    max_width = max(max_width, cell_width)
-            final_width = min(max(max_width * 1.2, 8), 100)
-            col_letter = ws.cell(row=1, column=col_idx).column_letter
-            ws.column_dimensions[col_letter].width = final_width
-
-        # 保存
-        if original_wb is not None:
-            original_wb.close()
-        wb.save(output_path)
-        wb.close()
-
-        try:
-            from core import Monitor
-            Monitor.log_success(f"三维提资接口导出完成！文件保存到: {output_path}")
-        except Exception:
-            pass
-        return output_path
-    except Exception as e:
-        print(f"导出三维提资接口数据时发生错误: {str(e)}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"导出三维提资接口数据时发生错误: {str(e)}")
-        except Exception:
-            pass
-        raise
-# ===================== 待处理文件6（收发文函）相关处理 =====================
 def find_target_file6(excel_files):
     """
     查找符合特定格式的待处理文件6（兼容性函数，返回第一个匹配的文件）
@@ -3686,7 +847,7 @@ def find_all_target_files6(excel_files):
         pass
     for file_path in excel_files:
         file_name = os.path.basename(file_path)
-        if (file_name.endswith('.xlsx') or file_name.endswith('.xls')) and ("收发文清单" in file_name):
+        if file_name.lower().endswith(('.xlsx', '.xlsm', '.xls')) and ("收发文清单" in file_name):
             # 优先匹配 紧随“收发文清单”的四位数字 作为项目号
             try:
                 # 紧随“收发文清单”的四位数字作为项目号，例如：收发文清单2016.xlsx
@@ -3706,438 +867,28 @@ def find_all_target_files6(excel_files):
     return matched_files
 
 
-def filter_valid_names(names_str, valid_names_set):
-    """
-    过滤责任人姓名，只保留在姓名角色表中存在的姓名
-    
-    Args:
-        names_str: 逗号分隔的姓名字符串，如"刘峰a,张三,李四b"
-        valid_names_set: 有效姓名集合
-    
-    Returns:
-        str: 过滤后的姓名字符串
-    
-    规则：
-        - "刘峰a" → 尝试匹配"刘峰"（去除尾部字母）
-        - 只保留在姓名角色表中存在的姓名
-    """
-    if not names_str or not valid_names_set:
-        return names_str
-    
-    tokens = [t.strip() for t in names_str.split(',') if t.strip()]
-    filtered_names = []
-    
-    for name in tokens:
-        # 首先尝试精确匹配
-        if name in valid_names_set:
-            filtered_names.append(name)
-        else:
-            # 尝试去除尾部字母后匹配（如"刘峰a" → "刘峰"）
-            # 移除尾部的英文字母（一个或多个）
-            cleaned_name = re.sub(r'[a-zA-Z]+$', '', name)
-            if cleaned_name and cleaned_name in valid_names_set:
-                filtered_names.append(cleaned_name)
-            # 如果都不匹配，不添加该姓名（过滤掉）
-    
-    return ','.join(filtered_names)
+def find_target_file7(excel_files):
+    """Find the first FU workbook named '<project>项目标准表格'."""
+    matched_files = find_all_target_files7(excel_files)
+    return matched_files[0] if matched_files else (None, None)
 
 
-def process_target_file6(file_path, current_datetime, skip_date_filter=False, valid_names_set=None):
-    """
-    处理待处理文件6（收发文函）
-    
-    Args:
-        file_path: Excel文件路径
-        current_datetime: 当前时间
-        skip_date_filter: 是否跳过I列日期范围筛选（管理员/所领导模式为True）
-        valid_names_set: 有效姓名集合（用于过滤责任人）
-    
-    筛选条件：
-      p1) V列包含"河北分公司.建筑结构所"
-      p_i) I列不为空且为有效日期
-      p3) I列日期 ≤ 今天+14天（普通模式）
-      p4) M列等于"尚未回复"或"超期未回复"
-      
-    最终结果：
-      - 【普通模式】: p1 & p_i & p3 & p4
-      - 【管理员/所领导模式】: p1 & p_i & p4（跳过日期范围限制，但仍需I列非空）
-    
-    附加字段：
-      - 接口时间：I列按 mm.dd 提取
-      - 责任人：X列分隔的姓名集合（用于角色过滤，稍后基于包含关系过滤）
-        【新增】只保留在姓名角色表中存在的姓名
-      - 科室：空值（待处理文件6科室空值）
-    """
-    print(f"开始处理待处理文件6: {os.path.basename(file_path)}")
-    try:
-        from core import Monitor
-        Monitor.log_process(f"开始处理待处理文件6: {os.path.basename(file_path)}")
-    except Exception:
-        pass
-
-    # 读取Excel文件的第一个工作表（不强制Sheet1）
-    if file_path.endswith('.xlsx'):
-        df = pd.read_excel(file_path, sheet_name=0, engine='openpyxl')
-    else:
-        df = pd.read_excel(file_path, sheet_name=0, engine='xlrd')
-
-    if df.empty:
-        try:
-            from core import Monitor
-            Monitor.log_warning("文件6为空，无法处理")
-        except Exception:
-            pass
-        return pd.DataFrame()
-
-    # 【新增】提取项目号（用于1818项目特殊日期逻辑）
-    filename = os.path.basename(file_path)
-    match = re.search(r'(\d{4})', filename)
-    project_id = match.group(1) if match else None
-
-    # 版次筛选：先确定同接口号最高版本（文件6：AC列）
-    version_allowed_rows = _filter_rows_by_highest_version(df, 6, set(range(1, len(df))), 28)
-
-    p1 = execute6_process1(df)
-    p_i_not_empty = execute6_process_i_not_empty(df)  # 【新增】I列非空检查
-    p4 = execute6_process4(df)
-    
-    # 根据skip_date_filter决定是否使用p3（I列日期筛选）
-    if skip_date_filter:
-        # 管理员模式：跳过I列日期范围筛选，但仍需检查I列非空
-        final_rows = p1 & p_i_not_empty & p4
-        print(f"最终完成处理数据（原始筛选，管理员模式）: {len(final_rows)} 行")
-    else:
-        # 普通模式：使用所有筛选条件（包括I列非空和日期范围）
-        p3 = execute6_process3(df, current_datetime, project_id)
-        final_rows = p1 & p_i_not_empty & p3 & p4
-        print(f"最终完成处理数据（原始筛选，普通模式）: {len(final_rows)} 行")
-    
-    # 【统一】Registry 查询：文件6写回后不再被旧 pending 重新加回
-    try:
-        base_filter = p1 & p_i_not_empty
-        if not skip_date_filter:
-            base_filter = base_filter & p3
-        final_rows, _ = _merge_registry_pending_rows(
-            file_type=6,
-            file_path=file_path,
-            df=df,
-            final_rows=final_rows,
-            allowed_rows=base_filter,
-        )
-    except Exception as e:
-        print(f"[Registry] 查询待审查任务失败: {e}")
-    
-    # 版次筛选：同接口号只保留最高版本（文件6：AC列）
-    final_rows = final_rows & version_allowed_rows
-
-    print(f"最终完成处理数据（含待确认）: {len(final_rows)} 行")
-    
-    # 日志记录
-    try:
-        from core import Monitor
-        if skip_date_filter:
-            Monitor.log_info(f"文件6处理1(V列机构匹配): {len(p1)} 行")
-            Monitor.log_info(f"文件6 I列非空检查: {len(p_i_not_empty)} 行")
-            Monitor.log_info(f"文件6处理4(M列=尚未回复或超期未回复): {len(p4)} 行")
-            Monitor.log_success(f"文件6最终完成处理数据(管理员模式): {len(final_rows)} 行")
-        else:
-            Monitor.log_info(f"文件6处理1(V列机构匹配): {len(p1)} 行")
-            Monitor.log_info(f"文件6 I列非空检查: {len(p_i_not_empty)} 行")
-            Monitor.log_info(f"文件6处理3(I列日期≤今天+14天): {len(p3)} 行")
-            Monitor.log_info(f"文件6处理4(M列=尚未回复或超期未回复): {len(p4)} 行")
-            Monitor.log_success(f"文件6最终完成处理数据: {len(final_rows)} 行")
-    except Exception:
-        pass
-
-    if not final_rows:
-        return pd.DataFrame()
-
-    final_indices = [i for i in final_rows if i > 0]
-    excel_row_numbers = [i + 2 for i in final_indices]
-    result_df = df.iloc[final_indices].copy()
-    result_df['原始行号'] = excel_row_numbers
-
-    # 接口时间（I列：索引8）
-    try:
-        time_values = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 8] if 8 < len(df.columns) else None
-            parsed = pd.to_datetime(cell_val, errors='coerce')
-            if pd.isna(parsed):
-                time_values.append("")
-            else:
-                # 【修复】保留完整年份，支持跨年延期判断
-                time_values.append(parsed.strftime('%Y.%m.%d'))
-        result_df["接口时间"] = time_values
-    except Exception:
-        result_df["接口时间"] = ""
-
-    # 待处理文件6科室空值
-    try:
-        result_df["科室"] = ""
-    except Exception:
-        pass
-
-    # 主办室：W列（索引22）提取多室并列数据
-    try:
-        host_offices = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 22] if 22 < len(df.columns) else None
-            s = str(cell_val) if cell_val is not None and cell_val is not pd.NA else ""
-            s = s.strip()
-            # 保持原格式，不做额外处理（可能包含"结构一室"、"结构二室"、"建筑总图室"等）
-            host_offices.append(s)
-        result_df['主办室'] = host_offices
-    except Exception as e:
-        print(f"提取主办室列失败: {e}")
-        result_df['主办室'] = ""
-
-    # 责任人：X列（索引23）按分隔符拆分并保留原始姓名集合（供过滤）
-    try:
-        owners = []
-        for idx in result_df.index:
-            cell_val = df.iloc[idx, 23] if 23 < len(df.columns) else None
-            s = str(cell_val) if cell_val is not None else ""
-            # 分隔符：, ， ; ； / 、
-            for sep in [',', '，', ';', '；', '/', '、']:
-                s = s.replace(sep, ',')
-            tokens = [t.strip() for t in s.split(',') if t.strip()]
-            names_str = ','.join(tokens)
-            
-            # 【新增】过滤责任人：只保留在姓名角色表中存在的姓名
-            if valid_names_set:
-                filtered_names = filter_valid_names(names_str, valid_names_set)
-                # 如果过滤后为空，保留原始值（避免变成"请指派"）
-                if filtered_names:
-                    names_str = filtered_names
-            
-            owners.append(names_str)
-        result_df['责任人'] = owners
-    except Exception:
-        result_df['责任人'] = ""
-    
-    # 【新增】添加source_file列
-    result_df['source_file'] = os.path.abspath(file_path)
-
-    # 【新增】应用指派记忆
-    result_df = apply_assignment_memory(result_df, file_type=6)
-
-    return result_df
+def find_all_target_files7(excel_files):
+    """Find FU workbooks and return ``(path, project_id)`` pairs."""
+    matched_files = []
+    pattern = re.compile(r"^(\d{4})项目标准表格\.(?:xlsx|xlsm|xls)$", re.IGNORECASE)
+    for file_path in excel_files:
+        match = pattern.fullmatch(os.path.basename(file_path))
+        if match:
+            matched_files.append((file_path, match.group(1)))
+    return matched_files
 
 
-def execute6_process1(df):
-    """V列包含“河北分公司.建筑结构所”"""
-    result_rows = set()
-    if len(df.columns) <= 21:
-        return result_rows
-    v_column = df.iloc[:, 21]
-    for idx, val in v_column.items():
-        if idx == 0:
-            continue
-        s = str(val) if val is not None else ""
-        if get_organization_filter_file6() in s:
-            result_rows.add(idx)
-    return result_rows
+# ============================================================
+# 当前精简列流式处理与导出实现
+# ============================================================
 
-
-def execute6_process2(df):
-    """H列为“是”"""
-    result_rows = set()
-    if len(df.columns) <= 7:
-        return result_rows
-    h_column = df.iloc[:, 7]
-    for idx, val in h_column.items():
-        if idx == 0:
-            continue
-        if str(val).strip() == "是":
-            result_rows.add(idx)
-    return result_rows
-
-
-def execute6_process_i_not_empty(df):
-    """I列不为空（管理员模式和普通模式都需要）"""
-    result_rows = set()
-    if len(df.columns) <= 8:
-        return result_rows
-    i_column = df.iloc[:, 8]
-    for idx, val in i_column.items():
-        if idx == 0:
-            continue
-        # 检查I列是否为空
-        if val is not None and str(val).strip() != '':
-            # 尝试解析为日期，确保是有效日期
-            try:
-                parsed = pd.to_datetime(val, errors='coerce')
-                if not pd.isna(parsed):
-                    result_rows.add(idx)
-            except Exception:
-                continue
-    return result_rows
-
-
-def execute6_process3(df, current_datetime, project_id=None):
-    """I列为日期，筛选当日及之前 + 未来14天内（即 delta <= 14）。【特殊逻辑】1818项目：日期减6天后再进行筛选"""
-    result_rows = set()
-    if len(df.columns) <= 8:
-        return result_rows
-    i_column = df.iloc[:, 8]
-    # 新逻辑：与旧逻辑相同，待处理文件6不使用月度范围，而是使用简单的日期窗口
-    # 当日及之前 + 未来14天（即日期 <= 今天+14天）
-    today = current_datetime.date()
-    for idx, val in i_column.items():
-        if idx == 0:
-            continue
-        try:
-            parsed = pd.to_datetime(val, errors='coerce')
-            if pd.isna(parsed):
-                continue
-            # 【1818特殊逻辑】日期减6天后再进行筛选
-            parsed = adjust_date_for_project(parsed, project_id)
-            d = parsed.date()
-            delta = (d - today).days
-            # 包含过去的日期（delta < 0）+ 今天和未来14天（0 <= delta <= 14）
-            if delta <= 14:
-                result_rows.add(idx)
-        except Exception:
-            continue
-    return result_rows
-
-
-def execute6_process4(df):
-    """M列为'尚未回复'或'超期未回复'"""
-    result_rows = set()
-    if len(df.columns) <= 12:
-        return result_rows
-    m_column = df.iloc[:, 12]
-    for idx, val in m_column.items():
-        if idx == 0:
-            continue
-        val_str = str(val).strip()
-        if val_str in ["尚未回复", "超期未回复"]:
-            result_rows.add(idx)
-    return result_rows
-
-
-def export_result_to_excel6(df, original_file_path, current_datetime, output_dir, project_id=None):
-    """
-    导出收发文函处理结果到Excel文件
-    Sheet 名称与文件前缀：收发文函
-    注：待处理文件6项目号空值 → 不新建项目号结果文件夹
-    """
-    from openpyxl import Workbook, load_workbook
-    try:
-        # 根据项目号决定输出目录（项目号为空则直接用输出目录）
-        if project_id:
-            result_folder_name = f"{project_id}结果文件"
-            result_folder_path = os.path.join(output_dir, result_folder_name)
-            if not os.path.exists(result_folder_path):
-                os.makedirs(result_folder_path)
-            final_output_dir = result_folder_path
-        else:
-            final_output_dir = output_dir
-
-        date_str = current_datetime.strftime('%Y-%m-%d')
-        base_filename = f"收发文函{date_str}"
-        output_filename = f"{base_filename}.xlsx"
-        output_path = os.path.join(final_output_dir, output_filename)
-        counter = 1
-        while os.path.exists(output_path):
-            output_filename = f"{base_filename}({counter}).xlsx"
-            output_path = os.path.join(final_output_dir, output_filename)
-            counter += 1
-
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "收发文函"
-
-        original_wb = load_workbook(original_file_path)
-        original_ws = original_wb.worksheets[0]
-        if original_file_path.endswith('.xlsx'):
-            original_df = pd.read_excel(original_file_path, sheet_name=0, engine='openpyxl', header=None)
-        else:
-            original_df = pd.read_excel(original_file_path, sheet_name=0, engine='xlrd', header=None)
-
-        if original_ws.max_row > 0:
-            max_col = max(original_ws.max_column, len(original_df.columns))
-            for col_idx in range(1, max_col + 1):
-                source_cell = original_ws.cell(row=1, column=col_idx)
-                target_cell = ws.cell(row=1, column=col_idx)
-                target_cell.value = source_cell.value
-                try:
-                    if source_cell.font:
-                        target_cell.font = copy(source_cell.font)
-                    if source_cell.fill:
-                        target_cell.fill = copy(source_cell.fill)
-                    if source_cell.border:
-                        target_cell.border = copy(source_cell.border)
-                    if source_cell.alignment:
-                        target_cell.alignment = copy(source_cell.alignment)
-                    if source_cell.number_format:
-                        target_cell.number_format = source_cell.number_format
-                except Exception:
-                    pass
-
-        if not df.empty and '原始行号' in df.columns:
-            qualified_rows = df['原始行号'].tolist()
-            write_row = 2
-            max_col = max(original_ws.max_column, len(original_df.columns))
-            for excel_row_num in sorted(qualified_rows):
-                if excel_row_num > 1 and excel_row_num <= len(original_df):
-                    for col_idx in range(1, max_col + 1):
-                        source_cell = original_ws.cell(row=excel_row_num, column=col_idx)
-                        target_cell = ws.cell(row=write_row, column=col_idx)
-                        target_cell.value = source_cell.value
-                        try:
-                            if source_cell.font:
-                                target_cell.font = copy(source_cell.font)
-                            if source_cell.fill:
-                                target_cell.fill = copy(source_cell.fill)
-                            if source_cell.border:
-                                target_cell.border = copy(source_cell.border)
-                            if source_cell.alignment:
-                                target_cell.alignment = copy(source_cell.alignment)
-                            if source_cell.number_format:
-                                target_cell.number_format = source_cell.number_format
-                        except Exception:
-                            pass
-                    write_row += 1
-
-        max_col = max(original_ws.max_column, len(original_df.columns))
-        for col_idx in range(1, max_col + 1):
-            max_width = 8
-            for row_idx in range(1, min(5, ws.max_row + 1)):
-                cell = ws.cell(row=row_idx, column=col_idx)
-                if cell.value is not None:
-                    cell_width = len(str(cell.value)) * 1.2
-                    max_width = max(max_width, cell_width)
-            final_width = min(max(max_width * 1.2, 8), 100)
-            col_letter = ws.cell(row=1, column=col_idx).column_letter
-            ws.column_dimensions[col_letter].width = final_width
-
-        original_wb.close()
-        wb.save(output_path)
-        wb.close()
-        try:
-            from core import Monitor
-            Monitor.log_success(f"收发文函导出完成！文件保存到: {output_path}")
-        except Exception:
-            pass
-        return output_path
-    except Exception as e:
-        print(f"导出收发文函数据时发生错误: {str(e)}")
-        try:
-            from core import Monitor
-            Monitor.log_error(f"导出收发文函数据时发生错误: {str(e)}")
-        except Exception:
-            pass
-        raise
-
-
-# ============================================================================
-# Streamed selected-column processing (schema v2)
-# ============================================================================
-
-STREAM_RESULT_SCHEMA_VERSION = "selected_columns_v2"
+STREAM_RESULT_SCHEMA_VERSION = "selected_columns_v3"
 
 STREAM_EXPORT_COLUMNS = [
     "状态",
@@ -4158,6 +909,17 @@ def _col_to_index(col_letter):
             continue
         value = value * 26 + (ord(ch) - ord("A") + 1)
     return value - 1
+
+
+def _index_to_col(one_based_index):
+    value = int(one_based_index)
+    if value <= 0:
+        raise ValueError(f"列序号必须为正整数: {one_based_index}")
+    letters = []
+    while value:
+        value, remainder = divmod(value - 1, 26)
+        letters.append(chr(ord("A") + remainder))
+    return "".join(reversed(letters))
 
 
 def _cell_to_text(value):
@@ -4208,6 +970,34 @@ def _parse_datetime_value(value):
     text = _cell_to_text(value)
     if not text:
         return None
+
+    java_date = re.fullmatch(
+        r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+"
+        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+"
+        r"(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})\s+"
+        r"(?:CST|GMT\+?8|Asia/Shanghai)\s+(\d{4})",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if java_date:
+        month_map = {
+            name.lower(): month
+            for month, name in enumerate(
+                ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+                start=1,
+            )
+        }
+        try:
+            return datetime.datetime(
+                int(java_date.group(6)),
+                month_map[java_date.group(1).lower()],
+                int(java_date.group(2)),
+                int(java_date.group(3)),
+                int(java_date.group(4)),
+                int(java_date.group(5)),
+            )
+        except ValueError:
+            return None
 
     formats = (
         "%Y-%m-%d",
@@ -4267,12 +1057,24 @@ def _in_month_window(value, current_datetime, project_id=None, exclude_4444=Fals
     except Exception:
         pass
     start_date, end_date = _date_window(current_datetime)
-    return start_date <= parsed <= end_date
+    return start_date.date() <= parsed.date() <= end_date.date()
 
 
 def _format_date_value(value):
     parsed = _parse_datetime_value(value)
     return parsed.strftime("%Y.%m.%d") if parsed is not None else ""
+
+
+def _filter_valid_owner_names(names_text, valid_names_set):
+    """仅保留角色表中存在的责任人姓名。"""
+    if not names_text or not valid_names_set:
+        return names_text or ""
+    filtered = []
+    for name in str(names_text).split(","):
+        normalized = name.strip()
+        if normalized and normalized in valid_names_set:
+            filtered.append(normalized)
+    return ",".join(filtered)
 
 
 def _split_owner_names(value, valid_names_set=None):
@@ -4285,7 +1087,7 @@ def _split_owner_names(value, valid_names_set=None):
     names = ",".join(tokens)
     if valid_names_set:
         try:
-            filtered = filter_valid_names(names, valid_names_set)
+            filtered = _filter_valid_owner_names(names, valid_names_set)
             if filtered:
                 names = filtered
         except Exception:
@@ -4354,32 +1156,268 @@ STREAM_FILE_SPECS = {
         "sheet": "收发文函",
         "filename": "收发文函",
     },
+    7: {
+        "columns": {"A": "file_code", "B": "internal_code", "C": "title", "D": "actual_fu", "E": "fu_plan", "F": "responsible"},
+        "interface": "B",
+        "time": "D",
+        "completed": "D",
+        "responsible": "F",
+        "assign": "F",
+        "sheet": "FU",
+        "filename": "FU",
+        "export_columns": ["原始行号", "状态", "项目号", "内部编码", "中文标题", "FU计划", "实际FU日期", "责任人"],
+    },
 }
 
 
+def _normalize_stream_header(value):
+    text = unicodedata.normalize("NFKC", _cell_to_text(value))
+    text = re.sub(r"[\s\r\n]+", "", text)
+    return text.replace("（", "(").replace("）", ")")
+
+
+FILE6_HEADER_ALIASES = {
+    "interface": ("收发文编号", "收文编号", "发文编号"),
+    "time": ("要求回文期限", "要求回复期限", "计划回文日期"),
+    "completed": ("我方回文日期", "实际回文日期", "回文日期"),
+    "reply_status": ("回文状态", "回复状态"),
+    "org": ("主办部门(所)", "主办部门", "主办所"),
+    "host_office": ("主办室", "主办科室"),
+    "responsible": ("主办人", "责任人"),
+    "version": ("版次", "版本"),
+}
+
+
+def _resolve_stream_spec_from_headers(file_type, headers):
+    """按真实表头解析易变模板；未识别到业务模板时保留旧列位兼容。"""
+    base_spec = STREAM_FILE_SPECS[file_type]
+    if file_type == 2:
+        normalized_headers = {
+            _normalize_stream_header(value): col_letter
+            for col_letter, value in headers.items()
+            if _normalize_stream_header(value)
+        }
+        responsible_column = normalized_headers.get(_normalize_stream_header("程序主办人"))
+        if not responsible_column:
+            return base_spec
+        spec = copy(base_spec)
+        spec["columns"] = {
+            letter: alias
+            for letter, alias in base_spec["columns"].items()
+            if alias != "responsible"
+        }
+        spec["columns"][responsible_column] = "responsible"
+        spec["responsible"] = responsible_column
+        spec["assign"] = responsible_column
+        return spec
+    if file_type != 6:
+        return base_spec
+
+    normalized_headers = {
+        _normalize_stream_header(value): col_letter
+        for col_letter, value in headers.items()
+        if _normalize_stream_header(value)
+    }
+    resolved = {}
+    for alias, candidates in FILE6_HEADER_ALIASES.items():
+        for candidate in candidates:
+            col_letter = normalized_headers.get(_normalize_stream_header(candidate))
+            if col_letter:
+                resolved[alias] = col_letter
+                break
+
+    # 没有识别到文件6的锚点时，兼容历史模板及测试构造文件的固定列位。
+    if "interface" not in resolved:
+        return base_spec
+
+    missing = [alias for alias in FILE6_HEADER_ALIASES if alias not in resolved]
+    if missing:
+        missing_text = "、".join(missing)
+        raise ValueError(f"收发文函表头不完整，缺少字段: {missing_text}")
+
+    spec = copy(base_spec)
+    spec["columns"] = {
+        resolved["interface"]: "interface",
+        resolved["time"]: "time",
+        resolved["completed"]: "completed",
+        resolved["reply_status"]: "reply_status",
+        resolved["org"]: "org",
+        resolved["host_office"]: "host_office",
+        resolved["responsible"]: "responsible",
+        resolved["version"]: "version",
+    }
+    spec["interface"] = resolved["interface"]
+    spec["time"] = resolved["time"]
+    spec["completed"] = resolved["completed"]
+    spec["responsible"] = resolved["responsible"]
+    spec["assign"] = resolved["responsible"]
+    return spec
+
+
+def _build_selected_record(spec, row_number, value_getter):
+    raw = {}
+    for letter, alias in spec["columns"].items():
+        raw[alias] = value_getter(_col_to_index(letter))
+    return {
+        "_df_index": row_number - 2,
+        "原始行号": row_number,
+        "_raw": raw,
+        "_stream_spec": spec,
+    }
+
+
+def _read_xlsx_physical_records(workbook, worksheet, file_type, base_spec):
+    """直接遍历工作表XML中的实际行；不信任dimension，也不构造缺失空单元格。"""
+    from xml.etree.ElementTree import iterparse
+
+    from openpyxl.utils.datetime import from_ISO8601, from_excel
+    from openpyxl.worksheet._reader import _cast_number
+
+    header_probe_max = 64 if file_type in (2, 6) else (
+        max(_col_to_index(letter) for letter in base_spec["columns"]) + 1
+    )
+    records = []
+    spec = None
+    required_columns = []
+    selected_columns = set()
+
+    def parse_value(cell):
+        data_type = cell.get("t", "n")
+        style_id = int(cell.get("s", 0) or 0)
+        if data_type == "inlineStr":
+            return "".join(
+                node.text or ""
+                for node in cell.iter()
+                if node.tag.endswith("}t") or node.tag == "t"
+            )
+        value_node = next(
+            (node for node in cell if node.tag.endswith("}v") or node.tag == "v"),
+            None,
+        )
+        value = value_node.text if value_node is not None else None
+        if value is None:
+            return None
+        if data_type == "s":
+            return worksheet._shared_strings[int(value)]
+        if data_type == "b":
+            return bool(int(value))
+        if data_type == "d":
+            return from_ISO8601(value)
+        if data_type in {"str", "e"}:
+            return value
+        number = _cast_number(value)
+        if style_id in workbook._date_formats:
+            try:
+                return from_excel(
+                    number,
+                    workbook.epoch,
+                    timedelta=style_id in workbook._timedelta_formats,
+                )
+            except (OverflowError, ValueError):
+                return value
+        return number
+
+    with worksheet._get_source() as source:
+        row_counter = 0
+        for _event, element in iterparse(source, events=("end",)):
+            if not (element.tag.endswith("}row") or element.tag == "row"):
+                continue
+            row_counter += 1
+            try:
+                row_number = int(element.get("r") or row_counter)
+            except (TypeError, ValueError):
+                row_number = row_counter
+            values = {}
+            fallback_column = 0
+            for cell in element:
+                if not (cell.tag.endswith("}c") or cell.tag == "c"):
+                    continue
+                fallback_column += 1
+                coordinate = str(cell.get("r") or "")
+                match = re.match(r"([A-Za-z]+)", coordinate)
+                column_number = (
+                    _col_to_index(match.group(1)) + 1
+                    if match
+                    else fallback_column
+                )
+                if row_number == 1:
+                    if column_number > header_probe_max:
+                        continue
+                elif selected_columns and column_number not in selected_columns:
+                    continue
+                values[column_number] = parse_value(cell)
+            if row_number == 1:
+                headers = {
+                    _index_to_col(column_number): values.get(column_number)
+                    for column_number in range(1, header_probe_max + 1)
+                }
+                spec = _resolve_stream_spec_from_headers(file_type, headers)
+                required_columns = sorted(spec["columns"], key=_col_to_index)
+                selected_columns = {
+                    _col_to_index(letter) + 1
+                    for letter in spec["columns"]
+                }
+            elif row_number >= 2:
+                if spec is None:
+                    spec = _resolve_stream_spec_from_headers(file_type, {})
+                    required_columns = sorted(spec["columns"], key=_col_to_index)
+                    selected_columns = {
+                        _col_to_index(letter) + 1
+                        for letter in spec["columns"]
+                    }
+                records.append(_build_selected_record(
+                    spec,
+                    row_number,
+                    lambda zero_idx, values=values: values.get(zero_idx + 1),
+                ))
+            element.clear()
+
+    if spec is None:
+        spec = _resolve_stream_spec_from_headers(file_type, {})
+        required_columns = sorted(spec["columns"], key=_col_to_index)
+    return records, required_columns
+
+
 def _read_selected_excel_records(file_path, file_type):
-    spec = STREAM_FILE_SPECS[file_type]
-    required_columns = sorted(spec["columns"], key=_col_to_index)
-    required_indices = {_col_to_index(letter): (letter, alias) for letter, alias in spec["columns"].items()}
-    max_col = max(required_indices) + 1 if required_indices else 1
+    base_spec = STREAM_FILE_SPECS[file_type]
     records = []
     lower_path = str(file_path).lower()
 
     if lower_path.endswith((".xlsx", ".xlsm")):
         from openpyxl import load_workbook
 
-        wb = load_workbook(file_path, read_only=True, data_only=True)
+        # FU 表可能只有极少数实际单元格却把维度扩到 1048576 行。
+        # 普通模式只加载物理单元格，可避免遍历整张空表。
+        sparse_fu = file_type == 7
+        wb = load_workbook(file_path, read_only=not sparse_fu, data_only=True)
         try:
             ws = wb.worksheets[0]
-            for df_idx, row in enumerate(ws.iter_rows(min_row=2, max_col=max_col, values_only=True)):
-                raw = {}
-                for col_idx, (letter, alias) in required_indices.items():
-                    raw[alias] = row[col_idx] if col_idx < len(row) else None
-                records.append({
-                    "_df_index": df_idx,
-                    "原始行号": df_idx + 2,
-                    "_raw": raw,
-                })
+            if not sparse_fu:
+                return _read_xlsx_physical_records(wb, ws, file_type, base_spec)
+
+            header_probe_max = 64 if file_type in (2, 6) else (
+                max(_col_to_index(letter) for letter in base_spec["columns"]) + 1
+            )
+            headers = {
+                _index_to_col(col_idx): ws.cell(1, col_idx).value
+                for col_idx in range(1, header_probe_max + 1)
+            }
+            spec = _resolve_stream_spec_from_headers(file_type, headers)
+            required_columns = sorted(spec["columns"], key=_col_to_index)
+            required_indices = {_col_to_index(letter) for letter in spec["columns"]}
+            max_col = max(required_indices) + 1 if required_indices else 1
+
+            physical_rows = sorted({
+                row_idx
+                for row_idx, col_idx in ws._cells
+                if row_idx >= 2 and col_idx <= max_col
+            })
+            for row_number in physical_rows:
+                records.append(_build_selected_record(
+                    spec,
+                    row_number,
+                    lambda zero_idx, row_number=row_number: ws.cell(row_number, zero_idx + 1).value,
+                ))
         finally:
             wb.close()
         return records, required_columns
@@ -4389,6 +1427,17 @@ def _read_selected_excel_records(file_path, file_type):
 
         book = xlrd.open_workbook(file_path)
         sheet = book.sheet_by_index(0)
+        header_probe_max = min(sheet.ncols, 64 if file_type in (2, 6) else sheet.ncols)
+        headers = {
+            _index_to_col(col_idx + 1): sheet.cell_value(0, col_idx)
+            for col_idx in range(header_probe_max)
+        }
+        spec = _resolve_stream_spec_from_headers(file_type, headers)
+        required_columns = sorted(spec["columns"], key=_col_to_index)
+        required_indices = {
+            _col_to_index(letter): (letter, alias)
+            for letter, alias in spec["columns"].items()
+        }
         for row_idx in range(1, sheet.nrows):
             raw = {}
             for col_idx, (letter, alias) in required_indices.items():
@@ -4409,6 +1458,7 @@ def _read_selected_excel_records(file_path, file_type):
                 "_df_index": row_idx - 1,
                 "原始行号": row_idx + 1,
                 "_raw": raw,
+                "_stream_spec": spec,
             })
         return records, required_columns
 
@@ -4416,7 +1466,7 @@ def _read_selected_excel_records(file_path, file_type):
 
 
 def _records_to_registry_index_df(records, file_type, file_path, project_id):
-    spec = STREAM_FILE_SPECS[file_type]
+    spec = records[0].get("_stream_spec") if records else STREAM_FILE_SPECS[file_type]
     interface_alias = spec["columns"][spec["interface"]]
     fallback_project_id = _extract_file5_project_id(file_path) if file_type == 5 else _extract_file_project_id(file_path)
     rows = []
@@ -4433,14 +1483,14 @@ def _records_to_registry_index_df(records, file_type, file_path, project_id):
 
 def _highest_version_rows(records, interface_alias, version_alias):
     if not version_alias:
-        return {record["_df_index"] for record in records if record["_df_index"] > 0}
+        return {record["_df_index"] for record in records if record["_df_index"] >= 0}
 
     best_rank = {}
     best_rows = {}
     keep_rows = set()
     for record in records:
         idx = record["_df_index"]
-        if idx <= 0:
+        if idx < 0:
             continue
         raw = record["_raw"]
         interface_id = _normalize_interface_id(raw.get(interface_alias))
@@ -4472,8 +1522,9 @@ def _standard_result_row(
     source_column="",
     completed_col=None,
     completed_value=None,
+    interface_id=None,
 ):
-    spec = STREAM_FILE_SPECS[file_type]
+    spec = record.get("_stream_spec") or STREAM_FILE_SPECS[file_type]
     raw = record["_raw"]
     interface_alias = spec["columns"][spec["interface"]]
     completed_letter = completed_col or spec["completed"] or ""
@@ -4483,7 +1534,7 @@ def _standard_result_row(
 
     row = {
         "项目号": project_id or _extract_file_project_id(file_path),
-        "接口号": _cell_to_text(raw.get(interface_alias)),
+        "接口号": _cell_to_text(interface_id if interface_id is not None else raw.get(interface_alias)),
         "接口时间": interface_time,
         "科室": department,
         "主办室": host_office,
@@ -4503,10 +1554,11 @@ def _standard_result_row(
     return row
 
 
-def _finalize_stream_result(records_by_idx, final_rows, build_row, file_type):
-    final_indices = sorted(idx for idx in final_rows if idx > 0 and idx in records_by_idx)
+def _finalize_stream_result(records_by_idx, final_rows, build_row, file_type, include_zero=True):
+    minimum_index = 0 if include_zero else 1
+    final_indices = sorted(idx for idx in final_rows if idx >= minimum_index and idx in records_by_idx)
     if not final_indices:
-        return pd.DataFrame(columns=STREAM_EXPORT_COLUMNS + [
+        result_df = pd.DataFrame(columns=STREAM_EXPORT_COLUMNS + [
             "source_file",
             "_file_type",
             "_interface_col",
@@ -4518,9 +1570,11 @@ def _finalize_stream_result(records_by_idx, final_rows, build_row, file_type):
             "_completed_col_value",
             "_stream_schema_version",
         ])
-    rows = [build_row(records_by_idx[idx], idx) for idx in final_indices]
-    result_df = pd.DataFrame(rows)
-    result_df = apply_assignment_memory(result_df, file_type=file_type)
+    else:
+        rows = [build_row(records_by_idx[idx], idx) for idx in final_indices]
+        result_df = pd.DataFrame(rows)
+        result_df = apply_assignment_memory(result_df, file_type=file_type)
+    result_df.attrs["_stream_schema_version"] = STREAM_RESULT_SCHEMA_VERSION
     return result_df
 
 
@@ -4534,8 +1588,6 @@ def _stream_process_file1(file_path, current_datetime):
     p4 = set()
     for record in records:
         idx = record["_df_index"]
-        if idx == 0:
-            continue
         raw = record["_raw"]
         if contains_department_code(_cell_to_text(raw.get("dept"))):
             p1.add(idx)
@@ -4584,8 +1636,6 @@ def _stream_process_file2(file_path, current_datetime, project_id=None):
     org_filter = get_organization_filter()
     for record in records:
         idx = record["_df_index"]
-        if idx == 0:
-            continue
         raw = record["_raw"]
         dept_text = _cell_to_text(raw.get("dept"))
         if org_filter in dept_text or contains_department_code(dept_text):
@@ -4646,8 +1696,6 @@ def _stream_process_file3(file_path, current_datetime):
     org_filter = get_organization_filter()
     for record in records:
         idx = record["_df_index"]
-        if idx == 0:
-            continue
         raw = record["_raw"]
         if _cell_to_text(raw.get("status")) == "B":
             p1.add(idx)
@@ -4726,8 +1774,6 @@ def _stream_process_file4(file_path, current_datetime):
     org_filter = get_organization_filter()
     for record in records:
         idx = record["_df_index"]
-        if idx == 0:
-            continue
         raw = record["_raw"]
         if _cell_to_text(raw.get("org")).startswith(org_filter):
             p1.add(idx)
@@ -4777,8 +1823,6 @@ def _stream_process_file5(file_path, current_datetime):
     p3 = set()
     for record in records:
         idx = record["_df_index"]
-        if idx == 0:
-            continue
         raw = record["_raw"]
         if contains_department_code(_cell_to_text(raw.get("dept"))):
             p1.add(idx)
@@ -4825,8 +1869,6 @@ def _stream_process_file6(file_path, current_datetime, skip_date_filter=False, v
     today = current_datetime.date()
     for record in records:
         idx = record["_df_index"]
-        if idx == 0:
-            continue
         raw = record["_raw"]
         if org_filter in _cell_to_text(raw.get("org")):
             p1.add(idx)
@@ -4875,6 +1917,108 @@ def _stream_process_file6(file_path, current_datetime, skip_date_filter=False, v
     return _finalize_stream_result(records_by_idx, final_rows, build, 6)
 
 
+def _assign_file7_interface_ids(records):
+    """Bind duplicate internal codes to deterministic per-row interface IDs."""
+    grouped = {}
+    for record in records:
+        raw = record.get("_raw") or {}
+        internal_code = _cell_to_text(raw.get("internal_code")).strip()
+        if internal_code:
+            grouped.setdefault(internal_code, []).append(record)
+
+    for internal_code, group in grouped.items():
+        if len(group) == 1:
+            group[0]["接口号"] = internal_code
+            continue
+        ordered = sorted(
+            group,
+            key=lambda item: (
+                _cell_to_text(item["_raw"].get("file_code")),
+                _cell_to_text(item["_raw"].get("title")),
+                int(item.get("原始行号", 0)),
+            ),
+        )
+        for sequence, record in enumerate(ordered, start=1):
+            record["接口号"] = f"{internal_code}#{sequence:02d}"
+
+
+def _stream_process_file7(file_path, current_datetime):
+    project_id = _extract_file_project_id(file_path)
+    records, _ = _read_selected_excel_records(file_path, 7)
+    _assign_file7_interface_ids(records)
+    records_by_idx = {record["_df_index"]: record for record in records}
+
+    plan_rows = set()
+    open_rows = set()
+    for record in records:
+        idx = record["_df_index"]
+        raw = record["_raw"]
+        if not _is_empty_cell(raw.get("fu_plan")) and _in_month_window(
+            raw.get("fu_plan"), current_datetime, project_id
+        ):
+            plan_rows.add(idx)
+            if _is_empty_cell(raw.get("actual_fu")):
+                open_rows.add(idx)
+
+    # A confirmed FU cycle stays closed if D is cleared accidentally. A changed
+    # E plan with D cleared is a new cycle under the same business_id.
+    try:
+        from registry.hooks import _cfg
+
+        cfg = _cfg()
+        archived_plans = _load_latest_confirmed_archive_times(
+            7,
+            project_id,
+            cfg.get("registry_db_path"),
+            bool(cfg.get("registry_wal", False)),
+        )
+    except Exception:
+        archived_plans = {}
+
+    final_rows = set()
+    for idx in open_rows:
+        record = records_by_idx[idx]
+        interface_id = str(record.get("接口号") or "").strip()
+        current_plan = _format_date_value(record["_raw"].get("fu_plan"))
+        if archived_plans.get(interface_id) == current_plan:
+            continue
+        final_rows.add(idx)
+
+    final_rows, _ = _merge_registry_pending_rows(
+        file_type=7,
+        file_path=file_path,
+        df=records,
+        final_rows=final_rows,
+        allowed_rows=plan_rows,
+        project_id=project_id,
+    )
+
+    def build(record, _idx):
+        raw = record["_raw"]
+        interface_id = str(record.get("接口号") or "").strip()
+        row = _standard_result_row(
+            record,
+            file_type=7,
+            file_path=file_path,
+            project_id=project_id,
+            interface_id=interface_id,
+            interface_time=_format_date_value(raw.get("fu_plan")),
+            department="请室主任确认",
+            responsible=_extract_chinese_text(raw.get("responsible")),
+        )
+        row.update({
+            "内部编码": interface_id,
+            "中文标题": _cell_to_text(raw.get("title")),
+            "FU计划": _format_date_value(raw.get("fu_plan")),
+            "实际FU日期": _format_date_value(raw.get("actual_fu")),
+        })
+        return row
+
+    return _finalize_stream_result(
+        records_by_idx, final_rows, build, 7, include_zero=True
+    )
+
+
 def _log_stream_process_start(file_type, file_path):
     print(f"开始流式处理文件{file_type}: {os.path.basename(file_path)}")
     try:
@@ -4914,6 +2058,11 @@ def process_target_file6(file_path, current_datetime, skip_date_filter=False, va
     return _stream_process_file6(file_path, current_datetime, skip_date_filter, valid_names_set)
 
 
+def process_target_file7(file_path, current_datetime):
+    _log_stream_process_start(7, file_path)
+    return _stream_process_file7(file_path, current_datetime)
+
+
 def _export_stream_result(df, current_datetime, output_dir, project_id, file_type):
     from openpyxl import Workbook
 
@@ -4931,8 +2080,9 @@ def _export_stream_result(df, current_datetime, output_dir, project_id, file_typ
         output_path = os.path.join(final_output_dir, f"{base_filename}({counter}).xlsx")
         counter += 1
 
+    export_columns = spec.get("export_columns", STREAM_EXPORT_COLUMNS)
     export_df = pd.DataFrame()
-    for col in STREAM_EXPORT_COLUMNS:
+    for col in export_columns:
         if df is not None and col in getattr(df, "columns", []):
             export_df[col] = df[col]
         else:
@@ -4941,11 +2091,11 @@ def _export_stream_result(df, current_datetime, output_dir, project_id, file_typ
     wb = Workbook()
     ws = wb.active
     ws.title = spec["sheet"]
-    ws.append(STREAM_EXPORT_COLUMNS)
+    ws.append(export_columns)
     for _, row in export_df.iterrows():
-        ws.append([row.get(col, "") for col in STREAM_EXPORT_COLUMNS])
+        ws.append([row.get(col, "") for col in export_columns])
 
-    for col_idx, col_name in enumerate(STREAM_EXPORT_COLUMNS, start=1):
+    for col_idx, col_name in enumerate(export_columns, start=1):
         max_width = max([len(str(col_name))] + [
             len(str(ws.cell(row=row_idx, column=col_idx).value or ""))
             for row_idx in range(2, ws.max_row + 1)
@@ -4984,6 +2134,10 @@ def export_result_to_excel5(df, original_file_path, current_datetime, output_dir
 
 def export_result_to_excel6(df, original_file_path, current_datetime, output_dir, project_id=None):
     return _export_stream_result(df, current_datetime, output_dir, project_id, 6)
+
+
+def export_result_to_excel7(df, original_file_path, current_datetime, output_dir, project_id=None):
+    return _export_stream_result(df, current_datetime, output_dir, project_id, 7)
 
 
 if __name__ == "__main__":

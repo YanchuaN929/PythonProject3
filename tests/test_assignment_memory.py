@@ -513,7 +513,7 @@ class TestSaveAssignmentsBatchMemory:
         # 创建临时Excel文件
         file_path = tmp_path / "test.xlsx"
         df = pd.DataFrame({
-            'A': ['接口1', '接口2'],
+            'A': ['HQ-TA-001', '接口2'],
             'B': ['数据1', '数据2'],
         })
         df.to_excel(file_path, index=False, engine='openpyxl')

@@ -16,6 +16,7 @@
   },
 
   "registry_force_network_mode": true,
+  "registry_write_mode": "direct",
 
   "department_profile": "建筑结构所",
   "department_profiles": {
@@ -41,7 +42,7 @@
         "管理员": null,
         "设计人员": null
       },
-      "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"],
+      "projects": ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"],
       "projects_standard_filter": ["1907", "2016"],
       "role_table_file": "excel_bin/姓名角色表.xlsx",
       "default_folder_path": "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册",
@@ -162,7 +163,7 @@
         "管理员": null,
         "设计人员": null
       },
-      "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306"],
+      "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"],
       "projects_standard_filter": ["1907", "2016"],
       "role_table_file": "excel_bin/姓名角色表-电气自动化所.xlsx",
       "default_folder_path": "//10.102.2.7/文件服务器/电气自动化所/自动化室/21 接口管理",

@@ -53,6 +53,7 @@ def migrate_database(db_path: str) -> None:
             ("last_seen_at", "TEXT NOT NULL DEFAULT ''"),
             ("missing_since", "TEXT DEFAULT NULL"),
             ("archive_reason", "TEXT DEFAULT NULL"),
+            ("source_revision", "TEXT DEFAULT NULL"),
             # 功能扩展列
             ("assigned_by", "TEXT DEFAULT NULL"),
             ("assigned_at", "TEXT DEFAULT NULL"),
@@ -125,7 +126,7 @@ def migrate_if_needed(db_path: str) -> None:
     try:
         # 检查是否缺少新字段（需要检查所有关键字段）
         missing_fields = []
-        required_fields = ["display_status", "business_id", "response_number", "completed_by", "archived_at", 
+        required_fields = ["display_status", "business_id", "response_number", "completed_by", "archived_at", "source_revision",
                           "ignored", "ignored_at", "ignored_by", "interface_time_when_ignored", "ignored_reason"]
         
         for field in required_fields:

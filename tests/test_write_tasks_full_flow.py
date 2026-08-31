@@ -102,3 +102,34 @@ def test_response_write_task_full_flow(tmp_path, monkeypatch):
             manager.shutdown()
     finally:
         registry_hooks._DATA_FOLDER = original
+
+
+def test_fu_excel_success_is_not_failed_by_registry_sync(tmp_path, monkeypatch):
+    """FU的Excel写入成功后，Registry失败不得触发Excel任务重试。"""
+    data_folder = tmp_path / "data"
+    data_folder.mkdir(parents=True, exist_ok=True)
+
+    import ui.input_handler as input_handler
+
+    monkeypatch.setattr(input_handler, "write_fu_completion_to_excel", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(registry_hooks, "on_fu_completed", lambda **_kwargs: False)
+
+    manager = WriteTaskManager(state_path=tmp_path / "tasks.json")
+    try:
+        manager._sync_to_shared_log = MagicMock()
+        task = manager.submit_fu_completion_task(
+            file_path=str(tmp_path / "fu.xlsx"),
+            row_index=2,
+            interface_id="FU-001",
+            user_name="测试用户",
+            project_id="2026",
+            completion_date="2026-07-27",
+            data_folder=str(data_folder),
+            description="测试FU完成",
+        )
+
+        status = _wait_for_task_done(manager, task.task_id)
+        assert status == "completed"
+        assert manager.tasks[task.task_id].error is None
+    finally:
+        manager.shutdown()

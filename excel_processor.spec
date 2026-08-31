@@ -23,11 +23,14 @@ a = Analysis(
         ('services/file_manager.py', 'services'),
         ('services/distribution.py', 'services'),
         ('services/db_status.py', 'services'),
+        ('services/account_service.py', 'services'),
         ('services/__init__.py', 'services'),
         # 工具模块 (utils/)
         ('utils/date_utils.py', 'utils'),
         ('utils/adjust.py', 'utils'),
         ('utils/dept_config.py', 'utils'),
+        ('utils/excel_io.py', 'utils'),
+        ('utils/role_table.py', 'utils'),
         ('utils/__init__.py', 'utils'),
         # 配置文件
         ('config.json', '.'),
@@ -62,11 +65,14 @@ a = Analysis(
         'services.file_manager',
         'services.distribution',
         'services.db_status',
+        'services.account_service',
         # 工具模块 (utils/)
         'utils',
         'utils.date_utils',
         'utils.adjust',
         'utils.dept_config',
+        'utils.excel_io',
+        'utils.role_table',
         # write_tasks 模块（写入任务面板/回文提交等）
         'write_tasks',
         'write_tasks.manager',
@@ -122,7 +128,6 @@ a = Analysis(
         'registry.history_ui',
         'registry.migrate',
         'registry.local_cache',
-        'registry.write_queue',
         # update模块
         'update',
         'update.manager',

@@ -4,12 +4,55 @@
 提供任务创建更新、状态流转、事件记录等核心功能。
 """
 import json
+import os
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from .db import get_connection, get_read_connection, close_connection_after_use
 from .models import Status, EventType
 from .recovery import row_to_dict, select_available_columns
 from .util import make_task_id, make_business_id
+
+
+CONFIRMED_ARCHIVE_REASONS = frozenset({
+    "confirmed_by_superior",
+    "completed_in_new_source",
+})
+AUTO_CONFIRMED_BY_SOURCE_UPDATE = "源文件更新自动确认"
+
+
+def _task_activity_timestamp(task: Optional[Dict[str, Any]]) -> str:
+    """Return the best comparable timestamp for an active task record."""
+    if not task:
+        return ""
+    return str(task.get("last_seen_at") or task.get("first_seen_at") or "").strip()
+
+
+def _confirmed_archive_timestamp(task: Optional[Dict[str, Any]]) -> str:
+    """Return the lifecycle timestamp that closed a business task."""
+    if not task:
+        return ""
+    return str(
+        task.get("archived_at")
+        or task.get("confirmed_at")
+        or task.get("last_seen_at")
+        or ""
+    ).strip()
+
+
+def _is_superseded_by_confirmed_archive(
+    active_task: Optional[Dict[str, Any]],
+    archived_task: Optional[Dict[str, Any]],
+) -> bool:
+    """Whether a confirmed archive is at least as new as an active duplicate."""
+    if not active_task or not archived_task:
+        return False
+    archive_ts = _confirmed_archive_timestamp(archived_task)
+    active_ts = _task_activity_timestamp(active_task)
+    if not archive_ts:
+        return False
+    if not active_ts:
+        return True
+    return archive_ts >= active_ts
 
 def find_task_by_business_id(
     db_path: str,
@@ -46,6 +89,7 @@ def find_task_by_business_id(
             "project_id",
             "interface_id",
             "source_file",
+            "source_revision",
             "row_index",
             "interface_time",
             "status",
@@ -57,6 +101,7 @@ def find_task_by_business_id(
             "completed_at",
             "completed_by",
             "confirmed_at",
+            "first_seen_at",
             "last_seen_at",
             "ignored",
             "ignored_at",
@@ -85,7 +130,7 @@ def find_task_by_business_id(
 
         row = cursor.fetchone()
         if row:
-            return row_to_dict(
+            task = row_to_dict(
                 row,
                 selected_columns,
                 defaults={
@@ -98,7 +143,9 @@ def find_task_by_business_id(
                     "completed_at": None,
                     "completed_by": None,
                     "confirmed_at": None,
+                    "first_seen_at": None,
                     "last_seen_at": None,
+                    "source_revision": None,
                     "ignored": 0,
                     "ignored_at": None,
                     "ignored_by": None,
@@ -106,10 +153,166 @@ def find_task_by_business_id(
                     "ignored_reason": None,
                 },
             )
+            archived_task = find_latest_confirmed_archive_by_business_id(
+                db_path,
+                wal,
+                file_type,
+                project_id,
+                interface_id,
+                conn=conn,
+            )
+            if _is_superseded_by_confirmed_archive(task, archived_task):
+                return None
+            return task
         return None
     finally:
         if owns_conn:
             close_connection_after_use()
+
+
+def find_latest_confirmed_archive_by_business_id(
+    db_path: str,
+    wal: bool,
+    file_type: int,
+    project_id: str,
+    interface_id: str,
+    conn=None
+) -> Optional[Dict[str, Any]]:
+    """查找同一 business_id 最近一次由确认产生的归档记录。"""
+    owns_conn = conn is None
+    conn = conn or get_connection(db_path, wal)
+    business_id = make_business_id(file_type, project_id, interface_id)
+
+    try:
+        preferred_columns = [
+            "id",
+            "business_id",
+            "file_type",
+            "project_id",
+            "interface_id",
+            "source_file",
+            "source_revision",
+            "row_index",
+            "interface_time",
+            "status",
+            "display_status",
+            "responsible_person",
+            "assigned_by",
+            "assigned_at",
+            "confirmed_by",
+            "completed_at",
+            "completed_by",
+            "confirmed_at",
+            "first_seen_at",
+            "last_seen_at",
+            "archive_reason",
+            "archived_at",
+            "ignored",
+        ]
+        selected_columns = select_available_columns(conn, "tasks", preferred_columns)
+        if not selected_columns:
+            return None
+
+        available = set(selected_columns)
+        if not {"business_id", "status"}.issubset(available):
+            return None
+
+        archive_filter = (
+            " AND archive_reason IN ('confirmed_by_superior', 'completed_in_new_source')"
+            if "archive_reason" in available
+            else ""
+        )
+        confirmed_filter = " AND confirmed_at IS NOT NULL" if "confirmed_at" in available else ""
+        order_parts = []
+        if "archived_at" in available:
+            order_parts.append("archived_at DESC")
+        if "last_seen_at" in available:
+            order_parts.append("last_seen_at DESC")
+        order_parts.append("rowid DESC")
+
+        cursor = conn.execute(
+            f"""
+            SELECT {", ".join(selected_columns)}
+            FROM tasks
+            WHERE business_id = ?
+              AND status = 'archived'
+              {archive_filter}
+              {confirmed_filter}
+            ORDER BY {", ".join(order_parts)}
+            LIMIT 1
+            """,
+            (business_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return row_to_dict(
+            row,
+            selected_columns,
+            defaults={
+                "display_status": None,
+                "responsible_person": None,
+                "assigned_by": None,
+                "assigned_at": None,
+                "role": "",
+                "confirmed_by": None,
+                "completed_at": None,
+                "completed_by": None,
+                "confirmed_at": None,
+                "first_seen_at": None,
+                "last_seen_at": None,
+                "source_revision": None,
+                "archive_reason": None,
+                "archived_at": None,
+                "ignored": 0,
+            },
+        )
+    finally:
+        if owns_conn:
+            close_connection_after_use()
+
+
+def _should_suppress_rescan_after_confirmed_archive(
+    archived_task: Optional[Dict[str, Any]],
+    fields: Dict[str, Any],
+    file_type: Optional[int] = None,
+) -> bool:
+    """同一轮任务已确认归档后，源 Excel 未重置时禁止重扫重新生成待审查任务。"""
+    if not archived_task:
+        return False
+    if archived_task.get("status") != Status.ARCHIVED:
+        return False
+    if archived_task.get("archive_reason") not in CONFIRMED_ARCHIVE_REASONS:
+        return False
+    if not archived_task.get("completed_at") or not archived_task.get("confirmed_at"):
+        return False
+
+    new_completed_val = str(fields.get("_completed_col_value", "") or "").strip()
+    old_interface_time = archived_task.get("interface_time") or ""
+    new_interface_time = fields.get("interface_time", "")
+
+    # FU starts a new cycle only when the plan changes and D is cleared. Merely
+    # clearing D for an already confirmed plan must not recreate the task.
+    if int(file_type or 0) == 7 and not new_completed_val:
+        return not should_reset_task_status(
+            old_interface_time,
+            new_interface_time,
+            "",
+            "",
+        )
+
+    if not new_completed_val:
+        return False
+
+    old_completed_val = "有值"
+    if not old_interface_time or not new_interface_time:
+        return True
+    return not should_reset_task_status(
+        old_interface_time,
+        new_interface_time,
+        old_completed_val,
+        new_completed_val,
+    )
 
 
 def _get_task_lookup_columns(conn) -> List[str]:
@@ -120,6 +323,7 @@ def _get_task_lookup_columns(conn) -> List[str]:
         "project_id",
         "interface_id",
         "source_file",
+        "source_revision",
         "row_index",
         "interface_time",
         "status",
@@ -133,7 +337,10 @@ def _get_task_lookup_columns(conn) -> List[str]:
         "completed_at",
         "completed_by",
         "response_number",
+        "first_seen_at",
         "last_seen_at",
+        "archive_reason",
+        "archived_at",
         "ignored",
     ]
     return select_available_columns(conn, "tasks", preferred_columns)
@@ -162,7 +369,11 @@ def _task_row_to_dict(row, selected_columns) -> Dict[str, Any]:
             "completed_at": None,
             "completed_by": None,
             "response_number": None,
+            "first_seen_at": None,
             "last_seen_at": None,
+            "archive_reason": None,
+            "archived_at": None,
+            "source_revision": None,
             "ignored": 0,
         },
     )
@@ -220,26 +431,205 @@ def resolve_task_record(
             key['interface_id'],
             conn=conn,
         )
+        latest_archive = find_latest_confirmed_archive_by_business_id(
+            db_path,
+            wal,
+            key['file_type'],
+            key['project_id'],
+            key['interface_id'],
+            conn=conn,
+        )
+
+        exact_status = str((exact_task or {}).get("status") or "").strip().lower()
+        exact_active = exact_task if exact_task and exact_status != Status.ARCHIVED else None
+        if _is_superseded_by_confirmed_archive(exact_active, latest_archive):
+            exact_active = None
 
         if latest_task is None:
-            return exact_task
-        if exact_task is None:
+            return latest_archive or exact_task
+        if exact_active is None:
             return latest_task
-        if exact_task.get("id") == latest_task.get("id"):
+        if exact_active.get("id") == latest_task.get("id"):
             return latest_task
 
-        exact_status = str(exact_task.get("status") or "").strip().lower()
-        exact_last_seen = str(exact_task.get("last_seen_at") or "").strip()
+        exact_last_seen = str(exact_active.get("last_seen_at") or "").strip()
         latest_last_seen = str(latest_task.get("last_seen_at") or "").strip()
 
-        if exact_status == Status.ARCHIVED:
-            return latest_task
         if latest_last_seen and not exact_last_seen:
             return latest_task
         if latest_last_seen and exact_last_seen and latest_last_seen > exact_last_seen:
             return latest_task
 
-        return exact_task
+        return exact_active
+    finally:
+        if owns_conn:
+            close_connection_after_use()
+
+
+def resolve_task_records(
+    db_path: str,
+    wal: bool,
+    task_keys: List[Dict[str, Any]],
+    conn=None,
+) -> Dict[str, Dict[str, Any]]:
+    """批量解析任务记录，避免界面按行往返查询 Registry。"""
+    if not task_keys:
+        return {}
+
+    owns_conn = conn is None
+    conn = conn or get_connection(db_path, wal)
+    try:
+        selected_columns = _get_task_lookup_columns(conn)
+        available = set(selected_columns)
+        if not {"id", "business_id", "status"}.issubset(available):
+            return {
+                task_id: task
+                for key in task_keys
+                for task_id, task in [(
+                    make_task_id(
+                        key["file_type"],
+                        key["project_id"],
+                        key["interface_id"],
+                        key["source_file"],
+                        key["row_index"],
+                    ),
+                    resolve_task_record(db_path, wal, key, conn=conn),
+                )]
+                if task is not None
+            }
+
+        exact_ids = []
+        business_ids = []
+        keyed_ids = []
+        for key in task_keys:
+            task_id = make_task_id(
+                key["file_type"],
+                key["project_id"],
+                key["interface_id"],
+                key["source_file"],
+                key["row_index"],
+            )
+            business_id = make_business_id(
+                key["file_type"],
+                key["project_id"],
+                key["interface_id"],
+            )
+            exact_ids.append(task_id)
+            business_ids.append(business_id)
+            keyed_ids.append((task_id, business_id))
+
+        candidate_rows = {}
+
+        def fetch_candidates(column_name: str, values: List[str]) -> None:
+            unique_values = list(dict.fromkeys(value for value in values if value))
+            for start in range(0, len(unique_values), 400):
+                chunk = unique_values[start:start + 400]
+                placeholders = ", ".join("?" for _ in chunk)
+                rows = conn.execute(
+                    f"""
+                    SELECT rowid, {", ".join(selected_columns)}
+                    FROM tasks
+                    WHERE {column_name} IN ({placeholders})
+                    """,
+                    chunk,
+                ).fetchall()
+                for row in rows:
+                    rowid = row[0]
+                    if rowid in candidate_rows:
+                        continue
+                    task = _task_row_to_dict(row[1:], selected_columns)
+                    task["_registry_rowid"] = rowid
+                    candidate_rows[rowid] = task
+
+        # business_id 查询负责取最新业务记录；id 查询兜底历史库中 business_id 异常的精确行。
+        fetch_candidates("business_id", business_ids)
+        fetch_candidates("id", exact_ids)
+
+        tasks_by_id = {}
+        tasks_by_business_id = {}
+        for task in candidate_rows.values():
+            task_id = str(task.get("id") or "")
+            business_id = str(task.get("business_id") or "")
+            if task_id:
+                tasks_by_id[task_id] = task
+            if business_id:
+                tasks_by_business_id.setdefault(business_id, []).append(task)
+
+        has_archive_reason = "archive_reason" in available
+        has_confirmed_at = "confirmed_at" in available
+        resolved_by_business_id = {}
+
+        for business_id, candidates in tasks_by_business_id.items():
+            archive_candidates = [
+                task
+                for task in candidates
+                if str(task.get("status") or "").strip().lower() == Status.ARCHIVED
+                and (
+                    not has_archive_reason
+                    or task.get("archive_reason") in CONFIRMED_ARCHIVE_REASONS
+                )
+                and (not has_confirmed_at or task.get("confirmed_at"))
+            ]
+            latest_archive = max(
+                archive_candidates,
+                key=lambda task: (
+                    str(task.get("archived_at") or ""),
+                    str(task.get("last_seen_at") or ""),
+                    int(task.get("_registry_rowid") or 0),
+                ),
+                default=None,
+            )
+
+            active_candidates = [
+                task
+                for task in candidates
+                if str(task.get("status") or "").strip().lower() != Status.ARCHIVED
+            ]
+            latest_task = max(
+                active_candidates,
+                key=lambda task: (
+                    str(task.get("last_seen_at") or ""),
+                    int(task.get("_registry_rowid") or 0),
+                ),
+                default=None,
+            )
+            if _is_superseded_by_confirmed_archive(latest_task, latest_archive):
+                latest_task = None
+            resolved_by_business_id[business_id] = (latest_task, latest_archive)
+
+        result = {}
+        for exact_task_id, business_id in keyed_ids:
+            exact_task = tasks_by_id.get(exact_task_id)
+            latest_task, latest_archive = resolved_by_business_id.get(
+                business_id,
+                (None, None),
+            )
+
+            exact_status = str((exact_task or {}).get("status") or "").strip().lower()
+            exact_active = exact_task if exact_task and exact_status != Status.ARCHIVED else None
+            if _is_superseded_by_confirmed_archive(exact_active, latest_archive):
+                exact_active = None
+
+            if latest_task is None:
+                resolved = latest_archive or exact_task
+            elif exact_active is None or exact_active.get("id") == latest_task.get("id"):
+                resolved = latest_task
+            else:
+                exact_last_seen = str(exact_active.get("last_seen_at") or "").strip()
+                latest_last_seen = str(latest_task.get("last_seen_at") or "").strip()
+                if latest_last_seen and (
+                    not exact_last_seen or latest_last_seen > exact_last_seen
+                ):
+                    resolved = latest_task
+                else:
+                    resolved = exact_active
+
+            if resolved is not None:
+                resolved = dict(resolved)
+                resolved.pop("_registry_rowid", None)
+                result[exact_task_id] = resolved
+
+        return result
     finally:
         if owns_conn:
             close_connection_after_use()
@@ -577,7 +967,7 @@ def upsert_task(
     conn.execute(
         """
         INSERT INTO tasks (
-            id, file_type, project_id, interface_id, source_file, row_index,
+            id, file_type, project_id, interface_id, source_file, source_revision, row_index,
             business_id,
             department, interface_time, role, status, 
             assigned_by, assigned_at, display_status, confirmed_by, responsible_person,
@@ -585,9 +975,10 @@ def upsert_task(
             ignored, ignored_at, ignored_by, interface_time_when_ignored, ignored_reason,
             first_seen_at, last_seen_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             business_id = excluded.business_id,
+            source_revision = COALESCE(excluded.source_revision, source_revision),
             department = excluded.department,
             interface_time = excluded.interface_time,
             role = excluded.role,
@@ -633,6 +1024,7 @@ def upsert_task(
             key['project_id'], 
             key['interface_id'], 
             key['source_file'], 
+            fields.get('_source_revision'),
             key['row_index'],
             business_id,
             department,
@@ -778,6 +1170,138 @@ def _build_archived_task_identity(conn, task: Dict[str, Any], now: datetime) -> 
     raise RuntimeError(f"无法为归档任务生成唯一ID: {old_id}")
 
 
+def _load_active_business_tasks(
+    conn,
+    key: Dict[str, Any],
+    business_id: str,
+    preferred_id: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Load every active row belonging to one business lifecycle."""
+    lookup_columns = _get_task_lookup_columns(conn)
+    rows = conn.execute(
+        f"""
+        SELECT {", ".join(lookup_columns)}
+        FROM tasks
+        WHERE status != ?
+          AND (
+              business_id = ?
+              OR (
+                  business_id IS NULL
+                  AND file_type = ?
+                  AND project_id = ?
+                  AND interface_id = ?
+              )
+          )
+        ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, last_seen_at DESC, rowid DESC
+        """,
+        (
+            Status.ARCHIVED,
+            business_id,
+            int(key['file_type']),
+            str(key['project_id']),
+            str(key['interface_id']),
+            preferred_id or "",
+        ),
+    ).fetchall()
+    return [_task_row_to_dict(row, lookup_columns) for row in rows]
+
+
+def _archive_active_business_tasks(
+    conn,
+    active_tasks: List[Dict[str, Any]],
+    now: datetime,
+    confirmed_by: Optional[str],
+    archive_reason: str,
+) -> List[Dict[str, Any]]:
+    """Archive active siblings without committing the caller's transaction."""
+    now_str = now.isoformat()
+    archived_records = []
+    for active_task in active_tasks:
+        old_id = active_task["id"]
+        old_row_index = int(active_task.get("row_index") or 0)
+        archived_id, archived_row_index = _build_archived_task_identity(conn, active_task, now)
+        conn.execute(
+            """
+            UPDATE tasks
+            SET id = ?,
+                row_index = ?,
+                status = ?,
+                completed_at = COALESCE(completed_at, ?),
+                confirmed_at = ?,
+                confirmed_by = ?,
+                display_status = ?,
+                archive_reason = ?,
+                archived_at = ?,
+                missing_since = NULL
+            WHERE id = ? AND status != ?
+            """,
+            (
+                archived_id,
+                archived_row_index,
+                Status.ARCHIVED,
+                now_str,
+                now_str,
+                confirmed_by,
+                '已审查',
+                archive_reason,
+                now_str,
+                old_id,
+                Status.ARCHIVED,
+            ),
+        )
+        archived_records.append(
+            {
+                "original_id": old_id,
+                "archived_id": archived_id,
+                "original_row_index": old_row_index,
+                "archived_row_index": archived_row_index,
+            }
+        )
+    return archived_records
+
+
+def _should_auto_confirm_from_new_source(
+    old_task: Optional[Dict[str, Any]],
+    key: Dict[str, Any],
+    fields: Dict[str, Any],
+) -> bool:
+    """Close pending review when a newer source file already records completion."""
+    if not old_task:
+        return False
+    if str(old_task.get("status") or "").strip().lower() != Status.COMPLETED:
+        return False
+    if str(old_task.get("display_status") or "").strip() not in {
+        "待审查",
+        "待指派人审查",
+    }:
+        return False
+
+    completed_value = str(fields.get("_completed_col_value") or "").strip()
+    if not completed_value or completed_value.lower() in {"nan", "none"}:
+        return False
+
+    old_source = os.path.normcase(os.path.basename(str(old_task.get("source_file") or "").strip()))
+    new_source = os.path.normcase(os.path.basename(str(key.get("source_file") or "").strip()))
+    if old_source and new_source and old_source != new_source:
+        return True
+
+    old_revision = str(old_task.get("source_revision") or "").strip()
+    new_revision = str(fields.get("_source_revision") or "").strip()
+    if old_revision and new_revision:
+        return old_revision != new_revision
+    if not new_revision:
+        return False
+
+    # Existing Registry databases have no revision token until their first
+    # scan. Use mtime versus last_seen_at once, then normal token comparison.
+    try:
+        revision_mtime = int(new_revision.rsplit(":", 1)[1]) / 1_000_000_000
+        last_seen = datetime.fromisoformat(str(old_task.get("last_seen_at") or "")).timestamp()
+        return revision_mtime > last_seen + 1.0
+    except (IndexError, TypeError, ValueError, OSError):
+        return False
+
+
 def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, confirmed_by: str = None, conn=None) -> Optional[Dict[str, Any]]:
     """
     标记任务为已确认并立即归档。
@@ -802,47 +1326,61 @@ def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, 
             close_connection_after_use()
         return None
 
-    tid = task["id"]
-    original_row_index = int(task.get("row_index") or key.get("row_index") or 0)
-    archived_tid, archived_row_index = _build_archived_task_identity(conn, task, now)
-    now_str = now.isoformat()
-    
-    # 确认即归档：释放原 task_id/row_index，使下一轮同业务接口可以作为新任务进入。
-    conn.execute(
-        """
-        UPDATE tasks
-        SET id = ?,
-            row_index = ?,
-            status = ?,
-            confirmed_at = ?,
-            confirmed_by = ?,
-            display_status = ?,
-            archive_reason = ?,
-            archived_at = ?,
-            missing_since = NULL
-        WHERE id = ?
-        """,
-        (
-            archived_tid,
-            archived_row_index,
-            Status.ARCHIVED,
-            now_str,
-            confirmed_by,
-            '已审查',
-            'confirmed_by_superior',
-            now_str,
-            tid,
-        ),
+    if str(task.get("status") or "").strip().lower() == Status.ARCHIVED:
+        print(f"[Registry] mark_confirmed警告: 任务已经归档 {key['interface_id']}")
+        if owns_conn:
+            close_connection_after_use()
+        return None
+
+    business_id = str(task.get("business_id") or "").strip() or make_business_id(
+        key['file_type'], key['project_id'], key['interface_id']
     )
-    conn.commit()
+    active_tasks = _load_active_business_tasks(
+        conn,
+        key,
+        business_id,
+        preferred_id=task['id'],
+    )
+    if not active_tasks:
+        print(f"[Registry] mark_confirmed警告: 找不到活动任务 {key['interface_id']}")
+        if owns_conn:
+            close_connection_after_use()
+        return None
+
+    target_task = next((item for item in active_tasks if item.get("id") == task.get("id")), active_tasks[0])
+    tid = target_task["id"]
+    original_row_index = int(target_task.get("row_index") or key.get("row_index") or 0)
+    try:
+        # 同一 business_id 只代表一个业务任务。确认时一并关闭旧源文件残留，
+        # 否则当前行归档后，旧的 completed/待审查记录会在刷新时再次加回。
+        archived_records = _archive_active_business_tasks(
+            conn,
+            active_tasks,
+            now,
+            confirmed_by,
+            "confirmed_by_superior",
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        if owns_conn:
+            close_connection_after_use()
+        raise
+
+    target_archive = next(
+        (item for item in archived_records if item["original_id"] == tid),
+        archived_records[0],
+    )
     if owns_conn:
         close_connection_after_use()
     return {
         "original_id": tid,
-        "archived_id": archived_tid,
+        "archived_id": target_archive["archived_id"],
         "original_row_index": original_row_index,
-        "archived_row_index": archived_row_index,
+        "archived_row_index": target_archive["archived_row_index"],
         "archive_reason": "confirmed_by_superior",
+        "archived_count": len(archived_records),
+        "archived_task_ids": [item["archived_id"] for item in archived_records],
     }
 
 def mark_unconfirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, conn=None) -> None:
@@ -1027,7 +1565,13 @@ def mark_ignored_batch(
         'failed_tasks': failed_tasks
     }
 
-def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]], current_user_roles: List[str] = None) -> Dict[str, str]:
+def get_display_status(
+    db_path: str,
+    wal: bool,
+    task_keys: List[Dict[str, Any]],
+    current_user_roles: List[str] = None,
+    task_snapshots: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> Dict[str, str]:
     """
     批量查询任务的显示状态（用于UI显示）
     
@@ -1044,8 +1588,8 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
     if not task_keys:
         return {}
     
-    # 显示状态查询属于只读场景，优先走本地缓存读，避免开始处理时与批量写共享库互相打架。
-    conn = get_read_connection(db_path)
+    # 已提供批量快照时不再重复查库；兼容旧调用时仍优先走本地缓存读。
+    conn = None if task_snapshots is not None else get_read_connection(db_path)
     result = {}
     
     # 判断用户角色类型
@@ -1076,23 +1620,24 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
             return False
     
     try:
-        selected_columns = select_available_columns(
-            conn,
-            "tasks",
-            [
-                "status",
-                "display_status",
-                "assigned_by",
-                "role",
-                "confirmed_at",
-                "responsible_person",
-                "ignored",
-                "confirmed_by",
-                "last_seen_at",
-            ],
-        )
-        if not selected_columns:
-            return {}
+        if task_snapshots is None:
+            selected_columns = select_available_columns(
+                conn,
+                "tasks",
+                [
+                    "status",
+                    "display_status",
+                    "assigned_by",
+                    "role",
+                    "confirmed_at",
+                    "responsible_person",
+                    "ignored",
+                    "confirmed_by",
+                    "last_seen_at",
+                ],
+            )
+            if not selected_columns:
+                return {}
 
         for key in task_keys:
             tid = make_task_id(
@@ -1107,16 +1652,20 @@ def get_display_status(db_path: str, wal: bool, task_keys: List[Dict[str, Any]],
             interface_time = key.get('interface_time', '')
             is_overdue = is_date_overdue(interface_time) if interface_time and interface_time != '-' else False
             
-            task = resolve_task_record(db_path, wal, key, conn=conn)
+            task = (
+                task_snapshots.get(tid)
+                if task_snapshots is not None
+                else resolve_task_record(db_path, wal, key, conn=conn)
+            )
             if not task:
                 # 任务不存在，不显示状态
                 continue
 
-            display_status = task["display_status"]
-            role = task["role"]
-            confirmed_at = task["confirmed_at"]
-            responsible_person = task["responsible_person"]
-            ignored = task["ignored"]
+            display_status = task.get("display_status")
+            role = task.get("role", "")
+            confirmed_at = task.get("confirmed_at")
+            responsible_person = task.get("responsible_person")
+            ignored = task.get("ignored", 0)
             
             # 【新增】如果任务被忽略，完全不返回（UI中会被过滤）
             if ignored == 1:
@@ -1334,6 +1883,7 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
     verbose = (_os.getenv("REGISTRY_VERBOSE", "").strip() == "1")
     reset_time_changed_count = 0
     reset_time_changed_samples: list[str] = []
+    auto_confirmed_count = 0
     
     try:
         # 开启事务
@@ -1361,6 +1911,71 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                 key['interface_id'],
                 conn=conn
             )
+
+            if _should_auto_confirm_from_new_source(old_task, key, fields):
+                active_tasks = _load_active_business_tasks(
+                    conn,
+                    key,
+                    business_id,
+                    preferred_id=old_task.get("id"),
+                )
+                archived_records = _archive_active_business_tasks(
+                    conn,
+                    active_tasks,
+                    now,
+                    AUTO_CONFIRMED_BY_SOURCE_UPDATE,
+                    "completed_in_new_source",
+                )
+                event_extra = json.dumps(
+                    {
+                        "automatic": True,
+                        "reason": "completed_in_new_source",
+                        "confirmed_by": AUTO_CONFIRMED_BY_SOURCE_UPDATE,
+                        "previous_source_file": old_task.get("source_file"),
+                        "archived_count": len(archived_records),
+                    },
+                    ensure_ascii=False,
+                )
+                for event_type in (EventType.CONFIRMED, EventType.ARCHIVED):
+                    conn.execute(
+                        """
+                        INSERT INTO events (
+                            ts, event, file_type, project_id, interface_id,
+                            source_file, row_index, extra
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            now_str,
+                            event_type,
+                            int(key['file_type']),
+                            str(key['project_id']),
+                            str(key['interface_id']),
+                            str(key['source_file']),
+                            int(key['row_index']),
+                            event_extra,
+                        ),
+                    )
+                auto_confirmed_count += 1
+                count += 1
+                continue
+
+            if not old_task:
+                archived_task = find_latest_confirmed_archive_by_business_id(
+                    db_path,
+                    wal,
+                    key['file_type'],
+                    key['project_id'],
+                    key['interface_id'],
+                    conn=conn
+                )
+                if _should_suppress_rescan_after_confirmed_archive(
+                    archived_task, fields, key.get("file_type")
+                ):
+                    if verbose:
+                        print(
+                            f"[Registry闭环] {key['interface_id']}: 已确认归档且源Excel仍为同一轮已完成状态，跳过重建任务"
+                        )
+                    continue
             
             # 【修正】row_index不匹配时的智能判断
             # 如果row_index差距较小（±100行以内），可能是Excel文件编辑导致的行号偏移，应该继承状态
@@ -1637,7 +2252,7 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             conn.execute(
                 """
                 INSERT INTO tasks (
-                    id, file_type, project_id, interface_id, source_file, row_index,
+                    id, file_type, project_id, interface_id, source_file, source_revision, row_index,
                     business_id,
                     department, interface_time, role, status, display_status,
                     first_seen_at, last_seen_at,
@@ -1645,9 +2260,10 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     completed_at, completed_by, confirmed_at, response_number,
                     ignored, ignored_at, ignored_by, interface_time_when_ignored, ignored_reason
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     business_id = excluded.business_id,
+                    source_revision = COALESCE(excluded.source_revision, source_revision),
                     department = excluded.department,
                     interface_time = excluded.interface_time,
                     role = excluded.role,
@@ -1677,6 +2293,7 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     key['project_id'], 
                     key['interface_id'], 
                     key['source_file'], 
+                    fields.get('_source_revision'),
                     key['row_index'],
                     business_id,
                     department,
@@ -1710,6 +2327,8 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             if reset_time_changed_samples:
                 suffix = f" (示例: {', '.join(reset_time_changed_samples)})"
             print(f"[Registry] 本轮批量：预期时间变化→重置状态 {reset_time_changed_count} 条{suffix}")
+        if auto_confirmed_count:
+            print(f"[Registry] 本轮批量：新源文件已填写完成列，自动审查归档 {auto_confirmed_count} 条")
         close_connection_after_use()
         return count
         

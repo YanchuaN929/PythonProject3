@@ -14,6 +14,7 @@
 
 import os
 import sys
+import hashlib
 
 def print_ok(msg):
     print(f"[OK] {msg}")
@@ -32,6 +33,23 @@ def check_file(file_path, description):
     else:
         print_error(f"{description}不存在: {file_path}")
         return False
+
+def _sha256(file_path):
+    digest = hashlib.sha256()
+    with open(file_path, "rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+def check_same_file(source_path, packaged_path, description):
+    """确认打包目录中的数据文件就是本次工作区版本。"""
+    if not os.path.exists(source_path) or not os.path.exists(packaged_path):
+        return check_file(packaged_path, description)
+    if _sha256(source_path) != _sha256(packaged_path):
+        print_error(f"{description}与当前源码不一致: {packaged_path}")
+        return False
+    print_ok(f"{description}与当前源码一致")
+    return True
 
 def check_pre_build():
     """打包前检查"""
@@ -58,7 +76,10 @@ def check_pre_build():
     all_ok &= check_file("ui/input_handler.py", "输入处理模块")
     all_ok &= check_file("services/distribution.py", "任务指派模块")
     all_ok &= check_file("services/db_status.py", "数据库状态显示器")
+    all_ok &= check_file("services/account_service.py", "账户管理服务")
     all_ok &= check_file("utils/dept_config.py", "科室配置模块")
+    all_ok &= check_file("utils/excel_io.py", "Excel安全读写模块")
+    all_ok &= check_file("utils/role_table.py", "角色表读取模块")
     print()
     
     # 检查配置文件
@@ -73,6 +94,7 @@ def check_pre_build():
     all_ok &= check_file("excel_bin/姓名角色表.xlsx", "角色表(建筑结构所)")
     all_ok &= check_file("excel_bin/姓名角色表-电力工程研究设计所.xlsx", "角色表(电力工程研究设计所)")
     all_ok &= check_file("excel_bin/姓名角色表——核工程所通信专业+设备专业.xlsx", "角色表(核工程研究设计所)")
+    all_ok &= check_file("excel_bin/姓名角色表-核电工艺所.xlsx", "角色表(核电工艺所)")
     all_ok &= check_file("excel_bin/姓名角色表-电气自动化所.xlsx", "角色表(电气自动化所)")
     print()
     
@@ -169,7 +191,10 @@ def check_post_build():
     all_ok &= check_file(os.path.join(internal, "ui", "input_handler.py"), "输入处理模块")
     all_ok &= check_file(os.path.join(internal, "services", "distribution.py"), "任务指派模块")
     all_ok &= check_file(os.path.join(internal, "services", "db_status.py"), "数据库状态显示器")
+    all_ok &= check_file(os.path.join(internal, "services", "account_service.py"), "账户管理服务")
     all_ok &= check_file(os.path.join(internal, "utils", "dept_config.py"), "科室配置模块")
+    all_ok &= check_file(os.path.join(internal, "utils", "excel_io.py"), "Excel安全读写模块")
+    all_ok &= check_file(os.path.join(internal, "utils", "role_table.py"), "角色表读取模块")
     print()
     
     # 检查配置文件
@@ -184,12 +209,37 @@ def check_post_build():
     all_ok &= check_file(os.path.join(internal, "excel_bin", "姓名角色表.xlsx"), "角色表(建筑结构所)")
     all_ok &= check_file(os.path.join(internal, "excel_bin", "姓名角色表-电力工程研究设计所.xlsx"), "角色表(电力工程研究设计所)")
     all_ok &= check_file(os.path.join(internal, "excel_bin", "姓名角色表——核工程所通信专业+设备专业.xlsx"), "角色表(核工程研究设计所)")
+    all_ok &= check_file(os.path.join(internal, "excel_bin", "姓名角色表-核电工艺所.xlsx"), "角色表(核电工艺所)")
     all_ok &= check_file(os.path.join(internal, "excel_bin", "姓名角色表-电气自动化所.xlsx"), "角色表(电气自动化所)")
     print()
     
     # 检查更新程序
     print("【更新程序】")
     all_ok &= check_file(os.path.join(dist_dir, "update.exe"), "更新程序")
+    print()
+
+    print("【构建新鲜度】")
+    source_pairs = [
+        ("core/main.py", os.path.join(internal, "core", "main.py"), "处理模块1"),
+        ("ui/input_handler.py", os.path.join(internal, "ui", "input_handler.py"), "输入处理模块"),
+        ("services/distribution.py", os.path.join(internal, "services", "distribution.py"), "任务指派模块"),
+        ("services/file_manager.py", os.path.join(internal, "services", "file_manager.py"), "结果缓存模块"),
+        ("services/account_service.py", os.path.join(internal, "services", "account_service.py"), "账户管理服务"),
+        ("utils/excel_io.py", os.path.join(internal, "utils", "excel_io.py"), "Excel安全读写模块"),
+        ("version.json", os.path.join(internal, "version.json"), "版本文件"),
+        ("excel_bin/姓名角色表.xlsx", os.path.join(internal, "excel_bin", "姓名角色表.xlsx"), "建筑结构所角色表"),
+    ]
+    for source_path, packaged_path, description in source_pairs:
+        all_ok &= check_same_file(source_path, packaged_path, description)
+    executable_path = os.path.join(dist_dir, "接口筛选.exe")
+    freshness_sources = ["base.py"] + [item[0] for item in source_pairs]
+    if os.path.exists(executable_path):
+        newest_source = max(os.path.getmtime(path) for path in freshness_sources if os.path.exists(path))
+        if os.path.getmtime(executable_path) + 1 < newest_source:
+            print_error("主程序时间早于本次关键源码，疑似仍为旧构建")
+            all_ok = False
+        else:
+            print_ok("主程序时间不早于本次关键源码")
     print()
     
     # 检查依赖库

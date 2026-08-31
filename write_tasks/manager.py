@@ -172,6 +172,38 @@ class WriteTaskManager:
         }
         return self._submit("response", payload, user_name or "未知用户", description)
 
+    def submit_fu_completion_task(
+        self,
+        *,
+        file_path: str,
+        row_index: int,
+        interface_id: str,
+        user_name: str,
+        project_id: str,
+        completion_date: str,
+        role: Optional[str] = None,
+        data_folder: Optional[str] = None,
+        description: str,
+    ) -> WriteTask:
+        if not data_folder:
+            try:
+                from registry import hooks as registry_hooks
+                data_folder = registry_hooks.get_data_folder()
+            except Exception:
+                pass
+        payload = {
+            "file_path": file_path,
+            "file_type": 7,
+            "row_index": row_index,
+            "interface_id": interface_id,
+            "user_name": user_name,
+            "project_id": project_id,
+            "completion_date": completion_date,
+            "role": role,
+            "data_folder": data_folder,
+        }
+        return self._submit("fu_completion", payload, user_name or "未知用户", description)
+
     def _submit(self, task_type: str, payload: dict, submitted_by: str, description: str) -> WriteTask:
         task = WriteTask(
             task_id=str(uuid.uuid4()),

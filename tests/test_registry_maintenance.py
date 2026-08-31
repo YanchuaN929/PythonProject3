@@ -11,7 +11,6 @@ import pytest
 from registry import db as registry_db
 from registry import service as registry_service
 from registry.util import make_task_id, make_business_id
-from registry.write_queue import WriteQueue, WriteRequest, WriteOperation
 
 
 pytestmark = pytest.mark.allow_empty_name
@@ -118,31 +117,12 @@ def test_find_tasks_for_force_assign_closes_connection(tmp_path):
     assert registry_db._CONN is None
 
 
-def test_write_queue_blocks_in_maintenance(monkeypatch):
-    queue = WriteQueue(db_path="dummy.db", enabled=True)
-    callback_result = {}
+def test_registry_reports_direct_write_mode():
+    from registry import hooks
 
-    def callback(success, error_message):
-        callback_result["success"] = success
-        callback_result["error"] = error_message
-
-    request = WriteRequest(
-        WriteOperation.WRITE_EVENT,
-        {"db_path": "dummy.db"},
-        callback=callback,
-    )
-
-    def raise_maintenance(*_args, **_kwargs):
-        raise registry_db.MaintenanceModeError("maintenance")
-
-    def should_not_connect(*_args, **_kwargs):
-        raise AssertionError("should not connect during maintenance")
-
-    monkeypatch.setattr(registry_db, "ensure_not_in_maintenance", raise_maintenance)
-    monkeypatch.setattr(registry_db, "get_write_connection", should_not_connect)
-
-    queue._process_batch([request])
-
-    assert request.result is False
-    assert "maintenance" in (request.error or "")
-    assert callback_result.get("success") is False
+    assert hooks.get_write_queue_stats() == {
+        "enabled": False,
+        "mode": "direct",
+        "queue_size": 0,
+    }
+    assert hooks.flush_write_queue() is True

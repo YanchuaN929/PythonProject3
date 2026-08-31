@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import contextlib
+import io
 import sqlite3
 import threading
 
@@ -250,6 +252,46 @@ def test_write_response_to_excel_keeps_workbook_valid(tmp_path, monkeypatch):
         verify_wb.close()
 
 
+def test_write_response_to_excel_not_broken_by_gbk_stdout(tmp_path, monkeypatch):
+    from ui.input_handler import write_response_to_excel
+    from utils.excel_io import open_workbook_for_edit
+
+    file_path = tmp_path / "response_gbk.xlsx"
+
+    wb = Workbook()
+    ws = wb.active
+    ws["A1"] = "标题"
+    ws["L2"] = ""
+    ws["J2"] = ""
+    ws["N2"] = ""
+    wb.save(str(file_path))
+    wb.close()
+
+    monkeypatch.setattr("tkinter.messagebox.showerror", lambda *_args, **_kwargs: None)
+
+    gbk_stdout = io.TextIOWrapper(io.BytesIO(), encoding="gbk", errors="strict")
+    with contextlib.redirect_stdout(gbk_stdout):
+        ok = write_response_to_excel(
+            str(file_path),
+            file_type=6,
+            row_index=2,
+            response_number="HF-✓-001",
+            user_name="测试用户",
+            project_id="2026",
+            source_column=None,
+        )
+
+    assert ok is True
+
+    verify_wb = open_workbook_for_edit(str(file_path))
+    try:
+        verify_ws = verify_wb.active
+        assert verify_ws["L2"].value == "HF-✓-001"
+        assert verify_ws["N2"].value == "测试用户"
+    finally:
+        verify_wb.close()
+
+
 def test_save_assignments_batch_keeps_workbook_valid(tmp_path, monkeypatch):
     from services.distribution import save_assignments_batch
     from utils.excel_io import open_workbook_for_edit
@@ -259,6 +301,7 @@ def test_save_assignments_batch_keeps_workbook_valid(tmp_path, monkeypatch):
     wb = Workbook()
     ws = wb.active
     ws["A1"] = "标题"
+    ws["A2"] = "S-TEST-01"
     ws["R2"] = ""
     wb.save(str(file_path))
     wb.close()

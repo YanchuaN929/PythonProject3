@@ -8,16 +8,33 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import pandas as pd
+from utils.role_table import read_role_table
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import defaultdict
 import os
+import re
 import sys
 
 from write_tasks import get_write_task_manager, get_pending_cache
-from utils.excel_io import atomic_save_workbook, open_workbook_for_edit
+from utils.excel_io import (
+    ExcelWriteError,
+    SharedWorkbookLock,
+    atomic_save_workbook,
+    column_number_to_letter,
+    ensure_program_column,
+    find_header_column,
+    is_legacy_xls,
+    normalize_header_text,
+    open_workbook_for_edit,
+    read_legacy_xls_cell,
+    write_legacy_xls_cells,
+)
 
 try:
     from utils.dept_config import (
         get_director_roles,
         get_director_role_mapping,
+        get_projects,
         get_role_table_file,
     )
 except ImportError:
@@ -27,6 +44,8 @@ except ImportError:
         return {"一室主任": "结构一室", "二室主任": "结构二室", "建筑总图室主任": "建筑总图室"}
     def get_role_table_file():
         return "excel_bin/姓名角色表.xlsx"
+    def get_projects():
+        return ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"]
 from ui.ui_copy import copy_text, normalize_interface_id
 
 # 导入文件锁定检测函数
@@ -53,12 +72,12 @@ def get_resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-def get_responsible_column(file_type):
+def get_responsible_column(file_type, worksheet=None, file_path=None):
     """
     获取各文件类型的责任人列名
     
     参数:
-        file_type: 文件类型(1-6)
+        file_type: 文件类型(1-7)
     
     返回:
         str: Excel列名，如'R'、'AP'、'AM'等
@@ -69,8 +88,60 @@ def get_responsible_column(file_type):
         3: 'AP',  # 文件3责任人列（索引41）
         4: 'AH',  # 文件4责任人列（索引33）
         5: 'K',   # 文件5责任人列（索引10）
-        6: 'X',   # 文件6责任人列（索引23）
+        6: 'Y',   # 当前收发文清单；旧版通过表头自动兼容X列
+        7: 'F',   # 文件7责任人列
     }
+    file_type = int(file_type)
+    if file_type == 6:
+        if worksheet is not None:
+            column = find_header_column(worksheet, '主办人', max_columns=64)
+            if not column:
+                raise ExcelWriteError(
+                    'RESPONSIBLE_HEADER_MISSING',
+                    'RESOLVE_COLUMNS',
+                    '收发文清单缺少“主办人”表头，已拒绝指派以避免覆盖“主办室”。',
+                    retryable=False,
+                    committed=False,
+                )
+            return column
+        if file_path and is_legacy_xls(file_path):
+            for column in ('Y', 'X'):
+                if str(read_legacy_xls_cell(file_path, f'{column}1') or '').strip() == '主办人':
+                    return column
+            raise ExcelWriteError(
+                'RESPONSIBLE_HEADER_MISSING',
+                'RESOLVE_COLUMNS',
+                '收发文清单缺少“主办人”表头，已拒绝指派。',
+                retryable=False,
+                committed=False,
+            )
+    if file_type == 2:
+        if worksheet is not None:
+            return ensure_program_column(worksheet, 'AM', '程序主办人')
+        if file_path and is_legacy_xls(file_path):
+            import xlrd
+
+            book = xlrd.open_workbook(file_path, on_demand=True)
+            try:
+                sheet = book.sheet_by_index(0)
+                for zero_index in range(sheet.ncols):
+                    if normalize_header_text(sheet.cell_value(0, zero_index)) == normalize_header_text('程序主办人'):
+                        return column_number_to_letter(zero_index + 1)
+                preferred_header = sheet.cell_value(0, 38) if sheet.ncols > 38 else ''
+                if not normalize_header_text(preferred_header):
+                    return 'AM'
+                target_number = max(sheet.ncols + 1, 40)
+                if target_number > 256:
+                    raise ExcelWriteError(
+                        'PROGRAM_COLUMN_CONFLICT',
+                        'RESOLVE_COLUMNS',
+                        '旧版xls已达到最大列数，无法建立“程序主办人”专用列。',
+                        retryable=False,
+                        committed=False,
+                    )
+                return column_number_to_letter(target_number)
+            finally:
+                book.release_resources()
     return column_map.get(file_type)
 
 
@@ -87,13 +158,13 @@ def get_name_list():
             print(f"姓名角色表不存在: {xls_path}")
             return []
         
-        df = pd.read_excel(xls_path)
+        df = read_role_table(xls_path)
         
         # 第一列为姓名
         if len(df.columns) == 0:
             return []
         
-        names = df.iloc[:, 0].dropna().astype(str).tolist()
+        names = df["姓名"].dropna().astype(str).tolist()
         
         # 过滤空值和'nan'
         names = [name.strip() for name in names if name.strip() and name.strip().lower() != 'nan']
@@ -171,6 +242,21 @@ def get_department(user_roles):
     return ""
 
 
+def parse_interface_engineer_projects(user_roles):
+    """从接口工程师角色中提取全部项目号，并按角色顺序去重。"""
+    import re
+
+    projects = []
+    for role in user_roles or []:
+        role_text = str(role)
+        if '接口工程师' not in role_text:
+            continue
+        for project_id in re.findall(r'(\d{4})', role_text):
+            if project_id not in projects:
+                projects.append(project_id)
+    return projects
+
+
 def parse_interface_engineer_project(user_roles):
     """
     从接口工程师角色中提取项目号
@@ -181,16 +267,21 @@ def parse_interface_engineer_project(user_roles):
     返回:
         str: 项目号，如"2016"
     """
-    import re
-    
-    for role in user_roles:
-        if '接口工程师' in str(role):
-            # 提取项目号（4位数字）
-            match = re.search(r'(\d{4})', role)
-            if match:
-                return match.group(1)
-    
-    return None
+    projects = parse_interface_engineer_projects(user_roles)
+    return projects[0] if projects else None
+
+
+def get_assignment_project_choices():
+    """Return configured project ids for assignment-related UI controls."""
+    try:
+        projects = []
+        for project_id in get_projects() or []:
+            project_id = str(project_id).strip()
+            if project_id and project_id not in projects:
+                projects.append(project_id)
+        return projects
+    except Exception:
+        return []
 
 
 def get_interface_id_column_index(file_type):
@@ -198,7 +289,7 @@ def get_interface_id_column_index(file_type):
     获取各文件类型的接口号列索引（参考window.py的interface_column_index逻辑）
     
     参数:
-        file_type: 文件类型(1-6)
+        file_type: 文件类型(1-7)
     
     返回:
         int: DataFrame列索引
@@ -210,6 +301,7 @@ def get_interface_id_column_index(file_type):
         4: 4,   # 文件4接口号列 - E列 = 索引4
         5: 0,   # 文件5接口号列 - A列 = 索引0
         6: 4,   # 文件6接口号列 - E列 = 索引4
+        7: 1,   # 文件7内部编码列 - B列 = 索引1
     }
     return column_map.get(file_type, 0)
 
@@ -219,9 +311,9 @@ def check_unassigned(processed_results, user_roles, project_id=None, config=None
     检测所有处理结果中没有责任人的数据
     
     参数:
-        processed_results: 6个文件的处理结果字典 {file_type: DataFrame}
+        processed_results: 各文件类型的处理结果字典 {file_type: DataFrame}
         user_roles: 当前用户角色列表
-        project_id: 项目号（接口工程师需要）
+        project_id: 项目号或项目号集合（接口工程师需要；保留单值兼容）
         config: 配置字典（用于自动过滤超期任务）
     
     返回:
@@ -260,9 +352,21 @@ def check_unassigned(processed_results, user_roles, project_id=None, config=None
         
         # 角色权限过滤
         if is_interface_engineer(user_roles):
-            # 接口工程师：只看自己负责的项目
-            if project_id and '项目号' in df_unassigned.columns:
-                df_unassigned = df_unassigned[df_unassigned['项目号'].astype(str) == str(project_id)]
+            # 接口工程师：查看自己负责的全部项目；兼容旧调用传入单个项目号。
+            if isinstance(project_id, (list, tuple, set, frozenset)):
+                project_ids = {
+                    str(item).strip() for item in project_id
+                    if str(item).strip()
+                }
+            elif project_id is None:
+                project_ids = set()
+            else:
+                normalized_project = str(project_id).strip()
+                project_ids = {normalized_project} if normalized_project else set()
+
+            if project_ids and '项目号' in df_unassigned.columns:
+                project_values = df_unassigned['项目号'].astype(str).str.strip()
+                df_unassigned = df_unassigned[project_values.isin(project_ids)]
         
         elif is_director(user_roles):
             # 室主任：只看自己科室的数据 + "请室主任确认"
@@ -285,6 +389,8 @@ def check_unassigned(processed_results, user_roles, project_id=None, config=None
                         interface_id = ''
                 except Exception as e:
                     print(f"从'接口号'列获取失败: {e}")
+            elif '内部编码' in df_unassigned.columns:
+                interface_id = row.get('内部编码', '')
             
             # 备用方案：使用列索引（用于真实的Excel数据，列名是数字索引）
             if not interface_id or interface_id == '':
@@ -304,7 +410,7 @@ def check_unassigned(processed_results, user_roles, project_id=None, config=None
                 'interface_id': str(interface_id) if interface_id and not pd.isna(interface_id) else '',
                 'file_path': file_path,
                 'row_index': row.get('原始行号', 0),
-                'interface_time': row.get('接口时间', ''),
+                'interface_time': row.get('接口时间', row.get('FU计划', '')),
                 'department': row.get('科室', '')
             }
             
@@ -332,6 +438,221 @@ def check_unassigned(processed_results, user_roles, project_id=None, config=None
                 unassigned.append(task)
     
     return unassigned
+
+
+ASSIGNMENT_INTERFACE_COLUMN_MAP = {
+    1: 'A',
+    2: 'R',
+    3: 'C',
+    4: 'E',
+    5: 'A',
+    6: 'E',
+    7: 'B',
+}
+
+
+def _normalize_assignment_interface(value):
+    text = normalize_interface_id(value)
+    return re.sub(r'\s+', '', str(text or '')).upper()
+
+
+def _resolve_xlsx_assignment_row(worksheet, assignment):
+    requested_row = int(assignment.get('row_index', 0) or 0)
+    file_type = int(assignment.get('file_type', 0) or 0)
+    interface_id = assignment.get('interface_id')
+    if file_type == 7:
+        from ui.input_handler import _resolve_xlsx_fu_row
+
+        return _resolve_xlsx_fu_row(worksheet, requested_row, interface_id)
+
+    expected = _normalize_assignment_interface(interface_id)
+    if not expected:
+        return requested_row
+    interface_column = ASSIGNMENT_INTERFACE_COLUMN_MAP.get(file_type)
+    if not interface_column:
+        raise ExcelWriteError(
+            'INTERFACE_COLUMN_UNKNOWN',
+            'VALIDATE_ROW',
+            f'无法确定文件类型{file_type}的接口号列。',
+            retryable=False,
+            committed=False,
+        )
+    if requested_row >= 2:
+        current = _normalize_assignment_interface(
+            worksheet[f'{interface_column}{requested_row}'].value
+        )
+        if current == expected:
+            return requested_row
+
+    column_number = 0
+    for char in interface_column:
+        column_number = column_number * 26 + ord(char) - ord('A') + 1
+    populated_rows = None
+    try:
+        populated_rows = sorted({
+            int(row)
+            for (row, column), cell in worksheet._cells.items()
+            if int(row) >= 2 and int(column) == column_number and cell.value not in (None, '')
+        })
+    except Exception:
+        populated_rows = None
+    candidate_rows = populated_rows
+    if candidate_rows is None:
+        candidate_rows = range(2, max(2, int(worksheet.max_row or 2)) + 1)
+    matches = [
+        row
+        for row in candidate_rows
+        if _normalize_assignment_interface(worksheet[f'{interface_column}{row}'].value) == expected
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        raise ExcelWriteError(
+            'ROW_NOT_FOUND',
+            'VALIDATE_ROW',
+            f'原行号{requested_row}已变化，且找不到接口号：{interface_id}',
+            retryable=False,
+            committed=False,
+        )
+    raise ExcelWriteError(
+        'ROW_AMBIGUOUS',
+        'VALIDATE_ROW',
+        f'接口号“{interface_id}”存在{len(matches)}条匹配，已拒绝自动指派。',
+        retryable=False,
+        committed=False,
+    )
+
+
+def _resolve_xls_assignment_row(file_path, assignment):
+    file_type = int(assignment.get('file_type', 0) or 0)
+    if file_type == 7:
+        from ui.input_handler import _resolve_xls_fu_row
+
+        return _resolve_xls_fu_row(
+            file_path,
+            assignment.get('row_index', 0),
+            assignment.get('interface_id'),
+        )
+    from ui.input_handler import _resolve_xls_response_row
+
+    return _resolve_xls_response_row(
+        file_path,
+        file_type,
+        assignment.get('row_index', 0),
+        assignment.get('interface_id'),
+    )
+
+
+def _write_assignment_group(file_path, file_assignments):
+    """在一个源文件锁内完成重定位、批量写入和一次保存。"""
+    failed = []
+    written = []
+    if not os.path.exists(file_path):
+        return written, [
+            {'interface_id': item.get('interface_id', '未知'), 'reason': '文件不存在'}
+            for item in file_assignments
+        ]
+
+    workbook = None
+    try:
+        with SharedWorkbookLock(file_path):
+            try:
+                with open(file_path, 'r+b'):
+                    pass
+            except PermissionError as exc:
+                lock_owner = get_excel_lock_owner(file_path) if get_excel_lock_owner else ''
+                owner_text = f'，占用者可能为{lock_owner}' if lock_owner else ''
+                raise ExcelWriteError(
+                    'FILE_LOCKED',
+                    'PRECHECK',
+                    f'文件被Excel或其他程序占用{owner_text}：{exc}',
+                    retryable=True,
+                    committed=False,
+                ) from exc
+
+            legacy_file = is_legacy_xls(file_path)
+            legacy_updates = []
+            if legacy_file:
+                worksheet = None
+            else:
+                workbook = open_workbook_for_edit(file_path)
+                worksheet = workbook.active
+
+            column_cache = {}
+            for original in file_assignments:
+                assignment = dict(original)
+                try:
+                    file_type = int(assignment['file_type'])
+                    if legacy_file:
+                        resolved_row = _resolve_xls_assignment_row(file_path, assignment)
+                    else:
+                        resolved_row = _resolve_xlsx_assignment_row(worksheet, assignment)
+                    assignment['row_index'] = int(resolved_row)
+
+                    if file_type not in column_cache:
+                        column_cache[file_type] = get_responsible_column(
+                            file_type,
+                            worksheet=worksheet,
+                            file_path=file_path,
+                        )
+                    column = column_cache[file_type]
+                    if not column:
+                        raise ExcelWriteError(
+                            'RESPONSIBLE_COLUMN_UNKNOWN',
+                            'RESOLVE_COLUMNS',
+                            f'无法确定文件类型{file_type}的责任人列。',
+                            retryable=False,
+                            committed=False,
+                        )
+
+                    if legacy_file:
+                        if file_type == 2:
+                            header_cell = f'{column}1'
+                            current_header = read_legacy_xls_cell(file_path, header_cell)
+                            if current_header in (None, ''):
+                                legacy_updates.append({'cell': header_cell, 'value': '程序主办人'})
+                            elif normalize_header_text(current_header) != normalize_header_text('程序主办人'):
+                                raise ExcelWriteError(
+                                    'PROGRAM_COLUMN_CONFLICT',
+                                    'RESOLVE_COLUMNS',
+                                    f'{header_cell}已有业务表头“{current_header}”，未执行指派。',
+                                    retryable=False,
+                                    committed=False,
+                                )
+                        legacy_updates.append({
+                            'cell': f'{column}{resolved_row}',
+                            'value': assignment['assigned_name'],
+                        })
+                    else:
+                        worksheet[f'{column}{resolved_row}'] = assignment['assigned_name']
+                    written.append(assignment)
+                except Exception as exc:
+                    failed.append({
+                        'interface_id': assignment.get('interface_id', '未知'),
+                        'reason': str(exc),
+                    })
+
+            if legacy_updates and written:
+                write_legacy_xls_cells(file_path, legacy_updates)
+            elif workbook is not None and written:
+                atomic_save_workbook(workbook, file_path)
+    except Exception as exc:
+        print(f'[指派] 文件处理失败: {file_path}, 错误: {exc}')
+        failed_ids = {item.get('interface_id') for item in failed}
+        for item in file_assignments:
+            if item.get('interface_id') not in failed_ids:
+                failed.append({
+                    'interface_id': item.get('interface_id', '未知'),
+                    'reason': str(exc),
+                })
+        written = []
+    finally:
+        if workbook is not None:
+            try:
+                workbook.close()
+            except Exception:
+                pass
+    return written, failed
 
 
 def save_assignment(file_type, file_path, row_index, assigned_name):
@@ -383,9 +704,6 @@ def save_assignments_batch(assignments):
             'registry_updates': int  # Registry更新数量
         }
     """
-    import pandas as pd
-    from collections import defaultdict
-    
     # 按文件路径分组
     file_groups = defaultdict(list)
     for assignment in assignments:
@@ -396,137 +714,61 @@ def save_assignments_batch(assignments):
     failed_tasks = []
     registry_updates = 0
     
-    # 按文件批量处理
-    for file_path, file_assignments in file_groups.items():
-        try:
-            # 1. 检查文件是否存在
-            if not os.path.exists(file_path):
-                print(f"[指派] 文件不存在: {file_path}")
-                for assignment in file_assignments:
-                    failed_tasks.append({
-                        'interface_id': assignment.get('interface_id', '未知'),
-                        'reason': '文件不存在'
-                    })
-                continue
-            
-            # 2. 文件锁定检测
+    # 不同源文件最多4路并行；同一文件在工作簿锁内一次保存。
+    successful_assignments = []
+    max_workers = min(4, max(1, len(file_groups)))
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix='AssignmentExcel') as pool:
+        futures = {
+            pool.submit(_write_assignment_group, file_path, file_assignments): file_path
+            for file_path, file_assignments in file_groups.items()
+        }
+        for future in as_completed(futures):
+            file_path = futures[future]
             try:
-                with open(file_path, 'r+b'):
-                    pass
-            except PermissionError:
-                # 尝试获取占用者信息
-                lock_owner = ""
-                if get_excel_lock_owner:
-                    lock_owner = get_excel_lock_owner(file_path)
-                
-                if lock_owner:
-                    print(f"[指派] 文件被占用: {file_path} (占用者: {lock_owner})")
-                    reason = f'文件被 {lock_owner} 占用'
-                else:
-                    print(f"[指派] 文件被占用: {file_path}")
-                    reason = '文件被占用'
-                
-                for assignment in file_assignments:
-                    failed_tasks.append({
-                        'interface_id': assignment.get('interface_id', '未知'),
-                        'reason': reason
-                    })
-                continue
-            
-            wb = None
+                written_assignments, group_failures = future.result()
+            except Exception as exc:
+                written_assignments = []
+                group_failures = [
+                    {'interface_id': item.get('interface_id', '未知'), 'reason': str(exc)}
+                    for item in file_groups[file_path]
+                ]
+            successful_assignments.extend(written_assignments)
+            failed_tasks.extend(group_failures)
+
+    success_count = len(successful_assignments)
+
+    # Excel全部落盘后再顺序同步Registry，避免数据库写锁与Excel并行写互相放大。
+    try:
+        from registry import hooks as registry_hooks
+
+        for assignment in successful_assignments:
             try:
-                # 3. 打开Excel文件（只打开一次）
-                wb = open_workbook_for_edit(file_path)
-                ws = wb.active
-
-                # 4. 批量写入责任人
-                for assignment in file_assignments:
-                    try:
-                        file_type = assignment['file_type']
-                        row_index = assignment['row_index']
-                        assigned_name = assignment['assigned_name']
-
-                        # 获取责任人列名
-                        col_name = get_responsible_column(file_type)
-                        if not col_name:
-                            print(f"[指派] 无法确定责任人列: file_type={file_type}")
-                            failed_tasks.append({
-                                'interface_id': assignment.get('interface_id', '未知'),
-                                'reason': '无法确定责任人列'
-                            })
-                            continue
-
-                        # 写入责任人
-                        ws[f"{col_name}{row_index}"] = assigned_name
-                        success_count += 1
-
-                    except Exception as e:
-                        print(f"[指派] 单个任务失败: {e}")
-                        failed_tasks.append({
-                            'interface_id': assignment.get('interface_id', '未知'),
-                            'reason': str(e)
-                        })
-
-                # 5. 保存Excel（只保存一次）
-                atomic_save_workbook(wb, file_path)
-            finally:
-                if wb is not None:
-                    try:
-                        wb.close()
-                    except Exception:
-                        pass
-            
-            # 6. 批量调用Registry钩子：只使用界面传入的精确 payload，避免为了兜底再全表读取Excel。
-            try:
-                from registry import hooks as registry_hooks
-
-                for assignment in file_assignments:
-                    try:
-                        row_index = assignment['row_index']
-
-                        interface_id = str(assignment.get("interface_id", "") or "").strip()
-                        project_id = str(assignment.get("project_id", "") or "").strip()
-
-                        if interface_id and project_id:
-                            assigned_by = assignment.get('assigned_by', '系统用户')
-                            registry_hooks.on_assigned(
-                                file_type=assignment['file_type'],
-                                file_path=file_path,
-                                row_index=row_index,
-                                interface_id=interface_id,
-                                project_id=project_id,
-                                assigned_by=assigned_by,
-                                assigned_to=assignment['assigned_name']
-                            )
-                            registry_updates += 1
-                    except Exception as e:
-                        print(f"[Registry] 单个任务钩子失败: {e}")
-
-                if registry_updates > 0:
-                    log_info(f"Registry: 已更新 {registry_updates} 个任务状态")
-            except Exception as e:
-                print(f"[Registry] 批量钩子失败: {e}")
-            
-        except Exception as e:
-            print(f"[指派] 文件处理失败: {file_path}, 错误: {e}")
-            import traceback
-            traceback.print_exc()
-            for assignment in file_assignments:
-                failed_tasks.append({
-                    'interface_id': assignment.get('interface_id', '未知'),
-                    'reason': str(e)
-                })
+                interface_id = str(assignment.get('interface_id', '') or '').strip()
+                project_id = str(assignment.get('project_id', '') or '').strip()
+                if not interface_id or not project_id:
+                    continue
+                result = registry_hooks.on_assigned(
+                    file_type=assignment['file_type'],
+                    file_path=assignment['file_path'],
+                    row_index=assignment['row_index'],
+                    interface_id=interface_id,
+                    project_id=project_id,
+                    assigned_by=assignment.get('assigned_by', '系统用户'),
+                    assigned_to=assignment['assigned_name'],
+                )
+                if result is not False:
+                    registry_updates += 1
+            except Exception as exc:
+                print(f'[Registry] 单个任务钩子失败: {exc}')
+        if registry_updates > 0:
+            log_info(f'Registry: 已更新 {registry_updates} 个任务状态')
+    except Exception as exc:
+        print(f'[Registry] 批量钩子失败: {exc}')
 
     # 【新增】保存指派记忆（只记录成功的指派）
     if success_count > 0:
         try:
             from services.assignment_memory import batch_save_memories
-            # 过滤出成功的指派（不在failed_tasks中的）
-            failed_interface_ids = {t.get('interface_id') for t in failed_tasks}
-            successful_assignments = [
-                a for a in assignments
-                if a.get('interface_id') not in failed_interface_ids
-            ]
             batch_save_memories(successful_assignments)
         except Exception:
             pass
@@ -676,7 +918,8 @@ class AssignmentDialog(tk.Toplevel):
             3: "外部需打开",
             4: "外部需回复",
             5: "三维提资",
-            6: "收发文函"
+            6: "收发文函",
+            7: "FU"
         }
         
         # 为每个未指派任务创建一行
@@ -922,7 +1165,8 @@ class ForceAssignDialog(tk.Toplevel):
         3: "外部需打开",
         4: "外部需回复",
         5: "三维提资",
-        6: "收发文函"
+        6: "收发文函",
+        7: "FU"
     }
 
     def __init__(self, parent, name_list, user_name, user_roles):
@@ -980,8 +1224,17 @@ class ForceAssignDialog(tk.Toplevel):
         # 项目号
         ttk.Label(form_frame, text="项目号：").grid(row=1, column=0, sticky='e', pady=8)
         self.project_id_var = tk.StringVar()
-        project_entry = ttk.Entry(form_frame, textvariable=self.project_id_var, width=28)
-        project_entry.grid(row=1, column=1, sticky='w', pady=8, padx=5)
+        project_values = get_assignment_project_choices()
+        project_combo = ttk.Combobox(
+            form_frame,
+            textvariable=self.project_id_var,
+            values=project_values,
+            width=25,
+        )
+        project_combo.grid(row=1, column=1, sticky='w', pady=8, padx=5)
+        default_project = parse_interface_engineer_project(self.user_roles) or ""
+        if default_project:
+            self.project_id_var.set(default_project)
 
         # 接口号
         ttk.Label(form_frame, text="接口号：").grid(row=2, column=0, sticky='e', pady=8)
@@ -1210,6 +1463,7 @@ class ForceAssignDialog(tk.Toplevel):
             4: ['待处理文件4', '外部需回复'],
             5: ['待处理文件5', '三维提资'],
             6: ['待处理文件6', '收发文函'],
+            7: ['待处理文件7', 'FU', '项目标准表格'],
         }
 
         # 尝试在对应的子文件夹中查找
@@ -1255,7 +1509,7 @@ def show_assignment_dialog(parent, unassigned_tasks, name_list):
 if __name__ == "__main__":
     # 测试get_responsible_column
     print("测试get_responsible_column:")
-    for i in range(1, 7):
+    for i in range(1, 8):
         col = get_responsible_column(i)
         print(f"  文件{i}: {col}")
     

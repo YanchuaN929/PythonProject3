@@ -33,6 +33,7 @@ def write_export_summary(
     results_multi5: Optional[Dict[str, Any]] = None,
     results_multi6: Optional[Dict[str, Any]] = None,
     simple_export_mode: bool = False,
+    results_multi7: Optional[Dict[str, Any]] = None,
 ) -> str:
     """依据导出的批量处理结果，生成结果汇总TXT文件。
 
@@ -45,6 +46,7 @@ def write_export_summary(
     results_multi4 = results_multi4 or {}
     results_multi5 = results_multi5 or {}
     results_multi6 = results_multi6 or {}
+    results_multi7 = results_multi7 or {}
 
     # 参与的项目号（四类结果字典的并集）
     project_ids = set()
@@ -54,6 +56,7 @@ def write_export_summary(
     project_ids.update(results_multi4.keys())
     project_ids.update(results_multi5.keys())
     project_ids.update(results_multi6.keys())
+    project_ids.update(results_multi7.keys())
 
     date_str = _format_date_for_filename(current_datetime)
     filename = f"结果汇总{date_str}.txt"
@@ -66,6 +69,7 @@ def write_export_summary(
     total_4 = sum(len(df) for df in results_multi4.values())
     total_5 = sum(len(df) for df in results_multi5.values())
     total_6 = sum(len(df) for df in results_multi6.values())
+    total_7 = sum(len(df) for df in results_multi7.values())
 
     lines = []
     lines.append(f"结果汇总 - {date_str}")
@@ -87,9 +91,10 @@ def write_export_summary(
         c4 = len(results_multi4.get(pid, []))
         c5 = len(results_multi5.get(pid, []))
         c6 = len(results_multi6.get(pid, []))
-        total = c1 + c2 + c3 + c4 + c5 + c6
+        c7 = len(results_multi7.get(pid, []))
+        total = c1 + c2 + c3 + c4 + c5 + c6 + c7
         lines.append(
-            f"项目 {_pid_display(pid)}：内部需打开接口={c1}，内部需回复接口={c2}，外部需打开接口={c3}，外部需回复接口={c4}，三维提资接口={c5}，收发文函={c6}，合计={total}"
+            f"项目 {_pid_display(pid)}：内部需打开接口={c1}，内部需回复接口={c2}，外部需打开接口={c3}，外部需回复接口={c4}，三维提资接口={c5}，收发文函={c6}，FU={c7}，合计={total}"
         )
 
     lines.append("")
@@ -100,6 +105,7 @@ def write_export_summary(
     lines.append(f"外部需回复接口合计={total_4}")
     lines.append(f"三维提资接口合计={total_5}")
     lines.append(f"收发文函合计={total_6}")
+    lines.append(f"FU合计={total_7}")
 
     # 追加：按文件类别 -> 科室 -> 项目号 的层级明细
     lines.append("")
@@ -120,6 +126,7 @@ def write_export_summary(
         ("外部需回复接口", results_multi4),
         ("三维提资接口", results_multi5),
         ("收发文函", results_multi6),
+        ("FU", results_multi7),
     ]
 
     # 当前日期用于时间提醒
@@ -150,7 +157,8 @@ def write_export_summary(
         "外部需打开接口": "C",
         "外部需回复接口": "E",
         "三维提资接口": "A",  # 三维提资接口使用A列
-        "收发文函": "E"
+        "收发文函": "E",
+        "FU": "B",
     }
     
     for category_name, category_results in file_categories:
@@ -173,6 +181,11 @@ def write_export_summary(
                     time_series = [
                         (str(v).strip() if v is not None and str(v).strip() else "未知")
                         for v in df["接口时间"].tolist()
+                    ]
+                elif "FU计划" in getattr(df, 'columns', []):
+                    time_series = [
+                        (str(v).strip() if v is not None and str(v).strip() else "未知")
+                        for v in df["FU计划"].tolist()
                     ]
                 else:
                     time_series = ["未知"] * len(df)
@@ -253,7 +266,10 @@ def write_export_summary(
                 for pid in sorted(cat_entry.keys()):
                     lines.append(f"    {_pid_display(pid)}项目：")
                     time_data = cat_entry[pid]
-                    action_word = "需打开" if category_name in ("内部需打开接口", "外部需打开接口", "三维提资接口") else "需回复"
+                    if category_name == "FU":
+                        action_word = "需完成FU"
+                    else:
+                        action_word = "需打开" if category_name in ("内部需打开接口", "外部需打开接口", "三维提资接口") else "需回复"
                     # 按时间排序逐条输出：mm.dd + 动词 + 数量 + 时间提醒 + 接口号列表
                     for t in sorted(time_data.keys(), key=_sort_key):
                         entry = time_data[t]

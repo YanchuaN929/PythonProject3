@@ -27,6 +27,7 @@ _TASK_TARGET_COLUMNS = [
     "project_id",
     "interface_id",
     "source_file",
+    "source_revision",
     "row_index",
     "business_id",
     "department",

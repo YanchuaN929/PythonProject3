@@ -24,6 +24,14 @@ import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 from openpyxl import load_workbook
 from typing import List, Dict, Any, Optional, Tuple
+from utils.role_table import read_role_table
+from services.account_service import (
+    AccountError,
+    AuthenticationError,
+    change_password as change_account_password,
+    list_accounts,
+    verify_password as verify_account_password,
+)
 
 # 导入窗口管理器
 from ui.window import WindowManager
@@ -50,7 +58,7 @@ except ImportError:
     def get_director_roles():
         return ["一室主任", "二室主任", "建筑总图室主任"]
     def get_projects():
-        return ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"]
+        return ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"]
     def get_role_table_file():
         return "excel_bin/姓名角色表.xlsx"
     def get_time_window_roles():
@@ -67,6 +75,21 @@ FORCED_DEFAULT_FOLDER = get_default_folder_path()
 DEV_OVERRIDE_PASSWORD = "0929"
 
 _CRASH_LOG_FH = None
+
+
+def _registry_snapshot_is_hidden(snapshot):
+    """Return True only when Registry explicitly marks a task as terminal/ignored."""
+    if not snapshot:
+        return False
+    ignored = str(snapshot.get("ignored", "") or "").strip().lower()
+    status = str(snapshot.get("status", "") or "").strip().lower()
+    display_status = str(snapshot.get("display_status", "") or "").strip()
+    return (
+        ignored in {"1", "true", "yes"}
+        or status in {"confirmed", "archived"}
+        or bool(snapshot.get("confirmed_at"))
+        or display_status == "已审查"
+    )
 
 
 def _init_crash_logging():
@@ -444,13 +467,14 @@ class ExcelProcessorApp:
         for pid in get_projects():
             self.project_vars[pid] = tk.BooleanVar(master=self.root, value=True)
         
-        # 六个勾选框变量（指定root作为master）
+        # 业务文件勾选框变量（指定root作为master）
         self.process_file1_var = tk.BooleanVar(master=self.root, value=True)
         self.process_file2_var = tk.BooleanVar(master=self.root, value=True)
         self.process_file3_var = tk.BooleanVar(master=self.root, value=True)
         self.process_file4_var = tk.BooleanVar(master=self.root, value=True)
         self.process_file5_var = tk.BooleanVar(master=self.root, value=True)
         self.process_file6_var = tk.BooleanVar(master=self.root, value=True)
+        self.process_file7_var = tk.BooleanVar(master=self.root, value=True)
         
         # 初始化设置相关变量（必须在WindowManager之前）
         self.auto_startup_var = tk.BooleanVar(master=self.root, value=self.config.get("auto_startup", True))
@@ -469,6 +493,7 @@ class ExcelProcessorApp:
             'tab4': self.process_file4_var,
             'tab5': self.process_file5_var,
             'tab6': self.process_file6_var,
+            'tab7': self.process_file7_var,
         }
         
         callbacks = {
@@ -480,7 +505,7 @@ class ExcelProcessorApp:
             'on_open_folder': self.open_selected_folder,
             'on_open_monitor': self.open_monitor,
             'on_settings_menu': self.show_settings_menu,
-            'on_tab_changed': lambda: self.on_tab_changed(None),  # 包装函数，传递None作为event
+            'on_tab_changed': lambda: self.on_tab_changed("user_tab_switch"),
             'on_assignment_click': self._on_assignment_button_click,  # 【新增】指派任务回调
             'on_history_query_click': self._on_history_query_button_click,  # 【新增】历史查询回调
             'on_ignore_overdue_click': self._on_ignore_overdue_button_click,  # 【新增】忽略延期项回调
@@ -517,6 +542,7 @@ class ExcelProcessorApp:
         self.tab4_viewer = self.window_manager.viewers['tab4']
         self.tab5_viewer = self.window_manager.viewers['tab5']
         self.tab6_viewer = self.window_manager.viewers['tab6']
+        self.tab7_viewer = self.window_manager.viewers['tab7']
 
         # 数据库状态指示器引用（确保属性存在，避免刷新收尾因 AttributeError 中断）
         self.db_status = getattr(self.window_manager, 'db_status', None)
@@ -593,6 +619,7 @@ class ExcelProcessorApp:
         self.target_files4 = []  # 待处理文件4列表
         self.target_files5 = []  # 待处理文件5列表
         self.target_files6 = []  # 待处理文件6列表
+        self.target_files7 = []  # FU文件列表
         
         # 文件数据存储（单文件兼容性保留）
         self.file1_data = None
@@ -601,6 +628,7 @@ class ExcelProcessorApp:
         self.file4_data = None
         self.file5_data = None
         self.file6_data = None
+        self.file7_data = None
         
         # 多文件数据存储：{项目号: DataFrame, ...}
         self.files1_data = {}  # 待处理文件1的数据字典
@@ -609,6 +637,7 @@ class ExcelProcessorApp:
         self.files4_data = {}  # 待处理文件4的数据字典
         self.files5_data = {}  # 待处理文件5的数据字典
         self.files6_data = {}  # 待处理文件6的数据字典
+        self.files7_data = {}  # FU文件的数据字典
         
         # 处理结果（单文件兼容性保留）
         self.processing_results = None
@@ -617,6 +646,8 @@ class ExcelProcessorApp:
         self.processing_results4 = None
         self.processing_results5 = None
         self.processing_results6 = None
+        self.processing_results7 = None
+        self._tab_render_signatures = {}
         
         # 多文件处理结果：{项目号: DataFrame, ...}
         self.processing_results_multi1 = {}  # 待处理文件1的处理结果字典
@@ -625,6 +656,7 @@ class ExcelProcessorApp:
         self.processing_results_multi4 = {}  # 待处理文件4的处理结果字典
         self.processing_results_multi5 = {}  # 待处理文件5的处理结果字典
         self.processing_results_multi6 = {}  # 待处理文件6的处理结果字典
+        self.processing_results_multi7 = {}  # FU处理结果字典
 
         # ============================================================
         # 性能优化 Step2：刷新阶段已加载缓存 -> 开始处理阶段复用内存缓存（避免重复读 .pkl）
@@ -636,6 +668,7 @@ class ExcelProcessorApp:
         self._cache_loaded_raw_multi4 = {}
         self._cache_loaded_raw_multi5 = {}
         self._cache_loaded_raw_multi6 = {}
+        self._cache_loaded_raw_multi7 = {}
         
         # 处理结果状态标记 - 用于判断是否显示处理后的结果
         self.has_processed_results1 = False
@@ -644,6 +677,7 @@ class ExcelProcessorApp:
         self.has_processed_results4 = False
         self.has_processed_results5 = False
         self.has_processed_results6 = False
+        self.has_processed_results7 = False
         # 监控器
         self.monitor = None
         
@@ -1545,6 +1579,13 @@ class ExcelProcessorApp:
         self.tab6_frame.rowconfigure(1, weight=1)
         self.tab6_check = ttk.Checkbutton(self.tab6_frame, text="处理收发文函", variable=self.process_file6_var)
         self.tab6_check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
+        # 选项卡7：FU
+        self.tab7_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab7_frame, text="FU")
+        self.tab7_frame.columnconfigure(0, weight=1)
+        self.tab7_frame.rowconfigure(1, weight=1)
+        self.tab7_check = ttk.Checkbutton(self.tab7_frame, text="处理FU", variable=self.process_file7_var)
+        self.tab7_check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
         # 为每个选项卡创建Excel预览控件
         self.create_excel_viewer(self.tab1_frame, "tab1")
         self.create_excel_viewer(self.tab2_frame, "tab2")
@@ -1552,6 +1593,7 @@ class ExcelProcessorApp:
         self.create_excel_viewer(self.tab4_frame, "tab4")
         self.create_excel_viewer(self.tab5_frame, "tab5")
         self.create_excel_viewer(self.tab6_frame, "tab6")
+        self.create_excel_viewer(self.tab7_frame, "tab7")
         # 绑定选项卡切换事件
         self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
         # 存储选项卡引用以便后续修改状态
@@ -1561,7 +1603,8 @@ class ExcelProcessorApp:
             'tab3': 2,  # 外部需打开接口
             'tab4': 3,  # 外部需回复接口
             'tab5': 4,  # 三维提资接口
-            'tab6': 5   # 收发文函
+            'tab6': 5,  # 收发文函
+            'tab7': 6   # FU
         }
 
     def create_excel_viewer(self, parent, tab_id):
@@ -1594,6 +1637,40 @@ class ExcelProcessorApp:
         if getattr(self, "_suppress_tab_change_render", False):
             return
         selected_tab = self.notebook.index(self.notebook.select())
+
+        result_attrs = (
+            "processing_results",
+            "processing_results2",
+            "processing_results3",
+            "processing_results4",
+            "processing_results5",
+            "processing_results6",
+            "processing_results7",
+        )
+        viewer_attrs = (
+            "tab1_viewer",
+            "tab2_viewer",
+            "tab3_viewer",
+            "tab4_viewer",
+            "tab5_viewer",
+            "tab6_viewer",
+            "tab7_viewer",
+        )
+        result_df = getattr(self, result_attrs[selected_tab], None)
+        render_signature = (
+            id(result_df),
+            len(result_df) if isinstance(result_df, pd.DataFrame) else -1,
+            tuple(getattr(self, "user_roles", []) or []),
+        )
+        render_signatures = getattr(self, "_tab_render_signatures", {})
+        selected_viewer = getattr(self, viewer_attrs[selected_tab], None)
+        if (
+            event == "user_tab_switch"
+            and render_signatures.get(selected_tab) == render_signature
+            and selected_viewer is not None
+            and selected_viewer.get_children()
+        ):
+            return
         
         # 根据选择的选项卡加载相应数据
         #
@@ -1646,6 +1723,16 @@ class ExcelProcessorApp:
                 self.show_empty_message(self.tab6_viewer, "无需要回复的文函")
             else:
                 self.show_empty_message(self.tab6_viewer, "请点击开始处理生成结果")
+        elif selected_tab == 6 and (getattr(self, 'target_files7', None) or self.has_processed_results7):
+            if self.has_processed_results7 and self.processing_results7 is not None and not self.processing_results7.empty:
+                self.display_results7(self.processing_results7, show_popup=False)
+            elif self.has_processed_results7:
+                self.show_empty_message(self.tab7_viewer, "无待处理FU")
+            else:
+                self.show_empty_message(self.tab7_viewer, "请点击开始处理生成结果")
+
+        self._tab_render_signatures = render_signatures
+        self._tab_render_signatures[selected_tab] = render_signature
 
     def _post_processing_select_and_render_active_tab(self, active_tab: int):
         """
@@ -1732,7 +1819,8 @@ class ExcelProcessorApp:
                 "外部需打开接口": 3,
                 "外部需回复接口": 4,
                 "三维提资接口": 5,
-                "收发文函": 6
+                "收发文函": 6,
+                "FU": 7,
             }
             file_type = file_type_map.get(tab_name)
             
@@ -1887,13 +1975,22 @@ class ExcelProcessorApp:
                 # 【修复】即使没有Registry任务，也要应用超期过滤
                 return self._apply_overdue_filter(df, file_type)
             
-            # 批量查询状态
-            status_map = registry_hooks.get_display_status(task_keys)
+            user_roles = getattr(self, 'user_roles', [])
+            if not user_roles:
+                user_role = getattr(self, 'user_role', '').strip()
+                if user_role:
+                    user_roles = [user_role]
+
+            # 一次批量查询状态与实时快照，避免切换选项卡时逐行访问 Registry。
+            status_map, snapshot_map = registry_hooks.get_display_state(
+                task_keys,
+                ",".join(user_roles),
+            )
 
             # 【关键兜底】如果Registry是新库/路径变化/未初始化导致查不到任何任务，
             # 不能把所有行当作“无状态(=已忽略/已归档)”直接过滤掉，否则会出现“结果全变0”的灾难性体验。
             # 这种情况下，降级为：跳过 Registry 过滤，仅保留超期过滤。
-            if not status_map:
+            if not status_map and not snapshot_map:
                 try:
                     print(f"[Registry] 警告：文件{file_type} status_map为空，跳过Registry过滤（可能是新库/路径变化/未初始化/本轮未写入）")
                 except Exception:
@@ -1901,24 +1998,21 @@ class ExcelProcessorApp:
                 return self._apply_overdue_filter(df, file_type)
             
             # 【修复】根据用户角色决定过滤逻辑
-            user_roles = getattr(self, 'user_roles', [])
-            if not user_roles:
-                user_role = getattr(self, 'user_role', '').strip()
-                if user_role:
-                    user_roles = [user_role]
-            
             # 判断是否为设计人员
             is_designer = '设计人员' in user_roles
             is_superior = any(keyword in ' '.join(user_roles) for keyword in ['所领导', '室主任', '接口工程师', '管理员'])
             
             exclude_indices = []
             
-            # 【新增】先过滤所有不在status_map中的任务（已忽略/已归档）
+            # 批量状态缓存可能只返回部分任务。缺项必须回源确认，不能直接等同于已归档，
+            # 否则新任务、缓存未同步任务会被错误隐藏。
             not_in_map_count = 0
             for tid in df_index_map.keys():
                 if tid not in status_map:
-                    exclude_indices.append(df_index_map[tid])
-                    not_in_map_count += 1
+                    snapshot = snapshot_map.get(tid)
+                    if _registry_snapshot_is_hidden(snapshot):
+                        exclude_indices.append(df_index_map[tid])
+                        not_in_map_count += 1
             
             status_filter_count = 0
             if is_designer and not is_superior:
@@ -1959,7 +2053,7 @@ class ExcelProcessorApp:
                 if filtered_count > 0:
                     role_desc = "设计人员" if (is_designer and not is_superior) else "上级"
                     print(f"[Registry过滤] 文件{file_type}: {original_count}→{len(df_filtered)}行 "
-                          f"(排除{not_in_map_count}个无状态+{status_filter_count}个{role_desc}过滤)")
+                          f"(排除{not_in_map_count}个已归档/忽略+{status_filter_count}个{role_desc}过滤)")
             
             # 【新增】自动隐藏超期任务过滤
             df_filtered = self._apply_overdue_filter(df_filtered, file_type)
@@ -1990,8 +2084,10 @@ class ExcelProcessorApp:
             if df is None or df.empty:
                 return df
             
-            # 检查是否有接口时间列
-            if "接口时间" not in df.columns:
+            time_column = "接口时间" if "接口时间" in df.columns else (
+                "FU计划" if "FU计划" in df.columns else None
+            )
+            if not time_column:
                 return df
             
             # 获取阈值天数
@@ -2007,7 +2103,7 @@ class ExcelProcessorApp:
             
             for idx in range(len(df)):
                 try:
-                    interface_time = df.iloc[idx].get("接口时间", "")
+                    interface_time = df.iloc[idx].get(time_column, "")
                     if not interface_time or str(interface_time).strip() in ['', '-', 'nan', 'None', '未知']:
                         continue
                     
@@ -2060,7 +2156,8 @@ class ExcelProcessorApp:
                 "外部需打开接口": "target_files3",
                 "外部需回复接口": "target_files4",
                 "三维提资接口": "target_files5",
-                "收发文函": "target_files6"
+                "收发文函": "target_files6",
+                "FU": "target_files7"
             }
             
             attr_name = tab_file_mapping.get(tab_name)
@@ -2097,7 +2194,8 @@ class ExcelProcessorApp:
                 "外部需打开接口": "target_files3",
                 "外部需回复接口": "target_files4",
                 "三维提资接口": "target_files5",
-                "收发文函": "target_files6"
+                "收发文函": "target_files6",
+                "FU": "target_files7"
             }
             
             attr_name = tab_file_mapping.get(tab_name)
@@ -2400,6 +2498,7 @@ class ExcelProcessorApp:
         self.show_empty_message(self.tab4_viewer, "等待加载外部需回复接口数据")
         self.show_empty_message(self.tab5_viewer, "等待加载三维提资接口数据")
         self.show_empty_message(self.tab6_viewer, "等待加载收发文函数据")
+        self.show_empty_message(self.tab7_viewer, "等待加载FU数据")
 
     def _apply_pending_overrides(self, df, file_type):
         try:
@@ -2474,6 +2573,8 @@ class ExcelProcessorApp:
                 self.display_results5(self.processing_results5, show_popup=False)
             if self.has_processed_results6 and self.processing_results6 is not None:
                 self.display_results6(self.processing_results6, show_popup=False)
+            if self.has_processed_results7 and self.processing_results7 is not None:
+                self.display_results7(self.processing_results7, show_popup=False)
         except Exception as e:
             print(f"[PendingCache] 刷新视图失败: {e}")
 
@@ -2527,6 +2628,19 @@ class ExcelProcessorApp:
         if match:
             return match.group(1)
         return None
+
+    @staticmethod
+    def _responsibility_contains_user(value, user_name: str) -> bool:
+        """责任人支持多人分隔，但必须按完整姓名匹配，避免同名片段误命中。"""
+        target = str(user_name or "").strip()
+        if not target:
+            return False
+        tokens = [
+            item.strip()
+            for item in re.split(r"[,，;；/、|\s]+", str(value or ""))
+            if item.strip()
+        ]
+        return target in tokens
     
     def _filter_by_single_role(self, df: pd.DataFrame, role: str, project_id: str = None) -> pd.DataFrame:
         """
@@ -2559,7 +2673,10 @@ class ExcelProcessorApp:
             # 2. 设计人员：责任人 == 姓名
             if role == '设计人员':
                 if '责任人' in safe_df.columns:
-                    return safe_df[safe_df['责任人'].astype(str).str.strip() == user_name]
+                    mask = safe_df['责任人'].map(
+                        lambda value: self._responsibility_contains_user(value, user_name)
+                    )
+                    return safe_df[mask]
                 return safe_df
             
             # 3-5. 室主任：科室过滤 + 时间窗口过滤（与导出统一）
@@ -2592,7 +2709,10 @@ class ExcelProcessorApp:
                     # None表示无限制
                     return safe_df
                 
-                if '接口时间' not in safe_df.columns:
+                time_column = '接口时间' if '接口时间' in safe_df.columns else (
+                    'FU计划' if 'FU计划' in safe_df.columns else None
+                )
+                if not time_column:
                     return safe_df
                 
                 from datetime import date
@@ -2601,7 +2721,7 @@ class ExcelProcessorApp:
                 today = date.today()
                 kept_idx = []
                 
-                for idx, time_val in safe_df["接口时间"].items():
+                for idx, time_val in safe_df[time_column].items():
                     if pd.isna(time_val) or str(time_val).strip() in ['', '-']:
                         continue
                     
@@ -2628,7 +2748,10 @@ class ExcelProcessorApp:
             # 6. 所领导：不区分科室，但需应用时间窗口过滤（与导出统一）
             #    时间窗口定义：所有已延期数据 + 未来N个工作日内到期的数据
             if role == '所领导':
-                if '接口时间' not in safe_df.columns:
+                time_column = '接口时间' if '接口时间' in safe_df.columns else (
+                    'FU计划' if 'FU计划' in safe_df.columns else None
+                )
+                if not time_column:
                     return safe_df
                 
                 # 从role_export_days读取天数限制（与导出统一）
@@ -2644,7 +2767,7 @@ class ExcelProcessorApp:
                 today = date.today()
                 kept_idx = []
                 
-                for idx, time_val in safe_df["接口时间"].items():
+                for idx, time_val in safe_df[time_column].items():
                     if pd.isna(time_val) or str(time_val).strip() in ['', '-']:
                         continue
                     
@@ -2806,7 +2929,10 @@ class ExcelProcessorApp:
                 max_days = int(raw_days)
             except Exception:
                 return df
-            if "接口时间" not in df.columns:
+            time_column = "接口时间" if "接口时间" in df.columns else (
+                "FU计划" if "FU计划" in df.columns else None
+            )
+            if not time_column:
                 return df.iloc[0:0]
             from datetime import date
             from utils.date_utils import get_workday_difference, parse_mmdd_to_date
@@ -2817,7 +2943,7 @@ class ExcelProcessorApp:
             use_workdays = (user_role in get_use_workdays_roles())
             
             kept_idx = []
-            for idx, val in df["接口时间"].items():
+            for idx, val in df[time_column].items():
                 try:
                     s = str(val).strip()
                     if not s or s == "未知":
@@ -2844,6 +2970,34 @@ class ExcelProcessorApp:
         except Exception:
             return df
 
+    @staticmethod
+    def _parse_role_tokens(role_value: str) -> List[str]:
+        """兼容顿号、标点、空格及无分隔符拼接的多角色单元格。"""
+        text = str(role_value or "").strip()
+        if not text:
+            return []
+
+        known_roles = set(get_director_roles())
+        known_roles.update({"设计人员", "所领导", "管理员"})
+        alternatives = [re.escape(role) for role in sorted(known_roles, key=len, reverse=True)]
+        alternatives.append(r"\d{4}\s*接口工程师")
+        pattern = re.compile("|".join(alternatives))
+
+        matches = []
+        for match in pattern.finditer(text):
+            token = re.sub(r"\s+", "", match.group(0))
+            if token not in matches:
+                matches.append(token)
+        if matches:
+            return matches
+
+        # 未知的历史角色仍按常见分隔符保留，避免升级后丢失权限信息。
+        return [
+            token.strip()
+            for token in re.split(r"[、,，;；/|\s]+", text)
+            if token.strip()
+        ]
+
     def load_user_role(self):
         """
         加载用户角色：从科室参数族指定的姓名角色表中读取 A列=姓名，B列=角色
@@ -2858,39 +3012,307 @@ class ExcelProcessorApp:
             xls_path = get_resource_path(get_role_table_file())
             if not os.path.exists(xls_path):
                 return
-            # 使用优化的读取方法
-            df = optimized_read_excel(xls_path)
-            # 兼容无表头/不同表头
-            cols = list(df.columns)
-            name_col = None
-            role_col = None
-            for i, c in enumerate(cols):
-                cs = str(c)
-                if name_col is None and (cs.find('姓名') != -1):
-                    name_col = i
-                if role_col is None and (cs.find('角色') != -1):
-                    role_col = i
-            if name_col is None:
-                name_col = 0 if len(cols) >= 1 else None
-            if role_col is None:
-                role_col = 1 if len(cols) >= 2 else None
-            if name_col is None or role_col is None:
-                return
+            df = read_role_table(xls_path)
+            matched_role_values = []
+            matched_roles = []
             for _, row in df.iterrows():
                 try:
-                    name_val = str(row.iloc[name_col]).strip()
-                    role_val = str(row.iloc[role_col]).strip()
+                    name_val = str(row["姓名"]).strip()
+                    role_val = str(row["角色"]).strip()
                     if name_val == self.user_name:
-                        self.user_role = role_val  # 保留原始字符串（兼容性）
-                        # 解析多重角色（用顿号、分隔）
-                        self.user_roles = [r.strip() for r in role_val.split('、') if r.strip()]
-                        print(f"加载角色成功: 用户={self.user_name}, 角色={self.user_roles}")
-                        break
+                        if role_val and role_val not in matched_role_values:
+                            matched_role_values.append(role_val)
+                        for role in self._parse_role_tokens(role_val):
+                            if role not in matched_roles:
+                                matched_roles.append(role)
                 except Exception:
                     continue
+            if matched_roles:
+                self.user_role = "、".join(matched_role_values)
+                self.user_roles = matched_roles
+                print(f"加载角色成功: 用户={self.user_name}, 角色={self.user_roles}")
         except Exception as e:
             print(f"加载角色表失败: {e}")
             pass
+
+    def _get_account_table_path(self, *, for_write: bool = False) -> str:
+        """返回账户认证使用的角色表；打包版以公共盘发布表为准。"""
+        del for_write  # 保留命名参数以兼容调用；读写必须始终指向同一张表。
+        relative_path = get_role_table_file()
+        if not getattr(sys, "frozen", False):
+            return get_resource_path(relative_path)
+
+        # 本地程序会从数据目录下的 EXE 更新；密码必须写回该公共发布表，
+        # 这样不同客户端看到的是同一份账户数据，且后续更新不会覆盖密码。
+        data_folder = self._resolve_update_folder_path(include_runtime_selection=True)
+        if data_folder:
+            return os.path.join(data_folder, "EXE", "_internal", relative_path)
+        # 未配置公共数据目录时（主要是开发/测试环境）才使用程序资源表。
+        return get_resource_path(relative_path)
+
+    def _authenticate_and_switch_user(
+        self,
+        user_name: str,
+        password: str,
+        *,
+        trigger_refresh: bool = True,
+    ) -> Tuple[bool, str]:
+        """验证目标账户后切换用户，供界面和测试共同调用。"""
+        target_name = str(user_name or "").strip()
+        if not target_name:
+            return False, "请选择要切换的账户。"
+        try:
+            if not verify_account_password(
+                self._get_account_table_path(), target_name, password
+            ):
+                return False, "密码不正确，请重新输入。"
+            self._handle_user_name_change(
+                target_name,
+                trigger_refresh=trigger_refresh,
+            )
+            return True, f"已切换到账户：{target_name}"
+        except AccountError as exc:
+            return False, str(exc)
+        except Exception as exc:
+            return False, f"账户验证失败：{exc}"
+
+    def _change_current_account_password(
+        self,
+        current_password: str,
+        new_password: str,
+        confirm_password: str,
+    ) -> Tuple[bool, str]:
+        """修改当前账户密码并写回公共角色表。"""
+        current_user = str(self.config.get("user_name", "") or "").strip()
+        if not current_user:
+            return False, "当前尚未登录账户。"
+        if not new_password or not str(new_password).strip():
+            return False, "新密码不能为空。"
+        if str(new_password) != str(confirm_password):
+            return False, "两次输入的新密码不一致。"
+        if str(current_password) == str(new_password):
+            return False, "新密码不能与当前密码相同。"
+        try:
+            change_account_password(
+                self._get_account_table_path(for_write=True),
+                current_user,
+                current_password,
+                new_password,
+            )
+            return True, "密码修改成功，已同步到公共账户表。"
+        except AuthenticationError as exc:
+            return False, str(exc)
+        except AccountError as exc:
+            return False, str(exc)
+        except Exception as exc:
+            return False, f"密码修改失败：{exc}"
+
+    def _apply_dialog_style_and_icon(self, dialog) -> None:
+        try:
+            style = ttk.Style(dialog)
+            style.configure(
+                "AccountTitle.TLabel",
+                font=("Microsoft YaHei UI", 12, "bold"),
+            )
+            style.configure(
+                "AccountName.TLabel",
+                font=("Microsoft YaHei UI", 10, "bold"),
+            )
+            style.configure(
+                "AccountAction.TButton",
+                padding=(14, 7),
+                font=("Microsoft YaHei UI", 9),
+            )
+        except Exception:
+            pass
+        try:
+            icon_path = get_resource_path("ico_bin/tubiao.ico")
+            if os.path.exists(icon_path):
+                dialog.iconbitmap(icon_path)
+        except Exception:
+            pass
+
+    def _center_account_dialog(self, dialog, width: int, height: int) -> None:
+        try:
+            dialog.update_idletasks()
+            x = self.root.winfo_rootx() + max(0, (self.root.winfo_width() - width) // 2)
+            y = self.root.winfo_rooty() + max(0, (self.root.winfo_height() - height) // 2)
+            dialog.geometry(f"{width}x{height}+{x}+{y}")
+        except Exception:
+            dialog.geometry(f"{width}x{height}")
+
+    @staticmethod
+    def _create_account_combobox(parent, textvariable, accounts, width: int = 28):
+        """创建既可下拉选择、也可直接键盘输入姓名的账户框。"""
+        return ttk.Combobox(
+            parent,
+            textvariable=textvariable,
+            values=accounts,
+            state="normal",
+            width=width,
+        )
+
+    def show_account_management(self):
+        """显示统一样式的账户切换与密码修改窗口。"""
+        try:
+            accounts = list_accounts(self._get_account_table_path())
+        except Exception as exc:
+            messagebox.showerror(
+                "账户管理",
+                f"无法读取公共账户表：\n{exc}",
+                parent=self.root,
+            )
+            return
+
+        current_user = str(self.config.get("user_name", "") or "").strip()
+        dialog = tk.Toplevel(self.root)
+        dialog.title("账户管理")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.resizable(False, False)
+        self._apply_dialog_style_and_icon(dialog)
+        self._center_account_dialog(dialog, 520, 410)
+
+        outer = ttk.Frame(dialog, padding=(22, 18, 22, 18))
+        outer.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(outer, text="账户管理", style="AccountTitle.TLabel").pack(anchor=tk.W)
+        role_text = "、".join(getattr(self, "user_roles", []) or []) or "未识别角色"
+        account_summary = ttk.Frame(outer)
+        account_summary.pack(fill=tk.X, pady=(8, 14))
+        ttk.Label(account_summary, text="当前账户：").pack(side=tk.LEFT)
+        current_name_var = tk.StringVar(value=current_user or "未登录")
+        ttk.Label(
+            account_summary,
+            textvariable=current_name_var,
+            style="AccountName.TLabel",
+        ).pack(side=tk.LEFT)
+        ttk.Label(
+            account_summary,
+            text=f"  |  {role_text}",
+            foreground="#666666",
+        ).pack(side=tk.LEFT)
+
+        notebook = ttk.Notebook(outer)
+        notebook.pack(fill=tk.BOTH, expand=True)
+
+        switch_tab = ttk.Frame(notebook, padding=(24, 20))
+        password_tab = ttk.Frame(notebook, padding=(24, 16))
+        notebook.add(switch_tab, text="切换账户")
+        notebook.add(password_tab, text="修改密码")
+
+        switch_tab.columnconfigure(1, weight=1)
+        ttk.Label(switch_tab, text="目标账户").grid(row=0, column=0, sticky=tk.W, pady=7)
+        switch_user_var = tk.StringVar(value=current_user if current_user in accounts else "")
+        switch_combo = self._create_account_combobox(
+            switch_tab,
+            switch_user_var,
+            accounts,
+            width=28,
+        )
+        switch_combo.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(14, 0), pady=7)
+        ttk.Label(switch_tab, text="账户密码").grid(row=1, column=0, sticky=tk.W, pady=7)
+        switch_password_var = tk.StringVar()
+        switch_password_entry = ttk.Entry(
+            switch_tab,
+            textvariable=switch_password_var,
+            show="*",
+            width=30,
+        )
+        switch_password_entry.grid(
+            row=1, column=1, sticky=(tk.W, tk.E), padx=(14, 0), pady=7
+        )
+        ttk.Label(
+            switch_tab,
+            text="可直接输入姓名，也可从下拉列表选择；切换时需输入目标账户密码。",
+            foreground="#666666",
+        ).grid(row=2, column=0, columnspan=2, sticky=tk.W, pady=(5, 12))
+
+        def submit_switch(*_):
+            success, message = self._authenticate_and_switch_user(
+                switch_user_var.get(),
+                switch_password_var.get(),
+                trigger_refresh=True,
+            )
+            if not success:
+                switch_password_var.set("")
+                messagebox.showerror("切换账户", message, parent=dialog)
+                switch_password_entry.focus_set()
+                return
+            current_name_var.set(self.config.get("user_name", "") or "未登录")
+            messagebox.showinfo("切换账户", message, parent=dialog)
+            dialog.destroy()
+
+        ttk.Button(
+            switch_tab,
+            text="验证并切换",
+            command=submit_switch,
+            style="AccountAction.TButton",
+        ).grid(row=3, column=0, columnspan=2, pady=(4, 0))
+        switch_password_entry.bind("<Return>", submit_switch)
+        switch_combo.bind(
+            "<<ComboboxSelected>>",
+            lambda _event: switch_password_entry.focus_set(),
+        )
+        switch_combo.bind("<Return>", lambda _event: switch_password_entry.focus_set())
+
+        password_tab.columnconfigure(1, weight=1)
+        current_password_var = tk.StringVar()
+        new_password_var = tk.StringVar()
+        confirm_password_var = tk.StringVar()
+        password_fields = (
+            ("当前密码", current_password_var),
+            ("新密码", new_password_var),
+            ("确认新密码", confirm_password_var),
+        )
+        last_password_entry = None
+        for row_index, (label_text, variable) in enumerate(password_fields):
+            ttk.Label(password_tab, text=label_text).grid(
+                row=row_index, column=0, sticky=tk.W, pady=6
+            )
+            last_password_entry = ttk.Entry(
+                password_tab,
+                textvariable=variable,
+                show="*",
+                width=30,
+            )
+            last_password_entry.grid(
+                row=row_index,
+                column=1,
+                sticky=(tk.W, tk.E),
+                padx=(14, 0),
+                pady=6,
+            )
+
+        def submit_password_change(*_):
+            success, message = self._change_current_account_password(
+                current_password_var.get(),
+                new_password_var.get(),
+                confirm_password_var.get(),
+            )
+            if not success:
+                messagebox.showerror("修改密码", message, parent=dialog)
+                return
+            current_password_var.set("")
+            new_password_var.set("")
+            confirm_password_var.set("")
+            messagebox.showinfo("修改密码", message, parent=dialog)
+
+        ttk.Button(
+            password_tab,
+            text="保存新密码",
+            command=submit_password_change,
+            style="AccountAction.TButton",
+        ).grid(row=3, column=0, columnspan=2, pady=(10, 0))
+        if last_password_entry is not None:
+            last_password_entry.bind("<Return>", submit_password_change)
+
+        ttk.Button(outer, text="关闭", command=dialog.destroy).pack(
+            anchor=tk.E, pady=(12, 0)
+        )
+        if current_user:
+            switch_password_entry.focus_set()
+        else:
+            switch_combo.focus_set()
     
     def get_valid_names_from_role_table(self):
         """
@@ -2906,26 +3328,12 @@ class ExcelProcessorApp:
                 print("姓名角色表不存在")
                 return valid_names
             
-            # 使用优化的读取方法
-            df = optimized_read_excel(xls_path)
-            
-            # 兼容无表头/不同表头
-            cols = list(df.columns)
-            name_col = None
-            for i, c in enumerate(cols):
-                cs = str(c)
-                if name_col is None and (cs.find('姓名') != -1):
-                    name_col = i
-            if name_col is None:
-                name_col = 0 if len(cols) >= 1 else None
-            
-            if name_col is None:
-                return valid_names
+            df = read_role_table(xls_path)
             
             # 收集所有有效姓名
             for _, row in df.iterrows():
                 try:
-                    name_val = str(row.iloc[name_col]).strip()
+                    name_val = str(row["姓名"]).strip()
                     if name_val and name_val not in ['nan', 'None', '']:
                         valid_names.add(name_val)
                 except Exception:
@@ -3083,21 +3491,20 @@ class ExcelProcessorApp:
         frame = ttk.Frame(settings_menu, padding="15")
         frame.pack(fill=tk.BOTH, expand=True)
         
-        # 姓名输入
-        name_frame = ttk.Frame(frame)
-        name_frame.pack(fill=tk.X, pady=(0, 10))
-        ttk.Label(name_frame, text="姓名:").pack(side=tk.LEFT)
-        self.user_name_var = tk.StringVar(value=self.config.get("user_name", ""))
-        name_entry = ttk.Entry(name_frame, textvariable=self.user_name_var, width=20)
-        name_entry.pack(side=tk.LEFT, padx=(8, 0))
-        try:
-            ttk.Label(name_frame, text="例:王任超", foreground="gray").pack(side=tk.LEFT, padx=(8,0))
-        except Exception:
-            pass
-
-        def on_name_change(*_):
-            self._handle_user_name_change(self.user_name_var.get(), trigger_refresh=False)
-        self.user_name_var.trace_add('write', on_name_change)
+        # 账户只能通过密码验证后切换，设置页不再允许直接改姓名。
+        account_frame = ttk.LabelFrame(frame, text="当前账户", padding=(10, 8))
+        account_frame.pack(fill=tk.X, pady=(0, 10))
+        account_name = self.config.get("user_name", "").strip() or "未登录"
+        account_roles = "、".join(getattr(self, "user_roles", []) or []) or "未识别角色"
+        ttk.Label(
+            account_frame,
+            text=f"{account_name}  |  {account_roles}",
+        ).pack(side=tk.LEFT)
+        ttk.Button(
+            account_frame,
+            text="账户管理",
+            command=lambda: (settings_menu.destroy(), self.show_account_management()),
+        ).pack(side=tk.RIGHT)
         
         # 开机自启动选项
         auto_startup_check = ttk.Checkbutton(
@@ -3524,7 +3931,7 @@ class ExcelProcessorApp:
             # 主线程：更新选项卡✓标记
             try:
                 # 先清理旧标记
-                for idx in range(6):
+                for idx in range(7):
                     self.update_tab_color(idx, "normal")
                 if getattr(self, "target_files1", None):
                     self.update_tab_color(0, "green")
@@ -3538,6 +3945,8 @@ class ExcelProcessorApp:
                     self.update_tab_color(4, "green")
                 if getattr(self, "target_files6", None):
                     self.update_tab_color(5, "green")
+                if getattr(self, "target_files7", None):
+                    self.update_tab_color(6, "green")
             except Exception:
                 pass
 
@@ -3694,6 +4103,13 @@ class ExcelProcessorApp:
                             file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
                             project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
                         total_identified_files += len(self.target_files6)
+                    if self.target_files7:
+                        file_info += f"✓ 待处理文件7 (FU): {len(self.target_files7)} 个文件\n"
+                        for fp, pid in self.target_files7:
+                            disp_pid = pid if pid else "未知项目"
+                            file_info += f"  - {disp_pid}: {os.path.basename(fp)}\n"
+                            project_summary[disp_pid] = project_summary.get(disp_pid, 0) + 1
+                        total_identified_files += len(self.target_files7)
 
                     if project_summary:
                         file_info += "\n📊 项目汇总:\n"
@@ -3941,6 +4357,20 @@ class ExcelProcessorApp:
                 else:  # 空字典，但仍需设置标志
                     self.processing_results6 = pd.DataFrame()
                     self.has_processed_results6 = True
+
+            # 处理文件7（FU）
+            if hasattr(self, 'processing_results_multi7'):
+                combined_results = []
+                for project_id, cached_df in self.processing_results_multi7.items():
+                    if cached_df is not None and not cached_df.empty:
+                        filtered_df = self.apply_role_based_filter(cached_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            combined_results.append(filtered_df)
+                self.processing_results7 = (
+                    pd.concat(combined_results, ignore_index=True)
+                    if combined_results else pd.DataFrame()
+                )
+                self.has_processed_results7 = True
             
             # 刷新当前选项卡的显示
             self.refresh_current_tab_display()
@@ -3999,18 +4429,21 @@ class ExcelProcessorApp:
         self.target_files4 = []
         self.target_files5 = []
         self.target_files6 = []
+        self.target_files7 = []
         self.files1_data = {}
         self.files2_data = {}
         self.files3_data = {}
         self.files4_data = {}
         self.files5_data = {}
         self.files6_data = {}
+        self.files7_data = {}
         self.processing_results_multi1 = {}
         self.processing_results_multi2 = {}
         self.processing_results_multi3 = {}
         self.processing_results_multi4 = {}
         self.processing_results_multi5 = {}
         self.processing_results_multi6 = {}
+        self.processing_results_multi7 = {}
         
         # 重置被忽略的文件记录（用于显示）
         self.ignored_files = []  # [(文件路径, 项目号, 文件类型), ...]
@@ -4022,6 +4455,7 @@ class ExcelProcessorApp:
         self.has_processed_results4 = False
         self.has_processed_results5 = False
         self.has_processed_results6 = False
+        self.has_processed_results7 = False
         # 重置选项卡状态（仅主线程可更新UI）
         if update_ui:
             self.update_tab_color(0, "normal")
@@ -4178,6 +4612,15 @@ class ExcelProcessorApp:
                 if self.target_files6:
                     if update_ui:
                         self.update_tab_color(5, "green")
+
+            if hasattr(main, 'find_all_target_files7'):
+                all_files = main.find_all_target_files7(self.excel_files)
+                self.target_files7, ignored = self._filter_files_by_project(
+                    all_files, enabled_projects, "待处理文件7"
+                )
+                self.ignored_files.extend(ignored)
+                if self.target_files7 and update_ui:
+                    self.update_tab_color(6, "green")
             
             # 【性能优化Step1】已确认：移除“并发预加载Excel”
             # 说明：预加载仅用于“未处理状态原始预览”，该功能已删除。
@@ -4191,7 +4634,7 @@ class ExcelProcessorApp:
         参数:
             file_path: 源文件路径
             project_id: 项目号
-            file_type: 文件类型（file1-file6）
+            file_type: 文件类型（file1-file7）
             process_func: 处理函数
             *args: 传递给处理函数的额外参数
             
@@ -4285,6 +4728,45 @@ class ExcelProcessorApp:
                 pass
             print(f"处理{file_type}失败 [项目{project_id}]: {e}")
             return None
+
+    def _prewarm_result_caches_parallel(self, jobs, max_workers=4):
+        """并行计算冷缓存；只读不同源文件，结果仍由主流程按原顺序消费。"""
+        pending_jobs = []
+        for job in jobs or []:
+            try:
+                cached = self.file_manager.load_cached_result(
+                    job["file_path"], job["project_id"], job["file_type"]
+                )
+                if cached is None:
+                    pending_jobs.append(job)
+            except Exception:
+                pending_jobs.append(job)
+        if len(pending_jobs) <= 1:
+            return {"processed": 0, "failed": 0}
+
+        def worker(job):
+            result = job["process_func"](job["file_path"], *job.get("args", ()))
+            if result is not None:
+                if not self.file_manager.save_cached_result(
+                    job["file_path"], job["project_id"], job["file_type"], result
+                ):
+                    raise RuntimeError("结果缓存保存失败")
+            return job
+
+        processed = 0
+        failed = 0
+        worker_count = min(max(1, int(max_workers)), len(pending_jobs))
+        print(f"[并行读取] {len(pending_jobs)}个冷缓存文件，使用{worker_count}路并行处理")
+        with ThreadPoolExecutor(max_workers=worker_count, thread_name_prefix="ExcelRead") as pool:
+            futures = [pool.submit(worker, job) for job in pending_jobs]
+            for future in futures:
+                try:
+                    future.result()
+                    processed += 1
+                except Exception as exc:
+                    failed += 1
+                    print(f"[并行读取] 单文件预处理失败，主流程将顺序重试: {exc}")
+        return {"processed": processed, "failed": failed}
     
     def _check_and_load_cache(self):
         """
@@ -4309,6 +4791,8 @@ class ExcelProcessorApp:
                 all_file_paths.extend([f[0] for f in self.target_files5])
             if hasattr(self, 'target_files6') and self.target_files6:
                 all_file_paths.extend([f[0] for f in self.target_files6])
+            if hasattr(self, 'target_files7') and self.target_files7:
+                all_file_paths.extend([f[0] for f in self.target_files7])
             
             # 去重
             all_file_paths = list(set(all_file_paths))
@@ -4355,6 +4839,7 @@ class ExcelProcessorApp:
                 _drop_from_multi(getattr(self, "target_files4", None), getattr(self, "processing_results_multi4", {}))
                 _drop_from_multi(getattr(self, "target_files5", None), getattr(self, "processing_results_multi5", {}))
                 _drop_from_multi(getattr(self, "target_files6", None), getattr(self, "processing_results_multi6", {}))
+                _drop_from_multi(getattr(self, "target_files7", None), getattr(self, "processing_results_multi7", {}))
 
             else:
                 # 文件未变化，也需要更新标识（为新文件记录标识）
@@ -4384,6 +4869,7 @@ class ExcelProcessorApp:
             self._cache_loaded_raw_multi4 = {}
             self._cache_loaded_raw_multi5 = {}
             self._cache_loaded_raw_multi6 = {}
+            self._cache_loaded_raw_multi7 = {}
             
             # 加载file1缓存
             if hasattr(self, 'target_files1') and self.target_files1:
@@ -4535,6 +5021,24 @@ class ExcelProcessorApp:
                         cache_loaded_count += 1
                 if self.processing_results_multi6:
                     self.has_processed_results6 = True
+
+            # 加载file7缓存
+            if hasattr(self, 'target_files7') and self.target_files7:
+                for file_path, project_id in self.target_files7:
+                    if file_path in changed_files:
+                        continue
+                    cached_df = self.file_manager.load_cached_result(file_path, project_id, 'file7')
+                    if cached_df is not None:
+                        raw_df = cached_df.copy()
+                        if '项目号' not in raw_df.columns:
+                            raw_df['项目号'] = project_id
+                        self._cache_loaded_raw_multi7[project_id] = raw_df
+                        filtered_df = self.apply_role_based_filter(raw_df.copy(), project_id=project_id)
+                        if filtered_df is not None and not filtered_df.empty:
+                            self.processing_results_multi7[project_id] = filtered_df
+                        cache_loaded_count += 1
+                if self.processing_results_multi7:
+                    self.has_processed_results7 = True
             
             # 4. 更新文件标识（如果之前没有）
             self.file_manager.update_file_identities(all_file_paths)
@@ -4684,6 +5188,8 @@ class ExcelProcessorApp:
                 all_file_paths.extend([f[0] for f in self.target_files5])
             if hasattr(self, 'target_files6') and self.target_files6:
                 all_file_paths.extend([f[0] for f in self.target_files6])
+            if hasattr(self, 'target_files7') and self.target_files7:
+                all_file_paths.extend([f[0] for f in self.target_files7])
             all_file_paths_for_run = list(all_file_paths or [])
             
             # 仅对发生变化的文件清理缓存与完成状态；未变化文件保留缓存命中能力
@@ -4719,7 +5225,8 @@ class ExcelProcessorApp:
         process_file4 = self.process_file4_var.get()
         process_file5 = self.process_file5_var.get()
         process_file6 = self.process_file6_var.get()
-        if not (process_file1 or process_file2 or process_file3 or process_file4 or process_file5 or process_file6):
+        process_file7 = self.process_file7_var.get()
+        if not (process_file1 or process_file2 or process_file3 or process_file4 or process_file5 or process_file6 or process_file7):
             if not getattr(self, 'auto_mode', False):
                 messagebox.showwarning("警告", "请至少勾选一个需要处理的接口类型！")
             return
@@ -4818,6 +5325,54 @@ class ExcelProcessorApp:
                             print(f"[Registry] 初始化失败（可能无法访问公共盘，将导致状态查询为空）: {_e}")
                 except Exception as e:
                     print(f"[Registry] 设置数据目录失败（将导致状态查询为空）: {e}")
+
+                # 冷缓存阶段仅并行读取不同工作簿；不持有写锁，也不并行写Registry。
+                # 后续原有主流程仍按类型/项目顺序做角色过滤与Registry同步。
+                try:
+                    prewarm_jobs = []
+
+                    def add_jobs(targets, file_type, process_func, args_factory):
+                        for source_path, source_project in (targets or []):
+                            prewarm_jobs.append({
+                                "file_path": source_path,
+                                "project_id": source_project,
+                                "file_type": file_type,
+                                "process_func": process_func,
+                                "args": tuple(args_factory(source_project)),
+                            })
+
+                    if process_file1 and getattr(self, "target_files1", None):
+                        add_jobs(self.target_files1, "file1", main.process_target_file,
+                                 lambda _pid: (self.current_datetime,))
+                    if process_file2 and getattr(self, "target_files2", None):
+                        add_jobs(self.target_files2, "file2", main.process_target_file2,
+                                 lambda pid: (self.current_datetime, pid))
+                    if process_file3 and getattr(self, "target_files3", None):
+                        add_jobs(self.target_files3, "file3", main.process_target_file3,
+                                 lambda _pid: (self.current_datetime,))
+                    if process_file4 and getattr(self, "target_files4", None):
+                        add_jobs(self.target_files4, "file4", main.process_target_file4,
+                                 lambda _pid: (self.current_datetime,))
+                    if process_file5 and getattr(self, "target_files5", None):
+                        add_jobs(self.target_files5, "file5", main.process_target_file5,
+                                 lambda _pid: (self.current_datetime,))
+                    if process_file6 and getattr(self, "target_files6", None):
+                        prewarm_valid_names = self.get_valid_names_from_role_table()
+                        prewarm_skip_date = ("管理员" in self.user_roles) or ("所领导" in self.user_roles)
+                        add_jobs(self.target_files6, "file6", main.process_target_file6,
+                                 lambda _pid: (self.current_datetime, prewarm_skip_date, prewarm_valid_names))
+                    if process_file7 and getattr(self, "target_files7", None):
+                        add_jobs(self.target_files7, "file7", main.process_target_file7,
+                                 lambda _pid: (self.current_datetime,))
+
+                    prewarm_result = self._prewarm_result_caches_parallel(prewarm_jobs, max_workers=4)
+                    if prewarm_result.get("processed"):
+                        print(
+                            f"[并行读取] 已生成{prewarm_result['processed']}个缓存，"
+                            f"失败{prewarm_result.get('failed', 0)}个"
+                        )
+                except Exception as exc:
+                    print(f"[并行读取] 预处理未完成，继续使用原顺序流程: {exc}")
 
                 # 处理待处理文件1（批量）
                 if process_file1 and self.target_files1:
@@ -5691,6 +6246,91 @@ class ExcelProcessorApp:
                                     active_tab = 5
                                 completion_messages.append("收发文函：无符合条件的数据")
 
+                    # 处理待处理文件7（FU）
+                    process_file7 = getattr(self, 'process_file7_var', tk.BooleanVar(value=False)).get()
+                    results7 = None
+                    if process_file7 and getattr(self, 'target_files7', None) and hasattr(main, 'process_target_file7'):
+                        new_multi7 = {}
+                        combined_results = []
+                        raw_results_for_registry = {}
+                        for file_path, project_id in self.target_files7:
+                            try:
+                                result = None
+                                used_refresh_cache = False
+                                if can_reuse_refresh_cache and file_path not in changed_files_for_run:
+                                    result = self._get_refresh_cached_raw_df(
+                                        file_type=7,
+                                        file_path=file_path,
+                                        project_id=project_id,
+                                        all_file_paths=all_file_paths_for_run,
+                                        changed_files=changed_files_for_run,
+                                    )
+                                    used_refresh_cache = result is not None
+                                if result is None:
+                                    result = self._process_with_cache(
+                                        file_path,
+                                        project_id,
+                                        'file7',
+                                        main.process_target_file7,
+                                        self.current_datetime,
+                                    )
+
+                                cache_hit = used_refresh_cache
+                                if not cache_hit:
+                                    info = getattr(self, "_last_cache_hit_info", {}) or {}
+                                    cache_hit = bool(
+                                        str(info.get("project_id", "")) == str(project_id)
+                                        and str(info.get("file_type", "")) == "file7"
+                                        and info.get("file_path") == file_path
+                                        and info.get("hit", False)
+                                    )
+                                should_update_registry = bool(
+                                    registry_bootstrap_needed
+                                    or file_path in changed_files_for_run
+                                    or not cache_hit
+                                )
+                                if result is not None and not result.empty:
+                                    raw_result = result.copy()
+                                    raw_result['项目号'] = project_id
+                                    if should_update_registry:
+                                        raw_results_for_registry[project_id] = (file_path, raw_result)
+                                    filtered_result = self.apply_role_based_filter(
+                                        raw_result.copy(), project_id=project_id
+                                    )
+                                    if filtered_result is not None and not filtered_result.empty:
+                                        new_multi7[project_id] = filtered_result
+                                        combined_results.append(filtered_result)
+                            except Exception as e:
+                                print(f"处理文件7失败: {file_path} - {e}")
+
+                        self.processing_results_multi7 = new_multi7
+                        if registry_hooks and raw_results_for_registry:
+                            for project_id, (source_file, raw_df) in raw_results_for_registry.items():
+                                try:
+                                    registry_hooks.on_process_done(
+                                        file_type=7,
+                                        project_id=project_id,
+                                        source_file=source_file,
+                                        result_df=raw_df,
+                                        now=self.current_datetime,
+                                    )
+                                    registry_write_flags["count"] += 1
+                                except Exception as e:
+                                    print(f"[Registry] 文件7钩子调用失败: {e}")
+
+                        results7 = pd.concat(combined_results, ignore_index=True) if combined_results else pd.DataFrame()
+                        self.processing_results7 = results7
+                        self.has_processed_results7 = True
+                        if not any((process_file1, process_file2, process_file3, process_file4, process_file5, process_file6)):
+                            active_tab = 6
+                        total_projects.update(self.processing_results_multi7.keys())
+                        total_files_processed += len(self.target_files7)
+                        if not results7.empty:
+                            processed_count += 1
+                            completion_messages.append(f"FU：{len(results7)} 行数据")
+                        else:
+                            completion_messages.append("FU：无符合条件的数据")
+
                     # Step4：更新导出按钮状态（不依赖当前tab是否已渲染）
                     try:
                         self.update_export_button_state()
@@ -5847,6 +6487,14 @@ class ExcelProcessorApp:
             self.processing_results5 is not None and 
             not self.processing_results5.empty):
             has_exportable_results = True
+        if (self.has_processed_results6 and
+            self.processing_results6 is not None and
+            not self.processing_results6.empty):
+            has_exportable_results = True
+        if (self.has_processed_results7 and
+            self.processing_results7 is not None and
+            not self.processing_results7.empty):
+            has_exportable_results = True
         
         # 根据结果设置导出按钮状态
         if has_exportable_results:
@@ -5970,6 +6618,28 @@ class ExcelProcessorApp:
         self.update_export_button_state()
         if show_popup and self._should_show_popup():
             messagebox.showinfo("处理完成", f"收发文函数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【收发文函】选项卡中更新显示。")
+
+    def display_results7(self, results, show_popup=True):
+        """显示FU处理结果。"""
+        if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
+            self.has_processed_results7 = True
+            self.show_empty_message(self.tab7_viewer, "无待处理FU")
+            self.update_export_button_state()
+            return
+        self.processing_results7 = results
+        self.has_processed_results7 = True
+        display_df = self._ensure_source_file_column_for_pending_cache(results, "FU")
+        display_df = self._apply_pending_overrides(display_df, 7)
+        excel_row_numbers = list(display_df['原始行号'])
+        self.display_excel_data_with_original_rows(
+            self.tab7_viewer, display_df, "FU", excel_row_numbers
+        )
+        self.update_export_button_state()
+        if show_popup and self._should_show_popup():
+            messagebox.showinfo(
+                "处理完成",
+                f"FU数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【FU】选项卡中更新显示。",
+            )
 
     def export_results(self):
         if not self._ensure_up_to_date(UpdateReason.EXPORT_RESULTS, UpdateReason.EXPORT_RESULTS):
@@ -6152,6 +6822,34 @@ class ExcelProcessorApp:
                         if original_file and not results.empty:
                             pid_for_export = project_id if project_id else "未知项目"
                             export_tasks.append(('收发文函', main.export_result_to_excel6, results, original_file, self.current_datetime, pid_for_export))
+        # 导出FU结果
+        if self.process_file7_var.get() and self.processing_results_multi7:
+            if hasattr(main, 'export_result_to_excel7'):
+                self.filtered_results_multi7 = {}
+                for project_id, results in self.processing_results_multi7.items():
+                    if not isinstance(results, pd.DataFrame) or results.empty:
+                        continue
+                    results = self.apply_role_based_filter(results, project_id=project_id)
+                    results = self.apply_auto_role_date_window(results)
+                    original_file = next(
+                        (path for path, pid in self.target_files7 if pid == project_id),
+                        None,
+                    )
+                    if original_file:
+                        results = self._exclude_completed_rows(results, original_file)
+                        results = self._exclude_pending_confirmation_rows(
+                            results, original_file, 7, project_id
+                        )
+                    self.filtered_results_multi7[project_id] = results
+                    if original_file and not results.empty:
+                        export_tasks.append((
+                            'FU',
+                            main.export_result_to_excel7,
+                            results,
+                            original_file,
+                            self.current_datetime,
+                            project_id or "未知项目",
+                        ))
         if not export_tasks:
             if self._should_show_popup():
                messagebox.showinfo("导出提示", "无可导出的数据")
@@ -6162,21 +6860,36 @@ class ExcelProcessorApp:
         total_count = len(export_tasks)
         export_dialog, progress_label = self.show_export_waiting_dialog("导出结果", "正在导出中，请稍后。。。 。。。", total_count)
         
-        # 使用after方法延迟执行导出操作，确保等待对话框能正确显示
+        # Tk 变量必须在主线程读取；实际 Excel/Registry I/O 在后台线程执行。
+        export_root_snapshot = (
+            self.export_path_var.get().strip()
+            if hasattr(self, 'export_path_var')
+            else ''
+        )
+        folder_path_snapshot = export_root_snapshot or self.path_var.get().strip()
+        show_export_popup = self._should_show_popup()
+        export_datetime_snapshot = self.current_datetime
+
         def do_export():
-            # 优先使用导出结果位置；为空则回退到文件夹路径
-            export_root = (self.export_path_var.get().strip() if hasattr(self, 'export_path_var') else '')
-            folder_path = export_root or self.path_var.get().strip()
             success_count = 0
             success_messages = []
             project_stats = {}  # 统计各项目的导出文件数
             
             for i, (name, func, results, original_file, dt, project_id) in enumerate(export_tasks, 1):
-                # 更新进度
-                self.update_export_progress(export_dialog, progress_label, i-1, total_count)
+                self._post_ui_task(
+                    lambda current=i - 1: self.update_export_progress(
+                        export_dialog, progress_label, current, total_count
+                    )
+                )
                 
                 try:
-                    output_path = func(results, original_file, dt, folder_path, project_id)
+                    output_path = func(
+                        results,
+                        original_file,
+                        dt,
+                        folder_path_snapshot,
+                        project_id,
+                    )
                     reused = False
                     success_count += 1
                     suffix = "(复用)" if reused else ""
@@ -6194,7 +6907,7 @@ class ExcelProcessorApp:
                             file_type_map = {
                                 '待处理文件1': 1, '待处理文件2': 2, '待处理文件3': 3,
                                 '待处理文件4': 4, '待处理文件5': 5, '待处理文件6': 6,
-                                '三维提资接口': 5, '收发文函': 6
+                                '三维提资接口': 5, '收发文函': 6, 'FU': 7,
                             }
                             file_type = file_type_map.get(name, 0)
                             if file_type > 0:
@@ -6203,27 +6916,43 @@ class ExcelProcessorApp:
                                     project_id=project_id,
                                     export_path=output_path,
                                     count=len(results) if results is not None else 0,
-                                    now=self.current_datetime
+                                    now=export_datetime_snapshot
                                 )
                         except Exception as e:
                             print(f"[Registry] 导出钩子调用失败: {e}")
                     
-                    # 更新进度显示已完成
-                    self.update_export_progress(export_dialog, progress_label, i, total_count)
+                    self._post_ui_task(
+                        lambda current=i: self.update_export_progress(
+                            export_dialog, progress_label, current, total_count
+                        )
+                    )
                     
                 except NotImplementedError:
-                    self.close_waiting_dialog(export_dialog)
-                    messagebox.showwarning(f"导出未实现 - {name}", f"{name}的导出功能尚未实现。")
+                    def show_not_implemented(task_name=name):
+                        self.close_waiting_dialog(export_dialog)
+                        messagebox.showwarning(
+                            f"导出未实现 - {task_name}",
+                            f"{task_name}的导出功能尚未实现。",
+                        )
+                        self._manual_operation = False
+
+                    self._post_ui_task(show_not_implemented)
                     return
                 except Exception as e:
-                    self.close_waiting_dialog(export_dialog)
-                    messagebox.showerror(f"导出失败 - {name}", f"导出过程中发生错误: {str(e)}")
+                    error_text = str(e)
+
+                    def show_export_error(task_name=name, message=error_text):
+                        self.close_waiting_dialog(export_dialog)
+                        messagebox.showerror(
+                            f"导出失败 - {task_name}",
+                            f"导出过程中发生错误: {message}",
+                        )
+                        self._manual_operation = False
+
+                    self._post_ui_task(show_export_error)
                     return
-            
-            # 关闭等待对话框
-            self.close_waiting_dialog(export_dialog)
-            
-            # 显示批量导出成功信息（包含各类型有无导出情况）
+
+            combined_message = ""
             if success_count > 0:
                 combined_message = "🎉 批量导出完成！\n\n"
 
@@ -6245,8 +6974,9 @@ class ExcelProcessorApp:
                     '外部接口单': '外部需回复接口',
                     '三维提资接口': '三维提资接口',
                     '收发文函': '收发文函',
+                    'FU': 'FU',
                 }
-                all_types = ['应打开接口', '需打开接口', '外部接口ICM', '外部接口单', '三维提资接口', '收发文函']
+                all_types = ['应打开接口', '需打开接口', '外部接口ICM', '外部接口单', '三维提资接口', '收发文函', 'FU']
 
                 # 添加统计信息
                 if len(project_stats) > 1:
@@ -6276,8 +7006,9 @@ class ExcelProcessorApp:
                     combined_message += "• 文件已按项目号自动分文件夹存放\n"
                     combined_message += "• 各项目的结果文件在对应的\"项目号结果文件\"文件夹中"
 
-                # 手动导出时也使用汇总弹窗显示结果
-                if self._should_show_popup():
+            def finish_export():
+                self.close_waiting_dialog(export_dialog)
+                if success_count > 0 and show_export_popup:
                     # 等待txt文件生成后显示汇总弹窗
                     def show_summary_after_export():
                         try:
@@ -6290,18 +7021,37 @@ class ExcelProcessorApp:
                         except Exception:
                             messagebox.showinfo("批量导出完成", combined_message)
                     self.root.after(1500, show_summary_after_export)
-            
-            # 重置手动操作标志
-            self._manual_operation = False
-        
-        # 延迟执行导出操作，确保等待对话框能够显示
-        self.root.after(100, do_export)
 
-        # 导出完成后生成结果汇总（放在异步导出流程中完成后执行）
+                self._manual_operation = False
+
+            self._post_ui_task(finish_export)
+
+        # 等待对话框先完成绘制，再启动后台导出线程。
+        self.root.after(
+            100,
+            lambda: threading.Thread(
+                target=do_export,
+                daemon=True,
+                name="ExcelExportWorker",
+            ).start(),
+        )
+
+        summary_results = tuple(
+            getattr(
+                self,
+                f'filtered_results_multi{file_type}',
+                getattr(self, f'processing_results_multi{file_type}', None),
+            )
+            for file_type in range(1, 8)
+        )
+        summary_simple_mode = (
+            (("管理员" in self.user_roles) and self.config.get("simple_export_mode", False))
+            or ("所领导" in self.user_roles)
+        )
+
         def write_summary_after_export():
             try:
                 import sys
-                import os
                 # 安全导入 main2 模块
                 try:
                     from core import main2
@@ -6312,18 +7062,9 @@ class ExcelProcessorApp:
                         sys.path.insert(0, os.path.dirname(__file__))
                     from core import main2
 
-                # TXT 汇总写入位置：优先使用导出结果位置，其次使用文件夹路径
-                export_root = (self.export_path_var.get().strip() if hasattr(self, 'export_path_var') else '')
-                summary_folder = export_root or self.path_var.get().strip()
+                summary_folder = folder_path_snapshot
                 if summary_folder:
-                    # 使用过滤后的结果进行汇总（若无则回退原结果）
-                    results_multi1 = getattr(self, 'filtered_results_multi1', getattr(self, 'processing_results_multi1', None))
-                    results_multi2 = getattr(self, 'filtered_results_multi2', getattr(self, 'processing_results_multi2', None))
-                    results_multi3 = getattr(self, 'filtered_results_multi3', getattr(self, 'processing_results_multi3', None))
-                    results_multi4 = getattr(self, 'filtered_results_multi4', getattr(self, 'processing_results_multi4', None))
-                    results_multi5 = getattr(self, 'filtered_results_multi5', getattr(self, 'processing_results_multi5', None))
-                    results_multi6 = getattr(self, 'filtered_results_multi6', getattr(self, 'processing_results_multi6', None))
-                   # 计算总条目数，用于自动模式下是否弹窗
+                    # 计算总条目数，用于自动模式下是否弹窗
                     def _count_total(multi):
                         try:
                             if not multi:
@@ -6332,30 +7073,19 @@ class ExcelProcessorApp:
                         except Exception:
                             return 0
                     
-                    total_count = (_count_total(results_multi1)
-                                   + _count_total(results_multi2)
-                                   + _count_total(results_multi3)
-                                   + _count_total(results_multi4)
-                                   + _count_total(results_multi5)
-                                   + _count_total(results_multi6))
-                    # 检查是否启用简洁导出模式
-                    # 1. 管理员且勾选了简洁模式
-                    # 2. 所领导角色（默认使用简洁模式）
-                    simple_mode = (
-                        (("管理员" in self.user_roles) and self.config.get("simple_export_mode", False)) or
-                        ("所领导" in self.user_roles)
-                    )
+                    total_count = sum(_count_total(multi) for multi in summary_results)
                     
                     txt_path = main2.write_export_summary(
                         folder_path=summary_folder,
-                        current_datetime=self.current_datetime,
-                        results_multi1=results_multi1,
-                        results_multi2=results_multi2,
-                        results_multi3=results_multi3,
-                        results_multi4=results_multi4,
-                        results_multi5=results_multi5,
-                        results_multi6=results_multi6,
-                        simple_export_mode=simple_mode,
+                        current_datetime=export_datetime_snapshot,
+                        results_multi1=summary_results[0],
+                        results_multi2=summary_results[1],
+                        results_multi3=summary_results[2],
+                        results_multi4=summary_results[3],
+                        results_multi5=summary_results[4],
+                        results_multi6=summary_results[5],
+                        results_multi7=summary_results[6],
+                        simple_export_mode=summary_simple_mode,
                     )
                     # 记录本次新生成的汇总文件路径
                     try:
@@ -6366,12 +7096,19 @@ class ExcelProcessorApp:
                             self.last_summary_written_path = None
                     except Exception:
                         pass
-            except Exception as _:
+            except Exception:
                 # 汇总失败不影响主流程
                 pass
 
-        # 延迟较长时间写汇总，确保导出完成
-        self.root.after(1000, write_summary_after_export)
+        # 保持“汇总可早于Excel导出完成”的既有语义，但不再阻塞Tk主线程。
+        self.root.after(
+            1000,
+            lambda: threading.Thread(
+                target=write_summary_after_export,
+                daemon=True,
+                name="ExportSummaryWorker",
+            ).start(),
+        )
 
     def open_selected_folder(self):
         """在资源管理器中打开导出结果位置（若未设置则打开选择的文件夹路径）"""
@@ -6446,45 +7183,119 @@ class ExcelProcessorApp:
                 print(f"刷新已处理结果失败: {e}")
 
     def _prompt_for_user_name(self, reason: str = "") -> bool:
-        """弹出带输入框的提示，要求用户填写姓名"""
+        """首次使用时要求选择账户并验证密码。"""
         if getattr(self, '_name_prompt_active', False):
             return False
         
         prompt_lines = [
-            "首次运行需要填写姓名，用于角色筛选、导出签名及任务指派。",
+            "首次运行需要登录账户，用于角色筛选、导出签名及任务指派。",
         ]
         if reason == "start_processing":
             prompt_lines.append("当前操作需要根据姓名确定角色权限，才能开始处理数据。")
         elif reason == "export_results":
             prompt_lines.append("导出结果需要记录责任人姓名，请先完成登记。")
-        prompt_lines.append("请输入您的姓名：")
+        prompt_lines.append("请选择账户并输入密码。")
         message = "\n".join(prompt_lines)
         
         self._name_prompt_active = True
         try:
-            result = self._show_name_input_dialog(message)
+            result = self._show_account_login_dialog(message)
         finally:
             self._name_prompt_active = False
         
         if result:
-            name = result.strip()
-            if name:
-                self._handle_user_name_change(name, trigger_refresh=False)
+            name, password = result
+            success, error_message = self._authenticate_and_switch_user(
+                name,
+                password,
+                trigger_refresh=False,
+            )
+            if success:
                 return True
+            try:
+                messagebox.showerror("账户登录", error_message, parent=self.root)
+            except Exception:
+                pass
         return False
 
-    def _show_name_input_dialog(self, message: str) -> Optional[str]:
-        """实际的姓名输入对话框，独立成方法便于测试"""
+    def _show_account_login_dialog(self, message: str) -> Optional[Tuple[str, str]]:
+        """显示阻塞式账户登录窗口，返回目标姓名和密码。"""
         try:
-            return simpledialog.askstring(
-                "完善姓名信息",
-                message,
-                parent=self.root,
-                initialvalue=self.config.get("user_name", "").strip()
-            )
+            accounts = list_accounts(self._get_account_table_path())
         except Exception as e:
-            print(f"[姓名录入] 弹出输入框失败: {e}")
+            try:
+                messagebox.showerror("账户登录", f"无法读取公共账户表：\n{e}", parent=self.root)
+            except Exception:
+                pass
             return None
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("账户登录")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        dialog.resizable(False, False)
+        self._apply_dialog_style_and_icon(dialog)
+        self._center_account_dialog(dialog, 460, 300)
+        result: Dict[str, Optional[Tuple[str, str]]] = {"value": None}
+
+        frame = ttk.Frame(dialog, padding=(24, 20))
+        frame.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(frame, text="账户登录", style="AccountTitle.TLabel").pack(anchor=tk.W)
+        ttk.Label(
+            frame,
+            text=message,
+            justify=tk.LEFT,
+            foreground="#555555",
+        ).pack(anchor=tk.W, pady=(8, 14))
+
+        form = ttk.Frame(frame)
+        form.pack(fill=tk.X)
+        form.columnconfigure(1, weight=1)
+        ttk.Label(form, text="账户").grid(row=0, column=0, sticky=tk.W, pady=6)
+        name_var = tk.StringVar()
+        account_combo = self._create_account_combobox(
+            form,
+            name_var,
+            accounts,
+            width=28,
+        )
+        account_combo.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(14, 0), pady=6)
+        ttk.Label(form, text="密码").grid(row=1, column=0, sticky=tk.W, pady=6)
+        password_var = tk.StringVar()
+        password_entry = ttk.Entry(form, textvariable=password_var, show="*", width=30)
+        password_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=(14, 0), pady=6)
+
+        def submit(*_):
+            target_name = name_var.get().strip()
+            if not target_name:
+                messagebox.showwarning("账户登录", "请输入或选择账户。", parent=dialog)
+                return
+            result["value"] = (target_name, password_var.get())
+            dialog.destroy()
+
+        def cancel():
+            result["value"] = None
+            dialog.destroy()
+
+        buttons = ttk.Frame(frame)
+        buttons.pack(fill=tk.X, pady=(18, 0))
+        ttk.Button(buttons, text="取消", command=cancel).pack(side=tk.RIGHT)
+        ttk.Button(
+            buttons,
+            text="登录",
+            command=submit,
+            style="AccountAction.TButton",
+        ).pack(side=tk.RIGHT, padx=(0, 8))
+        dialog.protocol("WM_DELETE_WINDOW", cancel)
+        password_entry.bind("<Return>", submit)
+        account_combo.bind(
+            "<<ComboboxSelected>>",
+            lambda _event: password_entry.focus_set(),
+        )
+        account_combo.bind("<Return>", lambda _event: password_entry.focus_set())
+        account_combo.focus_set()
+        self.root.wait_window(dialog)
+        return result["value"]
 
     def _enforce_user_name_gate(self, show_popup: bool = False):
         """当未填写姓名时，禁用"开始处理/导出结果"按钮并提示。"""
@@ -7040,23 +7851,46 @@ class ExcelProcessorApp:
             if not distribution:
                 return []
             
-            # 收集所有处理结果
+            # 收集所有处理结果。优先使用按项目保存的 multi 结果，避免新增项目
+            # 只存在于 processing_results_multiX 时被单表兼容字段漏掉。
             processed_results = {}
-            for i in range(1, 7):
-                result_attr = f'processing_results{i}'
-                if hasattr(self, result_attr):
-                    df = getattr(self, result_attr)
+            single_result_attrs = {
+                1: "processing_results",
+                2: "processing_results2",
+                3: "processing_results3",
+                4: "processing_results4",
+                5: "processing_results5",
+                6: "processing_results6",
+                7: "processing_results7",
+            }
+            for i in range(1, 8):
+                frames = []
+                multi = getattr(self, f"processing_results_multi{i}", None)
+                if isinstance(multi, dict) and multi:
+                    for df in multi.values():
+                        if df is not None and not df.empty:
+                            frames.append(df)
+                else:
+                    result_attr = single_result_attrs.get(i)
+                    df = getattr(self, result_attr, None) if result_attr else None
                     if df is not None and not df.empty:
-                        # _apply_pending_overrides 内部会读取 self.user_roles / self.user_name
-                        # 这里只需要传 df 与 file_type，避免参数不匹配导致指派检测失败
-                        processed_results[i] = self._apply_pending_overrides(df, i)
+                        frames.append(df)
+
+                if frames:
+                    if len(frames) == 1:
+                        df = frames[0]
+                    else:
+                        df = pd.concat(frames, ignore_index=True)
+                    # _apply_pending_overrides 内部会读取 self.user_roles / self.user_name
+                    # 这里只需要传 df 与 file_type，避免参数不匹配导致指派检测失败
+                    processed_results[i] = self._apply_pending_overrides(df, i)
             
             # 检测未指派任务
             user_roles = getattr(self, 'user_roles', [])
-            project_id = self._get_my_project_id()
+            project_ids = self._get_my_project_ids()
             
             # 【修改】传递config用于超期过滤
-            unassigned = distribution.check_unassigned(processed_results, user_roles, project_id, self.config)
+            unassigned = distribution.check_unassigned(processed_results, user_roles, project_ids, self.config)
             return unassigned
             
         except Exception as e:
@@ -7066,17 +7900,22 @@ class ExcelProcessorApp:
             return []
     
     def _get_my_project_id(self):
-        """获取接口工程师负责的项目号"""
+        """获取首个接口工程师项目号（保留旧调用兼容）。"""
+        project_ids = self._get_my_project_ids()
+        return project_ids[0] if project_ids else None
+
+    def _get_my_project_ids(self):
+        """获取接口工程师负责的全部项目号。"""
         try:
             if not distribution:
-                return None
+                return []
             
             user_roles = getattr(self, 'user_roles', [])
-            return distribution.parse_interface_engineer_project(user_roles)
+            return distribution.parse_interface_engineer_projects(user_roles)
             
         except Exception as e:
-            print(f"获取项目号失败: {e}")
-            return None
+            print(f"获取项目号列表失败: {e}")
+            return []
 
     def _get_current_user_name(self) -> str:
         try:
@@ -7422,7 +8261,8 @@ class ExcelProcessorApp:
                 3: '外部需打开接口',
                 4: '外部需回复接口',
                 5: '三维提资接口',
-                6: '收发文函'
+                6: '收发文函',
+                7: 'FU',
             }
             
             # 检查每个任务是否延期

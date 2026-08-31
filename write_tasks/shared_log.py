@@ -26,7 +26,7 @@ def _extract_fields(task: WriteTask) -> dict:
     row_index = None
 
     try:
-        if task.task_type == "response":
+        if task.task_type in ("response", "fu_completion"):
             file_path = str(task.payload.get("file_path", "") or "")
             file_type = task.payload.get("file_type")
             project_id = str(task.payload.get("project_id", "") or "")

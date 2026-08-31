@@ -542,6 +542,7 @@ def init_db(conn: sqlite3.Connection) -> None:
             project_id TEXT NOT NULL,
             interface_id TEXT NOT NULL,
             source_file TEXT NOT NULL,
+            source_revision TEXT DEFAULT NULL,
             row_index INTEGER NOT NULL,
             business_id TEXT DEFAULT NULL,
             department TEXT DEFAULT '',
@@ -819,4 +820,3 @@ def get_cache_info() -> dict:
     if _local_cache_manager:
         return _local_cache_manager.get_cache_info()
     return {'enabled': _local_cache_enabled, 'initialized': False}
-

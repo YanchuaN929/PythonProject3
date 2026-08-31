@@ -17,6 +17,7 @@ FILE_TYPE_MAP = {
     4: '外部需回复接口',
     5: '三维提资接口',
     6: '收发文函',
+    7: 'FU',
 }
 
 # 状态映射（与数据库中的status字段对应）
@@ -101,7 +102,7 @@ class HistoryQueryDialog(tk.Toplevel):
             font=('微软雅黑', 10),
             state='readonly'
         )
-        file_type_combo['values'] = ['全部', '内部需打开接口', '内部需回复接口', '外部需打开接口', '外部需回复接口', '三维提资接口', '收发文函']
+        file_type_combo['values'] = ['全部', '内部需打开接口', '内部需回复接口', '外部需打开接口', '外部需回复接口', '三维提资接口', '收发文函', 'FU']
         file_type_combo.grid(row=5, column=1, sticky=tk.W, pady=8, padx=(10, 0))
         
         # 按钮框架

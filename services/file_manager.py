@@ -20,6 +20,17 @@ from typing import Set, Optional, List
 import pandas as pd
 
 
+RESULT_CACHE_ENVELOPE_VERSION = 2
+
+
+def _current_stream_schema_version() -> str:
+    try:
+        from core.main import STREAM_RESULT_SCHEMA_VERSION
+        return str(STREAM_RESULT_SCHEMA_VERSION)
+    except Exception:
+        return "selected_columns_v3"
+
+
 def _get_app_directory():
     """
     获取程序所在目录的绝对路径
@@ -415,9 +426,19 @@ class FileIdentityManager:
             
             cache_file = self._get_cache_filename(file_path, project_id, file_type)
             
-            # 使用pickle保存DataFrame
+            schema_version = str(
+                getattr(dataframe, "attrs", {}).get("_stream_schema_version", "")
+                or _current_stream_schema_version()
+            )
+            payload = {
+                "cache_envelope_version": RESULT_CACHE_ENVELOPE_VERSION,
+                "stream_schema_version": schema_version,
+                "dataframe": dataframe,
+            }
+
+            # 带版本信封保存；即使结果为空也能可靠判断读取逻辑是否已升级。
             with open(cache_file, 'wb') as f:
-                pickle.dump(dataframe, f, protocol=pickle.HIGHEST_PROTOCOL)
+                pickle.dump(payload, f, protocol=pickle.HIGHEST_PROTOCOL)
             
             # 控制台输出优化：已验证逻辑，默认不输出
             return True
@@ -468,21 +489,28 @@ class FileIdentityManager:
             
             # 加载缓存
             with open(cache_file, 'rb') as f:
-                dataframe = pickle.load(f)
+                payload = pickle.load(f)
 
-            # 精简列流式读取后的缓存必须带 schema 标记；旧完整行缓存不再兼容。
-            if isinstance(dataframe, pd.DataFrame) and str(file_type).startswith("file"):
-                if "_stream_schema_version" not in dataframe.columns:
-                    try:
-                        os.remove(cache_file)
-                    except Exception:
-                        pass
-                    return None
+            expected_schema = _current_stream_schema_version()
+            valid_envelope = (
+                isinstance(payload, dict)
+                and payload.get("cache_envelope_version") == RESULT_CACHE_ENVELOPE_VERSION
+                and str(payload.get("stream_schema_version") or "") == expected_schema
+                and isinstance(payload.get("dataframe"), pd.DataFrame)
+            )
+            if not valid_envelope:
+                try:
+                    os.remove(cache_file)
+                except Exception:
+                    pass
+                return None
+            dataframe = payload["dataframe"]
+            dataframe.attrs["_stream_schema_version"] = expected_schema
             
             # 控制台输出优化：已验证逻辑，默认不输出
             return dataframe
             
-        except (pickle.UnpicklingError, EOFError, ValueError):
+        except (pickle.UnpicklingError, EOFError, ValueError, TypeError):
             # 损坏的缓存文件，静默删除并重新处理
             try:
                 cache_file = self._get_cache_filename(file_path, project_id, file_type)

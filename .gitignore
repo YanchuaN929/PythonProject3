@@ -18,6 +18,8 @@ build/
 dist/
 build_detached*/
 dist_detached*/
+/_internal/
+/接口筛选.exe
 *.egg-info/
 *.spec.bak
 
@@ -30,6 +32,7 @@ update_log.txt
 # Test / cache / coverage
 # =========================
 .pytest_cache/
+.pytest_*/
 .pytest_run_*/
 .pytest_stage_*/
 .probe_runtime/
@@ -61,6 +64,8 @@ result_cache/write_tasks_state.json
 # =========================
 .vscode/
 .idea/
+*.code-workspace
+backup/
 *.swp
 *.swo
 *~
@@ -74,16 +79,13 @@ desktop.ini
 *.log
 *.tmp
 .tmp_*
+post_update_log.txt
+/post_update_stub.bat
 
 # Excel / Office temp files
 ~$*.xlsx
 ~$*.xls
 ~$*.docx
-
-# =========================
-# Local config / user data
-# =========================
-config.json
 
 # =========================
 # SQL exploration local artifacts
@@ -105,3 +107,6 @@ document/*detail_base*.json
 
 # Local roster variants
 excel_bin/姓名角色表-*.xlsx
+!excel_bin/姓名角色表-电力工程研究设计所.xlsx
+!excel_bin/姓名角色表-核电工艺所.xlsx
+!excel_bin/姓名角色表-电气自动化所.xlsx

@@ -105,6 +105,7 @@ def process_vars():
         'tab4': tk.BooleanVar(value=True),
         'tab5': tk.BooleanVar(value=True),
         'tab6': tk.BooleanVar(value=True),
+        'tab7': tk.BooleanVar(value=True),
     }
 
 

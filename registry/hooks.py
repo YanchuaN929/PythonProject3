@@ -24,6 +24,7 @@ from .service import (
     mark_confirmed,
     batch_upsert_tasks,
     resolve_task_record,
+    resolve_task_records,
 )
 from .db import close_connection, close_connection_after_use, MaintenanceModeError, _diag_log
 from .models import EventType
@@ -31,6 +32,7 @@ from .util import (
     build_task_key_from_row, 
     build_task_fields_from_row,
     get_source_basename,
+    get_source_revision,
     safe_now,
     normalize_project_id
 )
@@ -288,6 +290,48 @@ def get_display_status(task_keys: List[Dict[str, Any]], current_user_roles_str: 
         close_connection_after_use()
 
 
+def get_display_state(
+    task_keys: List[Dict[str, Any]],
+    current_user_roles_str: str = None,
+) -> tuple:
+    """一次批量查询同时返回显示状态和实时任务快照。"""
+    try:
+        _ensure_data_folder_from_task_keys(task_keys)
+        cfg = _cfg()
+        if not _enabled(cfg):
+            return {}, {}
+
+        db_path = cfg["registry_db_path"]
+        wal = bool(cfg.get("registry_wal", False))
+        user_roles = []
+        if current_user_roles_str:
+            user_roles = [
+                role.strip()
+                for role in current_user_roles_str.split(",")
+                if role.strip()
+            ]
+
+        snapshots = resolve_task_records(db_path, wal, task_keys)
+        from .service import get_display_status as service_get_display_status
+        statuses = service_get_display_status(
+            db_path,
+            wal,
+            task_keys,
+            user_roles,
+            task_snapshots=snapshots,
+        )
+        return statuses, snapshots
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
+    except Exception as e:
+        print(f"[Registry] get_display_state 失败: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        close_connection_after_use()
+    return {}, {}
+
+
 def get_task_snapshot(key: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """统一读取任务快照，先查精确 task_id，再回退到最新 business 记录。"""
     try:
@@ -429,9 +473,11 @@ def on_process_done(
         
         # 批量构造任务数据
         tasks_data = []
+        source_revision = get_source_revision(source_file)
         for _, row in result_df.iterrows():
             key = build_task_key_from_row(row, file_type, source_file)
             fields = build_task_fields_from_row(row, file_type)
+            fields['_source_revision'] = source_revision
             tasks_data.append({'key': key, 'fields': fields})
         
         # 【关键改进】使用重试机制执行批量upsert
@@ -450,6 +496,9 @@ def on_process_done(
             }, now)
         
         _retry_on_lock("写入事件", do_write_event)
+
+        # 扫描可能新增任务或自动归档旧任务，后续显示必须重新同步本地只读缓存。
+        invalidate_cache()
         
         if count == 0:
             print(f"[Registry] ⚠ 文件{file_type}项目{project_id}: 写入0条（数据库可能未正确初始化）")
@@ -538,7 +587,7 @@ def on_assigned(
     assigned_by: str,
     assigned_to: str,
     now: Optional[datetime] = None
-) -> None:
+) -> bool:
     """
     任务指派钩子
     
@@ -558,7 +607,7 @@ def on_assigned(
         _ensure_data_folder_from_path(file_path)
         cfg = _cfg()
         if not _enabled(cfg):
-            return
+            return False
         
         now = now or safe_now()
         db_path = cfg['registry_db_path']
@@ -602,16 +651,20 @@ def on_assigned(
             }, now)
 
         _retry_on_lock("指派写入", _do_assigned_write)
+        invalidate_cache()
+        return True
         
         # 控制台输出优化：已验证逻辑，默认不输出
         
     except MaintenanceModeError as e:
         _handle_maintenance_mode(e)
+        return False
     except Exception as e:
         print(f"[Registry] on_assigned 失败: {e}")
         import traceback
         traceback.print_exc()
         _handle_runtime_registry_error(e)
+        return False
     finally:
         close_connection_after_use()
 
@@ -706,6 +759,7 @@ def on_response_written(
                     'response_number': response_number,  # 记录回文单号
                     'completed_by': user_name  # 【新增】记录完成人姓名
                 }
+                fields_to_update['_source_revision'] = get_source_revision(file_path)
                 if role:
                     fields_to_update['role'] = role
 
@@ -770,6 +824,109 @@ def on_response_written(
         import traceback
         traceback.print_exc()
         _handle_runtime_registry_error(e)
+    finally:
+        close_connection_after_use()
+
+
+def on_fu_completed(
+    file_path: str,
+    row_index: int,
+    interface_id: str,
+    actual_date: str,
+    user_name: str,
+    project_id: str,
+    role: Optional[str] = None,
+    now: Optional[datetime] = None,
+) -> bool:
+    """Record a type-7 FU date write and move the task to review."""
+    try:
+        _ensure_data_folder_from_path(file_path)
+        cfg = _cfg()
+        if not _enabled(cfg):
+            return True
+
+        now = now or safe_now()
+        db_path = cfg["registry_db_path"]
+        wal = bool(cfg.get("registry_wal", False))
+        key = {
+            "file_type": 7,
+            "project_id": normalize_project_id(project_id, 7),
+            "interface_id": (interface_id or "").strip(),
+            "source_file": get_source_basename(file_path),
+            "row_index": int(row_index or 0),
+        }
+
+        def _do_fu_write():
+            from .db import get_connection
+            from .service import upsert_task
+
+            conn = get_connection(db_path, wal)
+            try:
+                snapshot = resolve_task_record(db_path, wal, key, conn=conn)
+                display_status = "待指派人审查" if snapshot and snapshot.get("assigned_by") else "待审查"
+                interface_time = snapshot.get("interface_time", "") if snapshot else ""
+                superior_keywords = get_superior_keywords()
+                is_superior = bool(
+                    role and any(keyword in role for keyword in superior_keywords)
+                )
+                if is_superior:
+                    display_status = "已审查"
+
+                fields = {
+                    "display_status": display_status,
+                    "interface_time": interface_time,
+                    "_completed_col_value": actual_date or "有值",
+                    "completed_by": user_name,
+                    "_source_revision": get_source_revision(file_path),
+                }
+                if role:
+                    fields["role"] = role
+                if is_superior:
+                    fields["confirmed_by"] = user_name
+                    fields["confirmed_at"] = now.isoformat()
+
+                upsert_task(db_path, wal, key, fields, now, conn=conn)
+                mark_completed(db_path, wal, key, now, conn=conn)
+
+                if is_superior:
+                    archive_info = mark_confirmed(
+                        db_path, wal, key, now, confirmed_by=user_name, conn=conn
+                    )
+                    if not archive_info:
+                        raise RuntimeError(f"FU自动确认失败，未找到任务: {key['interface_id']}")
+                    write_event(db_path, wal, EventType.ARCHIVED, {
+                        **key,
+                        "extra": {
+                            "reason": archive_info.get("archive_reason"),
+                            "confirmed_by": user_name,
+                            "archived_task_id": archive_info.get("archived_id"),
+                            "original_task_id": archive_info.get("original_id"),
+                            "archived_row_index": archive_info.get("archived_row_index"),
+                        },
+                    }, now, conn=conn)
+
+                write_event(db_path, wal, EventType.FU_COMPLETED, {
+                    **key,
+                    "extra": {
+                        "actual_date": actual_date,
+                        "user_name": user_name,
+                    },
+                }, now, conn=conn)
+            finally:
+                close_connection_after_use()
+
+        _retry_on_lock("FU日期写入", _do_fu_write)
+        invalidate_cache()
+        return True
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
+        return False
+    except Exception as e:
+        print(f"[Registry] on_fu_completed 失败: {e}")
+        import traceback
+        traceback.print_exc()
+        _handle_runtime_registry_error(e)
+        return False
     finally:
         close_connection_after_use()
 
@@ -940,6 +1097,7 @@ def on_scan_finalize(
         # 执行归档逻辑
         from .service import finalize_scan
         finalize_scan(db_path, wal, now, days)
+        invalidate_cache()
         
         print(f"[Registry] scan_finalize: batch={batch_tag}, missing_keep_days={days}")
         
@@ -1035,50 +1193,13 @@ def get_cache_status() -> dict:
 
 
 def get_write_queue_stats() -> dict:
-    """
-    获取写入队列统计信息
-    
-    返回:
-        包含队列状态的字典
-    """
-    try:
-        cfg = _cfg()
-        if not cfg.get('registry_write_queue_enabled', False):
-            return {'enabled': False}
-        
-        from .write_queue import get_write_queue
-        queue = get_write_queue()
-        stats = queue.get_stats()
-        stats['queue_size'] = queue.get_queue_size()
-        stats['enabled'] = queue.is_enabled()
-        return stats
-    except Exception as e:
-        return {'error': str(e)}
+    """兼容旧诊断入口；Registry 当前固定使用直接事务写入。"""
+    return {'enabled': False, 'mode': 'direct', 'queue_size': 0}
 
 
 def flush_write_queue(timeout: float = 10.0) -> bool:
-    """
-    刷新写入队列，等待所有待处理请求完成
-    
-    在程序退出前调用此函数，确保所有写入操作已完成。
-    
-    参数:
-        timeout: 最大等待时间（秒）
-        
-    返回:
-        True = 队列已清空，False = 超时或未启用
-    """
-    try:
-        cfg = _cfg()
-        if not cfg.get('registry_write_queue_enabled', False):
-            return True  # 未启用队列，无需刷新
-        
-        from .write_queue import get_write_queue
-        queue = get_write_queue()
-        return queue.flush(timeout)
-    except Exception as e:
-        print(f"[Registry] flush_write_queue 失败: {e}")
-        return False
+    """兼容旧退出入口；直接写入模式没有待刷新的 Registry 队列。"""
+    return True
 
 
 def shutdown():
@@ -1091,24 +1212,14 @@ def shutdown():
     3. 本地缓存已清理
     """
     try:
-        # 1. 刷新写入队列
-        flush_write_queue(timeout=5.0)
-        
-        # 2. 关闭写入队列
-        try:
-            from .write_queue import shutdown_write_queue
-            shutdown_write_queue()
-        except ImportError:
-            pass
-        
-        # 3. 清理本地缓存
+        # 1. 清理本地缓存
         try:
             from .local_cache import cleanup_global_cache
             cleanup_global_cache()
         except ImportError:
             pass
         
-        # 4. 关闭数据库连接
+        # 2. 关闭数据库连接
         close_connection()
         
         print("[Registry] 模块已关闭")

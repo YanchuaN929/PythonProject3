@@ -55,6 +55,21 @@ def _is_confirmed_registry_status(status_text):
     return _normalize_registry_status_text(status_text) == "已审查"
 
 
+def _terminal_registry_status_from_snapshot(task_snapshot):
+    """将实时 Registry 终态归一为 UI 可过滤的已审查状态。"""
+    if not task_snapshot:
+        return None
+
+    task_status = str(task_snapshot.get("status") or "").strip().lower()
+    if task_status in {"confirmed", "archived"}:
+        return "已审查"
+    if task_snapshot.get("confirmed_at") or _is_confirmed_registry_status(
+        task_snapshot.get("display_status")
+    ):
+        return "已审查"
+    return None
+
+
 def _should_hide_registry_row_for_roles(status_text, current_user_roles):
     """按当前角色决定该 Registry 状态是否应从列表中隐藏。"""
     clean_status = _normalize_registry_status_text(status_text)
@@ -158,7 +173,7 @@ class WindowManager:
         self.file_info_text = None
         self.notebook = None
         
-        # 存储6个选项卡的viewer引用
+        # 存储选项卡的viewer引用
         self.viewers = {
             'tab1': None,  # 内部需打开接口
             'tab2': None,  # 内部需回复接口
@@ -166,6 +181,7 @@ class WindowManager:
             'tab4': None,  # 外部需回复接口
             'tab5': None,  # 三维提资接口
             'tab6': None,  # 收发文函
+            'tab7': None,  # FU
         }
         
         # 存储选项卡frame引用
@@ -179,6 +195,7 @@ class WindowManager:
             'tab4': 3,
             'tab5': 4,
             'tab6': 5,
+            'tab7': 6,
         }
         
         # 存储勾选框变量
@@ -354,7 +371,7 @@ class WindowManager:
             command=lambda: self._trigger_callback('on_browse_folder')
         )
         browse_btn.grid(row=0, column=2, sticky=tk.W)
-        
+
         # 设置菜单按钮
         settings_btn = ttk.Button(
             path_frame, 
@@ -387,7 +404,7 @@ class WindowManager:
             command=lambda: self._trigger_callback('on_browse_export_folder')
         )
         export_browse_btn.grid(row=1, column=2, sticky=tk.W, pady=(8, 0))
-    
+
     def create_info_section(self, parent):
         """创建文件信息显示区域"""
         container = ttk.Frame(parent)
@@ -452,11 +469,11 @@ class WindowManager:
         self.notebook = ttk.Notebook(parent)
         self.notebook.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
         
-        # 创建6个选项卡
+        # 创建业务选项卡
         self.create_tabs()
     
     def create_tabs(self):
-        """创建6个选项卡"""
+        """创建业务选项卡"""
         tab_configs = [
             ('tab1', "内部需打开接口"),
             ('tab2', "内部需回复接口"),
@@ -464,6 +481,7 @@ class WindowManager:
             ('tab4', "外部需回复接口"),
             ('tab5', "三维提资接口"),
             ('tab6', "收发文函"),
+            ('tab7', "FU"),
         ]
         
         for tab_id, tab_text in tab_configs:
@@ -608,9 +626,18 @@ class WindowManager:
         ignore_overdue_btn.pack(side=tk.LEFT, padx=(10, 0))
         self.buttons['ignore_overdue'] = ignore_overdue_btn
     
+    def _clear_viewer_metadata(self, viewer):
+        """Drop stale row metadata whenever a Treeview is rebuilt."""
+        metadata = getattr(self, "_item_metadata", None)
+        if not isinstance(metadata, dict):
+            return
+        for key in [key for key in metadata if isinstance(key, tuple) and key and key[0] is viewer]:
+            metadata.pop(key, None)
+
     def show_empty_message(self, viewer, message):
         """在viewer中显示提示信息"""
         # 清空现有内容
+        self._clear_viewer_metadata(viewer)
         for item in viewer.get_children():
             viewer.delete(item)
         
@@ -654,6 +681,7 @@ class WindowManager:
             current_user_roles: 当前用户的角色列表（用于筛选显示，如["设计人员", "2016接口工程师"]）
         """
         # 清空现有内容
+        self._clear_viewer_metadata(viewer)
         for item in viewer.get_children():
             viewer.delete(item)
         
@@ -708,7 +736,8 @@ class WindowManager:
                 "外部需打开接口": 3,
                 "外部需回复接口": 4,
                 "三维提资接口": 5,  # 【修复】应该是"三维提资接口"，不是"待处理文件5"
-                "收发文函": 6       # 【修复】应该是"收发文函"，不是"待处理文件6"
+                "收发文函": 6,      # 【修复】应该是"收发文函"，不是"待处理文件6"
+                "FU": 7,
             }
             file_type = file_type_map.get(tab_name)
             
@@ -724,8 +753,9 @@ class WindowManager:
                         
                         # 获取接口时间（用于判断是否延期）
                         interface_time = ""
-                        if "接口时间" in row_data.index:
-                            time_val = row_data["接口时间"]
+                        time_column = "接口时间" if "接口时间" in row_data.index else "FU计划"
+                        if time_column in row_data.index:
+                            time_val = row_data[time_column]
                             if pd.notna(time_val) and str(time_val).strip():
                                 interface_time = str(time_val).strip()
                         
@@ -756,7 +786,10 @@ class WindowManager:
                     task_keys_only = [tk[1] for tk in task_keys]
                     # 【新增】传递当前用户角色列表
                     user_roles_str = ','.join(current_user_roles) if current_user_roles else ''
-                    registry_status_map_raw = registry_hooks.get_display_status(task_keys_only, user_roles_str)
+                    (
+                        registry_status_map_raw,
+                        registry_snapshot_map,
+                    ) = registry_hooks.get_display_state(task_keys_only, user_roles_str)
                     current_user_name = getattr(self.app, 'user_name', '').strip()
 
                     # 映射回display_df的索引（取第一个匹配的状态）
@@ -772,13 +805,21 @@ class WindowManager:
                         if tid in registry_status_map_raw and df_idx not in registry_status_map:
                             registry_status_map[df_idx] = registry_status_map_raw[tid]
 
-                        if df_idx not in registry_confirmed_map:
-                            task_snapshot = registry_hooks.get_task_snapshot(task_key)
-                            if task_snapshot and task_snapshot.get("confirmed_by"):
-                                registry_confirmed_map[df_idx] = (
-                                    task_snapshot["confirmed_by"],
-                                    current_user_name,
-                                )
+                        # 批量实时快照覆盖确认/归档终态，避免逐行打开 Registry。
+                        task_snapshot = registry_snapshot_map.get(tid)
+                        terminal_status = _terminal_registry_status_from_snapshot(task_snapshot)
+                        if terminal_status:
+                            registry_status_map[df_idx] = terminal_status
+
+                        if (
+                            df_idx not in registry_confirmed_map
+                            and task_snapshot
+                            and task_snapshot.get("confirmed_by")
+                        ):
+                            registry_confirmed_map[df_idx] = (
+                                task_snapshot["confirmed_by"],
+                                current_user_name,
+                            )
         except Exception as e:
             print(f"[Registry] 状态查询失败（不影响主流程）: {e}")
         
@@ -793,13 +834,16 @@ class WindowManager:
         
         # 【重要】填充"状态"列：统一使用 Registry display_status（弃用旧的“延期感叹号/空白”标记）
         # 【新增】处理"接口时间"列：空值显示为"-"
-        if "接口时间" in display_df.columns:
+        display_time_column = "接口时间" if "接口时间" in display_df.columns else (
+            "FU计划" if "FU计划" in display_df.columns else None
+        )
+        if display_time_column:
             # 处理空值
             time_values = []
             status_values = []
             for idx in range(len(display_df)):
                 try:
-                    time_value = display_df.iloc[idx]["接口时间"]
+                    time_value = display_df.iloc[idx][display_time_column]
                     # 空值处理
                     if pd.isna(time_value) or str(time_value).strip() == '':
                         time_str = '-'
@@ -821,7 +865,7 @@ class WindowManager:
                     if "状态" in display_df.columns:
                         status_values.append("待完成")
             
-            display_df["接口时间"] = time_values
+            display_df[display_time_column] = time_values
             if "状态" in display_df.columns:
                 display_df["状态"] = status_values
         
@@ -871,7 +915,11 @@ class WindowManager:
             '状态': 140,  # 扩大以容纳Emoji状态文本
             '项目号': 75,
             '接口号': 240,
+            '内部编码': 220,
             '接口时间': 85,
+            'FU计划': 95,
+            '实际FU日期': 95,
+            '中文标题': 260,
             '责任人': 100,  # 新增责任人列
             '是否已完成': 95
         }
@@ -887,17 +935,20 @@ class WindowManager:
         
         # 配置序号列（宽度与接口号列一致）
         # 如果有项目号列，接口号在第二列(索引1)；否则在第一列(索引0)
-        interface_col_idx = 1 if "项目号" in columns else 0
-        row_number_width = column_widths[interface_col_idx] if len(column_widths) > interface_col_idx else 60
+        row_number_width = 80 if tab_name == "FU" else 60
         viewer.column("#0", width=row_number_width, minwidth=row_number_width)
-        viewer.heading("#0", text="行号")
+        viewer.heading("#0", text="原始行号" if tab_name == "FU" else "行号")
         
         # 配置列对齐方式
         column_alignment = {
             '状态': 'center',
             '项目号': 'center',
             '接口号': 'w',  # 左对齐
+            '内部编码': 'w',
             '接口时间': 'center',
+            'FU计划': 'center',
+            '实际FU日期': 'center',
+            '中文标题': 'w',
             '责任人': 'center',  # 新增责任人列对齐方式
             '是否已完成': 'center'
         }
@@ -967,9 +1018,12 @@ class WindowManager:
             
             # 判断是否为延期数据（用于应用tag样式）
             is_overdue_flag = False
-            if "接口时间" in display_df.columns and index < len(display_df):
+            overdue_column = "接口时间" if "接口时间" in display_df.columns else (
+                "FU计划" if "FU计划" in display_df.columns else None
+            )
+            if overdue_column and index < len(display_df):
                 try:
-                    time_value = display_df.iloc[index]["接口时间"]
+                    time_value = display_df.iloc[index][overdue_column]
                     is_overdue_flag = is_date_overdue(str(time_value) if not pd.isna(time_value) else "")
                 except Exception:
                     is_overdue_flag = False
@@ -998,7 +1052,7 @@ class WindowManager:
             
             # 获取接口号（尝试多个可能的列名）
             interface_id_val = ''
-            for col_name in ['接口号', 'interface_id', '接口编号']:
+            for col_name in ['接口号', '内部编码', 'interface_id', '接口编号']:
                 if col_name in metadata_row.index:
                     interface_id_val = str(metadata_row.get(col_name, ''))
                     break
@@ -1051,21 +1105,24 @@ class WindowManager:
                                            file_manager, tab_name)
         
         # 【新增】绑定接口号点击事件（用于回文单号输入）
-        if "接口号" in columns:
+        if "接口号" in columns or "内部编码" in columns:
             self._bind_interface_click_event(viewer, df, display_df, columns,
                                             visible_original_row_numbers, tab_name, file_manager)
         
         print(f"{tab_name}数据加载完成：{len(df)} 行，{len(df.columns)} 列 -> 显示：{max_rows} 行，{len(display_df.columns)} 列")
         
         # 【新增】默认按"接口时间"升序排序
-        if '接口时间' in columns:
+        default_time_column = '接口时间' if '接口时间' in columns else (
+            'FU计划' if 'FU计划' in columns else None
+        )
+        if default_time_column:
             try:
                 # 确保排序状态字典存在
                 if not hasattr(self, '_sort_states'):
                     self._sort_states = {}
                 # 预设状态为True，这样_sort_by_column调用时会toggle为False（升序）
-                self._sort_states[(viewer, '接口时间')] = True
-                self._sort_by_column(viewer, '接口时间', tab_name)
+                self._sort_states[(viewer, default_time_column)] = True
+                self._sort_by_column(viewer, default_time_column, tab_name)
             except Exception as sort_e:
                 print(f"[默认排序] 排序失败: {sort_e}")
     
@@ -1248,7 +1305,8 @@ class WindowManager:
                             "外部需打开接口": 3,
                             "外部需回复接口": 4,
                             "三维提资接口": 5,
-                            "收发文函": 6
+                            "收发文函": 6,
+                            "FU": 7,
                         }
                         file_type = file_type_map.get(tab_name)
                         
@@ -1278,6 +1336,18 @@ class WindowManager:
                                 messagebox.showwarning("提示", f"找不到任务记录：{interface_id_clean}")
                                 return
                             task_status = task_snapshot.get("status")
+                            if task_status == 'archived':
+                                # 旧缓存可能让已归档行短暂残留；Registry 终态不可再取消确认。
+                                try:
+                                    viewer.delete(item_id)
+                                except Exception:
+                                    pass
+                                if hasattr(self, '_item_metadata'):
+                                    self._item_metadata.pop((viewer, item_id), None)
+                                if hasattr(self, 'app') and self.app:
+                                    viewer.after(100, self.app.refresh_current_tab_display)
+                                print(f"[Registry] 已移除界面中残留的归档任务：{interface_id_clean}")
+                                return
                             if task_status != 'confirmed':
                                 print(f"[Registry] 错误：任务状态不是已确认，无法取消确认 (status={task_status})")
                                 import tkinter.messagebox as messagebox
@@ -1476,9 +1546,9 @@ class WindowManager:
             # 原始数据（未处理），不支持回文单号输入功能
             return
         
-        # 找到"接口号"列的索引
+        # 找到可操作的业务编码列
         try:
-            interface_col_idx = columns.index("接口号")
+            interface_col_idx = columns.index("内部编码" if tab_name == "FU" else "接口号")
         except ValueError:
             return  # 没有"接口号"列，不绑定事件
         
@@ -1574,6 +1644,50 @@ class WindowManager:
                     original_df=original_df,
                     item_index=item_index,
                 )
+
+                if file_type == 7:
+                    from datetime import date
+                    from tkinter import messagebox
+                    from write_tasks import get_write_task_manager, get_pending_cache
+
+                    role = " ".join(str(value) for value in getattr(self.app, "user_roles", []) if value)
+                    data_folder = None
+                    try:
+                        from registry import hooks as registry_hooks
+                        data_folder = registry_hooks.get_data_folder()
+                    except Exception:
+                        pass
+                    manager = self.write_task_manager or get_write_task_manager()
+                    completion_date = date.today().isoformat()
+                    task = manager.submit_fu_completion_task(
+                        file_path=source_file,
+                        row_index=original_row,
+                        interface_id=str(interface_id),
+                        user_name=user_name,
+                        project_id=project_id,
+                        completion_date=completion_date,
+                        role=role,
+                        data_folder=data_folder,
+                        description=f"{user_name} 完成FU {interface_id}",
+                    )
+                    responsible = (metadata.get('responsible') or "").strip()
+                    try:
+                        get_pending_cache().add_response_entry(task.task_id, {
+                            "file_path": source_file,
+                            "file_type": 7,
+                            "row_index": original_row,
+                            "response_number": completion_date,
+                            "user_name": user_name,
+                            "project_id": project_id,
+                            "has_assignor": bool(responsible and responsible != "无"),
+                        })
+                    except Exception as cache_error:
+                        print(f"[PendingCache] 记录FU任务失败: {cache_error}")
+                    callback = getattr(self.app, '_handle_response_submitted', None)
+                    if callable(callback):
+                        callback(source_file, original_row, 7)
+                    messagebox.showinfo("已提交", "实际FU日期写入任务已提交。", parent=viewer)
+                    return
                 
                 # 显示输入对话框
                 from ui.input_handler import InterfaceInputDialog
@@ -1632,7 +1746,8 @@ class WindowManager:
             "外部需打开接口": 3,
             "外部需回复接口": 4,
             "三维提资接口": 5,
-            "收发文函": 6
+            "收发文函": 6,
+            "FU": 7,
         }
         return tab_map.get(tab_name, 1)
     
@@ -1711,7 +1826,7 @@ class WindowManager:
                 if col == "项目号":
                     column_widths.append(80)
                     continue
-                elif col == "接口号":
+                elif col in ("接口号", "内部编码"):
                     column_widths.append(200)
                     continue
                 elif col == "是否已完成":
@@ -1768,6 +1883,23 @@ class WindowManager:
             completed_rows: 已完成行的集合（原始行号）
         """
         try:
+            if tab_name == "FU" and "内部编码" in df.columns:
+                completed_rows = completed_rows or set()
+                original_rows = df["原始行号"].tolist() if "原始行号" in df.columns else []
+                completed_status = [
+                    "☑" if row in completed_rows else "☐" for row in original_rows
+                ] if original_rows else ["☐"] * len(df)
+                return pd.DataFrame({
+                    "状态": df["状态"] if "状态" in df.columns else [""] * len(df),
+                    "项目号": df["项目号"] if "项目号" in df.columns else [""] * len(df),
+                    "内部编码": df["内部编码"],
+                    "中文标题": df["中文标题"] if "中文标题" in df.columns else [""] * len(df),
+                    "FU计划": df["FU计划"] if "FU计划" in df.columns else [""] * len(df),
+                    "实际FU日期": df["实际FU日期"] if "实际FU日期" in df.columns else [""] * len(df),
+                    "责任人": df["责任人"] if "责任人" in df.columns else [""] * len(df),
+                    "是否已完成": completed_status,
+                })
+
             # 精简列流式处理结果优先使用标准业务列，不再按原始Excel列索引取接口号。
             if "接口号" in df.columns:
                 if completed_rows is None:
@@ -2055,7 +2187,7 @@ class WindowManager:
             # - 接口号、是否已完成
             interface_col_idx = -1
             for idx, col in enumerate(columns):
-                if col == "接口号":
+                if col in ("接口号", "内部编码"):
                     interface_col_idx = idx
                     break
             

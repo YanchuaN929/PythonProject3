@@ -469,6 +469,7 @@ class TaskRecordPanel(ttk.LabelFrame):
         type_map = {
             "assignment": "任务指派",
             "response": "回文填报",
+            "fu_completion": "FU完成",
             "confirmation": "审查确认",
         }
         status_map = {

@@ -16,7 +16,7 @@ def make_task_id(file_type: int, project_id: str, interface_id: str, source_file
     使用SHA1哈希确保唯一性，避免主键冲突
     
     参数:
-        file_type: 文件类型（1-6）
+        file_type: 文件类型（1-7）
         project_id: 项目号
         interface_id: 接口号
         source_file: 源文件basename
@@ -80,6 +80,7 @@ def extract_interface_id(df_row: pd.Series, file_type: int) -> str:
         4: 4,   # E列
         5: 0,   # A列
         6: 4,   # E列
+        7: 1,   # B列
     }
     
     # 首先尝试使用"接口号"列名（如果DataFrame已经处理过）
@@ -89,6 +90,8 @@ def extract_interface_id(df_row: pd.Series, file_type: int) -> str:
         import re
         interface_id = re.sub(r'\([^)]*\)$', '', interface_id).strip()
         return interface_id
+    if "内部编码" in df_row.index:
+        return str(df_row["内部编码"]).strip()
     
     # 否则使用列索引
     col_idx = interface_col_map.get(file_type)
@@ -110,7 +113,7 @@ def extract_project_id(df_row: pd.Series, file_type: int) -> str:
     
     参数:
         df_row: DataFrame的一行（pd.Series）
-        file_type: 文件类型（1-6）
+        file_type: 文件类型（1-7）
         
     返回:
         项目号字符串（去除前后空格）
@@ -168,6 +171,7 @@ def extract_completed_column_value(df_row: pd.Series, file_type: int) -> str:
     - 文件4: V列（索引21）
     - 文件5: N列（索引13）
     - 文件6: J列（索引9）
+    - 文件7: D列（索引3）
     
     参数:
         df_row: DataFrame的一行
@@ -187,6 +191,7 @@ def extract_completed_column_value(df_row: pd.Series, file_type: int) -> str:
         4: 21,   # V列
         5: 13,   # N列
         6: 9,    # J列
+        7: 3,    # D列
     }
     
     col_idx = col_map.get(file_type)
@@ -225,6 +230,10 @@ def extract_interface_time(df_row: pd.Series) -> str:
         time_val = df_row["接口时间"]
         if pd.notna(time_val):
             return str(time_val).strip()
+    if "FU计划" in df_row.index:
+        time_val = df_row["FU计划"]
+        if pd.notna(time_val):
+            return str(time_val).strip()
     return ""
 
 def normalize_project_id(pid: str, file_type: int) -> str:
@@ -254,6 +263,17 @@ def get_source_basename(path: str) -> str:
     if not path:
         return ""
     return os.path.basename(path)
+
+
+def get_source_revision(path: str) -> str:
+    """Return a cheap revision token without reading the Excel payload."""
+    if not path:
+        return ""
+    try:
+        file_stat = os.stat(path)
+        return f"{int(file_stat.st_size)}:{int(file_stat.st_mtime_ns)}"
+    except (OSError, ValueError, TypeError):
+        return ""
 
 def safe_now() -> datetime:
     """
@@ -312,7 +332,7 @@ def build_task_fields_from_row(df_row: pd.Series, file_type: int = None) -> Dict
     
     参数:
         df_row: DataFrame的一行
-        file_type: 文件类型（1-6），用于提取完成列值
+        file_type: 文件类型（1-7），用于提取完成列值
         
     返回:
         包含department, interface_time, role等字段的字典

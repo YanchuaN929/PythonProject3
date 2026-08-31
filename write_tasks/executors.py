@@ -35,9 +35,16 @@ def execute_response_task(payload: Dict[str, Any]) -> bool:
         user_name=payload["user_name"],
         project_id=payload["project_id"],
         source_column=payload.get("source_column"),
+        interface_id=payload.get("interface_id"),
+        return_details=True,
     )
     if not ok:
         return False
+
+    # 文件更新后若接口行发生过唯一重定位，后续Registry必须使用实际写入行号。
+    actual_row_index = getattr(ok, "row_index", None)
+    if actual_row_index is not None:
+        payload["row_index"] = int(actual_row_index)
 
     # 关键：同步写入 registry.db（状态/完成人/完成时间/回文单号/待审查等）
     try:
@@ -74,9 +81,52 @@ def execute_response_task(payload: Dict[str, Any]) -> bool:
     return True
 
 
+def execute_fu_completion_task(payload: Dict[str, Any]) -> bool:
+    """Write the FU actual date and persist the completion in Registry."""
+    from ui.input_handler import write_fu_completion_to_excel
+
+    ok = write_fu_completion_to_excel(
+        payload["file_path"],
+        payload["row_index"],
+        payload.get("completion_date"),
+        interface_id=payload.get("interface_id"),
+        return_details=True,
+    )
+    if not ok:
+        return False
+
+    actual_row_index = getattr(ok, "row_index", None)
+    if actual_row_index is not None:
+        payload["row_index"] = int(actual_row_index)
+
+    # Excel 已写入并校验成功后即视为本写任务成功。
+    # Registry 是后续状态同步，失败时只记录日志，不能触发 Excel 重写。
+    try:
+        from registry import hooks as registry_hooks
+
+        data_folder = str(payload.get("data_folder", "") or "").strip()
+        if data_folder:
+            registry_hooks.set_data_folder(data_folder)
+        registry_ok = registry_hooks.on_fu_completed(
+            file_path=payload["file_path"],
+            row_index=payload["row_index"],
+            interface_id=str(payload.get("interface_id", "") or "").strip(),
+            actual_date=payload.get("completion_date", ""),
+            user_name=payload.get("user_name", ""),
+            project_id=payload.get("project_id", ""),
+            role=payload.get("role"),
+        )
+        if registry_ok is False:
+            print("[Registry] FU状态同步失败；Excel写入已成功，不重试Excel")
+    except Exception as exc:
+        print("[Registry] FU状态同步异常；Excel写入已成功，不重试Excel: {}".format(exc))
+    return True
+
+
 EXECUTOR_MAP = {
     "assignment": execute_assignment_task,
     "response": execute_response_task,
+    "fu_completion": execute_fu_completion_task,
 }
 
 

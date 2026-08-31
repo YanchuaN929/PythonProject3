@@ -25,12 +25,9 @@ DEFAULTS = {
     "registry_local_cache_enabled": True,      # 是否启用本地只读缓存
     "registry_local_cache_sync_interval": 600, # 同步间隔（秒），默认5分钟
     
-    # ============================================================
-    # 写入队列配置（第三阶段优化）
-    # ============================================================
-    "registry_write_queue_enabled": True,      # 是否启用写入队列
-    "registry_write_batch_interval": 1.0,      # 批量写入间隔（秒）
-    "registry_write_batch_size": 50,           # 单批最大任务数
+    # Registry 写操作使用 service 层的直接事务与锁重试。
+    # Excel 写回由 write_tasks 队列负责，二者不再叠加第二套数据库写队列。
+    "registry_write_mode": "direct",
     
     # ============================================================
     # 查询缓存配置

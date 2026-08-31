@@ -18,6 +18,7 @@ class EventType:
     PROCESS_DONE = "process_done"
     EXPORT_DONE = "export_done"
     RESPONSE_WRITTEN = "response_written"
+    FU_COMPLETED = "fu_completed"
     CONFIRMED = "confirmed"
     ARCHIVED = "archived"
     ASSIGNED = "assigned"

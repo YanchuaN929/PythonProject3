@@ -101,6 +101,43 @@ def test_stream_processors_do_not_call_full_table_read(monkeypatch, tmp_path, no
     assert file6["主办室"] == "结构一室"
 
 
+def test_stream_processors_include_excel_row_two(tmp_path, no_registry_merge):
+    now = datetime.datetime(2026, 5, 14)
+    org = get_organization_filter()
+    org6 = get_organization_filter_file6()
+    files = {
+        1: _make_workbook(tmp_path, "2026按项目导出IDI手册2026-05-14.xlsx", [
+            (2, {"A": "S-A-ROW2", "B": "", "H": "结构25C1", "K": now, "M": "", "R": "张三"})
+        ]),
+        2: _make_workbook(tmp_path, "内部接口信息单报表202620260514.xlsx", [
+            (2, {"A": "x", "E": "A", "F": "", "I": org, "M": now, "N": "", "R": "S-B-ROW2", "AB": "", "AM": "李四"})
+        ]),
+        3: _make_workbook(tmp_path, "外部接口ICM报表202620260514.xlsx", [
+            (2, {"C": "S-C-ROW2", "I": "B", "M": now, "T": "", "AC": "A", "AL": org, "AO": "结构一室", "AP": "王五"})
+        ]),
+        4: _make_workbook(tmp_path, "外部接口单报表202620260514.xlsx", [
+            (2, {"E": "S-D-ROW2", "I": "A", "P": "B", "S": now, "V": "", "AF": org, "AG": "", "AH": "周七"})
+        ]),
+        5: _make_workbook(tmp_path, "2026接口提资清单.xlsx", [
+            (2, {"A": "S-E-ROW2", "G": "25C2", "K": "吴八", "L": now, "N": ""})
+        ]),
+        6: _make_workbook(tmp_path, "收发文清单2026.xlsx", [
+            (2, {"E": "S-F-ROW2", "I": now, "J": "", "M": "尚未回复", "V": org6, "W": "结构一室", "X": "郑九", "AC": "A"})
+        ]),
+    }
+    results = {
+        1: main.process_target_file(files[1], now),
+        2: main.process_target_file2(files[2], now, "2026"),
+        3: main.process_target_file3(files[3], now),
+        4: main.process_target_file4(files[4], now),
+        5: main.process_target_file5(files[5], now),
+        6: main.process_target_file6(files[6], now),
+    }
+
+    for file_type, result in results.items():
+        assert result["原始行号"].tolist() == [2], f"file{file_type} skipped Excel row 2"
+
+
 def test_stream_export_only_contains_business_columns(tmp_path):
     df = main.pd.DataFrame([{
         "状态": "待完成",
@@ -188,6 +225,7 @@ def test_all_file_finders_accept_2416_project():
         r"C:\tmp\2416接口提资清单.xlsx",
         r"C:\tmp\三维接口提资清单241620260527.xlsx",
         r"C:\tmp\收发文清单2416.xlsx",
+        r"C:\tmp\2416项目标准表格.xlsx",
     ]
 
     assert main.find_all_target_files1(files) == [(files[0], "2416")]
@@ -196,3 +234,24 @@ def test_all_file_finders_accept_2416_project():
     assert main.find_all_target_files4(files) == [(files[3], "2416")]
     assert main.find_all_target_files5(files) == [(files[4], "2416"), (files[5], "2416")]
     assert main.find_all_target_files6(files) == [(files[6], "2416")]
+    assert main.find_all_target_files7(files) == [(files[7], "2416")]
+
+
+def test_all_file_finders_accept_xlsm_and_case_insensitive_extensions():
+    files = [
+        r"C:\tmp\2416按项目导出IDI手册2026-05-27.XLSM",
+        r"C:\tmp\内部接口信息单报表241620260527.XLSM",
+        r"C:\tmp\外部接口ICM报表241620260527.XLSM",
+        r"C:\tmp\外部接口单报表241620260527.XLSM",
+        r"C:\tmp\2416接口提资清单.XLSM",
+        r"C:\tmp\收发文清单2416.XLSM",
+        r"C:\tmp\2416项目标准表格.XLSM",
+    ]
+
+    assert main.find_all_target_files1(files) == [(files[0], "2416")]
+    assert main.find_all_target_files2(files) == [(files[1], "2416")]
+    assert main.find_all_target_files3(files) == [(files[2], "2416")]
+    assert main.find_all_target_files4(files) == [(files[3], "2416")]
+    assert main.find_all_target_files5(files) == [(files[4], "2416")]
+    assert main.find_all_target_files6(files) == [(files[5], "2416")]
+    assert main.find_all_target_files7(files) == [(files[6], "2416")]
