@@ -21,7 +21,7 @@ import winreg
 import re
 from pathlib import Path
 import pandas as pd
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from openpyxl import load_workbook
 from typing import List, Dict, Any, Optional, Tuple
 from utils.role_table import read_role_table
@@ -403,13 +403,50 @@ def concurrent_read_excel_files(file_paths, max_workers=4):
             lambda x: read_single_file(x),
             file_paths
         ))
-    
+
     return results
+
+
+def _build_file_type_spec(label, empty_message, tab_attr, results_attr, has_results_attr,
+                          popup_condition="always", display_via_filter=False):
+    """构造一个 file_type spec dict（label / empty_message / tab_attr / results_attr /
+    has_results_attr / popup_condition / display_via_filter）。"""
+    return {
+        "label": label,
+        "empty_message": empty_message,
+        "tab_attr": tab_attr,
+        "results_attr": results_attr,
+        "has_results_attr": has_results_attr,
+        "popup_condition": popup_condition,
+        "display_via_filter": display_via_filter,
+    }
 
 
 class ExcelProcessorApp:
     """主应用程序类"""
-    
+
+    # 文件类型规格表：file_type 1-7 的 UI 显示参数。
+    # 通过该表把 display_results[1-7] 与 update_export_button_state 中的重复逻辑收敛为统一分发。
+    FILE_TYPE_SPECS = {
+        1: _build_file_type_spec("内部需打开接口", "无内部需打开接口",
+                                 "tab1_viewer", "processing_results", "has_processed_results1",
+                                 display_via_filter=True),
+        2: _build_file_type_spec("内部需回复接口", "无内部需回复接口",
+                                 "tab2_viewer", "processing_results2", "has_processed_results2"),
+        3: _build_file_type_spec("外部需打开接口", "无外部需打开接口",
+                                 "tab3_viewer", "processing_results3", "has_processed_results3"),
+        4: _build_file_type_spec("外部需回复接口", "无外部需回复接口",
+                                 "tab4_viewer", "processing_results4", "has_processed_results4"),
+        5: _build_file_type_spec("三维提资接口", "无三维接口",
+                                 "tab5_viewer", "processing_results5", "has_processed_results5"),
+        6: _build_file_type_spec("收发文函", "无需要回复的文函",
+                                 "tab6_viewer", "processing_results6", "has_processed_results6",
+                                 popup_condition="should_show"),
+        7: _build_file_type_spec("FU", "无待处理FU",
+                                 "tab7_viewer", "processing_results7", "has_processed_results7",
+                                 popup_condition="should_show"),
+    }
+
     def __init__(self, auto_mode: bool = False, resume_action: str = ""):
         self.auto_mode = auto_mode
         self.resume_action = resume_action or ""
@@ -5317,6 +5354,271 @@ class ExcelProcessorApp:
             return None
         return None
 
+    def _process_file_types_1_to_4_background(
+        self,
+        *,
+        main_module,
+        enabled_types,
+        can_reuse_refresh_cache,
+        all_file_paths,
+        changed_files,
+        registry_bootstrap_needed,
+        registry_write_flags,
+        registry_hooks_obj=None,
+        file_lock_resolver=None,
+    ):
+        """Process file types 1-4 without touching Tk widgets.
+
+        与 _process_file_types_5_to_7_background 结构对称：内部串行 for 1/2/3/4，
+        单线程访问共享缓存和模块级 registry_hooks。Registry 写入由调用方提供的
+        registry_hooks_obj（带锁的代理）串行化，保证多 helper 并发安全。
+        """
+        results = {1: None, 2: None, 3: None, 4: None}
+        changed_files = set(changed_files or set())
+        enabled_types = set(enabled_types or set())
+
+        # 当调用方提供了带锁的代理时优先使用；否则回退到模块级 registry_hooks
+        # （保持单线程/老调用方的行为完全一致）。
+        hooks_obj = registry_hooks_obj
+        if hooks_obj is None:
+            hooks_obj = registry_hooks
+
+        type_specs = {
+            1: ("target_files1", "process_target_file", "内部需打开接口", True),
+            2: ("target_files2", "process_target_file2", "内部需回复接口", False),
+            3: ("target_files3", "process_target_file3", "外部需打开接口", False),
+            4: ("target_files4", "process_target_file4", "外部需回复接口", False),
+        }
+
+        for file_type in (1, 2, 3, 4):
+            target_attr, process_name, display_name, has_syncing = type_specs[file_type]
+            targets = list(getattr(self, target_attr, None) or [])
+            process_func = getattr(main_module, process_name, None)
+            if file_type not in enabled_types or not targets or process_func is None:
+                continue
+
+            # 文件 1：通知 UI 线程刷新状态显示（与原 inline 行为一致）
+            if has_syncing:
+                try:
+                    self._post_ui_task(notify_syncing)
+                except Exception:
+                    pass
+
+            try:
+                from core import Monitor
+                project_ids = list(set([pid for _, pid in targets]))
+                Monitor.log_process(
+                    f"开始批量处理{display_name}: {len(targets)}个文件，"
+                    f"涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})"
+                )
+            except Exception:
+                pass
+
+            new_multi = {}
+            combined_results = []
+            raw_results_for_registry = {}
+
+            for file_path, project_id in targets:
+                try:
+                    print(f"处理项目{project_id}的文件{file_type}: {os.path.basename(file_path)}")
+                    if file_type == 1:
+                        try:
+                            from core import Monitor
+                            Monitor.log_process(
+                                f"处理项目{project_id}的{display_name}: {os.path.basename(file_path)}"
+                            )
+                        except Exception:
+                            pass
+
+                    # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
+                    result = None
+                    used_refresh_cache = False
+                    # Stage C：同源文件互斥（与 Stage B do_export 同模式），
+                    # 防止 1-4 helper 与 5-7 helper 并发读取同一 .xlsx。
+                    # file_lock_resolver 为 None 时退化为无锁（与单线程行为一致）。
+                    _file_lock = None
+                    if file_lock_resolver is not None:
+                        try:
+                            _file_lock = file_lock_resolver(file_path)
+                        except Exception:
+                            _file_lock = None
+                    if can_reuse_refresh_cache and (file_path not in changed_files):
+                        if _file_lock is not None:
+                            with _file_lock:
+                                result = self._get_refresh_cached_raw_df(
+                                    file_type=file_type,
+                                    file_path=file_path,
+                                    project_id=project_id,
+                                    all_file_paths=all_file_paths,
+                                    changed_files=changed_files,
+                                )
+                        else:
+                            result = self._get_refresh_cached_raw_df(
+                                file_type=file_type,
+                                file_path=file_path,
+                                project_id=project_id,
+                                all_file_paths=all_file_paths,
+                                changed_files=changed_files,
+                            )
+                        used_refresh_cache = result is not None
+                    if result is None:
+                        # 使用缓存处理（.pkl）或缓存未命中则处理Excel
+                        # 文件 2 需要把 project_id 作为额外参数（与原 inline 调用一致）
+                        extra_args = (project_id,) if file_type == 2 else ()
+                        if _file_lock is not None:
+                            with _file_lock:
+                                result = self._process_with_cache(
+                                    file_path,
+                                    project_id,
+                                    f"file{file_type}",
+                                    process_func,
+                                    self.current_datetime,
+                                    *extra_args,
+                                )
+                        else:
+                            result = self._process_with_cache(
+                                file_path,
+                                project_id,
+                                f"file{file_type}",
+                                process_func,
+                                self.current_datetime,
+                                *extra_args,
+                            )
+
+                    # Step3：判定本项目是否需要触发 Registry 写入
+                    cache_hit = bool(used_refresh_cache)
+                    if not cache_hit:
+                        try:
+                            info = getattr(self, "_last_cache_hit_info", {}) or {}
+                            if (
+                                str(info.get("project_id", "")) == str(project_id)
+                                and str(info.get("file_type", "")) == f"file{file_type}"
+                                and info.get("file_path") == file_path
+                            ):
+                                cache_hit = bool(info.get("hit", False))
+                        except Exception:
+                            cache_hit = False
+                    should_update_registry = bool(
+                        registry_bootstrap_needed
+                        or (file_path in changed_files)
+                        or (not cache_hit)
+                    )
+
+                    if result is not None and not result.empty:
+                        if should_update_registry:
+                            raw_result = result.copy()
+                            raw_result["项目号"] = project_id
+                            raw_results_for_registry[project_id] = (file_path, raw_result)
+
+                        # 【显示用】应用角色筛选
+                        filtered_result = self.apply_role_based_filter(
+                            result, project_id=project_id
+                        )
+                        if filtered_result is not None and not filtered_result.empty:
+                            filtered_result["项目号"] = project_id
+                            new_multi[project_id] = filtered_result
+                            combined_results.append(filtered_result)
+
+                        if file_type == 1:
+                            print(
+                                f"项目{project_id}文件{file_type}处理完成: "
+                                f"原始{len(result)}行，角色筛选后{len(filtered_result) if filtered_result is not None else 0}行"
+                            )
+                            try:
+                                from core import Monitor
+                                Monitor.log_success(
+                                    f"项目{project_id}文件{file_type}处理完成: "
+                                    f"原始{len(result)}行，显示{len(filtered_result) if filtered_result is not None else 0}行"
+                                )
+                            except Exception:
+                                pass
+                        else:
+                            print(f"项目{project_id}文件{file_type}处理完成: 原始{len(result)}行")
+                    else:
+                        print(f"项目{project_id}文件{file_type}处理结果为空")
+                        if file_type == 1:
+                            try:
+                                from core import Monitor
+                                Monitor.log_warning(
+                                    f"项目{project_id}文件{file_type}处理结果为空"
+                                )
+                            except Exception:
+                                pass
+                except Exception as e:
+                    print(f"项目{project_id}文件{file_type}处理失败: {e}")
+                    if file_type == 1:
+                        try:
+                            from core import Monitor
+                            Monitor.log_error(
+                                f"项目{project_id}文件{file_type}处理失败: {e}"
+                            )
+                        except Exception:
+                            pass
+
+            setattr(self, f"processing_results_multi{file_type}", new_multi)
+
+            # Step3：Registry 写入走代理（代理由调用方加锁）
+            if hooks_obj and raw_results_for_registry:
+                try:
+                    for project_id, (source_file, raw_df) in raw_results_for_registry.items():
+                        if raw_df is None or raw_df.empty:
+                            continue
+                        try:
+                            hooks_obj.on_process_done(
+                                file_type=file_type,
+                                project_id=project_id,
+                                source_file=source_file,
+                                result_df=raw_df,
+                                now=self.current_datetime,
+                            )
+                        except Exception as hook_exc:
+                            print(f"[Registry] 文件{file_type}钩子调用失败: {hook_exc}")
+                            if file_type == 1:
+                                import traceback
+                                traceback.print_exc()
+                            continue
+                        try:
+                            from core import Monitor
+                            Monitor.log_info(
+                                f"Registry: 文件{file_type}项目{project_id}写入{len(raw_df)}个任务"
+                            )
+                        except Exception:
+                            pass
+                        try:
+                            registry_write_flags["count"] += 1
+                        except Exception:
+                            pass
+                except Exception as outer_exc:
+                    print(f"[Registry] 文件{file_type}写入循环异常: {outer_exc}")
+
+            if combined_results:
+                result_df = pd.concat(combined_results, ignore_index=True)
+                print(f"文件{file_type}批量处理完成，显示: {len(result_df)} 行")
+                if file_type == 1:
+                    try:
+                        from core import Monitor
+                        Monitor.log_success(
+                            f"待处理文件{file_type}批量处理完成: 显示{len(result_df)}行数据"
+                        )
+                    except Exception:
+                        pass
+            else:
+                result_df = pd.DataFrame()
+                print(f"文件{file_type}批量处理完成，角色筛选后无显示数据")
+                try:
+                    from core import Monitor
+                    Monitor.log_warning(
+                        f"待处理文件{file_type}批量处理完成: 角色筛选后无显示数据"
+                    )
+                except Exception:
+                    pass
+
+            setattr(self, f"processing_results{file_type}", result_df)
+            setattr(self, f"has_processed_results{file_type}", True)
+            results[file_type] = result_df
+
+        return results
+
     def _process_file_types_5_to_7_background(
         self,
         *,
@@ -5781,500 +6083,143 @@ class ExcelProcessorApp:
                     self._run_preloaded_results = {}
                     print(f"[并行读取] 预处理未完成，继续使用原顺序流程: {exc}")
 
-                # 处理待处理文件1（批量）
-                if process_file1 and self.target_files1:
-                    if hasattr(main, 'process_target_file'):
-                        print(f"开始批量处理文件1类型，共 {len(self.target_files1)} 个文件")
-                        # 更新数据库状态为同步中
-                        self._post_ui_task(notify_syncing)
-                        try:
-                            from core import Monitor
-                            project_ids = list(set([pid for _, pid in self.target_files1]))
-                            Monitor.log_process(f"开始批量处理待处理文件1: {len(self.target_files1)}个文件，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
-                        except Exception:
-                            pass
-                        
-                        new_multi1 = {}
-                        combined_results = []
-                        # Step3：保存原始结果（角色筛选前），用于Registry写入（仅增量触发）
-                        raw_results_for_registry = {}
-                        registry_should_update = {}
-                        
-                        for file_path, project_id in self.target_files1:
-                            try:
-                                print(f"处理项目{project_id}的文件1: {os.path.basename(file_path)}")
-                                try:
-                                    from core import Monitor
-                                    Monitor.log_process(f"处理项目{project_id}的待处理文件1: {os.path.basename(file_path)}")
-                                except Exception:
-                                    pass
+                # ============================================================
+                # Stage C：7 类文件并行处理（与 Stage B do_export 同模式）
+                # - ThreadPoolExecutor(max_workers=4) 调度 1-4 helper + 5-7 helper 两个任务
+                # - 共享 registry_lock 串行化 on_process_done / on_scan_finalize
+                # - 共享 file_locks 字典保证同源文件不并发处理
+                # - 业务不变量保持：_post_ui_task 推 UI、prewarm 缓存复用、
+                #   active_tab 优先级、update_display 行为完全不变
+                # ============================================================
+                _stage_c_registry_lock = threading.Lock()
+                _stage_c_file_locks = {}
+                _stage_c_file_locks_guard = threading.Lock()
 
-                                # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
-                                result = None
-                                used_refresh_cache = False
-                                if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
-                                    result = self._get_refresh_cached_raw_df(
-                                        file_type=1,
-                                        file_path=file_path,
-                                        project_id=project_id,
-                                        all_file_paths=all_file_paths_for_run,
-                                        changed_files=changed_files_for_run,
-                                    )
-                                    used_refresh_cache = result is not None
-                                if result is None:
-                                    # 使用缓存处理（.pkl）或缓存未命中则处理Excel
-                                    result = self._process_with_cache(
-                                        file_path,
-                                        project_id,
-                                        'file1',
-                                        main.process_target_file,
-                                        self.current_datetime,
-                                    )
-                                # Step3：判定本项目是否需要触发 Registry 写入
-                                cache_hit = bool(used_refresh_cache)
-                                if not cache_hit:
-                                    try:
-                                        info = getattr(self, "_last_cache_hit_info", {}) or {}
-                                        if (
-                                            str(info.get("project_id", "")) == str(project_id)
-                                            and str(info.get("file_type", "")) == "file1"
-                                            and info.get("file_path") == file_path
-                                        ):
-                                            cache_hit = bool(info.get("hit", False))
-                                    except Exception:
-                                        cache_hit = False
-                                # Step3：增量写入 + “空库bootstrap”兜底
-                                should_update_registry = bool(registry_bootstrap_needed or (file_path in changed_files_for_run) or (not cache_hit))
-                                registry_should_update[project_id] = bool(should_update_registry)
-                                
-                                # 【调试】打印处理结果
-                                print(f"[调试] 文件1处理返回: result={type(result)}, 行数={len(result) if result is not None else 'None'}")
-                                
-                                if result is not None and not result.empty:
-                                    # Step3：仅当需要增量更新时，才准备写入 Registry
-                                    if should_update_registry:
-                                        raw_result = result.copy()
-                                        raw_result['项目号'] = project_id
-                                        raw_results_for_registry[project_id] = (file_path, raw_result)
-                                        print(f"[调试] 已保存原始结果到raw_results_for_registry: 项目{project_id}, {len(raw_result)}行")
-                                    
-                                    # 【显示用】应用角色筛选（仅影响显示，不影响Registry）
-                                    filtered_result = self.apply_role_based_filter(result, project_id=project_id)
-                                    if filtered_result is not None and not filtered_result.empty:
-                                        # 添加项目号列
-                                        filtered_result['项目号'] = project_id
-                                        new_multi1[project_id] = filtered_result
-                                        combined_results.append(filtered_result)
-                                    print(f"项目{project_id}文件1处理完成: 原始{len(result)}行，角色筛选后{len(filtered_result) if filtered_result is not None else 0}行")
-                                    try:
-                                        from core import Monitor
-                                        Monitor.log_success(f"项目{project_id}文件1处理完成: 原始{len(result)}行，显示{len(filtered_result) if filtered_result is not None else 0}行")
-                                    except Exception:
-                                        pass
-                                else:
-                                    print(f"项目{project_id}文件1处理结果为空")
-                                    try:
-                                        from core import Monitor
-                                        Monitor.log_warning(f"项目{project_id}文件1处理结果为空")
-                                    except Exception:
-                                        pass
-                            except Exception as e:
-                                print(f"项目{project_id}文件1处理失败: {e}")
-                                try:
-                                    from core import Monitor
-                                    Monitor.log_error(f"项目{project_id}文件1处理失败: {e}")
-                                except Exception:
-                                    pass
-                        
-                        # Step3：Registry写入改为“增量触发”
-                        print(f"[调试] 准备写入Registry(增量): registry_hooks={registry_hooks is not None}, raw_results_for_registry有{len(raw_results_for_registry)}个项目")
-                        if registry_hooks and raw_results_for_registry:
-                            try:
-                                for project_id, (source_file, raw_df) in raw_results_for_registry.items():
-                                    print(f"[调试] 处理项目{project_id}: raw_df={raw_df is not None}, 行数={len(raw_df) if raw_df is not None else 'None'}")
-                                    if raw_df is not None and not raw_df.empty:
-                                        # 控制台输出优化：已验证逻辑，默认不输出
-                                        registry_hooks.on_process_done(
-                                            file_type=1,
-                                            project_id=project_id,
-                                            source_file=source_file,
-                                            result_df=raw_df,
-                                            now=self.current_datetime
-                                        )
-                                        # 控制台输出优化：已验证逻辑，默认不输出
-                                        Monitor.log_info(f"Registry: 文件1项目{project_id}写入{len(raw_df)}个任务")
-                                        try:
-                                            registry_write_flags["count"] += 1
-                                        except Exception:
-                                            pass
-                            except Exception as e:
-                                print(f"[Registry] 文件1钩子调用失败: {e}")
-                                import traceback
-                                traceback.print_exc()
-                        else:
-                            print(f"[调试] 跳过Registry写入: registry_hooks={registry_hooks is not None}, raw_results_for_registry={len(raw_results_for_registry)}个")
-                        
-                        # 合并所有结果（用于显示）
-                        if combined_results:
-                            results1 = pd.concat(combined_results, ignore_index=True)
-                            print(f"文件1批量处理完成，显示: {len(results1)} 行")
-                            try:
-                                from core import Monitor
-                                Monitor.log_success(f"待处理文件1批量处理完成: 显示{len(results1)}行数据")
-                            except Exception:
-                                pass
-                        else:
-                            # 所有项目都没有结果（角色筛选后），创建空DataFrame
-                            results1 = pd.DataFrame()
-                            print("文件1批量处理完成，角色筛选后无符合条件的数据")
-                            try:
-                                from core import Monitor
-                                Monitor.log_warning("待处理文件1批量处理完成: 角色筛选后无显示数据")
-                            except Exception:
-                                pass
-                        # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
-                        self.processing_results_multi1 = new_multi1
-                
-                # 处理待处理文件2（批量）
-                if process_file2 and self.target_files2:
-                    if hasattr(main, 'process_target_file2'):
-                        print(f"开始批量处理文件2类型，共 {len(self.target_files2)} 个文件")
-                        try:
-                            from core import Monitor
-                            project_ids = list(set([pid for _, pid in self.target_files2]))
-                            Monitor.log_process(f"开始批量处理待处理文件2: {len(self.target_files2)}个文件，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
-                        except Exception:
-                            pass
-                        
-                        new_multi2 = {}
-                        combined_results = []
-                        # Step3：保存原始结果（角色筛选前），用于Registry写入（仅增量触发）
-                        raw_results_for_registry = {}
-                        
-                        for file_path, project_id in self.target_files2:
-                            try:
-                                print(f"处理项目{project_id}的文件2: {os.path.basename(file_path)}")
-                                # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
-                                result = None
-                                used_refresh_cache = False
-                                if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
-                                    result = self._get_refresh_cached_raw_df(
-                                        file_type=2,
-                                        file_path=file_path,
-                                        project_id=project_id,
-                                        all_file_paths=all_file_paths_for_run,
-                                        changed_files=changed_files_for_run,
-                                    )
-                                    used_refresh_cache = result is not None
-                                if result is None:
-                                    # 使用缓存处理（.pkl）或缓存未命中则处理Excel
-                                    result = self._process_with_cache(
-                                        file_path,
-                                        project_id,
-                                        'file2',
-                                        main.process_target_file2,
-                                        self.current_datetime,
-                                        project_id,
-                                    )
-                                # Step3：判定本项目是否需要触发 Registry 写入
-                                cache_hit = bool(used_refresh_cache)
-                                if not cache_hit:
-                                    try:
-                                        info = getattr(self, "_last_cache_hit_info", {}) or {}
-                                        if (
-                                            str(info.get("project_id", "")) == str(project_id)
-                                            and str(info.get("file_type", "")) == "file2"
-                                            and info.get("file_path") == file_path
-                                        ):
-                                            cache_hit = bool(info.get("hit", False))
-                                    except Exception:
-                                        cache_hit = False
-                                should_update_registry = bool(registry_bootstrap_needed or (file_path in changed_files_for_run) or (not cache_hit))
-                                if result is not None and not result.empty:
-                                    # 【修复】先保存原始结果用于Registry（与角色无关）
-                                    if should_update_registry:
-                                        raw_result = result.copy()
-                                        raw_result['项目号'] = project_id
-                                        raw_results_for_registry[project_id] = (file_path, raw_result)
-                                    
-                                    # 【显示用】应用角色筛选（仅影响显示，不影响Registry）
-                                    filtered_result = self.apply_role_based_filter(result, project_id=project_id)
-                                    if filtered_result is not None and not filtered_result.empty:
-                                        # 添加项目号列
-                                        filtered_result['项目号'] = project_id
-                                        new_multi2[project_id] = filtered_result
-                                        combined_results.append(filtered_result)
-                                        print(f"项目{project_id}文件2处理完成: 原始{len(result)}行，显示{len(filtered_result)}行")
-                                    else:
-                                        print(f"项目{project_id}文件2处理完成: 原始{len(result)}行，角色筛选后为空")
-                                else:
-                                    print(f"项目{project_id}文件2处理结果为空")
-                            except Exception as e:
-                                print(f"项目{project_id}文件2处理失败: {e}")
-                        
-                        # Step3：Registry写入改为“增量触发”
-                        if registry_hooks and raw_results_for_registry:
-                            try:
-                                for project_id, (source_file, raw_df) in raw_results_for_registry.items():
-                                    if raw_df is not None and not raw_df.empty:
-                                        registry_hooks.on_process_done(
-                                            file_type=2,
-                                            project_id=project_id,
-                                            source_file=source_file,
-                                            result_df=raw_df,
-                                            now=self.current_datetime
-                                        )
-                                        # 控制台输出优化：已验证逻辑，默认不输出
-                                        Monitor.log_info(f"Registry: 文件2项目{project_id}写入{len(raw_df)}个任务")
-                                        try:
-                                            registry_write_flags["count"] += 1
-                                        except Exception:
-                                            pass
-                            except Exception as e:
-                                print(f"[Registry] 文件2钩子调用失败: {e}")
-                        
-                        # 合并所有结果（用于显示）
-                        if combined_results:
-                            results2 = pd.concat(combined_results, ignore_index=True)
-                            print(f"文件2批量处理完成，显示: {len(results2)} 行")
-                        else:
-                            results2 = pd.DataFrame()
-                            print("文件2批量处理完成，角色筛选后无显示数据")
-                            try:
-                                from core import Monitor
-                                Monitor.log_warning("待处理文件2批量处理完成: 角色筛选后无显示数据")
-                            except Exception:
-                                pass
-                        # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
-                        self.processing_results_multi2 = new_multi2
-                
-                # 处理待处理文件3（批量）
-                if process_file3 and self.target_files3:
-                    if hasattr(main, 'process_target_file3'):
-                        print(f"开始批量处理文件3类型，共 {len(self.target_files3)} 个文件")
-                        new_multi3 = {}
-                        combined_results = []
-                        # Step3：保存原始结果（角色筛选前），用于Registry写入（仅增量触发）
-                        raw_results_for_registry = {}
-                        
-                        for file_path, project_id in self.target_files3:
-                            try:
-                                print(f"处理项目{project_id}的文件3: {os.path.basename(file_path)}")
-                                # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
-                                result = None
-                                used_refresh_cache = False
-                                if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
-                                    result = self._get_refresh_cached_raw_df(
-                                        file_type=3,
-                                        file_path=file_path,
-                                        project_id=project_id,
-                                        all_file_paths=all_file_paths_for_run,
-                                        changed_files=changed_files_for_run,
-                                    )
-                                    used_refresh_cache = result is not None
-                                if result is None:
-                                    # 使用缓存处理（.pkl）或缓存未命中则处理Excel
-                                    result = self._process_with_cache(
-                                        file_path,
-                                        project_id,
-                                        'file3',
-                                        main.process_target_file3,
-                                        self.current_datetime,
-                                    )
-                                # Step3：判定本项目是否需要触发 Registry 写入
-                                cache_hit = bool(used_refresh_cache)
-                                if not cache_hit:
-                                    try:
-                                        info = getattr(self, "_last_cache_hit_info", {}) or {}
-                                        if (
-                                            str(info.get("project_id", "")) == str(project_id)
-                                            and str(info.get("file_type", "")) == "file3"
-                                            and info.get("file_path") == file_path
-                                        ):
-                                            cache_hit = bool(info.get("hit", False))
-                                    except Exception:
-                                        cache_hit = False
-                                should_update_registry = bool(registry_bootstrap_needed or (file_path in changed_files_for_run) or (not cache_hit))
-                                if result is not None and not result.empty:
-                                    # 【修复】先保存原始结果用于Registry（与角色无关）
-                                    if should_update_registry:
-                                        raw_result = result.copy()
-                                        raw_result['项目号'] = project_id
-                                        raw_results_for_registry[project_id] = (file_path, raw_result)
-                                    
-                                    # 【显示用】应用角色筛选
-                                    filtered_result = self.apply_role_based_filter(result, project_id=project_id)
-                                    if filtered_result is not None and not filtered_result.empty:
-                                        filtered_result['项目号'] = project_id
-                                        new_multi3[project_id] = filtered_result
-                                        combined_results.append(filtered_result)
-                                    print(f"项目{project_id}文件3处理完成: 原始{len(result)}行，显示{len(filtered_result) if filtered_result is not None else 0}行")
-                                else:
-                                    print(f"项目{project_id}文件3处理结果为空")
-                            except Exception as e:
-                                print(f"项目{project_id}文件3处理失败: {e}")
-                        
-                        # Step3：Registry写入改为“增量触发”
-                        if registry_hooks and raw_results_for_registry:
-                            try:
-                                for project_id, (source_file, raw_df) in raw_results_for_registry.items():
-                                    if raw_df is not None and not raw_df.empty:
-                                        registry_hooks.on_process_done(
-                                            file_type=3,
-                                            project_id=project_id,
-                                            source_file=source_file,
-                                            result_df=raw_df,
-                                            now=self.current_datetime
-                                        )
-                                        # 控制台输出优化：已验证逻辑，默认不输出
-                                        Monitor.log_info(f"Registry: 文件3项目{project_id}写入{len(raw_df)}个任务")
-                                        try:
-                                            registry_write_flags["count"] += 1
-                                        except Exception:
-                                            pass
-                            except Exception as e:
-                                print(f"[Registry] 文件3钩子调用失败: {e}")
-                        
-                        # 合并所有结果（用于显示）
-                        if combined_results:
-                            results3 = pd.concat(combined_results, ignore_index=True)
-                            print(f"文件3批量处理完成，显示: {len(results3)} 行")
-                        else:
-                            results3 = pd.DataFrame()
-                            print("文件3批量处理完成，角色筛选后无显示数据")
-                            try:
-                                from core import Monitor
-                                Monitor.log_warning("待处理文件3批量处理完成: 角色筛选后无显示数据")
-                            except Exception:
-                                pass
-                        # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
-                        self.processing_results_multi3 = new_multi3
-                
-                # 处理待处理文件4（批量）
-                if process_file4 and self.target_files4:
-                    if hasattr(main, 'process_target_file4'):
-                        print(f"开始批量处理文件4类型，共 {len(self.target_files4)} 个文件")
-                        new_multi4 = {}
-                        combined_results = []
-                        # Step3：保存原始结果（角色筛选前），用于Registry写入（仅增量触发）
-                        raw_results_for_registry = {}
-                        
-                        for file_path, project_id in self.target_files4:
-                            try:
-                                print(f"处理项目{project_id}的文件4: {os.path.basename(file_path)}")
-                                # Step2：优先复用 refresh 阶段已加载到内存的 raw 缓存（避免二次读 .pkl）
-                                result = None
-                                used_refresh_cache = False
-                                if can_reuse_refresh_cache and (file_path not in changed_files_for_run):
-                                    result = self._get_refresh_cached_raw_df(
-                                        file_type=4,
-                                        file_path=file_path,
-                                        project_id=project_id,
-                                        all_file_paths=all_file_paths_for_run,
-                                        changed_files=changed_files_for_run,
-                                    )
-                                    used_refresh_cache = result is not None
-                                if result is None:
-                                    # 使用缓存处理（.pkl）或缓存未命中则处理Excel
-                                    result = self._process_with_cache(
-                                        file_path,
-                                        project_id,
-                                        'file4',
-                                        main.process_target_file4,
-                                        self.current_datetime,
-                                    )
-                                # Step3：判定本项目是否需要触发 Registry 写入
-                                cache_hit = bool(used_refresh_cache)
-                                if not cache_hit:
-                                    try:
-                                        info = getattr(self, "_last_cache_hit_info", {}) or {}
-                                        if (
-                                            str(info.get("project_id", "")) == str(project_id)
-                                            and str(info.get("file_type", "")) == "file4"
-                                            and info.get("file_path") == file_path
-                                        ):
-                                            cache_hit = bool(info.get("hit", False))
-                                    except Exception:
-                                        cache_hit = False
-                                should_update_registry = bool(registry_bootstrap_needed or (file_path in changed_files_for_run) or (not cache_hit))
-                                if result is not None and not result.empty:
-                                    # 【修复】先保存原始结果用于Registry（与角色无关）
-                                    if should_update_registry:
-                                        raw_result = result.copy()
-                                        raw_result['项目号'] = project_id
-                                        raw_results_for_registry[project_id] = (file_path, raw_result)
-                                    
-                                    # 【显示用】应用角色筛选
-                                    filtered_result = self.apply_role_based_filter(result, project_id=project_id)
-                                    if filtered_result is not None and not filtered_result.empty:
-                                        filtered_result['项目号'] = project_id
-                                        new_multi4[project_id] = filtered_result
-                                        combined_results.append(filtered_result)
-                                    print(f"项目{project_id}文件4处理完成: 原始{len(result)}行，显示{len(filtered_result) if filtered_result is not None else 0}行")
-                                else:
-                                    print(f"项目{project_id}文件4处理结果为空")
-                            except Exception as e:
-                                print(f"项目{project_id}文件4处理失败: {e}")
-                        
-                        # Step3：Registry写入改为“增量触发”
-                        if registry_hooks and raw_results_for_registry:
-                            try:
-                                for project_id, (source_file, raw_df) in raw_results_for_registry.items():
-                                    if raw_df is not None and not raw_df.empty:
-                                        registry_hooks.on_process_done(
-                                            file_type=4,
-                                            project_id=project_id,
-                                            source_file=source_file,
-                                            result_df=raw_df,
-                                            now=self.current_datetime
-                                        )
-                                        # 控制台输出优化：已验证逻辑，默认不输出
-                                        Monitor.log_info(f"Registry: 文件4项目{project_id}写入{len(raw_df)}个任务")
-                                        try:
-                                            registry_write_flags["count"] += 1
-                                        except Exception:
-                                            pass
-                            except Exception as e:
-                                print(f"[Registry] 文件4钩子调用失败: {e}")
-                        
-                        # 合并所有结果（用于显示）
-                        if combined_results:
-                            results4 = pd.concat(combined_results, ignore_index=True)
-                            print(f"文件4批量处理完成，显示: {len(results4)} 行")
-                        else:
-                            results4 = pd.DataFrame()
-                            print("文件4批量处理完成，角色筛选后无显示数据")
-                            try:
-                                from core import Monitor
-                                Monitor.log_warning("待处理文件4批量处理完成: 角色筛选后无显示数据")
-                            except Exception:
-                                pass
-                        # Step2：统一回写本轮过滤后的 multi（避免残留旧项目）
-                        self.processing_results_multi4 = new_multi4
+                def _stage_c_get_file_lock(path):
+                    if not path:
+                        return None
+                    with _stage_c_file_locks_guard:
+                        lock = _stage_c_file_locks.get(path)
+                        if lock is None:
+                            lock = threading.Lock()
+                            _stage_c_file_locks[path] = lock
+                        return lock
 
-                # 文件5-7、角色表读取和对应Registry同步必须全部留在后台线程。
-                # update_display 之后只允许发布结果和操作Tk控件。
-                additional_results = self._process_file_types_5_to_7_background(
-                    main_module=main,
-                    enabled_types={
-                        file_type
-                        for file_type, enabled in (
+                class _StageCLockedHooks:
+                    """进程内 Registry 写入代理：on_process_done / on_scan_finalize
+                    全部在 _stage_c_registry_lock 内执行，避免 1-4 helper 与 5-7 helper
+                    并发触发 SQLite 写锁竞争。其他属性透传给真实 hooks。"""
+                    __slots__ = ("_real", "_lock")
+
+                    def __init__(self, real, lock):
+                        self._real = real
+                        self._lock = lock
+
+                    def on_process_done(self, *args, **kwargs):
+                        with self._lock:
+                            return self._real.on_process_done(*args, **kwargs)
+
+                    def on_scan_finalize(self, *args, **kwargs):
+                        with self._lock:
+                            return self._real.on_scan_finalize(*args, **kwargs)
+
+                    def __getattr__(self, name):
+                        return getattr(self._real, name)
+
+                # 1-4 helper 内部按 file_type 调用 _get_refresh_cached_raw_df /
+                # _process_with_cache 等方法时会访问 file_locks；此处把它们以
+                # 模块级暂存（仅在并行阶段使用），helper 通过参数接收。
+                _stage_c_original_hooks = registry_hooks
+                try:
+                    if registry_hooks is not None:
+                        base.registry_hooks = _StageCLockedHooks(
+                            registry_hooks, _stage_c_registry_lock
+                        )
+
+                    _stage_c_enabled_1_to_4 = {
+                        ft
+                        for ft, enabled in (
+                            (1, process_file1),
+                            (2, process_file2),
+                            (3, process_file3),
+                            (4, process_file4),
+                        )
+                        if enabled
+                    }
+                    _stage_c_enabled_5_to_7 = {
+                        ft
+                        for ft, enabled in (
                             (5, process_file5),
                             (6, process_file6),
                             (7, process_file7),
                         )
                         if enabled
-                    },
-                    can_reuse_refresh_cache=can_reuse_refresh_cache,
-                    all_file_paths=all_file_paths_for_run,
-                    changed_files=changed_files_for_run,
-                    registry_bootstrap_needed=registry_bootstrap_needed,
-                    registry_write_flags=registry_write_flags,
-                    file6_context=file6_context,
-                )
-                results5 = additional_results.get(5)
-                results6 = additional_results.get(6)
-                results7 = additional_results.get(7)
+                    }
+
+                    _stage_c_results_1_to_4 = {1: None, 2: None, 3: None, 4: None}
+                    _stage_c_results_5_to_7 = {5: None, 6: None, 7: None}
+
+                    if _stage_c_enabled_1_to_4 or _stage_c_enabled_5_to_7:
+                        with ThreadPoolExecutor(
+                            max_workers=4,
+                            thread_name_prefix="ProcessFileType",
+                        ) as _stage_c_executor:
+                            _stage_c_futures = []
+                            if _stage_c_enabled_1_to_4:
+                                _stage_c_futures.append((
+                                    "1_to_4",
+                                    _stage_c_executor.submit(
+                                        self._process_file_types_1_to_4_background,
+                                        main_module=main,
+                                        enabled_types=_stage_c_enabled_1_to_4,
+                                        can_reuse_refresh_cache=can_reuse_refresh_cache,
+                                        all_file_paths=all_file_paths_for_run,
+                                        changed_files=changed_files_for_run,
+                                        registry_bootstrap_needed=registry_bootstrap_needed,
+                                        registry_write_flags=registry_write_flags,
+                                        file_lock_resolver=_stage_c_get_file_lock,
+                                    ),
+                                ))
+                            if _stage_c_enabled_5_to_7:
+                                _stage_c_futures.append((
+                                    "5_to_7",
+                                    _stage_c_executor.submit(
+                                        self._process_file_types_5_to_7_background,
+                                        main_module=main,
+                                        enabled_types=_stage_c_enabled_5_to_7,
+                                        can_reuse_refresh_cache=can_reuse_refresh_cache,
+                                        all_file_paths=all_file_paths_for_run,
+                                        changed_files=changed_files_for_run,
+                                        registry_bootstrap_needed=registry_bootstrap_needed,
+                                        registry_write_flags=registry_write_flags,
+                                        file6_context=file6_context,
+                                    ),
+                                ))
+                            for label, fut in _stage_c_futures:
+                                try:
+                                    payload = fut.result()
+                                except Exception as exc:
+                                    print(f"[并行处理] {label} 执行失败: {exc}")
+                                    import traceback
+                                    traceback.print_exc()
+                                    continue
+                                if label == "1_to_4":
+                                    _stage_c_results_1_to_4 = payload
+                                else:
+                                    _stage_c_results_5_to_7 = payload
+                finally:
+                    # 必须在所有 helper 完成（包括异常路径）后恢复，避免污染后续逻辑
+                    base.registry_hooks = _stage_c_original_hooks
+
+                # Step2：把 helper 输出映射回原 results1..results7 变量
+                # （update_display 直接读取这些名称，保持后续逻辑零变化）
+                results1 = _stage_c_results_1_to_4.get(1)
+                results2 = _stage_c_results_1_to_4.get(2)
+                results3 = _stage_c_results_1_to_4.get(3)
+                results4 = _stage_c_results_1_to_4.get(4)
+                results5 = _stage_c_results_5_to_7.get(5)
+                results6 = _stage_c_results_5_to_7.get(6)
+                results7 = _stage_c_results_5_to_7.get(7)
                 self._run_preloaded_results = {}
 
                 registry_connected_db_path = ""
@@ -6290,7 +6235,9 @@ class ExcelProcessorApp:
                         )
                     )
                     if should_finalize:
-                        registry_hooks.on_scan_finalize(batch_tag=batch_tag)
+                        # Stage C：on_scan_finalize 也走同一 registry_lock 串行化
+                        with _stage_c_registry_lock:
+                            registry_hooks.on_scan_finalize(batch_tag=batch_tag)
                     folder_path = self.config.get('folder_path', '').strip()
                     if folder_path:
                         from registry.config import load_config
@@ -6584,228 +6531,94 @@ class ExcelProcessorApp:
         thread = threading.Thread(target=process_files, daemon=True)
         thread.start()
 
-    def display_results(self, results, show_popup=True):
-        """显示处理结果"""
-        # 检查处理结果
-        if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
-            self.has_processed_results1 = True  # 标记已处理，即使结果为空
-            self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
-            self.update_export_button_state()  # 更新导出按钮状态
-            return
-        
-        # 检查结果是否为空（所有行都被剔除）
-        if len(results) == 0:
-            self.has_processed_results1 = True  # 标记已处理，即使结果为空
-            self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
-            self.update_export_button_state()  # 更新导出按钮状态
-            return
-        
-        # 保存处理结果供导出使用
-        self.processing_results = results
-        self.has_processed_results1 = True  # 标记已有处理结果
-        
-        display_df = self._ensure_source_file_column_for_pending_cache(results, "内部需打开接口")
-        display_df = self._apply_pending_overrides(display_df, 1)
+    def _display_results(self, file_type, results, show_popup=True):
+        """统一的处理结果显示入口（file_type 1-7 共用），由 FILE_TYPE_SPECS 驱动。"""
+        spec = self.FILE_TYPE_SPECS[file_type]
+        label = spec["label"]
+        empty_message = spec["empty_message"]
+        tab = getattr(self, spec["tab_attr"])
+        results_attr = spec["results_attr"]
+        has_results_attr = spec["has_results_attr"]
 
-        print(f"处理完成：原始数据经过筛选后剩余 {len(results)} 行符合条件的数据")
-        
-        # 基于原始文件数据，过滤显示符合条件的行
-        self.filter_and_display_results(display_df)
-        
-        # 更新导出按钮状态
+        if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
+            setattr(self, has_results_attr, True)
+            self.show_empty_message(tab, empty_message)
+            self.update_export_button_state()
+            return
+
+        setattr(self, results_attr, results)
+        setattr(self, has_results_attr, True)
+        display_df = self._ensure_source_file_column_for_pending_cache(results, label)
+        display_df = self._apply_pending_overrides(display_df, file_type)
+
+        if spec["display_via_filter"]:
+            # 文件 1 走 filter_and_display_results，保留原有"四步筛选"语义
+            print(f"处理完成：原始数据经过筛选后剩余 {len(results)} 行符合条件的数据")
+            self.filter_and_display_results(display_df)
+        else:
+            excel_row_numbers = list(display_df['原始行号'])
+            self.display_excel_data_with_original_rows(tab, display_df, label, excel_row_numbers)
+
         self.update_export_button_state()
-        
-        # 显示处理完成信息（仅在旧版调用时显示）
-        if show_popup:
-            row_count = len(results)
-            messagebox.showinfo("处理完成", f"数据处理完成！\n经过四步筛选后，共剩余 {row_count} 行符合条件的数据\n结果已在【内部需打开接口】选项卡中更新显示。")
+
+        if show_popup and (spec["popup_condition"] != "should_show" or self._should_show_popup()):
+            if file_type == 1:
+                messagebox.showinfo(
+                    "处理完成",
+                    f"数据处理完成！\n经过四步筛选后，共剩余 {len(results)} 行符合条件的数据\n结果已在【{label}】选项卡中更新显示。",
+                )
+            else:
+                messagebox.showinfo(
+                    "处理完成",
+                    f"{label}数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【{label}】选项卡中更新显示。",
+                )
+
+    def display_results(self, results, show_popup=True):
+        """文件 1（内部需打开接口）处理结果入口，保留旧版调用名。"""
+        return self._display_results(1, results, show_popup)
+
+    def display_results2(self, results, show_popup=True):
+        return self._display_results(2, results, show_popup)
+
+    def display_results3(self, results, show_popup=True):
+        return self._display_results(3, results, show_popup)
+
+    def display_results4(self, results, show_popup=True):
+        return self._display_results(4, results, show_popup)
+
+    def display_results5(self, results, show_popup=True):
+        return self._display_results(5, results, show_popup)
+
+    def display_results6(self, results, show_popup=True):
+        return self._display_results(6, results, show_popup)
+
+    def display_results7(self, results, show_popup=True):
+        return self._display_results(7, results, show_popup)
 
     def update_export_button_state(self):
-        """更新导出按钮状态，基于所有处理结果的综合状态"""
-        # 检查是否有任何处理结果可以导出
-        has_exportable_results = False
-        
-        # 检查待处理文件1的结果
-        if (self.has_processed_results1 and 
-            self.processing_results is not None and 
-            not self.processing_results.empty):
-            has_exportable_results = True
-        
-        # 检查待处理文件2的结果
-        if (self.has_processed_results2 and 
-            self.processing_results2 is not None and 
-            not self.processing_results2.empty):
-            has_exportable_results = True
-        
-        # 检查待处理文件3的结果
-        if (self.has_processed_results3 and 
-            self.processing_results3 is not None and 
-            not self.processing_results3.empty):
-            has_exportable_results = True
-        
-        # 检查待处理文件4的结果
-        if (self.has_processed_results4 and 
-            self.processing_results4 is not None and 
-            not self.processing_results4.empty):
-            has_exportable_results = True
-        # 检查待处理文件5的结果
-        if (self.has_processed_results5 and 
-            self.processing_results5 is not None and 
-            not self.processing_results5.empty):
-            has_exportable_results = True
-        if (self.has_processed_results6 and
-            self.processing_results6 is not None and
-            not self.processing_results6.empty):
-            has_exportable_results = True
-        if (self.has_processed_results7 and
-            self.processing_results7 is not None and
-            not self.processing_results7.empty):
-            has_exportable_results = True
-        
-        # 根据结果设置导出按钮状态
-        if has_exportable_results:
-            self.export_button.config(state='normal')
-        else:
-            self.export_button.config(state='disabled')
+        """根据所有 file_type 的处理结果综合状态决定导出按钮是否可点击。"""
+        for file_type in range(1, 8):
+            spec = self.FILE_TYPE_SPECS[file_type]
+            if not getattr(self, spec["has_results_attr"]):
+                continue
+            results = getattr(self, spec["results_attr"])
+            if isinstance(results, pd.DataFrame) and not results.empty:
+                self.export_button.config(state='normal')
+                return
+        self.export_button.config(state='disabled')
 
     def filter_and_display_results(self, results):
-        """
-        只显示最终筛选出来的数据行，行号以Excel原表为准，不显示表头。
-        """
+        """只显示最终筛选出来的数据行，行号以Excel原表为准（文件 1 专用）。"""
         try:
             if results is None or results.empty or '原始行号' not in results.columns:
                 self.show_empty_message(self.tab1_viewer, "无内部需打开接口")
                 return
-
-            # 只取最终结果的所有数据行
-            # 不要drop原始行号列，因为需要它来加载勾选状态
             excel_row_numbers = list(results['原始行号'])
-
-            # 只显示数据行，不显示表头
             self.display_excel_data_with_original_rows(self.tab1_viewer, results, "内部需打开接口", excel_row_numbers)
         except Exception as e:
             print(f"显示最终筛选数据时发生错误: {e}")
             self.show_empty_message(self.tab1_viewer, "数据过滤失败")
-            # 处理失败时也需要更新导出按钮状态
             self.update_export_button_state()
-
-    def display_results2(self, results, show_popup=True):
-        """显示需回复接口处理结果"""
-        if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
-            self.has_processed_results2 = True  # 标记已处理，即使结果为空
-            self.show_empty_message(self.tab2_viewer, "无内部需回复接口")
-            self.update_export_button_state()  # 更新导出按钮状态
-            return
-        self.processing_results2 = results
-        self.has_processed_results2 = True  # 标记已有处理结果
-        display_df = self._ensure_source_file_column_for_pending_cache(results, "内部需回复接口")
-        display_df = self._apply_pending_overrides(display_df, 2)
-        # 不要drop原始行号列，因为需要它来加载勾选状态
-        excel_row_numbers = list(display_df['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab2_viewer, display_df, "内部需回复接口", excel_row_numbers)
-        self.update_export_button_state()
-        
-        # 显示处理完成信息（仅在旧版调用时显示）
-        if show_popup:
-            messagebox.showinfo("处理完成", f"内部需回复接口数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【内部需回复接口】选项卡中更新显示。")
-
-    def display_results3(self, results, show_popup=True):
-        """显示外部接口ICM处理结果"""
-        if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
-            self.has_processed_results3 = True  # 标记已处理，即使结果为空
-            self.show_empty_message(self.tab3_viewer, "无外部需打开接口")
-            self.update_export_button_state()  # 更新导出按钮状态
-            return
-        self.processing_results3 = results
-        self.has_processed_results3 = True  # 标记已有处理结果
-        display_df = self._ensure_source_file_column_for_pending_cache(results, "外部需打开接口")
-        display_df = self._apply_pending_overrides(display_df, 3)
-        # 不要drop原始行号列，因为需要它来加载勾选状态
-        excel_row_numbers = list(display_df['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab3_viewer, display_df, "外部需打开接口", excel_row_numbers)
-        self.update_export_button_state()
-        
-        # 显示处理完成信息（仅在旧版调用时显示）
-        if show_popup:
-            messagebox.showinfo("处理完成", f"外部需打开接口数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【外部需打开接口】选项卡中更新显示。")
-
-    def display_results4(self, results, show_popup=True):
-        """显示外部接口单处理结果"""
-        if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
-            self.has_processed_results4 = True  # 标记已处理，即使结果为空
-            self.show_empty_message(self.tab4_viewer, "无外部需回复接口")
-            self.update_export_button_state()  # 更新导出按钮状态
-            return
-        self.processing_results4 = results
-        self.has_processed_results4 = True  # 标记已有处理结果
-        display_df = self._ensure_source_file_column_for_pending_cache(results, "外部需回复接口")
-        display_df = self._apply_pending_overrides(display_df, 4)
-        # 不要drop原始行号列，因为需要它来加载勾选状态
-        excel_row_numbers = list(display_df['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab4_viewer, display_df, "外部需回复接口", excel_row_numbers)
-        self.update_export_button_state()
-        
-        # 显示处理完成信息（仅在旧版调用时显示）
-        if show_popup:
-            messagebox.showinfo("处理完成", f"外部需回复接口数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【外部需回复接口】选项卡中更新显示。")
-
-    def display_results5(self, results, show_popup=True):
-        """显示三维提资接口处理结果"""
-        if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
-            self.has_processed_results5 = True
-            self.show_empty_message(self.tab5_viewer, "无三维接口")
-            self.update_export_button_state()
-            return
-        self.processing_results5 = results
-        self.has_processed_results5 = True
-        display_df = self._ensure_source_file_column_for_pending_cache(results, "三维提资接口")
-        display_df = self._apply_pending_overrides(display_df, 5)
-        # 不要drop原始行号列，因为需要它来加载勾选状态
-        excel_row_numbers = list(display_df['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab5_viewer, display_df, "三维提资接口", excel_row_numbers)
-        self.update_export_button_state()
-        if show_popup:
-            messagebox.showinfo("处理完成", f"三维提资接口数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【三维提资接口】选项卡中更新显示。")
-
-    def display_results6(self, results, show_popup=True):
-        """显示收发文函处理结果（与其他类型保持一致）"""
-        if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
-            self.has_processed_results6 = True
-            self.show_empty_message(self.tab6_viewer, "无需要回复的文函")
-            self.update_export_button_state()
-            return
-        self.processing_results6 = results
-        self.has_processed_results6 = True
-        display_df = self._ensure_source_file_column_for_pending_cache(results, "收发文函")
-        display_df = self._apply_pending_overrides(display_df, 6)
-        # 不要drop原始行号列，因为需要它来加载勾选状态
-        excel_row_numbers = list(display_df['原始行号'])
-        self.display_excel_data_with_original_rows(self.tab6_viewer, display_df, "收发文函", excel_row_numbers)
-        self.update_export_button_state()
-        if show_popup and self._should_show_popup():
-            messagebox.showinfo("处理完成", f"收发文函数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【收发文函】选项卡中更新显示。")
-
-    def display_results7(self, results, show_popup=True):
-        """显示FU处理结果。"""
-        if not isinstance(results, pd.DataFrame) or results.empty or '原始行号' not in results.columns:
-            self.has_processed_results7 = True
-            self.show_empty_message(self.tab7_viewer, "无待处理FU")
-            self.update_export_button_state()
-            return
-        self.processing_results7 = results
-        self.has_processed_results7 = True
-        display_df = self._ensure_source_file_column_for_pending_cache(results, "FU")
-        display_df = self._apply_pending_overrides(display_df, 7)
-        excel_row_numbers = list(display_df['原始行号'])
-        self.display_excel_data_with_original_rows(
-            self.tab7_viewer, display_df, "FU", excel_row_numbers
-        )
-        self.update_export_button_state()
-        if show_popup and self._should_show_popup():
-            messagebox.showinfo(
-                "处理完成",
-                f"FU数据处理完成！\n共剩余 {len(results)} 行符合条件的数据\n结果已在【FU】选项卡中更新显示。",
-            )
 
     def export_results(self):
         if not self._ensure_up_to_date(UpdateReason.EXPORT_RESULTS, UpdateReason.EXPORT_RESULTS):
@@ -7040,83 +6853,136 @@ class ExcelProcessorApp:
             success_count = 0
             success_messages = []
             project_stats = {}  # 统计各项目的导出文件数
-            
-            for i, (name, func, results, original_file, dt, project_id) in enumerate(export_tasks, 1):
-                self._post_ui_task(
-                    lambda current=i - 1: self.update_export_progress(
-                        export_dialog, progress_label, current, total_count
-                    )
-                )
-                
+
+            # 同源文件互斥：同一 original_file 的多个 project_id 任务必须串行执行，
+            # 避免 openpyxl/OOXML 写入冲突或 SMB 共享盘文件锁竞争。
+            file_locks = {}
+            file_locks_guard = threading.Lock()
+
+            def _get_file_lock(path):
+                if not path:
+                    return None
+                with file_locks_guard:
+                    lock = file_locks.get(path)
+                    if lock is None:
+                        lock = threading.Lock()
+                        file_locks[path] = lock
+                    return lock
+
+            # 单任务执行体：按 original_file 互斥，调 export 函数并写 Registry 钩子。
+            # 抛出三类结果：("ok", name, output_path, project_id) /
+            #              ("not_implemented", name) /
+            #              ("error", name, error_text)
+            def _run_one(task):
+                name, func, results, original_file, dt, project_id = task
+                file_lock = _get_file_lock(original_file)
                 try:
-                    output_path = func(
-                        results,
-                        original_file,
-                        dt,
-                        folder_path_snapshot,
-                        project_id,
-                    )
-                    reused = False
-                    success_count += 1
-                    suffix = "(复用)" if reused else ""
-                    success_messages.append(f"{name}(项目{project_id}): {os.path.basename(output_path)}{suffix}")
-                    
-                    # 统计项目导出数量
-                    if project_id not in project_stats:
-                        project_stats[project_id] = 0
-                    project_stats[project_id] += 1
-                    
-                    # 【Registry】调用on_export_done钩子
-                    if registry_hooks:
-                        try:
-                            # 从导出任务名称推断file_type
-                            file_type_map = {
-                                '待处理文件1': 1, '待处理文件2': 2, '待处理文件3': 3,
-                                '待处理文件4': 4, '待处理文件5': 5, '待处理文件6': 6,
-                                '三维提资接口': 5, '收发文函': 6, 'FU': 7,
-                            }
-                            file_type = file_type_map.get(name, 0)
-                            if file_type > 0:
-                                registry_hooks.on_export_done(
-                                    file_type=file_type,
-                                    project_id=project_id,
-                                    export_path=output_path,
-                                    count=len(results) if results is not None else 0,
-                                    now=export_datetime_snapshot
-                                )
-                        except Exception as e:
-                            print(f"[Registry] 导出钩子调用失败: {e}")
-                    
+                    if file_lock is not None:
+                        with file_lock:
+                            output_path = func(
+                                results,
+                                original_file,
+                                dt,
+                                folder_path_snapshot,
+                                project_id,
+                            )
+                    else:
+                        output_path = func(
+                            results,
+                            original_file,
+                            dt,
+                            folder_path_snapshot,
+                            project_id,
+                        )
+                except NotImplementedError:
+                    return ("not_implemented", name, None, None, None)
+                except Exception as exc:
+                    return ("error", name, None, str(exc), None)
+
+                # 【Registry】调用on_export_done钩子（每条 SQL 独立事务，并发安全）
+                if registry_hooks:
+                    try:
+                        file_type_map = {
+                            '应打开接口': 1, '需打开接口': 2, '外部接口ICM': 3,
+                            '外部接口单': 4, '三维提资接口': 5, '收发文函': 6, 'FU': 7,
+                        }
+                        file_type = file_type_map.get(name, 0)
+                        if file_type > 0:
+                            registry_hooks.on_export_done(
+                                file_type=file_type,
+                                project_id=project_id,
+                                export_path=output_path,
+                                count=len(results) if results is not None else 0,
+                                now=export_datetime_snapshot
+                            )
+                    except Exception as e:
+                        print(f"[Registry] 导出钩子调用失败: {e}")
+
+                return ("ok", name, output_path, project_id, results)
+
+            # 用 max_workers=4 的线程池并行跑 7 类导出；同 original_file 的任务已在 _run_one 内互斥。
+            completed_count = 0
+            first_not_implemented = None
+            first_error = None
+            with ThreadPoolExecutor(
+                max_workers=min(4, max(1, len(export_tasks))),
+                thread_name_prefix="ExcelExportTask",
+            ) as executor:
+                future_to_task = {
+                    executor.submit(_run_one, task): task for task in export_tasks
+                }
+                for future in as_completed(future_to_task):
+                    completed_count += 1
+                    # 按完成数驱动进度（顺序与原版不同但数量一致）
                     self._post_ui_task(
-                        lambda current=i: self.update_export_progress(
+                        lambda current=completed_count: self.update_export_progress(
                             export_dialog, progress_label, current, total_count
                         )
                     )
-                    
-                except NotImplementedError:
-                    def show_not_implemented(task_name=name):
-                        self.close_waiting_dialog(export_dialog)
-                        messagebox.showwarning(
-                            f"导出未实现 - {task_name}",
-                            f"{task_name}的导出功能尚未实现。",
+                    try:
+                        status, name, output_path, project_id_or_err, results_or_none = future.result()
+                    except Exception as exc:
+                        # _run_one 已经兜住所有异常，这里仅作防御
+                        if first_error is None:
+                            first_error = ("(未知任务)", str(exc))
+                        continue
+                    if status == "ok":
+                        success_count += 1
+                        success_messages.append(
+                            f"{name}(项目{project_id_or_err}): {os.path.basename(output_path)}"
                         )
-                        self._manual_operation = False
+                        project_stats[project_id_or_err] = project_stats.get(project_id_or_err, 0) + 1
+                    elif status == "not_implemented":
+                        if first_not_implemented is None:
+                            first_not_implemented = name
+                    elif status == "error":
+                        if first_error is None:
+                            first_error = (name, project_id_or_err)
 
-                    self._post_ui_task(show_not_implemented)
-                    return
-                except Exception as e:
-                    error_text = str(e)
+            # 错误处理：保留“first-error-wins”语义，任一任务失败即终止整体展示。
+            if first_not_implemented is not None:
+                def show_not_implemented(task_name=first_not_implemented):
+                    self.close_waiting_dialog(export_dialog)
+                    messagebox.showwarning(
+                        f"导出未实现 - {task_name}",
+                        f"{task_name}的导出功能尚未实现。",
+                    )
+                    self._manual_operation = False
 
-                    def show_export_error(task_name=name, message=error_text):
-                        self.close_waiting_dialog(export_dialog)
-                        messagebox.showerror(
-                            f"导出失败 - {task_name}",
-                            f"导出过程中发生错误: {message}",
-                        )
-                        self._manual_operation = False
+                self._post_ui_task(show_not_implemented)
+                return
+            if first_error is not None:
+                task_name, error_text = first_error
+                def show_export_error(t_name=task_name, message=error_text):
+                    self.close_waiting_dialog(export_dialog)
+                    messagebox.showerror(
+                        f"导出失败 - {t_name}",
+                        f"导出过程中发生错误: {message}",
+                    )
+                    self._manual_operation = False
 
-                    self._post_ui_task(show_export_error)
-                    return
+                self._post_ui_task(show_export_error)
+                return
 
             combined_message = ""
             if success_count > 0:
