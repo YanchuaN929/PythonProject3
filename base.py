@@ -525,6 +525,10 @@ class ExcelProcessorApp:
         self.window_manager.app = self
         self.window_manager.set_write_task_manager(self.write_task_manager, self._get_current_user_name)
         self.window_manager.setup(config_data, process_vars, project_vars)
+        try:
+            self.write_task_manager.register_listener(self._on_write_task_status_changed)
+        except Exception:
+            pass
         
         # 保存UI组件引用（向后兼容）
         self.path_var = self.window_manager.path_var
@@ -648,6 +652,9 @@ class ExcelProcessorApp:
         self.processing_results6 = None
         self.processing_results7 = None
         self._tab_render_signatures = {}
+        # 处理完成后按 UI 空闲片段预渲染其余选项卡。
+        # generation 用于让新一轮处理/刷新立即作废尚未执行的旧预加载回调。
+        self._tab_preload_generation = 0
         
         # 多文件处理结果：{项目号: DataFrame, ...}
         self.processing_results_multi1 = {}  # 待处理文件1的处理结果字典
@@ -1631,14 +1638,10 @@ class ExcelProcessorApp:
         # 使用WindowManager的show_empty_message方法
         self.window_manager.show_empty_message(viewer, message)
 
-    def on_tab_changed(self, event):
-        """选项卡切换事件处理"""
-        # Step4：UI 渲染去重 —— 在程序内部主动切换 tab 时，可临时抑制渲染，避免重复触发
-        if getattr(self, "_suppress_tab_change_render", False):
-            return
-        selected_tab = self.notebook.index(self.notebook.select())
-
-        result_attrs = (
+    @staticmethod
+    def _tab_result_attrs():
+        """返回选项卡对应的处理结果属性名。"""
+        return (
             "processing_results",
             "processing_results2",
             "processing_results3",
@@ -1647,7 +1650,11 @@ class ExcelProcessorApp:
             "processing_results6",
             "processing_results7",
         )
-        viewer_attrs = (
+
+    @staticmethod
+    def _tab_viewer_attrs():
+        """返回选项卡对应的 Treeview 属性名。"""
+        return (
             "tab1_viewer",
             "tab2_viewer",
             "tab3_viewer",
@@ -1656,28 +1663,54 @@ class ExcelProcessorApp:
             "tab6_viewer",
             "tab7_viewer",
         )
-        result_df = getattr(self, result_attrs[selected_tab], None)
-        render_signature = (
+
+    def _get_tab_render_signature(self, tab_index):
+        """生成可判断当前选项卡是否已经按最新结果渲染的轻量签名。"""
+        result_attrs = self._tab_result_attrs()
+        if tab_index < 0 or tab_index >= len(result_attrs):
+            return None
+        result_df = getattr(self, result_attrs[tab_index], None)
+        return (
             id(result_df),
             len(result_df) if isinstance(result_df, pd.DataFrame) else -1,
             tuple(getattr(self, "user_roles", []) or []),
+            bool(getattr(self, f"has_processed_results{tab_index + 1}", False)),
         )
+
+    def _is_tab_rendered(self, tab_index, render_signature=None):
+        """仅当数据签名一致且 Treeview 已有内容时，认为该选项卡可直接显示。"""
+        viewer_attrs = self._tab_viewer_attrs()
+        if tab_index < 0 or tab_index >= len(viewer_attrs):
+            return False
+        if render_signature is None:
+            render_signature = self._get_tab_render_signature(tab_index)
         render_signatures = getattr(self, "_tab_render_signatures", {})
-        selected_viewer = getattr(self, viewer_attrs[selected_tab], None)
-        if (
-            event == "user_tab_switch"
-            and render_signatures.get(selected_tab) == render_signature
-            and selected_viewer is not None
-            and selected_viewer.get_children()
-        ):
-            return
-        
+        viewer = getattr(self, viewer_attrs[tab_index], None)
+        try:
+            has_content = viewer is not None and bool(viewer.get_children())
+        except Exception:
+            has_content = False
+        return render_signatures.get(tab_index) == render_signature and has_content
+
+    def _render_tab_by_index(self, selected_tab, reuse_rendered=False):
+        """
+        使用与用户切换完全相同的业务路径渲染指定选项卡。
+
+        reuse_rendered=True 时，若结果、角色和现有 Treeview 均未变化则直接复用；
+        预加载和用户切换均使用该模式，强制刷新仍可传 False。
+        """
+        if selected_tab < 0 or selected_tab >= len(self._tab_result_attrs()):
+            return False
+        render_signature = self._get_tab_render_signature(selected_tab)
+        if reuse_rendered and self._is_tab_rendered(selected_tab, render_signature):
+            return False
+
         # 根据选择的选项卡加载相应数据
         #
         # 【性能优化Step1】已确认：移除“未处理状态原始预览/预加载”
         # - 未开始处理时不读Excel、不展示原始数据
         # - 仅在“开始处理”后展示处理结果（或空结果提示）
-        if selected_tab == 0 and self.target_file1:  # 内部需打开接口
+        if selected_tab == 0 and (self.target_file1 or self.has_processed_results1):  # 内部需打开接口
             # 如果有处理结果，显示过滤后的数据；否则提示点击开始处理
             if self.has_processed_results1 and self.processing_results is not None and not self.processing_results.empty:
                 # Step4：统一走 display_results，确保 PendingCache 覆盖（责任人/状态）与过滤逻辑一致
@@ -1731,15 +1764,84 @@ class ExcelProcessorApp:
             else:
                 self.show_empty_message(self.tab7_viewer, "请点击开始处理生成结果")
 
+        render_signatures = getattr(self, "_tab_render_signatures", {})
         self._tab_render_signatures = render_signatures
         self._tab_render_signatures[selected_tab] = render_signature
+        return True
+
+    def on_tab_changed(self, event):
+        """选项卡切换事件处理。已预加载的选项卡只做原生视图切换。"""
+        # Step4：UI 渲染去重 —— 在程序内部主动切换 tab 时，可临时抑制渲染，避免重复触发
+        if getattr(self, "_suppress_tab_change_render", False):
+            return
+        selected_tab = self.notebook.index(self.notebook.select())
+        self._render_tab_by_index(
+            selected_tab,
+            reuse_rendered=(event == "user_tab_switch"),
+        )
+
+    def _cancel_tab_preload(self, clear_signatures=False):
+        """作废尚未执行的选项卡预加载回调。"""
+        self._tab_preload_generation = getattr(self, "_tab_preload_generation", 0) + 1
+        if clear_signatures:
+            self._tab_render_signatures = {}
+
+    def _schedule_processed_tab_preload(self, active_tab):
+        """
+        在主线程空闲片段逐个预渲染本轮已处理的非活动选项卡。
+
+        Treeview 不能由后台线程安全更新，因此这里使用 after_idle/after 分片；
+        每次只渲染一个选项卡，给窗口事件留出处理机会。
+        """
+        root = getattr(self, "root", None)
+        if root is None:
+            return
+
+        self._cancel_tab_preload(clear_signatures=False)
+        generation = self._tab_preload_generation
+        processed_flags = tuple(
+            bool(getattr(self, f"has_processed_results{index + 1}", False))
+            for index in range(7)
+        )
+        queue = [
+            index for index, is_processed in enumerate(processed_flags)
+            if is_processed and index != active_tab
+        ]
+        if not queue:
+            return
+
+        def preload_next():
+            if generation != getattr(self, "_tab_preload_generation", 0):
+                return
+            if not queue:
+                return
+            tab_index = queue.pop(0)
+            try:
+                self._render_tab_by_index(tab_index, reuse_rendered=True)
+            except Exception as exc:
+                print(f"[选项卡预加载] 选项卡{tab_index + 1}预加载失败: {exc}")
+            if queue and generation == getattr(self, "_tab_preload_generation", 0):
+                try:
+                    root.after(1, preload_next)
+                except Exception:
+                    pass
+
+        try:
+            root.after_idle(preload_next)
+        except Exception:
+            try:
+                root.after(1, preload_next)
+            except Exception:
+                pass
 
     def _post_processing_select_and_render_active_tab(self, active_tab: int):
         """
-        Step4：处理完成后的统一渲染入口
+        Step4：处理完成后的统一渲染与预加载入口
         - 内部会选择 active_tab，但抑制 <<NotebookTabChanged>> 的二次渲染
-        - 最终只渲染一次当前选中 tab
+        - 先渲染当前选中 tab，再按 UI 空闲片段预渲染其他已处理 tab
         """
+        # 新的处理结果已提交，旧签名和旧预加载任务必须立即失效。
+        self._cancel_tab_preload(clear_signatures=True)
         try:
             self._suppress_tab_change_render = True
             try:
@@ -1756,6 +1858,9 @@ class ExcelProcessorApp:
             self.on_tab_changed(None)
         except Exception:
             pass
+
+        # 当前 tab 可立即使用；其余已处理 tab 在空闲片段逐个准备好。
+        self._schedule_processed_tab_preload(active_tab)
 
     def load_file_to_viewer(self, file_path, viewer, tab_name):
         """加载Excel文件到预览器（优化版：使用只读模式）"""
@@ -2614,6 +2719,29 @@ class ExcelProcessorApp:
         except Exception as e:
             print(f"[PendingCache] 回文提交后刷新失败: {e}")
 
+    def _on_write_task_status_changed(self, task):
+        """Registry补偿完成后使本机视图缓存失效，并在Tk主线程刷新当前页。"""
+        task_type = getattr(task, "task_type", "")
+        task_status = getattr(task, "status", "")
+        should_refresh = (
+            (task_type == "registry_sync" and task_status == "completed")
+            or (
+                task_type in ("response_batch", "fu_completion_batch")
+                and task_status in ("completed", "failed")
+            )
+        )
+        if not should_refresh:
+            return
+
+        def refresh_after_compensation():
+            self._tab_render_signatures = {}
+            self.refresh_current_tab_display()
+
+        try:
+            self.root.after(0, refresh_after_compensation)
+        except Exception:
+            pass
+
     def _parse_interface_engineer_role(self, role: str):
         """
         解析接口工程师角色，提取项目号
@@ -3443,7 +3571,7 @@ class ExcelProcessorApp:
         """显示帮助文档窗口"""
         try:
             from ui.help_viewer import HelpViewer
-            user_role = getattr(self, 'role', None)
+            user_role = ",".join(getattr(self, "user_roles", []) or [])
             viewer = HelpViewer(self.root, user_role=user_role)
             viewer.show()
         except ImportError as e:
@@ -4408,6 +4536,9 @@ class ExcelProcessorApp:
             update_ui: 是否更新Tk界面（选项卡✓标记）。后台线程调用时必须为False。
             enabled_projects_override: 可选，直接传入已勾选的项目号列表，避免后台线程读取Tk变量。
         """
+        # 文件集合刷新后旧 Treeview 不再代表本轮数据，同时作废旧预加载回调。
+        self._cancel_tab_preload(clear_signatures=True)
+
         # 重置单文件状态（兼容性保留）
         self.target_file1 = None
         self.target_file1_project_id = None
@@ -5230,6 +5361,9 @@ class ExcelProcessorApp:
             if not getattr(self, 'auto_mode', False):
                 messagebox.showwarning("警告", "请至少勾选一个需要处理的接口类型！")
             return
+
+        # 新一轮处理期间不再执行上一轮尚未完成的选项卡预加载。
+        self._cancel_tab_preload(clear_signatures=False)
         
         # 显示等待对话框（自动模式下不显示）
         processing_dialog, _ = self.show_waiting_dialog("开始处理", "正在处理中，请稍后。。。 。。。")

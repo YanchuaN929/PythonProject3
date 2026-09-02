@@ -80,6 +80,7 @@ DEFAULT_STATE_PATH = _get_default_state_path()
 
 _manager_singleton: Optional["WriteTaskManager"] = None
 _singleton_lock = threading.Lock()
+REGISTRY_RETRY_DELAYS = (5, 15, 30, 60)
 
 
 class WriteTaskManager:
@@ -172,6 +173,32 @@ class WriteTaskManager:
         }
         return self._submit("response", payload, user_name or "未知用户", description)
 
+    def submit_response_batch_task(
+        self,
+        *,
+        items,
+        user_name: str,
+        data_folder: Optional[str] = None,
+        description: str,
+    ) -> WriteTask:
+        """提交文件1-6批量回文；执行器按源工作簿分组并一次保存。"""
+        if not data_folder:
+            try:
+                from registry import hooks as registry_hooks
+                data_folder = registry_hooks.get_data_folder()
+            except Exception:
+                pass
+        normalized_items = [dict(item or {}) for item in (items or [])]
+        if not normalized_items:
+            raise ValueError("批量回文任务不能为空")
+        payload = {
+            "batch_id": str(uuid.uuid4()),
+            "items": normalized_items,
+            "user_name": user_name,
+            "data_folder": data_folder,
+        }
+        return self._submit("response_batch", payload, user_name or "未知用户", description)
+
     def submit_fu_completion_task(
         self,
         *,
@@ -203,6 +230,80 @@ class WriteTaskManager:
             "data_folder": data_folder,
         }
         return self._submit("fu_completion", payload, user_name or "未知用户", description)
+
+    def submit_fu_completion_batch_task(
+        self,
+        *,
+        items,
+        user_name: str,
+        data_folder: Optional[str] = None,
+        description: str,
+    ) -> WriteTask:
+        """提交文件7批量完成；执行器按源工作簿分组并一次保存。"""
+        if not data_folder:
+            try:
+                from registry import hooks as registry_hooks
+                data_folder = registry_hooks.get_data_folder()
+            except Exception:
+                pass
+        normalized_items = [dict(item or {}) for item in (items or [])]
+        if not normalized_items:
+            raise ValueError("批量FU完成任务不能为空")
+        payload = {
+            "batch_id": str(uuid.uuid4()),
+            "items": normalized_items,
+            "user_name": user_name,
+            "data_folder": data_folder,
+        }
+        return self._submit("fu_completion_batch", payload, user_name or "未知用户", description)
+
+    def submit_registry_sync_task(
+        self,
+        compensation: dict,
+        *,
+        submitted_by: str,
+        origin_task_id: str,
+    ) -> WriteTask:
+        """提交只写 Registry 的持久化补偿任务，绝不重新进入 Excel 执行器。"""
+        task = self._build_registry_sync_task(
+            compensation,
+            submitted_by=submitted_by,
+            origin_task_id=origin_task_id,
+        )
+        self.tasks[task.task_id] = task
+        self.cache.save(self.tasks.values())
+        self._sync_to_shared_log(task)
+        self._queue.put(task.task_id)
+        return task
+
+    @staticmethod
+    def _build_registry_sync_task(
+        compensation: dict,
+        *,
+        submitted_by: str,
+        origin_task_id: str,
+    ) -> WriteTask:
+        """构造补偿任务；由调用方决定何时与原任务一起持久化和入队。"""
+        payload = dict(compensation or {})
+        payload["origin_task_id"] = origin_task_id
+        payload.setdefault("_retry_count", 0)
+        registry_payload = payload.get("registry_payload") or {}
+        interface_id = str(registry_payload.get("interface_id", "") or "").strip()
+        operation_name = {
+            "response_written": "回文状态",
+            "fu_completed": "FU完成状态",
+            "assigned": "指派状态",
+        }.get(str(payload.get("operation", "") or ""), "Registry状态")
+        description = f"{operation_name}补偿"
+        if interface_id:
+            description += f" {interface_id}"
+        return WriteTask(
+            task_id=str(uuid.uuid4()),
+            task_type="registry_sync",
+            payload=payload,
+            submitted_by=submitted_by or "未知用户",
+            description=description,
+        )
 
     def _submit(self, task_type: str, payload: dict, submitted_by: str, description: str) -> WriteTask:
         task = WriteTask(
@@ -249,6 +350,8 @@ class WriteTaskManager:
             self._notify_listeners(task)
             self._sync_to_shared_log(task)
 
+            retry_delay = None
+            compensation_tasks = []
             try:
                 result = executor(task.payload)
                 if result is False:
@@ -286,23 +389,91 @@ class WriteTaskManager:
                             f"failed={failed_count}"
                             f"{f', reason={first_reason}' if first_reason else ''}"
                         )
+
+                compensations = []
+                if isinstance(result, dict):
+                    compensation = result.get("registry_compensation")
+                    if compensation:
+                        compensations.append(compensation)
+                    compensations.extend(result.get("registry_compensations") or [])
+                result_message = ""
+                if isinstance(result, dict):
+                    result_message = str(result.get("result_message", "") or "").strip()
+                if compensations:
+                    # 先在内存中同时设置“原任务已完成”和“补偿任务待执行”，
+                    # 再由 finally 一次写入状态文件。这样异常退出后只会恢复
+                    # Registry 补偿，不会把原 Excel 任务重新放回队列。
+                    compensation_tasks = [
+                        self._build_registry_sync_task(
+                            compensation_item,
+                            submitted_by=task.submitted_by,
+                            origin_task_id=task.task_id,
+                        )
+                        for compensation_item in compensations
+                    ]
+                    for compensation_task in compensation_tasks:
+                        self.tasks[compensation_task.task_id] = compensation_task
+                    compensation_message = (
+                        f"Excel写入已成功；{len(compensation_tasks)}条Registry同步已转补偿队列"
+                    )
+                    task.error = "；".join(
+                        text for text in (result_message, compensation_message) if text
+                    )
+                else:
+                    task.error = result_message or None
                 task.status = "completed"
-                task.error = None
             except Exception as e:
-                task.status = "failed"
-                task.error = str(e)
+                if task.task_type == "registry_sync":
+                    retry_count = int((task.payload or {}).get("_retry_count", 0) or 0) + 1
+                    task.payload["_retry_count"] = retry_count
+                    task.status = "pending"
+                    task.error = str(e)
+                    task.completed_at = None
+                    retry_delay = REGISTRY_RETRY_DELAYS[
+                        min(retry_count - 1, len(REGISTRY_RETRY_DELAYS) - 1)
+                    ]
+                    print(
+                        f"[Registry补偿] 第{retry_count}次同步失败，"
+                        f"{retry_delay}秒后仅重试Registry: {e}"
+                    )
+                else:
+                    task.status = "failed"
+                    task.error = str(e)
             finally:
-                task.completed_at = utc_now_iso()
+                if task.status in ("completed", "failed"):
+                    task.completed_at = utc_now_iso()
                 self.cache.save(self.tasks.values())
                 self._notify_listeners(task)
                 self._sync_to_shared_log(task)
                 self._queue.task_done()
+            for compensation_task in compensation_tasks:
+                self._sync_to_shared_log(compensation_task)
+                self._queue.put(compensation_task.task_id)
+            if retry_delay is not None:
+                self._schedule_registry_retry(task.task_id, retry_delay)
+
+    def _schedule_registry_retry(self, task_id: str, delay_seconds: float) -> None:
+        """延迟重新入队；等待期间不占用写入工作线程。"""
+        def delayed_requeue():
+            if self._stop_event.wait(timeout=max(0.0, float(delay_seconds))):
+                return
+            task = self.tasks.get(task_id)
+            if task and task.task_type == "registry_sync" and task.status == "pending":
+                self._queue.put(task_id)
+
+        thread = threading.Thread(target=delayed_requeue, daemon=True)
+        thread.start()
 
     # ------------------------------------------------------------------ #
     # Helpers for UI / other components
     # ------------------------------------------------------------------ #
-    def has_pending_tasks(self) -> bool:
-        return any(task.status in ("pending", "running") for task in self.tasks.values())
+    def has_pending_tasks(self, include_registry_sync: bool = False) -> bool:
+        """Registry补偿不阻塞新一轮Excel处理，两类任务使用彼此独立的等待语义。"""
+        return any(
+            task.status in ("pending", "running")
+            and (include_registry_sync or task.task_type != "registry_sync")
+            for task in self.tasks.values()
+        )
 
     def get_tasks(self) -> Iterable[WriteTask]:
         return list(self.tasks.values())

@@ -1,5 +1,6 @@
 import datetime
 import sqlite3
+from types import SimpleNamespace
 
 from openpyxl import Workbook, load_workbook
 
@@ -218,6 +219,147 @@ def test_file7_gui_display_uses_internal_code_and_fu_columns():
         "是否已完成",
     ]
     assert "接口号" not in display.columns
+
+
+def test_file7_designer_checkbox_submits_fu_completion(monkeypatch):
+    """设计人员点击FU完成框时直接提交FU任务，不进入上级审查分支。"""
+    from ui.window import WindowManager
+
+    class FakeViewer:
+        def __init__(self):
+            self._bindtags = ("viewer",)
+            self.callback = None
+
+        def identify_region(self, _x, _y):
+            return "cell"
+
+        def identify_column(self, _x):
+            return "#2"
+
+        def identify_row(self, _y):
+            return "row-1"
+
+        def item(self, _item_id, option=None, **_kwargs):
+            if option == "values":
+                return ("FU-01", "☐")
+            return {"values": ("FU-01", "☐")}
+
+        def index(self, _item_id):
+            return 0
+
+        def bindtags(self, value=None):
+            if value is not None:
+                self._bindtags = value
+            return self._bindtags
+
+        def unbind_class(self, _tag, _event):
+            return None
+
+        def bind_class(self, _tag, _event, callback):
+            self.callback = callback
+
+    viewer = FakeViewer()
+    manager = WindowManager.__new__(WindowManager)
+    manager.app = SimpleNamespace(user_name="张三", user_roles=["设计人员"])
+    manager._item_metadata = {
+        (viewer, "row-1"): {
+            "original_row": 8,
+            "source_file": r"E:\\data\\1916项目标准表格.xlsx",
+            "project_id": "1916",
+            "interface_id": "FU-01",
+            "responsible": "张三",
+        }
+    }
+    submissions = []
+    manager._submit_fu_completion = lambda **kwargs: submissions.append(kwargs)
+
+    original_df = main.pd.DataFrame([{
+        "项目号": "1916",
+        "接口号": "FU-01",
+        "原始行号": 8,
+    }])
+    manager._bind_checkbox_click_event(
+        viewer,
+        original_df,
+        original_df,
+        ["内部编码", "是否已完成"],
+        [8],
+        [r"E:\\data\\1916项目标准表格.xlsx"],
+        object(),
+        "FU",
+    )
+
+    assert viewer.callback is not None
+    viewer.callback(SimpleNamespace(x=10, y=10))
+
+    assert len(submissions) == 1
+    assert submissions[0]["source_file"].endswith("1916项目标准表格.xlsx")
+    assert submissions[0]["original_row"] == 8
+    assert submissions[0]["interface_id"] == "FU-01"
+    assert submissions[0]["user_name"] == "张三"
+    assert submissions[0]["responsible"] == "张三"
+
+
+def test_file7_mixed_role_uses_row_status_to_choose_completion_or_review(monkeypatch):
+    """设计+上级多角色在待完成FU上仍可完成，不会被上级审查逻辑截走。"""
+    from ui.window import WindowManager
+
+    class FakeViewer:
+        def __init__(self):
+            self.callback = None
+            self._tags = ("viewer",)
+
+        def identify_region(self, _x, _y): return "cell"
+        def identify_column(self, _x): return "#3"
+        def identify_row(self, _y): return "row-1"
+        def index(self, _item_id): return 0
+        def item(self, _item_id, option=None, **_kwargs):
+            values = ("待完成", "FU-MIXED", "☐")
+            return values if option == "values" else {"values": values}
+        def bindtags(self, value=None):
+            if value is not None: self._tags = value
+            return self._tags
+        def unbind_class(self, _tag, _event): return None
+        def bind_class(self, _tag, _event, callback): self.callback = callback
+
+    viewer = FakeViewer()
+    manager = WindowManager.__new__(WindowManager)
+    manager.app = SimpleNamespace(
+        user_name="张三",
+        user_roles=["设计人员", "一室主任"],
+    )
+    manager._item_metadata = {
+        (viewer, "row-1"): {
+            "original_row": 9,
+            "source_file": "1916项目标准表格.xlsx",
+            "project_id": "1916",
+            "interface_id": "FU-MIXED",
+            "responsible": "张三",
+        }
+    }
+    submissions = []
+    manager._submit_fu_completion = lambda **kwargs: submissions.append(kwargs)
+    original_df = main.pd.DataFrame([{
+        "状态": "待完成",
+        "项目号": "1916",
+        "接口号": "FU-MIXED",
+        "原始行号": 9,
+    }])
+
+    manager._bind_checkbox_click_event(
+        viewer,
+        original_df,
+        original_df,
+        ["状态", "内部编码", "是否已完成"],
+        [9],
+        ["1916项目标准表格.xlsx"],
+        object(),
+        "FU",
+    )
+    viewer.callback(SimpleNamespace(x=10, y=10))
+
+    assert len(submissions) == 1
+    assert submissions[0]["interface_id"] == "FU-MIXED"
 
 
 def test_file7_registry_completion_confirmation_and_new_cycle(monkeypatch, tmp_path):

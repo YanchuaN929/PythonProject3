@@ -61,19 +61,26 @@ class PendingCache:
                 self._task_index[task_id] = entries
 
     def add_response_entry(self, task_id: str, info: Dict):
+        self.add_response_entries(task_id, [info])
+
+    def add_response_entries(self, task_id: str, infos: List[Dict]):
+        """记录一个批量任务的全部临时回文/FU覆盖项。"""
         with self._lock:
-            keys = self._make_keys(info)
-            for key in keys:
-                self._responses[key] = {
-                    "response_number": info.get("response_number", ""),
-                    "user_name": info.get("user_name", ""),
-                    "project_id": info.get("project_id", ""),
-                    "status_text": info.get("status_text", ""),
-                    "has_assignor": bool(info.get("has_assignor")),
-                    "status": "pending",
-                }
-            # 记录索引：用于状态变更时清理/更新（同一任务可能对应多个 key）
-            self._task_index[task_id] = [("response", k) for k in keys]
+            entries = []
+            for info in infos or []:
+                keys = self._make_keys(info)
+                for key in keys:
+                    self._responses[key] = {
+                        "response_number": info.get("response_number", ""),
+                        "user_name": info.get("user_name", ""),
+                        "project_id": info.get("project_id", ""),
+                        "status_text": info.get("status_text", ""),
+                        "has_assignor": bool(info.get("has_assignor")),
+                        "status": "pending",
+                    }
+                    entries.append(("response", key))
+            # 记录索引：用于状态变更时清理/更新（同一任务可能对应多行、每行多个key）
+            self._task_index[task_id] = entries
 
     # ------------------------------------------------------------------ #
     # Query helpers
@@ -160,6 +167,18 @@ class PendingCache:
             entries = self._task_index.get(task.task_id, [])
             if not entries:
                 return
+            successful_response_keys = None
+            if task.status == "completed" and task.task_type in ("response_batch", "fu_completion_batch"):
+                result = (task.payload or {}).get("_result") or {}
+                successful_items = result.get("successful_items") or []
+                if successful_items:
+                    successful_response_keys = set()
+                    for item in successful_items:
+                        cache_item = dict(item or {})
+                        cache_item["row_index"] = int(
+                            cache_item.get("requested_row_index", cache_item.get("row_index", 0)) or 0
+                        )
+                        successful_response_keys.update(self._make_keys(cache_item))
             for entry_type, key in entries:
                 if entry_type == "assignment" and key in self._assignments:
                     self._assignments[key]["status"] = task.status
@@ -169,6 +188,9 @@ class PendingCache:
                         del self._assignments[key]
                 elif entry_type == "response" and key in self._responses:
                     self._responses[key]["status"] = task.status
+                    if successful_response_keys is not None and key not in successful_response_keys:
+                        del self._responses[key]
+                        continue
                     if task.status in ("failed",):
                         del self._responses[key]
             # 仅当失败时清理索引；completed 仍保留覆盖信息用于UI展示

@@ -15,6 +15,7 @@ a = Analysis(
         # UI模块 (ui/)
         ('ui/window.py', 'ui'),
         ('ui/input_handler.py', 'ui'),
+        ('ui/batch_response_dialog.py', 'ui'),
         ('ui/ignore_overdue_dialog.py', 'ui'),
         ('ui/help_viewer.py', 'ui'),
         ('ui/ui_copy.py', 'ui'),
@@ -24,6 +25,7 @@ a = Analysis(
         ('services/distribution.py', 'services'),
         ('services/db_status.py', 'services'),
         ('services/account_service.py', 'services'),
+        ('services/batch_response.py', 'services'),
         ('services/__init__.py', 'services'),
         # 工具模块 (utils/)
         ('utils/date_utils.py', 'utils'),
@@ -57,6 +59,7 @@ a = Analysis(
         'ui',
         'ui.window',
         'ui.input_handler',
+        'ui.batch_response_dialog',
         'ui.ignore_overdue_dialog',
         'ui.help_viewer',
         'ui.ui_copy',
@@ -66,6 +69,7 @@ a = Analysis(
         'services.distribution',
         'services.db_status',
         'services.account_service',
+        'services.batch_response',
         # 工具模块 (utils/)
         'utils',
         'utils.date_utils',

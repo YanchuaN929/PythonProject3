@@ -74,9 +74,11 @@ def check_pre_build():
     all_ok &= check_file("ui/ignore_overdue_dialog.py", "忽略延期对话框")
     all_ok &= check_file("utils/date_utils.py", "日期工具模块")
     all_ok &= check_file("ui/input_handler.py", "输入处理模块")
+    all_ok &= check_file("ui/batch_response_dialog.py", "批量回文窗口")
     all_ok &= check_file("services/distribution.py", "任务指派模块")
     all_ok &= check_file("services/db_status.py", "数据库状态显示器")
     all_ok &= check_file("services/account_service.py", "账户管理服务")
+    all_ok &= check_file("services/batch_response.py", "批量写入服务")
     all_ok &= check_file("utils/dept_config.py", "科室配置模块")
     all_ok &= check_file("utils/excel_io.py", "Excel安全读写模块")
     all_ok &= check_file("utils/role_table.py", "角色表读取模块")
@@ -189,9 +191,11 @@ def check_post_build():
     all_ok &= check_file(os.path.join(internal, "ui", "ignore_overdue_dialog.py"), "忽略延期对话框")
     all_ok &= check_file(os.path.join(internal, "utils", "date_utils.py"), "日期工具模块")
     all_ok &= check_file(os.path.join(internal, "ui", "input_handler.py"), "输入处理模块")
+    all_ok &= check_file(os.path.join(internal, "ui", "batch_response_dialog.py"), "批量回文窗口")
     all_ok &= check_file(os.path.join(internal, "services", "distribution.py"), "任务指派模块")
     all_ok &= check_file(os.path.join(internal, "services", "db_status.py"), "数据库状态显示器")
     all_ok &= check_file(os.path.join(internal, "services", "account_service.py"), "账户管理服务")
+    all_ok &= check_file(os.path.join(internal, "services", "batch_response.py"), "批量写入服务")
     all_ok &= check_file(os.path.join(internal, "utils", "dept_config.py"), "科室配置模块")
     all_ok &= check_file(os.path.join(internal, "utils", "excel_io.py"), "Excel安全读写模块")
     all_ok &= check_file(os.path.join(internal, "utils", "role_table.py"), "角色表读取模块")
@@ -222,9 +226,11 @@ def check_post_build():
     source_pairs = [
         ("core/main.py", os.path.join(internal, "core", "main.py"), "处理模块1"),
         ("ui/input_handler.py", os.path.join(internal, "ui", "input_handler.py"), "输入处理模块"),
+        ("ui/batch_response_dialog.py", os.path.join(internal, "ui", "batch_response_dialog.py"), "批量回文窗口"),
         ("services/distribution.py", os.path.join(internal, "services", "distribution.py"), "任务指派模块"),
         ("services/file_manager.py", os.path.join(internal, "services", "file_manager.py"), "结果缓存模块"),
         ("services/account_service.py", os.path.join(internal, "services", "account_service.py"), "账户管理服务"),
+        ("services/batch_response.py", os.path.join(internal, "services", "batch_response.py"), "批量写入服务"),
         ("utils/excel_io.py", os.path.join(internal, "utils", "excel_io.py"), "Excel安全读写模块"),
         ("version.json", os.path.join(internal, "version.json"), "版本文件"),
         ("excel_bin/姓名角色表.xlsx", os.path.join(internal, "excel_bin", "姓名角色表.xlsx"), "建筑结构所角色表"),

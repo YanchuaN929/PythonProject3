@@ -10,6 +10,7 @@ from tkinter import ttk
 import tkinter.scrolledtext as scrolledtext
 import pandas as pd
 import os
+import re
 import sys
 import uuid
 from utils.date_utils import is_date_overdue
@@ -498,6 +499,18 @@ class WindowManager:
                     variable=self.process_vars[tab_id]
                 )
                 check.grid(row=0, column=0, sticky='nw', padx=5, pady=2)
+
+            batch_text = "批量标记完成" if tab_id == "tab7" else "批量填写回文"
+            batch_button = ttk.Button(
+                frame,
+                text=batch_text,
+                command=lambda current_tab_id=tab_id, current_tab_text=tab_text: self._open_batch_entry_dialog(
+                    current_tab_id,
+                    current_tab_text,
+                ),
+            )
+            batch_button.grid(row=0, column=0, sticky="ne", padx=5, pady=2)
+            self.buttons[f"batch_{tab_id}"] = batch_button
             
             # 创建Excel预览控件
             self.create_excel_viewer(frame, tab_id, tab_text)
@@ -1233,6 +1246,73 @@ class WindowManager:
         except Exception:
             pass
 
+    def _submit_fu_completion(
+        self,
+        *,
+        viewer,
+        source_file,
+        original_row,
+        interface_id,
+        user_name,
+        project_id,
+        responsible="",
+        show_message=True,
+    ):
+        """提交 FU 实际完成日期写入；供内部编码双击和设计人员勾选框共用。"""
+        from datetime import date
+        from write_tasks import get_write_task_manager, get_pending_cache
+
+        role = " ".join(
+            str(value)
+            for value in getattr(self.app, "user_roles", [])
+            if value
+        )
+        data_folder = None
+        try:
+            from registry import hooks as registry_hooks
+
+            data_folder = registry_hooks.get_data_folder()
+        except Exception:
+            pass
+
+        manager = self.write_task_manager or get_write_task_manager()
+        completion_date = date.today().isoformat()
+        task = manager.submit_fu_completion_task(
+            file_path=source_file,
+            row_index=original_row,
+            interface_id=str(interface_id),
+            user_name=user_name,
+            project_id=project_id,
+            completion_date=completion_date,
+            role=role,
+            data_folder=data_folder,
+            description=f"{user_name} 完成FU {interface_id}",
+        )
+
+        responsible = str(responsible or "").strip()
+        try:
+            get_pending_cache().add_response_entry(task.task_id, {
+                "file_path": source_file,
+                "file_type": 7,
+                "row_index": original_row,
+                "response_number": completion_date,
+                "user_name": user_name,
+                "project_id": project_id,
+                "has_assignor": bool(responsible and responsible != "无"),
+            })
+        except Exception as cache_error:
+            print(f"[PendingCache] 记录FU任务失败: {cache_error}")
+
+        callback = getattr(self.app, "_handle_response_submitted", None)
+        if callable(callback):
+            callback(source_file, original_row, 7)
+
+        if show_message:
+            from tkinter import messagebox
+
+            messagebox.showinfo("已提交", "实际FU日期写入任务已提交。", parent=viewer)
+        return task
+
     def _bind_checkbox_click_event(self, viewer, original_df, display_df, columns, 
                                     original_row_numbers, source_files, file_manager, tab_name):
         """
@@ -1286,6 +1366,21 @@ class WindowManager:
                 user_name = getattr(self.app, 'user_name', '').strip()
                 user_roles = getattr(self.app, 'user_roles', [])
                 is_superior = any(keyword in ''.join(user_roles) for keyword in ['所领导', '室主任', '接口工程师', '管理员'])
+                is_designer = any('设计人员' in str(role or '') for role in user_roles)
+
+                file_type_map = {
+                    "内部需打开接口": 1,
+                    "内部需回复接口": 2,
+                    "外部需打开接口": 3,
+                    "外部需回复接口": 4,
+                    "三维提资接口": 5,
+                    "收发文函": 6,
+                    "FU": 7,
+                }
+                file_type = file_type_map.get(tab_name)
+                if not file_type:
+                    print(f"[错误] 无法识别tab_name: {tab_name}")
+                    return
 
                 current_values = list(viewer.item(item_id, "values"))
                 if checkbox_col_idx >= len(current_values):
@@ -1294,25 +1389,52 @@ class WindowManager:
                 current_checkbox = current_values[checkbox_col_idx]
                 is_currently_checked = (current_checkbox == "☑")
 
+                # FU设计人员可直接点击完成。若用户同时具备上级角色，则按当前行状态分流：
+                # “待完成”写FU日期，“待审查”继续进入下方上级确认，避免权限互相覆盖。
+                displayed_status = ""
+                if "状态" in columns:
+                    status_col_idx = columns.index("状态")
+                    if status_col_idx < len(current_values):
+                        displayed_status = _normalize_registry_status_text(
+                            current_values[status_col_idx]
+                        )
+                should_submit_fu = (
+                    file_type == 7
+                    and is_designer
+                    and not is_currently_checked
+                    and (not is_superior or displayed_status in ("", "待完成"))
+                )
+                if should_submit_fu:
+                    context, context_error = self._build_checkbox_task_context(
+                        viewer,
+                        item_id,
+                        original_df,
+                        original_row_numbers,
+                        source_files,
+                        file_type,
+                    )
+                    if context_error:
+                        print(f"[错误] {context_error}")
+                        return
+                    metadata = context.get('metadata') or {}
+                    self._submit_fu_completion(
+                        viewer=viewer,
+                        source_file=context['source_file'],
+                        original_row=context['original_row'],
+                        interface_id=context['interface_id_clean'],
+                        user_name=user_name,
+                        project_id=context['project_id'],
+                        responsible=metadata.get('responsible', ''),
+                    )
+                    return
+
+                if file_type == 7 and is_designer and not is_superior:
+                    # 纯设计人员不能对已完成/已审查FU执行上级确认或取消确认。
+                    return
+
                 if is_superior:
                     try:
                         from registry import hooks as registry_hooks
-                        
-                        # 根据tab_name确定file_type
-                        file_type_map = {
-                            "内部需打开接口": 1,
-                            "内部需回复接口": 2,
-                            "外部需打开接口": 3,
-                            "外部需回复接口": 4,
-                            "三维提资接口": 5,
-                            "收发文函": 6,
-                            "FU": 7,
-                        }
-                        file_type = file_type_map.get(tab_name)
-                        
-                        if not file_type:
-                            print(f"[错误] 无法识别tab_name: {tab_name}")
-                            return
 
                         context, context_error = self._build_checkbox_task_context(
                             viewer,
@@ -1479,8 +1601,8 @@ class WindowManager:
                         import traceback
                         traceback.print_exc()
                 else:
-                    # 设计人员角色：不应该通过勾选框操作，应该通过填写回文单号来完成
-                    print("[提示] 设计人员角色请通过填写回文单号来标记完成，勾选框仅供上级角色使用")
+                    # 文件1-6仍通过填写回文单号完成；FU设计人员已在上方单独处理。
+                    print("[提示] 请通过填写回文单号来标记完成，勾选框仅供上级审查使用")
                 
             except Exception as e:
                 print(f"点击事件处理失败: {e}")
@@ -1646,47 +1768,16 @@ class WindowManager:
                 )
 
                 if file_type == 7:
-                    from datetime import date
-                    from tkinter import messagebox
-                    from write_tasks import get_write_task_manager, get_pending_cache
-
-                    role = " ".join(str(value) for value in getattr(self.app, "user_roles", []) if value)
-                    data_folder = None
-                    try:
-                        from registry import hooks as registry_hooks
-                        data_folder = registry_hooks.get_data_folder()
-                    except Exception:
-                        pass
-                    manager = self.write_task_manager or get_write_task_manager()
-                    completion_date = date.today().isoformat()
-                    task = manager.submit_fu_completion_task(
-                        file_path=source_file,
-                        row_index=original_row,
-                        interface_id=str(interface_id),
+                    responsible = (metadata.get('responsible') or "").strip()
+                    self._submit_fu_completion(
+                        viewer=viewer,
+                        source_file=source_file,
+                        original_row=original_row,
+                        interface_id=interface_id,
                         user_name=user_name,
                         project_id=project_id,
-                        completion_date=completion_date,
-                        role=role,
-                        data_folder=data_folder,
-                        description=f"{user_name} 完成FU {interface_id}",
+                        responsible=responsible,
                     )
-                    responsible = (metadata.get('responsible') or "").strip()
-                    try:
-                        get_pending_cache().add_response_entry(task.task_id, {
-                            "file_path": source_file,
-                            "file_type": 7,
-                            "row_index": original_row,
-                            "response_number": completion_date,
-                            "user_name": user_name,
-                            "project_id": project_id,
-                            "has_assignor": bool(responsible and responsible != "无"),
-                        })
-                    except Exception as cache_error:
-                        print(f"[PendingCache] 记录FU任务失败: {cache_error}")
-                    callback = getattr(self.app, '_handle_response_submitted', None)
-                    if callable(callback):
-                        callback(source_file, original_row, 7)
-                    messagebox.showinfo("已提交", "实际FU日期写入任务已提交。", parent=viewer)
                     return
                 
                 # 显示输入对话框
@@ -1737,6 +1828,208 @@ class WindowManager:
         
         # 绑定双击事件
         viewer.bind_class(bind_tag, "<Double-1>", on_interface_click)
+
+    def _collect_batch_items(self, viewer, tab_name):
+        """Collect selected rows in current visual order using stable row metadata."""
+        selected = set(viewer.selection() or ())
+        if not selected:
+            return [], ["请先在当前选项卡中选择至少一个任务。"]
+        columns = list(viewer["columns"] or ())
+        file_type = self._get_file_type_from_tab(tab_name)
+        items = []
+        errors = []
+        for item_id in viewer.get_children():
+            if item_id not in selected:
+                continue
+            metadata = self._item_metadata.get((viewer, item_id)) if hasattr(self, "_item_metadata") else None
+            if not metadata:
+                errors.append("选中行缺少源文件元数据，请重新处理文件后再试。")
+                continue
+            source_file = str(metadata.get("source_file", "") or "").strip()
+            original_row = int(metadata.get("original_row", 0) or 0)
+            project_id = str(metadata.get("project_id", "") or "").strip()
+            interface_id = str(metadata.get("interface_id", "") or "").strip()
+            values = list(viewer.item(item_id, "values") or ())
+            interface_column = "内部编码" if file_type == 7 else "接口号"
+            if interface_column in columns:
+                value_index = columns.index(interface_column)
+                if value_index < len(values) and str(values[value_index] or "").strip():
+                    interface_id = str(values[value_index]).strip()
+            if not project_id and source_file:
+                match = re.search(r"(\d{4})", os.path.basename(source_file))
+                project_id = match.group(1) if match else ""
+            if not source_file or not interface_id or original_row < 2:
+                errors.append(f"任务信息不完整：{interface_id or '未知接口'}")
+                continue
+
+            displayed_status = ""
+            if "状态" in columns:
+                status_index = columns.index("状态")
+                if status_index < len(values):
+                    displayed_status = _normalize_registry_status_text(values[status_index])
+            items.append({
+                "file_path": source_file,
+                "file_type": file_type,
+                "row_index": original_row,
+                "interface_id": interface_id,
+                "project_id": project_id,
+                "source_column": metadata.get("source_column"),
+                "responsible": str(metadata.get("responsible", "") or "").strip(),
+                "display_status": displayed_status,
+            })
+        return items, errors
+
+    def _open_batch_entry_dialog(self, tab_id, tab_name):
+        """Open the response or FU batch preview for selected rows."""
+        from tkinter import messagebox
+        from ui.batch_response_dialog import BatchFuCompletionDialog, BatchResponseDialog
+
+        viewer = self.viewers.get(tab_id)
+        if viewer is None:
+            return
+        items, errors = self._collect_batch_items(viewer, tab_name)
+        if errors:
+            messagebox.showwarning("无法批量处理", "\n".join(errors[:8]), parent=viewer)
+            return
+        if not items:
+            messagebox.showinfo("提示", "请先选择需要批量处理的任务。", parent=viewer)
+            return
+
+        user_name = getattr(self.app, "user_name", "").strip()
+        user_roles = list(getattr(self.app, "user_roles", []) or [])
+        if not user_name:
+            messagebox.showwarning("提示", "无法获取当前用户姓名。", parent=viewer)
+            return
+
+        if self._get_file_type_from_tab(tab_name) == 7:
+            is_designer = any("设计人员" in str(role or "") for role in user_roles)
+            if not is_designer:
+                messagebox.showwarning("无操作权限", "只有设计人员可以批量标记FU完成。", parent=viewer)
+                return
+            ineligible = [
+                item.get("interface_id", "")
+                for item in items
+                if item.get("display_status") not in ("", "待完成", "待设计人员完成")
+            ]
+            if ineligible:
+                messagebox.showwarning(
+                    "包含不可完成项",
+                    "以下FU当前不是待完成状态：\n" + "\n".join(ineligible[:8]),
+                    parent=viewer,
+                )
+                return
+            dialog = BatchFuCompletionDialog(
+                viewer,
+                items,
+                lambda submitted_items: self._submit_fu_completion_batch(viewer, submitted_items),
+            )
+        else:
+            dialog = BatchResponseDialog(
+                viewer,
+                items,
+                lambda submitted_items: self._submit_response_batch(viewer, submitted_items),
+            )
+        dialog.wait_window()
+
+    def _batch_submission_context(self):
+        user_name = getattr(self.app, "user_name", "").strip()
+        role = " ".join(str(value) for value in getattr(self.app, "user_roles", []) if value)
+        data_folder = None
+        try:
+            from registry import hooks as registry_hooks
+
+            data_folder = registry_hooks.get_data_folder()
+        except Exception:
+            pass
+        return user_name, role, data_folder
+
+    def _after_batch_submission(self, viewer, task, cache_items, file_type):
+        from tkinter import messagebox
+        from write_tasks import get_pending_cache
+
+        cache = get_pending_cache()
+        cache.add_response_entries(task.task_id, cache_items)
+        # 极快任务可能在缓存登记前已完成；立即补一次状态处理以消除竞态。
+        if task.status not in ("pending", "running"):
+            cache.on_task_status_changed(task)
+        callback = getattr(self.app, "_handle_response_submitted", None)
+        if callable(callback) and cache_items:
+            first = cache_items[0]
+            callback(first.get("file_path", ""), first.get("row_index", 0), file_type)
+        try:
+            if self.task_panel:
+                self.task_panel.refresh_tasks()
+        except Exception:
+            pass
+        messagebox.showinfo(
+            "已提交",
+            f"已提交{len(cache_items)}条批量任务。\n程序将按源工作簿分组写入，请在右上角任务记录查看结果。",
+            parent=viewer,
+        )
+
+    def _submit_response_batch(self, viewer, items):
+        from write_tasks import get_write_task_manager
+
+        user_name, role, data_folder = self._batch_submission_context()
+        prepared = []
+        cache_items = []
+        for raw_item in items:
+            item = dict(raw_item)
+            item.pop("enabled", None)
+            item.pop("display_status", None)
+            item["user_name"] = user_name
+            item["role"] = role
+            item["data_folder"] = data_folder
+            prepared.append(item)
+            cache_items.append({
+                "file_path": item.get("file_path", ""),
+                "file_type": item.get("file_type", 0),
+                "row_index": item.get("row_index", 0),
+                "response_number": item.get("response_number", ""),
+                "user_name": user_name,
+                "project_id": item.get("project_id", ""),
+                "has_assignor": bool(item.get("responsible") and item.get("responsible") != "无"),
+            })
+        manager = self.write_task_manager or get_write_task_manager()
+        task = manager.submit_response_batch_task(
+            items=prepared,
+            user_name=user_name,
+            data_folder=data_folder,
+            description=f"{user_name} 批量填写回文 {len(prepared)}条",
+        )
+        self._after_batch_submission(viewer, task, cache_items, int(prepared[0].get("file_type", 0) or 0))
+
+    def _submit_fu_completion_batch(self, viewer, items):
+        from write_tasks import get_write_task_manager
+
+        user_name, role, data_folder = self._batch_submission_context()
+        prepared = []
+        cache_items = []
+        for raw_item in items:
+            item = dict(raw_item)
+            item.pop("display_status", None)
+            item["file_type"] = 7
+            item["user_name"] = user_name
+            item["role"] = role
+            item["data_folder"] = data_folder
+            prepared.append(item)
+            cache_items.append({
+                "file_path": item.get("file_path", ""),
+                "file_type": 7,
+                "row_index": item.get("row_index", 0),
+                "response_number": item.get("completion_date", ""),
+                "user_name": user_name,
+                "project_id": item.get("project_id", ""),
+                "has_assignor": bool(item.get("responsible") and item.get("responsible") != "无"),
+            })
+        manager = self.write_task_manager or get_write_task_manager()
+        task = manager.submit_fu_completion_batch_task(
+            items=prepared,
+            user_name=user_name,
+            data_folder=data_folder,
+            description=f"{user_name} 批量完成FU {len(prepared)}条",
+        )
+        self._after_batch_submission(viewer, task, cache_items, 7)
     
     def _get_file_type_from_tab(self, tab_name):
         """根据选项卡名称获取文件类型"""

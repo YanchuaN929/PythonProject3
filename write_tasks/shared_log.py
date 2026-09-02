@@ -31,6 +31,22 @@ def _extract_fields(task: WriteTask) -> dict:
             file_type = task.payload.get("file_type")
             project_id = str(task.payload.get("project_id", "") or "")
             row_index = task.payload.get("row_index")
+        elif task.task_type in ("response_batch", "fu_completion_batch"):
+            items = task.payload.get("items") or []
+            if items:
+                first = items[0] or {}
+                file_path = str(first.get("file_path", "") or "")
+                file_type = first.get("file_type")
+                project_id = str(first.get("project_id", "") or "")
+                row_index = first.get("row_index")
+        elif task.task_type == "registry_sync":
+            registry_payload = task.payload.get("registry_payload") or {}
+            file_path = str(registry_payload.get("file_path", "") or "")
+            file_type = registry_payload.get("file_type")
+            if file_type is None and task.payload.get("operation") == "fu_completed":
+                file_type = 7
+            project_id = str(registry_payload.get("project_id", "") or "")
+            row_index = registry_payload.get("row_index")
         elif task.task_type == "confirmation":
             confirmations = task.payload.get("confirmations") or []
             if confirmations:

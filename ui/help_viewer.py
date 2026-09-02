@@ -143,7 +143,12 @@ class HelpViewer:
         tree_frame = ttk.Frame(parent)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
         
-        self.toc_tree = ttk.Treeview(tree_frame, show="tree", selectmode="browse")
+        self.toc_tree = ttk.Treeview(
+            tree_frame,
+            show="tree",
+            selectmode="browse",
+            style="Help.TOC.Treeview",
+        )
         self.toc_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         # 滚动条
@@ -155,8 +160,10 @@ class HelpViewer:
         self.toc_tree.bind("<<TreeviewSelect>>", self._on_toc_select)
         
         # 配置目录树样式
-        style = ttk.Style()
-        style.configure("Treeview", font=("Microsoft YaHei", 11), rowheight=28)
+        # 使用帮助窗口专属样式。修改全局 "Treeview" 会让主界面的数据表
+        # 立即改变行高/字体并触发整表重新排版。
+        style = ttk.Style(self.window)
+        style.configure("Help.TOC.Treeview", font=("Microsoft YaHei", 11), rowheight=28)
         
     def _create_content_panel(self, parent: ttk.Frame):
         """创建内容面板"""

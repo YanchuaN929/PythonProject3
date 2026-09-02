@@ -879,6 +879,7 @@ def test_user_tab_switch_reuses_rendered_tree_until_forced_refresh():
         id(app.processing_results2),
         len(app.processing_results2),
         tuple(app.user_roles),
+        True,
     )
     app._tab_render_signatures = {1: signature}
     render_calls = []
@@ -889,3 +890,107 @@ def test_user_tab_switch_reuses_rendered_tree_until_forced_refresh():
 
     ExcelProcessorApp.on_tab_changed(app, None)
     assert render_calls == ["rendered"]
+
+
+def test_processed_tabs_are_preloaded_in_separate_ui_slices():
+    from base import ExcelProcessorApp
+
+    class FakeRoot:
+        def __init__(self):
+            self.callbacks = []
+
+        def after_idle(self, callback):
+            self.callbacks.append(callback)
+
+        def after(self, _delay, callback):
+            self.callbacks.append(callback)
+
+    app = ExcelProcessorApp.__new__(ExcelProcessorApp)
+    app.root = FakeRoot()
+    app._tab_preload_generation = 0
+    app._tab_render_signatures = {}
+    for index in range(1, 8):
+        setattr(app, f"has_processed_results{index}", index in (1, 2, 4))
+
+    render_calls = []
+    app._render_tab_by_index = (
+        lambda tab_index, reuse_rendered=False:
+        render_calls.append((tab_index, reuse_rendered))
+    )
+
+    ExcelProcessorApp._schedule_processed_tab_preload(app, active_tab=1)
+
+    # 首次只登记一个 idle 回调；每个回调只渲染一个选项卡。
+    assert len(app.root.callbacks) == 1
+    first_callback = app.root.callbacks.pop(0)
+    first_callback()
+    assert render_calls == [(0, True)]
+    assert len(app.root.callbacks) == 1
+
+    second_callback = app.root.callbacks.pop(0)
+    second_callback()
+    assert render_calls == [(0, True), (3, True)]
+    assert app.root.callbacks == []
+
+
+def test_new_processing_generation_cancels_stale_tab_preload():
+    from base import ExcelProcessorApp
+
+    class FakeRoot:
+        def __init__(self):
+            self.callbacks = []
+
+        def after_idle(self, callback):
+            self.callbacks.append(callback)
+
+        def after(self, _delay, callback):
+            self.callbacks.append(callback)
+
+    app = ExcelProcessorApp.__new__(ExcelProcessorApp)
+    app.root = FakeRoot()
+    app._tab_preload_generation = 0
+    app._tab_render_signatures = {1: ("old",)}
+    for index in range(1, 8):
+        setattr(app, f"has_processed_results{index}", index == 2)
+
+    render_calls = []
+    app._render_tab_by_index = (
+        lambda tab_index, reuse_rendered=False:
+        render_calls.append((tab_index, reuse_rendered))
+    )
+
+    ExcelProcessorApp._schedule_processed_tab_preload(app, active_tab=0)
+    stale_callback = app.root.callbacks.pop(0)
+    ExcelProcessorApp._cancel_tab_preload(app, clear_signatures=True)
+    stale_callback()
+
+    assert render_calls == []
+    assert app._tab_render_signatures == {}
+
+
+def test_post_processing_renders_active_tab_then_schedules_preload():
+    from base import ExcelProcessorApp
+
+    class FakeNotebook:
+        def __init__(self):
+            self.selected = None
+
+        def select(self, tab_index):
+            self.selected = tab_index
+
+    app = ExcelProcessorApp.__new__(ExcelProcessorApp)
+    app.notebook = FakeNotebook()
+    app._tab_preload_generation = 2
+    app._tab_render_signatures = {0: ("stale",)}
+    events = []
+    app.on_tab_changed = lambda event: events.append(("render", event))
+    app._schedule_processed_tab_preload = (
+        lambda active_tab: events.append(("preload", active_tab))
+    )
+
+    ExcelProcessorApp._post_processing_select_and_render_active_tab(app, active_tab=3)
+
+    assert app.notebook.selected == 3
+    assert app._suppress_tab_change_render is False
+    assert app._tab_render_signatures == {}
+    assert events == [("render", None), ("preload", 3)]

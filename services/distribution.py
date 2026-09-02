@@ -701,7 +701,8 @@ def save_assignments_batch(assignments):
         dict: {
             'success_count': int,  # 成功数量
             'failed_tasks': list,  # 失败的任务信息
-            'registry_updates': int  # Registry更新数量
+            'registry_updates': int,  # Registry更新数量
+            'registry_failures': list  # Excel已成功、仅Registry待补偿的任务
         }
     """
     # 按文件路径分组
@@ -713,6 +714,7 @@ def save_assignments_batch(assignments):
     success_count = 0
     failed_tasks = []
     registry_updates = 0
+    registry_failures = []
     
     # 不同源文件最多4路并行；同一文件在工作簿锁内一次保存。
     successful_assignments = []
@@ -756,14 +758,56 @@ def save_assignments_batch(assignments):
                     assigned_by=assignment.get('assigned_by', '系统用户'),
                     assigned_to=assignment['assigned_name'],
                 )
-                if result is not False:
+                if result is False:
+                    registry_failures.append({
+                        'registry_payload': {
+                            'file_type': assignment['file_type'],
+                            'file_path': assignment['file_path'],
+                            'row_index': assignment['row_index'],
+                            'interface_id': interface_id,
+                            'project_id': project_id,
+                            'assigned_by': assignment.get('assigned_by', '系统用户'),
+                            'assigned_to': assignment['assigned_name'],
+                        },
+                        'origin_error': 'Registry指派同步返回False',
+                    })
+                else:
                     registry_updates += 1
             except Exception as exc:
                 print(f'[Registry] 单个任务钩子失败: {exc}')
+                registry_failures.append({
+                    'registry_payload': {
+                        'file_type': assignment.get('file_type'),
+                        'file_path': assignment.get('file_path'),
+                        'row_index': assignment.get('row_index'),
+                        'interface_id': str(assignment.get('interface_id', '') or '').strip(),
+                        'project_id': str(assignment.get('project_id', '') or '').strip(),
+                        'assigned_by': assignment.get('assigned_by', '系统用户'),
+                        'assigned_to': assignment.get('assigned_name', ''),
+                    },
+                    'origin_error': str(exc),
+                })
         if registry_updates > 0:
             log_info(f'Registry: 已更新 {registry_updates} 个任务状态')
     except Exception as exc:
         print(f'[Registry] 批量钩子失败: {exc}')
+        for assignment in successful_assignments:
+            interface_id = str(assignment.get('interface_id', '') or '').strip()
+            project_id = str(assignment.get('project_id', '') or '').strip()
+            if not interface_id or not project_id:
+                continue
+            registry_failures.append({
+                'registry_payload': {
+                    'file_type': assignment.get('file_type'),
+                    'file_path': assignment.get('file_path'),
+                    'row_index': assignment.get('row_index'),
+                    'interface_id': interface_id,
+                    'project_id': project_id,
+                    'assigned_by': assignment.get('assigned_by', '系统用户'),
+                    'assigned_to': assignment.get('assigned_name', ''),
+                },
+                'origin_error': str(exc),
+            })
 
     # 【新增】保存指派记忆（只记录成功的指派）
     if success_count > 0:
@@ -782,7 +826,8 @@ def save_assignments_batch(assignments):
     return {
         'success_count': success_count,
         'failed_tasks': failed_tasks,
-        'registry_updates': registry_updates
+        'registry_updates': registry_updates,
+        'registry_failures': registry_failures,
     }
 
 

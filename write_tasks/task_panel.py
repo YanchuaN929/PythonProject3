@@ -73,7 +73,7 @@ class TaskRecordPanel(ttk.LabelFrame):
         self.tree.column("user", width=90, anchor="w")
         self.tree.column("type", width=90, anchor="w")
         self.tree.column("description", width=520, anchor="w")
-        self.tree.column("status", width=70, anchor="center")
+        self.tree.column("status", width=115, anchor="center")
 
         tree_scroll = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=tree_scroll.set)
@@ -134,8 +134,18 @@ class TaskRecordPanel(ttk.LabelFrame):
                     interface_id = normalize_interface_id((a or {}).get("interface_id", ""))
                     if interface_id:
                         ids.append(interface_id)
-            elif getattr(task, "task_type", "") == "response":
+            elif getattr(task, "task_type", "") in ("response", "fu_completion"):
                 interface_id = normalize_interface_id((task.payload or {}).get("interface_id", ""))
+                if interface_id:
+                    ids.append(interface_id)
+            elif getattr(task, "task_type", "") in ("response_batch", "fu_completion_batch"):
+                for item in (task.payload or {}).get("items") or []:
+                    interface_id = normalize_interface_id((item or {}).get("interface_id", ""))
+                    if interface_id:
+                        ids.append(interface_id)
+            elif getattr(task, "task_type", "") == "registry_sync":
+                registry_payload = (task.payload or {}).get("registry_payload") or {}
+                interface_id = normalize_interface_id(registry_payload.get("interface_id", ""))
                 if interface_id:
                     ids.append(interface_id)
         except Exception:
@@ -155,7 +165,13 @@ class TaskRecordPanel(ttk.LabelFrame):
         nums = []
         try:
             if getattr(task, "task_type", "") == "response":
-                rn = str((task.payload or {}).get("response_number", "") or "").strip()
+                response_items = [task.payload or {}]
+            elif getattr(task, "task_type", "") == "response_batch":
+                response_items = (task.payload or {}).get("items") or []
+            else:
+                response_items = []
+            for item in response_items:
+                rn = str((item or {}).get("response_number", "") or "").strip()
                 if rn:
                     nums.append(rn)
         except Exception:
@@ -208,7 +224,7 @@ class TaskRecordPanel(ttk.LabelFrame):
         if not sel:
             return
         task = self._task_by_iid.get(sel[0])
-        if not task or getattr(task, "task_type", "") != "response":
+        if not task or getattr(task, "task_type", "") not in ("response", "response_batch"):
             return
         self._open_response_detail_dialog(task)
 
@@ -254,19 +270,22 @@ class TaskRecordPanel(ttk.LabelFrame):
         y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
 
-        p = task.payload or {}
-        tree.insert(
-            "",
-            tk.END,
-            values=(
-                str(p.get("response_number", "") or ""),
-                normalize_interface_id(p.get("interface_id", "")),
-                str(p.get("project_id", "") or ""),
-                str(p.get("file_type", "") or ""),
-                str(p.get("row_index", "") or ""),
-                str(p.get("file_path", "") or ""),
-            ),
-        )
+        payload = task.payload or {}
+        response_items = (payload.get("items") or []) if task.task_type == "response_batch" else [payload]
+        for p in response_items:
+            p = p or {}
+            tree.insert(
+                "",
+                tk.END,
+                values=(
+                    str(p.get("response_number", "") or ""),
+                    normalize_interface_id(p.get("interface_id", "")),
+                    str(p.get("project_id", "") or ""),
+                    str(p.get("file_type", "") or ""),
+                    str(p.get("row_index", "") or ""),
+                    str(p.get("file_path", "") or ""),
+                ),
+            )
 
         def on_copy(event=None):
             nums = []
@@ -469,8 +488,11 @@ class TaskRecordPanel(ttk.LabelFrame):
         type_map = {
             "assignment": "任务指派",
             "response": "回文填报",
+            "response_batch": "批量回文",
             "fu_completion": "FU完成",
+            "fu_completion_batch": "批量FU完成",
             "confirmation": "审查确认",
+            "registry_sync": "Registry补偿",
         }
         status_map = {
             "pending": "待执行",
@@ -484,6 +506,17 @@ class TaskRecordPanel(ttk.LabelFrame):
             count += 1
             display_type = type_map.get(task.task_type, task.task_type)
             status = status_map.get(task.status, task.status)
+            if task.task_type == "registry_sync":
+                if task.status == "pending":
+                    status = "待补偿"
+                elif task.status == "running":
+                    status = "补偿中"
+            elif task.task_type in ("response_batch", "fu_completion_batch") and task.status == "completed":
+                result = (task.payload or {}).get("_result") or {}
+                success_count = int(result.get("success_count", 0) or 0)
+                failed_count = len(result.get("failed_tasks") or [])
+                if failed_count:
+                    status = f"部分成功 {success_count}/{success_count + failed_count}"
             submitted_time = task.submitted_at or ""
             iid = str(getattr(task, "task_id", "")) or None
             inserted = self.tree.insert(

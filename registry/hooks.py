@@ -679,7 +679,7 @@ def on_response_written(
     source_column: Optional[str] = None,
     role: Optional[str] = None,
     now: Optional[datetime] = None
-) -> None:
+) -> bool:
     """
     回文单号写入钩子
     
@@ -703,7 +703,7 @@ def on_response_written(
         _ensure_data_folder_from_path(file_path)
         cfg = _cfg()
         if not _enabled(cfg):
-            return
+            return True
         
         now = now or safe_now()
         db_path = cfg['registry_db_path']
@@ -816,14 +816,17 @@ def on_response_written(
         invalidate_cache()
         
         # 控制台输出优化：已验证逻辑，默认不输出
+        return True
         
     except MaintenanceModeError as e:
         _handle_maintenance_mode(e)
+        return False
     except Exception as e:
         print(f"[Registry] on_response_written 失败: {e}")
         import traceback
         traceback.print_exc()
         _handle_runtime_registry_error(e)
+        return False
     finally:
         close_connection_after_use()
 

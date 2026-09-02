@@ -90,6 +90,30 @@ echo   输出目录: dist\接口筛选\
 echo ============================================
 echo.
 
+:: 步骤4：生成带版本号的发布压缩包
+echo [步骤4] 生成版本化发布压缩包...
+set "APP_VERSION="
+for /f "usebackq delims=" %%V in (`.venv\Scripts\python.exe -c "import json; print(json.load(open('version.json', encoding='utf-8'))['version'])"`) do set "APP_VERSION=%%V"
+if not defined APP_VERSION (
+    echo   [错误] 无法从 version.json 读取版本号
+    exit /b 1
+)
+set "RAR_EXE=C:\Program Files\WinRAR\Rar.exe"
+if exist "%RAR_EXE%" (
+    pushd "dist"
+    "%RAR_EXE%" a -r -idq "接口筛选_%APP_VERSION%.rar" "接口筛选"
+    if errorlevel 1 (
+        popd
+        echo   [错误] 发布压缩包生成失败
+        exit /b 1
+    )
+    popd
+    echo   发布压缩包: dist\接口筛选_%APP_VERSION%.rar
+) else (
+    echo   [警告] 未找到 WinRAR，已保留程序目录但未生成RAR压缩包
+)
+echo.
+
 :: 显示输出文件
 echo [信息] 输出文件列表:
 dir /b "dist\接口筛选\*.exe" 2>nul
