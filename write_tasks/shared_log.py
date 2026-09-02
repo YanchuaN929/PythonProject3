@@ -161,11 +161,21 @@ def upsert_task(conn, task: WriteTask) -> None:
     conn.commit()
 
 
-def list_tasks(conn, limit: int = 100, only_user: Optional[str] = None) -> List[WriteTask]:
+def list_tasks(
+    conn,
+    limit: int = 100,
+    only_user: Optional[str] = None,
+    *,
+    ensure_schema_first: bool = True,
+) -> List[WriteTask]:
     """
     读取共享日志记录，返回 WriteTask 列表（用于 UI 直接复用现有渲染逻辑）。
     """
-    ensure_schema(conn)
+    # Existing callers keep the safe initialize-on-read behaviour.  Long-lived
+    # task panels can pass False after their first successful initialization so
+    # a five-second refresh does not repeatedly issue DDL/commit on a shared DB.
+    if ensure_schema_first:
+        ensure_schema(conn)
     only_user = (only_user or "").strip()
     params = []
     where = ""

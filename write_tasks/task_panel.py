@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import queue
+import threading
 import tkinter as tk
 from tkinter import ttk
 from typing import Callable, Iterable, Optional
@@ -33,12 +35,21 @@ class TaskRecordPanel(ttk.LabelFrame):
         self.auto_refresh = auto_refresh
         self.refresh_interval = refresh_interval
         self._refresh_job: Optional[str] = None
+        self._refresh_poll_job: Optional[str] = None
+        self._refresh_lock = threading.Lock()
+        self._refresh_in_progress = False
+        self._refresh_requested = False
+        self._refresh_results = queue.Queue()
+        self._last_task_snapshot = []
+        self._shared_schema_paths = set()
+        self._destroyed = False
 
         self.only_mine_var = tk.BooleanVar(value=False)
         self.status_var = tk.StringVar(value="暂无写入任务")
         self._task_by_iid = {}
 
         self._build_ui()
+        self._refresh_poll_job = self.after(100, self._poll_refresh_results)
 
     def _build_ui(self):
         control_frame = ttk.Frame(self)
@@ -390,11 +401,10 @@ class TaskRecordPanel(ttk.LabelFrame):
         try:
             # 事件驱动刷新：写入任务状态变化时立刻刷新（比 5s 轮询更“实时”）
             def _listener(task):
-                try:
-                    # manager 的回调在后台线程触发，Tk 更新必须回到主线程
-                    self.after(0, self.refresh_tasks)
-                except Exception:
-                    pass
+                # manager callback runs on its worker.  Only set a Python flag;
+                # the Tk-side poller starts the refresh on the main thread.
+                with self._refresh_lock:
+                    self._refresh_requested = True
 
             manager.register_listener(_listener)
         except Exception:
@@ -404,73 +414,187 @@ class TaskRecordPanel(ttk.LabelFrame):
             self._schedule_refresh()
 
     def _schedule_refresh(self):
+        if self._destroyed:
+            return
         if self._refresh_job:
-            self.after_cancel(self._refresh_job)
+            try:
+                self.after_cancel(self._refresh_job)
+            except Exception:
+                pass
         self._refresh_job = self.after(self.refresh_interval, self.refresh_tasks)
 
     def refresh_tasks(self):
-        tasks = self._collect_tasks()
-        self._populate_tree(tasks)
-        if self.auto_refresh and self.manager:
-            self._schedule_refresh()
+        """Start one non-blocking shared-task refresh.
+
+        Repeated timer/listener/manual requests while a public-drive query is in
+        flight are coalesced into one follow-up refresh.
+        """
+        if self._destroyed:
+            return
+        if self._refresh_job:
+            try:
+                self.after_cancel(self._refresh_job)
+            except Exception:
+                pass
+            self._refresh_job = None
+
+        only_mine = bool(self.only_mine_var.get())
+        current_user = (self.get_current_user() or "").strip()
+        with self._refresh_lock:
+            if self._refresh_in_progress:
+                self._refresh_requested = True
+                return
+            self._refresh_in_progress = True
+            self._refresh_requested = False
+
+        if not self._last_task_snapshot:
+            self.status_var.set("正在刷新任务记录…")
+
+        worker = threading.Thread(
+            target=self._refresh_tasks_worker,
+            args=(only_mine, current_user),
+            name="TaskRecordRefresh",
+            daemon=True,
+        )
+        worker.start()
+
+    def _refresh_tasks_worker(self, only_mine: bool, current_user: str):
+        try:
+            tasks, source, warning = self._collect_tasks_snapshot(only_mine, current_user)
+            self._refresh_results.put((list(tasks or []), source, warning))
+        except Exception as exc:
+            self._refresh_results.put((None, "error", str(exc)))
+
+    def _poll_refresh_results(self):
+        if self._destroyed:
+            return
+
+        latest = None
+        while True:
+            try:
+                latest = self._refresh_results.get_nowait()
+            except queue.Empty:
+                break
+
+        if latest is not None:
+            tasks, source, warning = latest
+            with self._refresh_lock:
+                self._refresh_in_progress = False
+                refresh_requested = self._refresh_requested
+                self._refresh_requested = False
+
+            if tasks is not None:
+                self._last_task_snapshot = list(tasks)
+                self._populate_tree(tasks)
+                if warning:
+                    self.status_var.set(warning)
+                elif source == "shared":
+                    self.status_var.set(f"显示 {len(tasks)} 条任务（共享）")
+                elif source == "local":
+                    self.status_var.set(f"显示 {len(tasks)} 条任务（本机）")
+            else:
+                # A transient public-drive failure must not blank a useful view.
+                if self._last_task_snapshot:
+                    self.status_var.set(f"刷新失败，保留上次结果: {warning or '未知错误'}")
+                else:
+                    self.status_var.set(f"获取任务失败: {warning or '未知错误'}")
+
+            if refresh_requested:
+                self.refresh_tasks()
+            elif self.auto_refresh and self.manager:
+                self._schedule_refresh()
+
+        # A manager event can arrive even when no query result is pending.
+        with self._refresh_lock:
+            requested = self._refresh_requested and not self._refresh_in_progress
+        if requested:
+            self.refresh_tasks()
+
+        if not self._destroyed:
+            self._refresh_poll_job = self.after(100, self._poll_refresh_results)
 
     def _collect_tasks(self) -> Iterable:
+        """Synchronous compatibility helper used by tests/non-UI callers."""
+        only_mine = bool(self.only_mine_var.get())
+        current_user = (self.get_current_user() or "").strip()
+        tasks, _source, _warning = self._collect_tasks_snapshot(only_mine, current_user)
+        return tasks
+
+    def _collect_tasks_snapshot(self, only_mine: bool, current_user: str):
         # 优先从共享 registry.db 的 write_tasks_log 读取（可看到所有用户）
-        shared_tasks = self._collect_shared_tasks()
+        shared_tasks, shared_error = self._collect_shared_tasks(
+            only_mine=only_mine,
+            current_user=current_user,
+        )
         # 共享读取成功且有数据：直接使用共享数据
         if isinstance(shared_tasks, list) and len(shared_tasks) > 0:
-            return shared_tasks
+            return shared_tasks, "shared", ""
         # 共享读取成功但为空：如果本机队列存在，则回退显示本机（避免首次运行空窗）
         if isinstance(shared_tasks, list) and len(shared_tasks) == 0 and self.manager:
             pass
         elif shared_tasks is not None and self.manager is None:
             # 没有本机manager时，哪怕为空也返回共享结果
-            return shared_tasks
+            return shared_tasks, "shared", ""
 
         # 兜底：只显示本机任务（旧模式）
         if not self.manager:
-            self.status_var.set("写入队列未初始化")
-            return []
+            warning = "写入队列未初始化"
+            if shared_error:
+                warning = f"共享任务读取失败: {shared_error}"
+            return [], "local", warning
 
         try:
             tasks = list(self.manager.get_tasks())
         except Exception as exc:
-            self.status_var.set(f"获取任务失败: {exc}")
-            return []
+            return None, "error", f"获取本机任务失败: {exc}"
 
         tasks.sort(key=lambda t: (t.submitted_at or ""), reverse=True)
 
-        if self.only_mine_var.get():
-            current_user = (self.get_current_user() or "").strip()
+        if only_mine:
             if current_user:
                 tasks = [task for task in tasks if (task.submitted_by or "").strip() == current_user]
 
-        return tasks[:100]
+        warning = ""
+        if shared_error:
+            warning = f"共享任务读取失败，显示本机记录: {shared_error}"
+        return tasks[:100], "local", warning
 
-    def _collect_shared_tasks(self):
+    def _collect_shared_tasks(self, *, only_mine: bool, current_user: str):
         if not shared_list_tasks or not registry_hooks:
-            return None
+            return None, ""
         try:
             cfg = registry_hooks._cfg()
             if not cfg.get("registry_enabled", True):
-                return None
+                return None, ""
             db_path = cfg.get("registry_db_path")
             if not db_path:
-                return None
+                return None, ""
             wal = bool(cfg.get("registry_wal", False))
             from registry.db import open_isolated_connection
 
             conn = open_isolated_connection(db_path, wal)
             try:
-                if self.only_mine_var.get():
-                    current_user = (self.get_current_user() or "").strip()
-                    tasks = shared_list_tasks(conn, limit=100, only_user=current_user)
-                else:
-                    tasks = shared_list_tasks(conn, limit=100, only_user=None)
-                # 仅当共享有数据时才显示“共享”状态；为空时交给上层决定是否回退
-                if tasks:
-                    self.status_var.set(f"显示 {len(tasks)} 条任务（共享）")
-                return tasks
+                schema_key = str(db_path).casefold()
+                ensure_first = schema_key not in self._shared_schema_paths
+                try:
+                    tasks = shared_list_tasks(
+                        conn,
+                        limit=100,
+                        only_user=current_user if only_mine else None,
+                        ensure_schema_first=ensure_first,
+                    )
+                except Exception:
+                    # The DB may have been replaced at the same path. Recreate
+                    # the idempotent schema once and retry this read.
+                    self._shared_schema_paths.discard(schema_key)
+                    tasks = shared_list_tasks(
+                        conn,
+                        limit=100,
+                        only_user=current_user if only_mine else None,
+                        ensure_schema_first=True,
+                    )
+                self._shared_schema_paths.add(schema_key)
+                return tasks, ""
             finally:
                 try:
                     conn.close()
@@ -478,8 +602,7 @@ class TaskRecordPanel(ttk.LabelFrame):
                     pass
         except Exception as exc:
             # 共享读取失败时不阻塞，回退到本机显示
-            self.status_var.set(f"共享任务读取失败，已回退本机: {exc}")
-            return None
+            return None, str(exc)
     def _populate_tree(self, tasks: Iterable):
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -539,9 +662,15 @@ class TaskRecordPanel(ttk.LabelFrame):
             self.status_var.set(f"显示 {count} 条任务")
 
     def destroy(self):
+        self._destroyed = True
         if self._refresh_job:
             try:
                 self.after_cancel(self._refresh_job)
+            except Exception:
+                pass
+        if self._refresh_poll_job:
+            try:
+                self.after_cancel(self._refresh_poll_job)
             except Exception:
                 pass
         super().destroy()

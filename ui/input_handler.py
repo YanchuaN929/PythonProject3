@@ -1134,6 +1134,106 @@ def _resolve_xlsx_fu_row(worksheet, row_index, interface_id) -> int:
     )
 
 
+def _resolve_ooxml_fu_row(snapshot, row_index, interface_id) -> int:
+    """Resolve a FU row from physical cells without loading the workbook model."""
+    requested_row = int(row_index)
+    expected = _normalize_response_interface_id(interface_id)
+    base_expected = _fu_base_interface_id(expected)
+    if not base_expected:
+        return requested_row
+    if requested_row >= 2 and _fu_base_interface_id(
+        snapshot.value(f"B{requested_row}")
+    ) == base_expected:
+        return requested_row
+
+    matches = snapshot.rows_matching("B", base_expected, _fu_base_interface_id)
+    if len(matches) == 1:
+        return matches[0]
+    sequence_match = re.search(r"#(\d{2})$", expected)
+    if sequence_match and matches:
+        ordered = sorted(
+            matches,
+            key=lambda row: (
+                _response_text(snapshot.value(f"A{row}")),
+                _response_text(snapshot.value(f"C{row}")),
+                row,
+            ),
+        )
+        sequence = int(sequence_match.group(1))
+        if 1 <= sequence <= len(ordered):
+            return ordered[sequence - 1]
+    if not matches:
+        raise ExcelWriteError(
+            "ROW_NOT_FOUND",
+            "VALIDATE_ROW",
+            f"原行号{requested_row}已变化，且找不到FU内部编码：{interface_id}",
+            retryable=False,
+            committed=False,
+        )
+    raise ExcelWriteError(
+        "ROW_AMBIGUOUS",
+        "VALIDATE_ROW",
+        f"FU内部编码“{interface_id}”存在{len(matches)}条匹配，已拒绝自动写入。",
+        retryable=False,
+        committed=False,
+    )
+
+
+def _ooxml_fu_date_update(snapshot, row_index: int, target_date: date):
+    """Build a numeric date update using an existing date-compatible style."""
+    from datetime import datetime, time as datetime_time
+
+    from openpyxl.styles.numbers import is_date_format
+    from openpyxl.utils.datetime import (
+        CALENDAR_MAC_1904,
+        CALENDAR_WINDOWS_1900,
+        to_excel,
+    )
+
+    style_id = snapshot.style_id(f"D{row_index}")
+    if not is_date_format(snapshot._number_format_for_style(style_id)):
+        style_id = snapshot.style_id(f"E{row_index}")
+    if not is_date_format(snapshot._number_format_for_style(style_id)):
+        return None
+
+    epoch = CALENDAR_MAC_1904 if snapshot.date_1904 else CALENDAR_WINDOWS_1900
+    serial = to_excel(datetime.combine(target_date, datetime_time.min), epoch=epoch)
+    return {
+        "cell": f"D{row_index}",
+        "value": int(serial) if float(serial).is_integer() else serial,
+        "value_type": "number",
+        "style_id": style_id,
+    }
+
+
+def _verify_ooxml_fu_date(file_path, sheet_path, row_index, target_date):
+    last_error = None
+    for attempt in range(len(VERIFY_RETRY_DELAYS) + 1):
+        try:
+            snapshot = OoxmlWorksheetSnapshot(file_path, sheet_path=sheet_path)
+            actual = snapshot.typed_value_from_cell_xml(
+                snapshot.cell_xml(f"D{row_index}")
+            )
+            if hasattr(actual, "date"):
+                actual = actual.date()
+            if actual != target_date:
+                raise RuntimeError(
+                    f"验证失败：D{row_index}期望 {target_date}，实际 {actual}"
+                )
+            return
+        except Exception as exc:
+            last_error = exc
+        if attempt < len(VERIFY_RETRY_DELAYS):
+            time.sleep(VERIFY_RETRY_DELAYS[attempt])
+    raise ExcelWriteError(
+        "VERIFY_FAILED",
+        "VERIFY_FINAL",
+        f"FU日期已替换正式文件，但重新读取核验失败：{last_error}",
+        retryable=True,
+        committed=True,
+    ) from last_error
+
+
 def _resolve_xls_fu_row(file_path, row_index, interface_id) -> int:
     requested_row = int(row_index)
     expected = _normalize_response_interface_id(interface_id)
@@ -1196,8 +1296,6 @@ def _write_fu_completion_unlocked(
     return_details=False,
 ):
     """Write and verify the actual FU date in column D for a type-7 task."""
-    wb = None
-    verify_wb = None
     resolved_row = int(row_index)
     _make_stdio_unicode_safe()
 
@@ -1243,28 +1341,36 @@ def _write_fu_completion_unlocked(
                 )
             return _success()
 
-        wb = open_workbook_for_edit(file_path)
-        ws = wb.active
-        resolved_row = _resolve_xlsx_fu_row(ws, row_index, interface_id)
-        target_cell = ws[f"D{resolved_row}"]
-        if target_cell.value not in (None, ""):
+        snapshot = OoxmlWorksheetSnapshot(file_path)
+        resolved_row = _resolve_ooxml_fu_row(snapshot, row_index, interface_id)
+        target_cell = f"D{resolved_row}"
+        current_value = snapshot.typed_value_from_cell_xml(snapshot.cell_xml(target_cell))
+        if current_value not in (None, ""):
             raise ValueError(f"D{resolved_row} 已有实际FU日期，未覆盖原值")
-        target_cell.value = target_date
-        target_cell.number_format = "yyyy/m/d"
-        atomic_save_workbook(wb, file_path)
-        wb.close()
-        wb = None
-
-        verify_wb = open_workbook_for_edit(file_path)
-        verify_value = verify_wb.active[f"D{resolved_row}"].value
-        if hasattr(verify_value, "date"):
-            verify_value = verify_value.date()
-        if verify_value != target_date:
-            raise RuntimeError(
-                f"验证失败：D{resolved_row} 期望 {target_date}，实际 {verify_value}"
-            )
-        verify_wb.close()
-        verify_wb = None
+        update = _ooxml_fu_date_update(snapshot, resolved_row, target_date)
+        if update is None:
+            # Rare non-standard template: retain the proven writer instead of
+            # changing a date into a text/general-format cell.
+            wb = open_workbook_for_edit(file_path)
+            try:
+                ws = wb.active
+                resolved_row = _resolve_xlsx_fu_row(ws, row_index, interface_id)
+                target = ws[f"D{resolved_row}"]
+                if target.value not in (None, ""):
+                    raise ValueError(f"D{resolved_row} 已有实际FU日期，未覆盖原值")
+                target.value = target_date
+                target.number_format = "yyyy/m/d"
+                atomic_save_workbook(wb, file_path)
+            finally:
+                wb.close()
+        else:
+            atomic_patch_ooxml_cells(file_path, snapshot.sheet_path, [update])
+        _verify_ooxml_fu_date(
+            file_path,
+            snapshot.sheet_path,
+            resolved_row,
+            target_date,
+        )
         return _success()
     except Exception as e:
         _safe_print(f"[ERROR] 写入FU日期失败: {e}")
@@ -1273,18 +1379,6 @@ def _write_fu_completion_unlocked(
         except Exception:
             pass
         return False
-    finally:
-        for workbook in (wb, verify_wb):
-            try:
-                if workbook is not None:
-                    workbook.close()
-            except Exception:
-                pass
-        try:
-            if verify_wb is not None:
-                verify_wb.close()
-        except Exception:
-            pass
 
 
 def write_fu_completion_to_excel(

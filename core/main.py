@@ -10,11 +10,39 @@ import datetime
 import os
 import warnings
 import re
+import threading
 import unicodedata
 from copy import copy
+from functools import lru_cache
 
 # 忽略pandas警告
 warnings.filterwarnings('ignore')
+
+
+_REGISTRY_READ_SNAPSHOT_LOCK = threading.RLock()
+_REGISTRY_READ_SNAPSHOT = None
+
+
+def begin_registry_read_snapshot():
+    """Enable one-run Registry read reuse across workbook worker threads."""
+    global _REGISTRY_READ_SNAPSHOT
+    with _REGISTRY_READ_SNAPSHOT_LOCK:
+        _REGISTRY_READ_SNAPSHOT = {}
+
+
+def end_registry_read_snapshot():
+    global _REGISTRY_READ_SNAPSHOT
+    with _REGISTRY_READ_SNAPSHOT_LOCK:
+        _REGISTRY_READ_SNAPSHOT = None
+
+
+def _registry_snapshot_load(key, loader):
+    with _REGISTRY_READ_SNAPSHOT_LOCK:
+        if _REGISTRY_READ_SNAPSHOT is None:
+            return loader()
+        if key not in _REGISTRY_READ_SNAPSHOT:
+            _REGISTRY_READ_SNAPSHOT[key] = loader()
+        return _REGISTRY_READ_SNAPSHOT[key]
 
 # 导入科室参数化配置
 try:
@@ -246,7 +274,7 @@ def _extract_file5_project_id(file_path):
     return _extract_file_project_id(file_path)
 
 
-def _load_latest_registry_pending_tasks(file_type, db_path, wal):
+def _load_latest_registry_pending_tasks_uncached(file_type, db_path, wal):
     """
     读取指定文件类型在 Registry 中最新 business 记录仍处于待审查的任务。
 
@@ -313,7 +341,20 @@ def _load_latest_registry_pending_tasks(file_type, db_path, wal):
     return pending_tasks
 
 
-def _load_latest_confirmed_archive_times(file_type, project_id, db_path, wal):
+def _load_latest_registry_pending_tasks(file_type, db_path, wal):
+    key = (
+        "pending",
+        int(file_type),
+        os.path.normcase(os.path.abspath(os.fspath(db_path))) if db_path else "",
+        bool(wal),
+    )
+    return _registry_snapshot_load(
+        key,
+        lambda: _load_latest_registry_pending_tasks_uncached(file_type, db_path, wal),
+    )
+
+
+def _load_latest_confirmed_archive_times_uncached(file_type, project_id, db_path, wal):
     """Return the latest confirmed archive plan time for each business interface."""
     from registry.db import get_connection, close_connection_after_use
 
@@ -345,6 +386,22 @@ def _load_latest_confirmed_archive_times(file_type, project_id, db_path, wal):
     finally:
         close_connection_after_use()
     return archive_times
+
+
+def _load_latest_confirmed_archive_times(file_type, project_id, db_path, wal):
+    key = (
+        "confirmed_archive_times",
+        int(file_type),
+        str(project_id or "").strip(),
+        os.path.normcase(os.path.abspath(os.fspath(db_path))) if db_path else "",
+        bool(wal),
+    )
+    return _registry_snapshot_load(
+        key,
+        lambda: _load_latest_confirmed_archive_times_uncached(
+            file_type, project_id, db_path, wal
+        ),
+    )
 
 
 def _build_registry_records_index(records, file_type, file_path, project_id=None, allow_interface_only_fallback=False):
@@ -902,6 +959,7 @@ STREAM_EXPORT_COLUMNS = [
 ]
 
 
+@lru_cache(maxsize=256)
 def _col_to_index(col_letter):
     value = 0
     for ch in str(col_letter).strip().upper():
@@ -911,6 +969,7 @@ def _col_to_index(col_letter):
     return value - 1
 
 
+@lru_cache(maxsize=256)
 def _index_to_col(one_based_index):
     value = int(one_based_index)
     if value <= 0:
@@ -1280,6 +1339,7 @@ def _read_xlsx_physical_records(workbook, worksheet, file_type, base_spec):
     spec = None
     required_columns = []
     selected_columns = set()
+    selected_column_numbers = {}
 
     def parse_value(cell):
         data_type = cell.get("t", "n")
@@ -1334,12 +1394,19 @@ def _read_xlsx_physical_records(workbook, worksheet, file_type, base_spec):
                     continue
                 fallback_column += 1
                 coordinate = str(cell.get("r") or "")
-                match = re.match(r"([A-Za-z]+)", coordinate)
-                column_number = (
-                    _col_to_index(match.group(1)) + 1
-                    if match
-                    else fallback_column
-                )
+                split_at = 0
+                coordinate_length = len(coordinate)
+                while split_at < coordinate_length and coordinate[split_at].isalpha():
+                    split_at += 1
+                column_letters = coordinate[:split_at].upper()
+                if row_number != 1 and selected_column_numbers and column_letters:
+                    column_number = selected_column_numbers.get(column_letters)
+                    if column_number is None:
+                        continue
+                elif column_letters:
+                    column_number = _col_to_index(column_letters) + 1
+                else:
+                    column_number = fallback_column
                 if row_number == 1:
                     if column_number > header_probe_max:
                         continue
@@ -1357,12 +1424,20 @@ def _read_xlsx_physical_records(workbook, worksheet, file_type, base_spec):
                     _col_to_index(letter) + 1
                     for letter in spec["columns"]
                 }
+                selected_column_numbers = {
+                    str(letter).upper(): _col_to_index(letter) + 1
+                    for letter in spec["columns"]
+                }
             elif row_number >= 2:
                 if spec is None:
                     spec = _resolve_stream_spec_from_headers(file_type, {})
                     required_columns = sorted(spec["columns"], key=_col_to_index)
                     selected_columns = {
                         _col_to_index(letter) + 1
+                        for letter in spec["columns"]
+                    }
+                    selected_column_numbers = {
+                        str(letter).upper(): _col_to_index(letter) + 1
                         for letter in spec["columns"]
                     }
                 records.append(_build_selected_record(
@@ -1378,6 +1453,87 @@ def _read_xlsx_physical_records(workbook, worksheet, file_type, base_spec):
     return records, required_columns
 
 
+def _read_sparse_fu_records_ooxml(file_path, base_spec=None):
+    """Read only real A-F cells from the first FU worksheet.
+
+    Some production FU workbooks contain more than one million empty ``row``
+    elements.  Iterating actual ``c`` elements avoids materialising those rows
+    while retaining Excel row numbers, scalar types and date conversion.
+    """
+    from utils.excel_io import OoxmlWorksheetSnapshot, worksheet_archive_path_by_index
+
+    base_spec = base_spec or STREAM_FILE_SPECS[7]
+    sheet_path = worksheet_archive_path_by_index(file_path, 0)
+    snapshot = OoxmlWorksheetSnapshot(file_path, sheet_path=sheet_path)
+    selected_letters = {str(letter).upper() for letter in base_spec["columns"]}
+    header_values = {}
+    row_values = {}
+
+    for reference, cell_xml in snapshot.iter_cells():
+        match = re.fullmatch(r"([A-Za-z]+)([1-9][0-9]*)", reference)
+        if not match:
+            continue
+        column_letter = match.group(1).upper()
+        if column_letter not in selected_letters:
+            continue
+        row_number = int(match.group(2))
+        value = snapshot.typed_value_from_cell_xml(cell_xml)
+        if row_number == 1:
+            header_values[column_letter] = value
+        elif row_number >= 2:
+            row_values.setdefault(row_number, {})[column_letter] = value
+
+    spec = _resolve_stream_spec_from_headers(7, header_values)
+    required_columns = sorted(spec["columns"], key=_col_to_index)
+    records = [
+        _build_selected_record(
+            spec,
+            row_number,
+            lambda zero_idx, values=values: values.get(_index_to_col(zero_idx + 1)),
+        )
+        for row_number, values in sorted(row_values.items())
+    ]
+    return records, required_columns
+
+
+def _read_sparse_fu_records_openpyxl(file_path, base_spec=None):
+    """Compatibility reader kept as a correctness fallback and test oracle."""
+    from openpyxl import load_workbook
+
+    base_spec = base_spec or STREAM_FILE_SPECS[7]
+    records = []
+    wb = load_workbook(file_path, read_only=False, data_only=True)
+    try:
+        ws = wb.worksheets[0]
+        header_probe_max = max(
+            _col_to_index(letter) for letter in base_spec["columns"]
+        ) + 1
+        headers = {
+            _index_to_col(col_idx): ws.cell(1, col_idx).value
+            for col_idx in range(1, header_probe_max + 1)
+        }
+        spec = _resolve_stream_spec_from_headers(7, headers)
+        required_columns = sorted(spec["columns"], key=_col_to_index)
+        required_indices = {_col_to_index(letter) for letter in spec["columns"]}
+        max_col = max(required_indices) + 1 if required_indices else 1
+        physical_rows = sorted({
+            row_idx
+            for row_idx, col_idx in ws._cells
+            if row_idx >= 2 and col_idx <= max_col
+        })
+        for row_number in physical_rows:
+            records.append(_build_selected_record(
+                spec,
+                row_number,
+                lambda zero_idx, row_number=row_number: ws.cell(
+                    row_number, zero_idx + 1
+                ).value,
+            ))
+    finally:
+        wb.close()
+    return records, required_columns
+
+
 def _read_selected_excel_records(file_path, file_type):
     base_spec = STREAM_FILE_SPECS[file_type]
     records = []
@@ -1386,41 +1542,21 @@ def _read_selected_excel_records(file_path, file_type):
     if lower_path.endswith((".xlsx", ".xlsm")):
         from openpyxl import load_workbook
 
-        # FU 表可能只有极少数实际单元格却把维度扩到 1048576 行。
-        # 普通模式只加载物理单元格，可避免遍历整张空表。
-        sparse_fu = file_type == 7
-        wb = load_workbook(file_path, read_only=not sparse_fu, data_only=True)
+        if file_type == 7:
+            try:
+                return _read_sparse_fu_records_ooxml(file_path, base_spec)
+            except Exception as exc:
+                # Unsupported producer-specific OOXML must never change the
+                # business result: fall back to the proven workbook reader.
+                print(f"FU快速读取失败，回退兼容模式: {exc}")
+                return _read_sparse_fu_records_openpyxl(file_path, base_spec)
+
+        wb = load_workbook(file_path, read_only=True, data_only=True)
         try:
             ws = wb.worksheets[0]
-            if not sparse_fu:
-                return _read_xlsx_physical_records(wb, ws, file_type, base_spec)
-
-            header_probe_max = 64 if file_type in (2, 6) else (
-                max(_col_to_index(letter) for letter in base_spec["columns"]) + 1
-            )
-            headers = {
-                _index_to_col(col_idx): ws.cell(1, col_idx).value
-                for col_idx in range(1, header_probe_max + 1)
-            }
-            spec = _resolve_stream_spec_from_headers(file_type, headers)
-            required_columns = sorted(spec["columns"], key=_col_to_index)
-            required_indices = {_col_to_index(letter) for letter in spec["columns"]}
-            max_col = max(required_indices) + 1 if required_indices else 1
-
-            physical_rows = sorted({
-                row_idx
-                for row_idx, col_idx in ws._cells
-                if row_idx >= 2 and col_idx <= max_col
-            })
-            for row_number in physical_rows:
-                records.append(_build_selected_record(
-                    spec,
-                    row_number,
-                    lambda zero_idx, row_number=row_number: ws.cell(row_number, zero_idx + 1).value,
-                ))
+            return _read_xlsx_physical_records(wb, ws, file_type, base_spec)
         finally:
             wb.close()
-        return records, required_columns
 
     if lower_path.endswith(".xls"):
         import xlrd

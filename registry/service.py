@@ -342,6 +342,10 @@ def _get_task_lookup_columns(conn) -> List[str]:
         "archive_reason",
         "archived_at",
         "ignored",
+        "ignored_at",
+        "ignored_by",
+        "interface_time_when_ignored",
+        "ignored_reason",
     ]
     return select_available_columns(conn, "tasks", preferred_columns)
 
@@ -375,6 +379,10 @@ def _task_row_to_dict(row, selected_columns) -> Dict[str, Any]:
             "archived_at": None,
             "source_revision": None,
             "ignored": 0,
+            "ignored_at": None,
+            "ignored_by": None,
+            "interface_time_when_ignored": None,
+            "ignored_reason": None,
         },
     )
 
@@ -1859,6 +1867,77 @@ def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int
         traceback.print_exc()
         close_connection_after_use()
 
+def _prefetch_batch_business_states(conn, business_ids):
+    """Fetch active and confirmed-archive state for unique business IDs in chunks.
+
+    Returns ``None`` for legacy schemas so the caller can retain the original
+    per-row lookup.  Every requested ID is present in a successful result.
+    """
+    selected_columns = _get_task_lookup_columns(conn)
+    available = set(selected_columns)
+    required = {"id", "business_id", "status"}
+    if not required.issubset(available):
+        return None
+
+    unique_ids = list(dict.fromkeys(str(value or "") for value in business_ids if value))
+    grouped = {business_id: [] for business_id in unique_ids}
+    for start in range(0, len(unique_ids), 400):
+        chunk = unique_ids[start:start + 400]
+        placeholders = ", ".join("?" for _ in chunk)
+        rows = conn.execute(
+            f"""
+            SELECT rowid, {", ".join(selected_columns)}
+            FROM tasks
+            WHERE business_id IN ({placeholders})
+            """,
+            chunk,
+        ).fetchall()
+        for row in rows:
+            task = _task_row_to_dict(row[1:], selected_columns)
+            task["_registry_rowid"] = int(row[0])
+            grouped.setdefault(str(task.get("business_id") or ""), []).append(task)
+
+    has_archive_reason = "archive_reason" in available
+    has_confirmed_at = "confirmed_at" in available
+    states = {}
+    for business_id in unique_ids:
+        candidates = grouped.get(business_id, [])
+        active_task = max(
+            (
+                task
+                for task in candidates
+                if str(task.get("status") or "").strip().lower() != Status.ARCHIVED
+            ),
+            key=lambda task: (
+                str(task.get("last_seen_at") or ""),
+                int(task.get("_registry_rowid") or 0),
+            ),
+            default=None,
+        )
+        archive_task = max(
+            (
+                task
+                for task in candidates
+                if str(task.get("status") or "").strip().lower() == Status.ARCHIVED
+                and (
+                    not has_archive_reason
+                    or task.get("archive_reason") in CONFIRMED_ARCHIVE_REASONS
+                )
+                and (not has_confirmed_at or task.get("confirmed_at"))
+            ),
+            key=lambda task: (
+                str(task.get("archived_at") or ""),
+                str(task.get("last_seen_at") or ""),
+                int(task.get("_registry_rowid") or 0),
+            ),
+            default=None,
+        )
+        if _is_superseded_by_confirmed_archive(active_task, archive_task):
+            active_task = None
+        states[business_id] = (active_task, archive_task)
+    return states
+
+
 def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime) -> int:
     """
     批量创建或更新任务（带事务优化）
@@ -1888,8 +1967,27 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
     try:
         # 开启事务
         conn.execute("BEGIN TRANSACTION")
+
+        business_ids = [
+            make_business_id(
+                item["key"]["file_type"],
+                item["key"]["project_id"],
+                item["key"]["interface_id"],
+            )
+            for item in tasks_data
+        ]
+        business_id_counts = {}
+        for business_id in business_ids:
+            business_id_counts[business_id] = business_id_counts.get(business_id, 0) + 1
+        try:
+            prefetched_states = _prefetch_batch_business_states(conn, business_ids)
+        except Exception as exc:
+            # Performance optimization must never make a compatible legacy DB
+            # unusable.  The original per-row lookup remains the fallback.
+            print(f"[Registry] 批量预取不可用，回退逐条状态查询: {exc}")
+            prefetched_states = None
         
-        for task_data in tasks_data:
+        for task_data, business_id in zip(tasks_data, business_ids):
             key = task_data['key']
             fields = task_data['fields']
             
@@ -1902,15 +2000,26 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             )
             
             # 【新增】生成business_id并查询旧任务（接口号继承逻辑）
-            business_id = make_business_id(key['file_type'], key['project_id'], key['interface_id'])
-            old_task = find_task_by_business_id(
-                db_path,
-                wal,
-                key['file_type'],
-                key['project_id'],
-                key['interface_id'],
-                conn=conn
+            use_prefetched_state = bool(
+                prefetched_states is not None
+                and business_id_counts.get(business_id, 0) == 1
             )
+            prefetched_archive = None
+            if use_prefetched_state:
+                old_task, prefetched_archive = prefetched_states.get(
+                    business_id, (None, None)
+                )
+            else:
+                # Duplicate business IDs must observe mutations made by the
+                # preceding row in this same transaction.
+                old_task = find_task_by_business_id(
+                    db_path,
+                    wal,
+                    key['file_type'],
+                    key['project_id'],
+                    key['interface_id'],
+                    conn=conn
+                )
 
             if _should_auto_confirm_from_new_source(old_task, key, fields):
                 active_tasks = _load_active_business_tasks(
@@ -1960,14 +2069,17 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                 continue
 
             if not old_task:
-                archived_task = find_latest_confirmed_archive_by_business_id(
-                    db_path,
-                    wal,
-                    key['file_type'],
-                    key['project_id'],
-                    key['interface_id'],
-                    conn=conn
-                )
+                if use_prefetched_state:
+                    archived_task = prefetched_archive
+                else:
+                    archived_task = find_latest_confirmed_archive_by_business_id(
+                        db_path,
+                        wal,
+                        key['file_type'],
+                        key['project_id'],
+                        key['interface_id'],
+                        conn=conn
+                    )
                 if _should_suppress_rescan_after_confirmed_archive(
                     archived_task, fields, key.get("file_type")
                 ):

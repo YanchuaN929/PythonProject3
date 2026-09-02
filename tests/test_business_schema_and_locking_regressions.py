@@ -414,6 +414,9 @@ def test_cold_cache_prewarm_reads_different_files_in_parallel():
 
     result = app._prewarm_result_caches_parallel(jobs, max_workers=4)
 
-    assert result == {"processed": 4, "failed": 0}
+    assert result["processed"] == 4
+    assert result["failed"] == 0
+    assert len(result["results"]) == 4
+    assert all(entry["hit"] is False for entry in result["results"].values())
     assert peak >= 2
     assert len(app.file_manager.saved) == 4

@@ -375,6 +375,90 @@ def _dates_equal(left, right: date) -> bool:
 
 
 def _write_ooxml_fu_group(file_path: str, items: List[dict]) -> List[dict]:
+    from ui.input_handler import _ooxml_fu_date_update, _resolve_ooxml_fu_row
+
+    snapshot = OoxmlWorksheetSnapshot(file_path)
+    updates: Dict[str, dict] = {}
+    results: List[dict] = []
+    target_cells = set()
+    fallback_required = False
+
+    for raw_item in items:
+        item = dict(raw_item)
+        resolved_row = _resolve_ooxml_fu_row(
+            snapshot,
+            int(item.get("row_index", 0) or 0),
+            item.get("interface_id"),
+        )
+        cell_reference = f"D{resolved_row}"
+        if cell_reference in target_cells:
+            raise ExcelWriteError(
+                "BATCH_TARGET_DUPLICATE",
+                "PRECHECK_BATCH",
+                f"同一批次重复包含{cell_reference}，已拒绝整组写入。",
+                retryable=False,
+                committed=False,
+            )
+        target_cells.add(cell_reference)
+        target_date = _normalize_target_date(item.get("completion_date"))
+        current = snapshot.typed_value_from_cell_xml(snapshot.cell_xml(cell_reference))
+        already_present = _dates_equal(current, target_date)
+        if current not in (None, "") and not already_present:
+            raise ExcelWriteError(
+                "FU_DATE_CONFLICT",
+                "CHECK_EXISTING",
+                f"{cell_reference}已有实际FU日期“{current}”，本次未覆盖。",
+                retryable=False,
+                committed=False,
+            )
+        result = dict(item)
+        result["requested_row_index"] = int(item.get("row_index", 0) or 0)
+        result["row_index"] = int(resolved_row)
+        result["already_present"] = already_present
+        results.append(result)
+        if not already_present:
+            update = _ooxml_fu_date_update(snapshot, resolved_row, target_date)
+            if update is None:
+                fallback_required = True
+            else:
+                _merge_update(updates, update)
+
+    # No write has happened yet, so the compatibility fallback preserves the
+    # workbook-level all-or-nothing guarantee for unusual templates.
+    if fallback_required:
+        return _write_ooxml_fu_group_openpyxl_compat(file_path, items)
+
+    if updates:
+        atomic_patch_ooxml_cells(file_path, snapshot.sheet_path, list(updates.values()))
+
+    last_error = None
+    for attempt in range(len(VERIFY_RETRY_DELAYS) + 1):
+        try:
+            verify_snapshot = OoxmlWorksheetSnapshot(file_path, sheet_path=snapshot.sheet_path)
+            for item in results:
+                actual = verify_snapshot.typed_value_from_cell_xml(
+                    verify_snapshot.cell_xml(f"D{item['row_index']}")
+                )
+                expected = _normalize_target_date(item.get("completion_date"))
+                if not _dates_equal(actual, expected):
+                    raise RuntimeError(
+                        f"D{item['row_index']}期望“{expected}”，实际“{actual}”。"
+                    )
+            return results
+        except Exception as exc:
+            last_error = exc
+        if attempt < len(VERIFY_RETRY_DELAYS):
+            time.sleep(VERIFY_RETRY_DELAYS[attempt])
+    raise ExcelWriteError(
+        "VERIFY_FAILED",
+        "VERIFY_FINAL",
+        f"批量FU日期已替换正式文件，但重新读取核验失败：{last_error}",
+        retryable=True,
+        committed=bool(updates),
+    ) from last_error
+
+
+def _write_ooxml_fu_group_openpyxl_compat(file_path: str, items: List[dict]) -> List[dict]:
     from ui.input_handler import _resolve_xlsx_fu_row
 
     workbook = open_workbook_for_edit(file_path)

@@ -700,17 +700,56 @@ def _ooxml_inline_string_cell(cell_reference: str, value, existing_cell=None, st
     )
 
 
+def _ooxml_number_cell(cell_reference: str, value, existing_cell=None, style_id=None) -> bytes:
+    """Build a numeric cell while preserving the target cell's other attributes."""
+    reference = str(cell_reference).upper()
+    attributes = b' r="' + reference.encode("ascii") + b'"'
+    if existing_cell:
+        opening = re.match(rb'<c\b([^>]*)/?>', existing_cell, flags=re.DOTALL)
+        if opening:
+            attributes = re.sub(rb'\s*/\s*$', b'', opening.group(1))
+            attributes = re.sub(
+                rb'\s+t\s*=\s*(["\']).*?\1',
+                b'',
+                attributes,
+                flags=re.DOTALL,
+            )
+    if not re.search(rb'\br\s*=', attributes):
+        attributes += b' r="' + reference.encode("ascii") + b'"'
+    if style_id not in (None, ""):
+        encoded_style = str(int(style_id)).encode("ascii")
+        if re.search(rb'\bs\s*=', attributes):
+            attributes = re.sub(
+                rb'(\bs\s*=\s*["\'])[^"\']*(["\'])',
+                rb'\g<1>' + encoded_style + rb'\g<2>',
+                attributes,
+                count=1,
+            )
+        elif int(style_id) != 0:
+            attributes += b' s="' + encoded_style + b'"'
+    number_text = str(value).encode("ascii")
+    return b"<c" + attributes + b"><v>" + number_text + b"</v></c>"
+
+
 def _patch_ooxml_row(row_xml: bytes, update) -> bytes:
     reference, target_column, _row_number = _cell_reference_parts(update["cell"])
     pattern = _ooxml_cell_pattern(reference)
     existing_match = pattern.search(row_xml)
     existing_xml = existing_match.group(0) if existing_match else None
-    replacement = _ooxml_inline_string_cell(
-        reference,
-        update.get("value"),
-        existing_cell=existing_xml,
-        style_id=update.get("style_id"),
-    )
+    if update.get("value_type") == "number":
+        replacement = _ooxml_number_cell(
+            reference,
+            update.get("value"),
+            existing_cell=existing_xml,
+            style_id=update.get("style_id"),
+        )
+    else:
+        replacement = _ooxml_inline_string_cell(
+            reference,
+            update.get("value"),
+            existing_cell=existing_xml,
+            style_id=update.get("style_id"),
+        )
     if existing_match:
         return row_xml[:existing_match.start()] + replacement + row_xml[existing_match.end():]
 
@@ -976,6 +1015,53 @@ def active_worksheet_archive_path(file_path: str) -> str:
         ) from exc
 
 
+def worksheet_archive_path_by_index(file_path: str, sheet_index: int = 0) -> str:
+    """Resolve a worksheet archive member by workbook order."""
+    try:
+        with zipfile.ZipFile(file_path, "r") as archive:
+            workbook_root = ET.fromstring(archive.read("xl/workbook.xml"))
+            relationships_root = ET.fromstring(
+                archive.read("xl/_rels/workbook.xml.rels")
+            )
+
+        sheets = [
+            element
+            for element in workbook_root.iter()
+            if element.tag.rsplit("}", 1)[-1] == "sheet"
+        ]
+        index = int(sheet_index)
+        if index < 0 or index >= len(sheets):
+            raise IndexError(f"工作表序号超出范围: {sheet_index}")
+        relationship_id = next(
+            (
+                value
+                for key, value in sheets[index].attrib.items()
+                if key.rsplit("}", 1)[-1] == "id"
+            ),
+            None,
+        )
+        if not relationship_id:
+            raise ValueError("工作表缺少关系标识")
+        for relationship in relationships_root:
+            if relationship.attrib.get("Id") != relationship_id:
+                continue
+            target = str(relationship.attrib.get("Target", "") or "").replace("\\", "/")
+            if target.startswith("/"):
+                return target.lstrip("/")
+            return posixpath.normpath(posixpath.join("xl", target))
+        raise ValueError("工作表关系不存在")
+    except ExcelWriteError:
+        raise
+    except Exception as exc:
+        raise ExcelWriteError(
+            "SHEET_PATH_UNKNOWN",
+            "RESOLVE_SHEET",
+            f"无法确定第{sheet_index + 1}个工作表XML路径：{exc}",
+            retryable=False,
+            committed=False,
+        ) from exc
+
+
 _OOXML_ANY_CELL_PATTERN = re.compile(
     rb'(?:<c\b[^>]*/\s*>|<c\b[^>]*>.*?</c\s*>)',
     flags=re.DOTALL,
@@ -1000,7 +1086,12 @@ class OoxmlWorksheetSnapshot:
                 workbook_xml = archive.read("xl/workbook.xml")
             except KeyError:
                 workbook_xml = b""
+            try:
+                self.styles_xml = archive.read("xl/styles.xml")
+            except KeyError:
+                self.styles_xml = None
         self.date_1904 = bool(re.search(rb'<workbookPr\b[^>]*\bdate1904\s*=\s*["\'](?:1|true)["\']', workbook_xml))
+        self._style_formats = None
 
     def cell_xml(self, cell_reference: str):
         reference, _column, _row = _cell_reference_parts(cell_reference)
@@ -1054,6 +1145,97 @@ class OoxmlWorksheetSnapshot:
         if cell_type == "b":
             return str(raw_value).strip() == "1"
         return raw_value
+
+    def _number_format_for_style(self, style_id: int):
+        if self._style_formats is None:
+            from openpyxl.styles.numbers import BUILTIN_FORMATS
+
+            custom_formats = {}
+            style_formats = []
+            if self.styles_xml:
+                root = ET.fromstring(self.styles_xml)
+                for element in root.iter():
+                    if element.tag.rsplit("}", 1)[-1] == "numFmt":
+                        try:
+                            custom_formats[int(element.attrib.get("numFmtId"))] = element.attrib.get(
+                                "formatCode", ""
+                            )
+                        except (TypeError, ValueError):
+                            continue
+                cell_xfs = next(
+                    (
+                        element
+                        for element in root.iter()
+                        if element.tag.rsplit("}", 1)[-1] == "cellXfs"
+                    ),
+                    None,
+                )
+                if cell_xfs is not None:
+                    for xf in cell_xfs:
+                        try:
+                            num_fmt_id = int(xf.attrib.get("numFmtId", 0) or 0)
+                        except (TypeError, ValueError):
+                            num_fmt_id = 0
+                        style_formats.append(
+                            custom_formats.get(num_fmt_id, BUILTIN_FORMATS.get(num_fmt_id, ""))
+                        )
+            self._style_formats = style_formats
+        try:
+            return self._style_formats[int(style_id)]
+        except (IndexError, TypeError, ValueError):
+            return ""
+
+    def typed_value_from_cell_xml(self, cell_xml):
+        """Return an openpyxl-compatible scalar without loading worksheet rows."""
+        from openpyxl.styles.numbers import is_date_format, is_timedelta_format
+        from openpyxl.utils.datetime import (
+            CALENDAR_MAC_1904,
+            CALENDAR_WINDOWS_1900,
+            from_ISO8601,
+            from_excel,
+        )
+        from openpyxl.worksheet._reader import _cast_number
+
+        cell_type, raw_value = self._cell_type_and_raw_value(cell_xml)
+        if raw_value is None:
+            return None
+        if cell_type == "s":
+            try:
+                index = int(raw_value)
+                values = self._shared_strings()
+                return values[index] if 0 <= index < len(values) else None
+            except (TypeError, ValueError):
+                return None
+        if cell_type == "b":
+            return str(raw_value).strip() == "1"
+        if cell_type == "d":
+            return from_ISO8601(raw_value)
+        if cell_type in {"inlineStr", "str", "e"}:
+            return raw_value
+
+        number = _cast_number(raw_value)
+        style_id = self.style_id_from_cell_xml(cell_xml)
+        number_format = self._number_format_for_style(style_id)
+        if number_format and is_date_format(number_format):
+            try:
+                epoch = CALENDAR_MAC_1904 if self.date_1904 else CALENDAR_WINDOWS_1900
+                return from_excel(
+                    number,
+                    epoch,
+                    timedelta=is_timedelta_format(number_format),
+                )
+            except (OverflowError, ValueError):
+                return raw_value
+        return number
+
+    @staticmethod
+    def style_id_from_cell_xml(cell_xml):
+        if not cell_xml:
+            return 0
+        opening = re.match(rb'<c\b([^>]*)/?>', cell_xml, flags=re.DOTALL)
+        attributes = opening.group(1) if opening else b""
+        style_match = re.search(rb'\bs\s*=\s*["\']([0-9]+)["\']', attributes)
+        return int(style_match.group(1)) if style_match else 0
 
     def value(self, cell_reference: str):
         return self.value_from_cell_xml(self.cell_xml(cell_reference))
