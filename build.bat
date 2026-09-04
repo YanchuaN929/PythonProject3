@@ -67,8 +67,17 @@ if errorlevel 1 (
 )
 echo.
 
-:: 步骤3：执行打包
-echo [步骤3] 开始打包...
+:: 步骤3：执行打包前检查（包含当天版本号校验）
+echo [步骤3] 执行打包前检查...
+.venv\Scripts\python.exe verify_package.py --pre
+if errorlevel 1 (
+    echo   [错误] 打包前检查失败
+    exit /b 1
+)
+echo.
+
+:: 步骤4：执行打包
+echo [步骤4] 开始打包...
 echo   使用配置文件: excel_processor.spec
 echo.
 .venv\Scripts\pyinstaller.exe excel_processor.spec --noconfirm
@@ -84,14 +93,24 @@ if errorlevel 1 (
 )
 
 echo.
+
+:: 步骤5：执行打包后检查（再次校验包内版本号）
+echo [步骤5] 执行打包后检查...
+.venv\Scripts\python.exe verify_package.py --post
+if errorlevel 1 (
+    echo   [错误] 打包后检查失败
+    exit /b 1
+)
+echo.
+
 echo ============================================
 echo   [成功] 打包完成!
 echo   输出目录: dist\接口筛选\
 echo ============================================
 echo.
 
-:: 步骤4：生成带版本号的发布压缩包
-echo [步骤4] 生成版本化发布压缩包...
+:: 步骤6：生成带版本号的发布压缩包
+echo [步骤6] 生成版本化发布压缩包...
 set "APP_VERSION="
 for /f "usebackq delims=" %%V in (`.venv\Scripts\python.exe -c "import json; print(json.load(open('version.json', encoding='utf-8'))['version'])"`) do set "APP_VERSION=%%V"
 if not defined APP_VERSION (

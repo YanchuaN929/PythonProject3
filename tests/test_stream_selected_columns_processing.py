@@ -138,6 +138,40 @@ def test_stream_processors_include_excel_row_two(tmp_path, no_registry_merge):
         assert result["原始行号"].tolist() == [2], f"file{file_type} skipped Excel row 2"
 
 
+@pytest.mark.parametrize("project_id", ["2016", "2026"])
+def test_file2_2026_uses_same_standard_rule_as_2016(
+    tmp_path,
+    no_registry_merge,
+    project_id,
+):
+    now = datetime.datetime(2026, 9, 4)
+    org = get_organization_filter()
+    source = _make_workbook(
+        tmp_path,
+        f"内部接口信息单报表{project_id}20260904.xlsx",
+        [
+            (
+                3,
+                {
+                    "A": "x",
+                    "E": "A",
+                    "F": "传递",
+                    "I": org,
+                    "M": now,
+                    "N": "",
+                    "R": f"S-{project_id}-STANDARD",
+                    "AB": "4444-计划关闭",
+                    "AM": "测试责任人",
+                },
+            )
+        ],
+    )
+
+    result = main.process_target_file2(source, now, project_id)
+
+    assert result["接口号"].tolist() == [f"S-{project_id}-STANDARD"]
+
+
 def test_stream_export_only_contains_business_columns(tmp_path):
     df = main.pd.DataFrame([{
         "状态": "待完成",

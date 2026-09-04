@@ -15,6 +15,14 @@
 import os
 import sys
 import hashlib
+import datetime
+import json
+import re
+
+
+_RELEASE_VERSION_PATTERN = re.compile(
+    r"^(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})\.(?P<sequence>[1-9]\d*)$"
+)
 
 def print_ok(msg):
     print(f"[OK] {msg}")
@@ -49,6 +57,42 @@ def check_same_file(source_path, packaged_path, description):
         print_error(f"{description}与当前源码不一致: {packaged_path}")
         return False
     print_ok(f"{description}与当前源码一致")
+    return True
+
+
+def check_release_version(file_path="version.json", today=None):
+    """校验发布版本为当天的 ``YYYY.MM.DD.N``，且日内序号从1开始。"""
+    today = today or datetime.date.today()
+    try:
+        with open(file_path, "r", encoding="utf-8") as handle:
+            version = str(json.load(handle).get("version", "")).strip()
+    except Exception as exc:
+        print_error(f"无法读取版本文件 {file_path}: {exc}")
+        return False
+
+    match = _RELEASE_VERSION_PATTERN.fullmatch(version)
+    if not match:
+        print_error(f"版本号格式错误: {version!r}，必须为 YYYY.MM.DD.N，且N从1开始")
+        return False
+
+    try:
+        version_date = datetime.date(
+            int(match.group("year")),
+            int(match.group("month")),
+            int(match.group("day")),
+        )
+    except ValueError:
+        print_error(f"版本号日期无效: {version}")
+        return False
+
+    if version_date != today:
+        print_error(
+            f"版本日期不是本次发布日期: {version}；"
+            f"今天应使用 {today.strftime('%Y.%m.%d')}.N"
+        )
+        return False
+
+    print_ok(f"发布版本号有效: {version}")
     return True
 
 def check_pre_build():
@@ -87,7 +131,10 @@ def check_pre_build():
     # 检查配置文件
     print("【配置文件】")
     all_ok &= check_file("config.json", "配置文件")
-    all_ok &= check_file("version.json", "版本文件")
+    version_exists = check_file("version.json", "版本文件")
+    all_ok &= version_exists
+    if version_exists:
+        all_ok &= check_release_version("version.json")
     print()
     
     # 检查资源文件
@@ -204,7 +251,11 @@ def check_post_build():
     # 检查配置文件
     print("【配置文件】")
     all_ok &= check_file(os.path.join(internal, "config.json"), "配置文件")
-    all_ok &= check_file(os.path.join(internal, "version.json"), "版本文件")
+    packaged_version_path = os.path.join(internal, "version.json")
+    version_exists = check_file(packaged_version_path, "版本文件")
+    all_ok &= version_exists
+    if version_exists:
+        all_ok &= check_release_version(packaged_version_path)
     print()
     
     # 检查资源文件

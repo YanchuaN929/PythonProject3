@@ -189,6 +189,7 @@ def test_file_types_5_to_7_processing_is_worker_safe_and_keeps_raw_registry_rows
         ),
     )
     flags = {"count": 0}
+    scan_scopes = []
     main_module = SimpleNamespace(
         process_target_file5=object(),
         process_target_file6=object(),
@@ -203,16 +204,82 @@ def test_file_types_5_to_7_processing_is_worker_safe_and_keeps_raw_registry_rows
         changed_files=set(),
         registry_bootstrap_needed=True,
         registry_write_flags=flags,
+        registry_scan_scopes=scan_scopes,
         file6_context=({"张三"}, False),
     )
 
     assert [call[2] for call in process_calls] == ["file5", "file6", "file7"]
     assert process_calls[1][3][1:] == (False, {"张三"})
     assert flags["count"] == 3
+    assert [(item["file_type"], item["project_id"]) for item in scan_scopes] == [
+        (5, "1818"),
+        (6, "2026"),
+        (7, "1916"),
+    ]
     assert [item["file_type"] for item in registry_rows] == [5, 6, 7]
     assert all(item["result_df"].iloc[0]["责任人"] == "原始责任人" for item in registry_rows)
     assert all(results[file_type].iloc[0]["责任人"] == "筛选后责任人" for file_type in (5, 6, 7))
     assert all(getattr(app, f"has_processed_results{file_type}") for file_type in (5, 6, 7))
+
+
+def test_cached_result_uses_fast_registry_touch_and_records_finalize_scope(monkeypatch):
+    import base
+    from base import ExcelProcessorApp
+
+    app = ExcelProcessorApp.__new__(ExcelProcessorApp)
+    app.current_datetime = datetime.datetime(2026, 9, 4, 10, 0, 0)
+    calls = []
+    monkeypatch.setattr(
+        base,
+        "registry_hooks",
+        SimpleNamespace(
+            on_cached_process_done=lambda **kwargs: calls.append(("cached", kwargs)) or True,
+            on_process_done=lambda **kwargs: calls.append(("full", kwargs)) or True,
+        ),
+    )
+    flags = {"count": 0}
+    scopes = []
+    frame = pd.DataFrame({"接口号": ["FU-1"], "项目号": ["2026"]})
+
+    app._sync_registry_source_results(
+        file_type=7,
+        entries=[("fu.xlsx", "2026", frame, True)],
+        registry_bootstrap_needed=False,
+        changed_files=set(),
+        registry_write_flags=flags,
+        registry_scan_scopes=scopes,
+    )
+
+    assert [name for name, _kwargs in calls] == ["cached"]
+    assert flags == {"count": 1}
+    assert scopes == [{"file_type": 7, "project_id": "2026", "source_file": "fu.xlsx"}]
+
+
+def test_failed_registry_sync_is_not_added_to_finalize_scope(monkeypatch):
+    import base
+    from base import ExcelProcessorApp
+
+    app = ExcelProcessorApp.__new__(ExcelProcessorApp)
+    app.current_datetime = datetime.datetime(2026, 9, 4, 10, 0, 0)
+    monkeypatch.setattr(
+        base,
+        "registry_hooks",
+        SimpleNamespace(on_cached_process_done=lambda **_kwargs: False),
+    )
+    flags = {"count": 0}
+    scopes = []
+
+    app._sync_registry_source_results(
+        file_type=7,
+        entries=[("fu.xlsx", "2026", pd.DataFrame({"接口号": ["FU-1"]}), True)],
+        registry_bootstrap_needed=False,
+        changed_files=set(),
+        registry_write_flags=flags,
+        registry_scan_scopes=scopes,
+    )
+
+    assert flags == {"count": 0}
+    assert scopes == []
 
 
 def test_task_panel_coalesces_overlapping_refreshes(monkeypatch):

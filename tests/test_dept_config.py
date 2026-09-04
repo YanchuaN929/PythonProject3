@@ -130,7 +130,7 @@ NUCLEAR_ENGINEERING_PROFILE = {
         "设计人员": None,
     },
     "projects": ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"],
-    "projects_standard_filter": ["1907", "2016"],
+    "projects_standard_filter": ["1907", "2016", "2026"],
     "role_table_file": "excel_bin/姓名角色表——核工程所通信专业+设备专业.xlsx",
     "default_folder_path": "//10.102.2.7/文件服务器/核工程研究设计所/软件/接口管理软件",
     "watermark_text": "建筑结构所",
@@ -159,7 +159,7 @@ AUTOMATION_ENGINEERING_PROFILE = {
         "设计人员": None,
     },
     "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"],
-    "projects_standard_filter": ["1907", "2016"],
+    "projects_standard_filter": ["1907", "2016", "2026"],
     "role_table_file": "excel_bin/姓名角色表-电气自动化所.xlsx",
     "default_folder_path": "//10.102.2.7/文件服务器/电气自动化所/自动化室/21 接口管理",
     "watermark_text": "建筑结构所",
@@ -1085,7 +1085,7 @@ class TestNuclearEngineeringProfile:
 
     def test_projects_standard_filter(self):
         from utils.dept_config import get_projects_standard_filter
-        assert get_projects_standard_filter() == ["1907", "2016"]
+        assert get_projects_standard_filter() == ["1907", "2016", "2026"]
 
     def test_role_table_file(self):
         from utils.dept_config import get_role_table_file
@@ -1273,7 +1273,7 @@ class TestAutomationEngineeringProfile:
     def test_projects_and_standard_filter(self):
         from utils.dept_config import get_projects, get_projects_standard_filter
         assert get_projects() == ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"]
-        assert get_projects_standard_filter() == ["1907", "2016"]
+        assert get_projects_standard_filter() == ["1907", "2016", "2026"]
 
     def test_role_table_and_folder_path(self):
         from utils.dept_config import get_role_table_file, get_default_folder_path

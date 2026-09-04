@@ -76,9 +76,5 @@ def test_excel_export_and_summary_run_outside_tk_thread(tmp_path, monkeypatch):
 
     assert export_event.wait(2)
     assert summary_event.wait(2)
-    # 导出在后台线程中执行（Stage B：7 类由 ThreadPoolExecutor 并行驱动，
-    # 线程名形如 "ExcelExportTask_0"；之前串行版本则是 "ExcelExportWorker"）。
-    # 关键不变量：不能跑在 Tk 主线程上。
-    assert worker_names["export"].startswith("ExcelExport")
+    assert worker_names["export"] == "ExcelExportWorker"
     assert worker_names["summary"] == "ExportSummaryWorker"
-    assert worker_names["export"] != threading.current_thread().name

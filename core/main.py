@@ -13,7 +13,7 @@ import re
 import threading
 import unicodedata
 from copy import copy
-from functools import lru_cache, partial
+from functools import lru_cache
 
 # 忽略pandas警告
 warnings.filterwarnings('ignore')
@@ -76,7 +76,7 @@ except ImportError:
     def contains_department_code(s):
         return any(c in s for c in ["25C1", "25C2", "25C3"])
     def get_projects_standard_filter():
-        return ["1907", "2016"]
+        return ["1907", "2016", "2026"]
 
 # 导入项目特殊调整模块（1818项目日期减6天等）
 try:
@@ -279,7 +279,7 @@ def _load_latest_registry_pending_tasks_uncached(file_type, db_path, wal):
     读取指定文件类型在 Registry 中最新 business 记录仍处于待审查的任务。
 
     统一口径：
-    - 仅取非 archived、未 ignored 的记录
+    - 取非 archived 记录，以及未确认但被 missing_from_source 误归档的记录
     - 按 interface_id + project_id 只保留最新一条
     - 只有 status=completed 且 display_status 为待审查/待指派人审查才允许加回
     """
@@ -293,11 +293,30 @@ def _load_latest_registry_pending_tasks_uncached(file_type, db_path, wal):
     try:
         cursor = conn.execute("""
             SELECT current.interface_id, current.project_id, current.display_status,
-                   current.status, current.last_seen_at
+                   CASE
+                       WHEN current.status = 'archived'
+                            AND current.archive_reason = 'missing_from_source'
+                            AND current.confirmed_at IS NULL
+                            AND current.completed_at IS NOT NULL
+                       THEN 'completed'
+                       WHEN current.status = 'archived'
+                            AND current.archive_reason = 'missing_from_source'
+                            AND current.confirmed_at IS NULL
+                       THEN 'open'
+                       ELSE current.status
+                   END AS effective_status,
+                   current.last_seen_at
             FROM tasks AS current
             WHERE current.file_type = ?
               AND (current.ignored = 0 OR current.ignored IS NULL)
-              AND current.status != 'archived'
+              AND (
+                  current.status != 'archived'
+                  OR (
+                      current.status = 'archived'
+                      AND current.archive_reason = 'missing_from_source'
+                      AND current.confirmed_at IS NULL
+                  )
+              )
               AND NOT EXISTS (
                   SELECT 1
                   FROM tasks AS confirmed
@@ -602,161 +621,350 @@ def _merge_registry_pending_rows(
 # 文件识别与项目号提取
 # ============================================================
 
-# 文件识别规格表：file_type 1-7 统一配置。
-# spec 字段：
-#   description      - 启动日志描述
-#   log_style        - "full"=start+per-match+summary+warning（文件 1-4）
-#                     "match_only"=仅 start+per-match（文件 5）
-#                     "match_only_with_empty_id"=同上且允许空 project_id（文件 6）
-#                     "none"=不产生 Monitor 日志（文件 7）
-#   matcher          - callable(file_path) -> project_id 或 None（None 表示不匹配）
-#   match_description - 可选，逐条匹配日志使用的描述（默认与 description 相同）
+def find_target_file(excel_files):
+    """
+    查找符合特定格式的待处理文件1（兼容性函数，返回第一个匹配的文件）
+    格式：四位数字+按项目导出IDI手册+日期
+    例如：2016按项目导出IDI手册2025-08-01-17_55_52
+    返回：(文件路径, 项目号) 或 (None, None)
+    """
+    all_files = find_all_target_files1(excel_files)
+    if all_files:
+        return all_files[0]
+    return None, None
 
-def _make_regex_target_matcher(pattern, project_group=1):
-    def matcher(file_path):
-        file_name = os.path.basename(file_path or "")
-        match = pattern.match(file_name)
-        return match.group(project_group) if match else None
-    return matcher
+def find_all_target_files1(excel_files):
+    """
+    查找所有符合特定格式的待处理文件1
+    格式：四位数字+按项目导出IDI手册+日期
+    例如：2016按项目导出IDI手册2025-08-01-17_55_52
+    返回：[(文件路径, 项目号), ...] 列表
+    """
+    pattern = r'^(\d{4})按项目导出IDI手册\d{4}-\d{2}-\d{2}.*\.(xlsx|xlsm|xls)$'
+    matched_files = []
 
-
-def _build_regex_spec(description, pattern_str, log_style="full"):
-    return {
-        "description": description,
-        "log_style": log_style,
-        "matcher": _make_regex_target_matcher(re.compile(pattern_str, re.IGNORECASE)),
-    }
-
-
-def _match_file5_target(file_path):
-    file_name = os.path.basename(file_path or "")
-    if not re.search(r'接口提资清单', file_name):
-        return None
-    if not re.search(r'\.(xlsx|xls|xlsm)$', file_name, flags=re.IGNORECASE):
-        return None
-    return _extract_file5_project_id(file_path) or None
-
-
-def _match_file6_target(file_path):
-    file_name = os.path.basename(file_path or "")
-    if not (file_name.lower().endswith(('.xlsx', '.xlsm', '.xls')) and ("收发文清单" in file_name)):
-        return None
-    try:
-        m = re.search(r"收发文清单(\d{4})", file_name)
-        return m.group(1) if m else ""
-    except Exception:
-        return ""
-
-
-def _safe_monitor_log(level, message):
     try:
         from core import Monitor
-        getattr(Monitor, level)(message)
+        Monitor.log_process("开始批量识别待处理文件1...")
     except Exception:
         pass
 
-
-def _log_target_match(log_style, match_description, file_name, project_id):
-    if log_style == "full":
-        print(f"匹配到{match_description}格式: {file_name}, 项目号: {project_id}")
-    if log_style == "none":
-        return
-    if log_style == "match_only_with_empty_id" and not project_id:
-        _safe_monitor_log("log_success", f"找到{match_description}(未识别项目号): {file_name}")
-    else:
-        _safe_monitor_log("log_success", f"找到{match_description}: 项目{project_id} - {file_name}")
-
-
-def _log_target_summary(match_description, matched_files):
-    if matched_files:
-        print(f"总共找到 {len(matched_files)} 个{match_description}")
-        project_ids = list(set([pid for _, pid in matched_files]))
-        _safe_monitor_log(
-            "log_success",
-            f"批量识别完成: 找到{len(matched_files)}个{match_description}，"
-            f"涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})",
-        )
-    else:
-        _safe_monitor_log("log_warning", f"未找到任何符合格式的{match_description}")
-
-
-_FILE_DISCOVERY_SPECS = {
-    1: _build_regex_spec("待处理文件1", r'^(\d{4})按项目导出IDI手册\d{4}-\d{2}-\d{2}.*\.(xlsx|xlsm|xls)$'),
-    2: _build_regex_spec("待处理文件2", r'^内部接口信息单报表(\d{4})\d{8}\.(xlsx|xlsm|xls)$'),
-    3: _build_regex_spec("待处理文件3", r'^外部接口ICM报表(\d{4})\d{8}\.(xlsx|xlsm|xls)$'),
-    4: _build_regex_spec("待处理文件4", r'^外部接口单报表(\d{4})\d{8}\.(xlsx|xlsm|xls)$'),
-    5: {
-        "description": "待处理文件5(三维提资接口)",
-        "match_description": "待处理文件5",
-        "log_style": "match_only",
-        "matcher": _match_file5_target,
-    },
-    6: {
-        "description": "待处理文件6(收发文函)",
-        "match_description": "待处理文件6",
-        "log_style": "match_only_with_empty_id",
-        "matcher": _match_file6_target,
-    },
-    7: _build_regex_spec("待处理文件7", r"^(\d{4})项目标准表格\.(?:xlsx|xlsm|xls)$", log_style="none"),
-}
-
-
-def _find_files_by_spec(excel_files, file_type):
-    """按规格表识别指定 file_type 的所有目标文件，返回 [(file_path, project_id), ...]。"""
-    spec = _FILE_DISCOVERY_SPECS[file_type]
-    description = spec["description"]
-    match_description = spec.get("match_description") or description
-    log_style = spec["log_style"]
-    matcher = spec["matcher"]
-    matched_files = []
-    if log_style != "none":
-        _safe_monitor_log("log_process", f"开始批量识别{description}...")
     for file_path in excel_files:
+        file_name = os.path.basename(file_path)
+        m = re.match(pattern, file_name, flags=re.IGNORECASE)
+        if m:
+            project_id = m.group(1)
+            matched_files.append((file_path, project_id))
+            print(f"匹配到待处理文件1格式: {file_name}, 项目号: {project_id}")
+            try:
+                from core import Monitor
+                Monitor.log_success(f"找到待处理文件1: 项目{project_id} - {file_name}")
+            except Exception:
+                pass
+
+    if matched_files:
+        print(f"总共找到 {len(matched_files)} 个待处理文件1")
         try:
-            project_id = matcher(file_path)
+            from core import Monitor
+            project_ids = list(set([pid for _, pid in matched_files]))
+            Monitor.log_success(f"批量识别完成: 找到{len(matched_files)}个待处理文件1，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
         except Exception:
-            project_id = None
-        if log_style == "match_only_with_empty_id":
-            if project_id is None:  # 文件 6 允许空串 project_id
-                continue
-        elif not project_id:  # None 或 空串都视为不匹配
-            continue
-        matched_files.append((file_path, project_id))
-        if log_style != "none":
-            _log_target_match(log_style, match_description, os.path.basename(file_path), project_id)
-    if log_style == "full":
-        _log_target_summary(match_description, matched_files)
+            pass
+    else:
+        try:
+            from core import Monitor
+            Monitor.log_warning("未找到任何符合格式的待处理文件1")
+        except Exception:
+            pass
+
     return matched_files
 
 
-# 兼容旧版接口：find_target_fileN / find_all_target_filesN
-# file_type=1 的兼容接口在历史上没有数字后缀；其余 6 个 file_type 沿用原命名
-def _first_target_file(file_type, excel_files):
-    matched = _find_files_by_spec(excel_files, file_type)
-    return matched[0] if matched else (None, None)
+def find_target_file2(excel_files):
+    """
+    查找符合特定格式的待处理文件2（兼容性函数，返回第一个匹配的文件）
+    格式：内部接口信息单报表+12位数字，前4位为项目号
+    例如：内部接口信息单报表201612345678
+    返回：(文件路径, 项目号) 或 (None, None)
+    """
+    all_files = find_all_target_files2(excel_files)
+    if all_files:
+        return all_files[0]
+    return None, None
+
+def find_all_target_files2(excel_files):
+    """
+    查找所有符合特定格式的待处理文件2
+    格式：内部接口信息单报表+12位数字，前4位为项目号
+    例如：内部接口信息单报表201612345678
+    返回：[(文件路径, 项目号), ...] 列表
+    """
+    pattern = r'^内部接口信息单报表(\d{4})\d{8}\.(xlsx|xlsm|xls)$'
+    matched_files = []
+
+    try:
+        from core import Monitor
+        Monitor.log_process("开始批量识别待处理文件2...")
+    except Exception:
+        pass
+
+    for file_path in excel_files:
+        file_name = os.path.basename(file_path)
+        m = re.match(pattern, file_name, flags=re.IGNORECASE)
+        if m:
+            project_id = m.group(1)
+            matched_files.append((file_path, project_id))
+            print(f"匹配到待处理文件2格式: {file_name}, 项目号: {project_id}")
+            try:
+                from core import Monitor
+                Monitor.log_success(f"找到待处理文件2: 项目{project_id} - {file_name}")
+            except Exception:
+                pass
+
+    if matched_files:
+        print(f"总共找到 {len(matched_files)} 个待处理文件2")
+        try:
+            from core import Monitor
+            project_ids = list(set([pid for _, pid in matched_files]))
+            Monitor.log_success(f"批量识别完成: 找到{len(matched_files)}个待处理文件2，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
+        except Exception:
+            pass
+    else:
+        try:
+            from core import Monitor
+            Monitor.log_warning("未找到任何符合格式的待处理文件2")
+        except Exception:
+            pass
+
+    return matched_files
 
 
-find_all_target_files1 = partial(_find_files_by_spec, file_type=1)
-find_all_target_files2 = partial(_find_files_by_spec, file_type=2)
-find_all_target_files3 = partial(_find_files_by_spec, file_type=3)
-find_all_target_files4 = partial(_find_files_by_spec, file_type=4)
-find_all_target_files5 = partial(_find_files_by_spec, file_type=5)
-find_all_target_files6 = partial(_find_files_by_spec, file_type=6)
-find_all_target_files7 = partial(_find_files_by_spec, file_type=7)
-find_target_file = partial(_first_target_file, 1)
-find_target_file2 = partial(_first_target_file, 2)
-find_target_file3 = partial(_first_target_file, 3)
-find_target_file4 = partial(_first_target_file, 4)
-find_target_file5 = partial(_first_target_file, 5)
-find_target_file6 = partial(_first_target_file, 6)
-find_target_file7 = partial(_first_target_file, 7)
+def find_target_file3(excel_files):
+    """
+    查找符合特定格式的待处理文件3（兼容性函数，返回第一个匹配的文件）
+    格式：外部接口ICM报表+四位数字（项目号）+日期（8位）
+    例如：外部接口ICM报表201620250801.xlsx
+    返回：(文件路径, 项目号) 或 (None, None)
+    """
+    all_files = find_all_target_files3(excel_files)
+    if all_files:
+        return all_files[0]
+    return None, None
+
+def find_all_target_files3(excel_files):
+    """
+    查找所有符合特定格式的待处理文件3
+    格式：外部接口ICM报表+四位数字（项目号）+日期（8位）
+    例如：外部接口ICM报表201620250801.xlsx
+    返回：[(文件路径, 项目号), ...] 列表
+    """
+    pattern = r'^外部接口ICM报表(\d{4})\d{8}\.(xlsx|xlsm|xls)$'
+    matched_files = []
+
+    try:
+        from core import Monitor
+        Monitor.log_process("开始批量识别待处理文件3...")
+    except Exception:
+        pass
+
+    for file_path in excel_files:
+        file_name = os.path.basename(file_path)
+        m = re.match(pattern, file_name, flags=re.IGNORECASE)
+        if m:
+            project_id = m.group(1)
+            matched_files.append((file_path, project_id))
+            print(f"匹配到待处理文件3格式: {file_name}, 项目号: {project_id}")
+            try:
+                from core import Monitor
+                Monitor.log_success(f"找到待处理文件3: 项目{project_id} - {file_name}")
+            except Exception:
+                pass
+    if matched_files:
+        print(f"总共找到 {len(matched_files)} 个待处理文件3")
+        try:
+            from core import Monitor
+            project_ids = list(set([pid for _, pid in matched_files]))
+            Monitor.log_success(f"批量识别完成: 找到{len(matched_files)}个待处理文件3，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
+        except Exception:
+            pass
+    else:
+        try:
+            from core import Monitor
+            Monitor.log_warning("未找到任何符合格式的待处理文件3")
+        except Exception:
+            pass
+    return matched_files
+
+
+def find_target_file4(excel_files):
+    """
+    查找符合特定格式的待处理文件4（兼容性函数，返回第一个匹配的文件）
+    格式：外部接口单报表+四位数字（项目号）+日期（8位）
+    例如：外部接口单报表201620250801.xlsx
+    返回：(文件路径, 项目号) 或 (None, None)
+    """
+    all_files = find_all_target_files4(excel_files)
+    if all_files:
+        return all_files[0]
+    return None, None
+
+def find_all_target_files4(excel_files):
+    """
+    查找所有符合特定格式的待处理文件4
+    格式：外部接口单报表+四位数字（项目号）+日期（8位）
+    例如：外部接口单报表201620250801.xlsx
+    返回：[(文件路径, 项目号), ...] 列表
+    """
+    pattern = r'^外部接口单报表(\d{4})\d{8}\.(xlsx|xlsm|xls)$'
+    matched_files = []
+
+    try:
+        from core import Monitor
+        Monitor.log_process("开始批量识别待处理文件4...")
+    except Exception:
+        pass
+
+    for file_path in excel_files:
+        file_name = os.path.basename(file_path)
+        m = re.match(pattern, file_name, flags=re.IGNORECASE)
+        if m:
+            project_id = m.group(1)
+            matched_files.append((file_path, project_id))
+            print(f"匹配到待处理文件4格式: {file_name}, 项目号: {project_id}")
+            try:
+                from core import Monitor
+                Monitor.log_success(f"找到待处理文件4: 项目{project_id} - {file_name}")
+            except Exception:
+                pass
+
+    if matched_files:
+        print(f"总共找到 {len(matched_files)} 个待处理文件4")
+        try:
+            from core import Monitor
+            project_ids = list(set([pid for _, pid in matched_files]))
+            Monitor.log_success(f"批量识别完成: 找到{len(matched_files)}个待处理文件4，涉及{len(project_ids)}个项目({', '.join(sorted(project_ids))})")
+        except Exception:
+            pass
+    else:
+        try:
+            from core import Monitor
+            Monitor.log_warning("未找到任何符合格式的待处理文件4")
+        except Exception:
+            pass
+
+    return matched_files
+
+
+def find_target_file5(excel_files):
+    """
+    查找符合特定格式的待处理文件5（兼容性函数，返回第一个匹配的文件）
+    格式：兼容“2016接口提资清单”和“三维接口提资清单1915...”命名
+    返回：(文件路径, 项目号) 或 (None, None)
+    """
+    all_files = find_all_target_files5(excel_files)
+    if all_files:
+        return all_files[0]
+    return None, None
+
+
+def find_all_target_files5(excel_files):
+    """
+    查找所有符合特定格式的待处理文件5
+    格式：兼容“2016接口提资清单”和“三维接口提资清单1915...”命名
+    返回：[(文件路径, 项目号), ...] 列表
+    """
+    matched_files = []
+    try:
+        from core import Monitor
+        Monitor.log_process("开始批量识别待处理文件5(三维提资接口)...")
+    except Exception:
+        pass
+    for file_path in excel_files:
+        file_name = os.path.basename(file_path)
+        if not re.search(r'接口提资清单', file_name):
+            continue
+        if not re.search(r'\.(xlsx|xls|xlsm)$', file_name, flags=re.IGNORECASE):
+            continue
+        project_id = _extract_file5_project_id(file_path)
+        if project_id:
+            matched_files.append((file_path, project_id))
+            try:
+                from core import Monitor
+                Monitor.log_success(f"找到待处理文件5: 项目{project_id} - {file_name}")
+            except Exception:
+                pass
+    return matched_files
+
+
+def find_target_file6(excel_files):
+    """
+    查找符合特定格式的待处理文件6（兼容性函数，返回第一个匹配的文件）
+    规则：文件名中包含“收发文清单”，若其后紧随四位数字则作为项目号
+         示例：收发文清单2016.xlsx → 项目号=2016；
+         未紧随四位数字时，项目号为空字符串（兼容旧命名）
+    返回：(文件路径, 项目号) 或 (None, None)
+    """
+    all_files = find_all_target_files6(excel_files)
+    if all_files:
+        return all_files[0]
+    return None, None
+
+
+def find_all_target_files6(excel_files):
+    """
+    批量查找所有“收发文清单”文件。
+    优先提取紧随其后的四位数字作为项目号；若未匹配，则项目号为空字符串。
+    """
+    matched_files = []
+    try:
+        from core import Monitor
+        Monitor.log_process("开始批量识别待处理文件6(收发文函)...")
+    except Exception:
+        pass
+    for file_path in excel_files:
+        file_name = os.path.basename(file_path)
+        if file_name.lower().endswith(('.xlsx', '.xlsm', '.xls')) and ("收发文清单" in file_name):
+            # 优先匹配 紧随“收发文清单”的四位数字 作为项目号
+            try:
+                # 紧随“收发文清单”的四位数字作为项目号，例如：收发文清单2016.xlsx
+                m = re.search(r"收发文清单(\d{4})", file_name)
+                project_id = m.group(1) if m else ""
+            except Exception:
+                project_id = ""
+            matched_files.append((file_path, project_id))
+            try:
+                from core import Monitor
+                if project_id:
+                    Monitor.log_success(f"找到待处理文件6: 项目{project_id} - {file_name}")
+                else:
+                    Monitor.log_success(f"找到待处理文件6(未识别项目号): {file_name}")
+            except Exception:
+                pass
+    return matched_files
+
+
+def find_target_file7(excel_files):
+    """Find the first FU workbook named '<project>项目标准表格'."""
+    matched_files = find_all_target_files7(excel_files)
+    return matched_files[0] if matched_files else (None, None)
+
+
+def find_all_target_files7(excel_files):
+    """Find FU workbooks and return ``(path, project_id)`` pairs."""
+    matched_files = []
+    pattern = re.compile(r"^(\d{4})项目标准表格\.(?:xlsx|xlsm|xls)$", re.IGNORECASE)
+    for file_path in excel_files:
+        match = pattern.fullmatch(os.path.basename(file_path))
+        if match:
+            matched_files.append((file_path, match.group(1)))
+    return matched_files
 
 
 # ============================================================
 # 当前精简列流式处理与导出实现
 # ============================================================
 
-STREAM_RESULT_SCHEMA_VERSION = "selected_columns_v3"
+STREAM_RESULT_SCHEMA_VERSION = "selected_columns_v5"
 
 STREAM_EXPORT_COLUMNS = [
     "状态",

@@ -43,7 +43,7 @@
         "设计人员": null
       },
       "projects": ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"],
-      "projects_standard_filter": ["1907", "2016"],
+      "projects_standard_filter": ["1907", "2016", "2026"],
       "role_table_file": "excel_bin/姓名角色表.xlsx",
       "default_folder_path": "//10.102.2.7/文件服务器/建筑结构所/接口文件/各项目内外部接口手册",
       "watermark_text": "建筑结构所"
@@ -74,7 +74,7 @@
         "设计人员": null
       },
       "projects": ["1116", "1517", "1817", "1907", "1915", "2016", "2026", "2306", "2416"],
-      "projects_standard_filter": ["1907", "2016"],
+      "projects_standard_filter": ["1907", "2016", "2026"],
       "role_table_file": "excel_bin/姓名角色表-电力工程研究设计所.xlsx",
       "default_folder_path": "//10.102.2.7/文件服务器/电力工程研究设计所/软件/接口管理软件",
       "watermark_text": "建筑结构所"
@@ -99,7 +99,7 @@
         "设计人员": null
       },
       "projects": ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"],
-      "projects_standard_filter": ["1907", "2016"],
+      "projects_standard_filter": ["1907", "2016", "2026"],
       "role_table_file": "excel_bin/姓名角色表——核工程所通信专业+设备专业.xlsx",
       "default_folder_path": "//10.102.2.7/文件服务器/核工程研究设计所/软件/接口管理软件",
       "watermark_text": "建筑结构所"
@@ -136,7 +136,7 @@
         "设计人员": null
       },
       "projects": ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"],
-      "projects_standard_filter": ["1907", "2016"],
+      "projects_standard_filter": ["1907", "2016", "2026"],
       "role_table_file": "excel_bin/姓名角色表-核电工艺所.xlsx",
       "default_folder_path": "//10.102.2.7/文件服务器/核电工艺所/软件/接口管理软件",
       "watermark_text": "建筑结构所"
@@ -164,7 +164,7 @@
         "设计人员": null
       },
       "projects": ["1818", "1907", "1915", "1916", "2016", "2026", "2306", "2416"],
-      "projects_standard_filter": ["1907", "2016"],
+      "projects_standard_filter": ["1907", "2016", "2026"],
       "role_table_file": "excel_bin/姓名角色表-电气自动化所.xlsx",
       "default_folder_path": "//10.102.2.7/文件服务器/电气自动化所/自动化室/21 接口管理",
       "watermark_text": "建筑结构所"

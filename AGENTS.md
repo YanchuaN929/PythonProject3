@@ -203,7 +203,9 @@ Tests must use temporary workbooks and temporary Registry databases. Tests that 
 
 - `version.json` is the single source of truth for the application version.
 - Change the version only when the user explicitly requests a version update or release.
-- If the user does not specify the next version, increment the final numeric component of the existing four-part version.
+- Release versions must use `YYYY.MM.DD.N`, where the date is the actual local release/build date and `N` starts at 1.
+- If the existing version date is not today, replace the date with today and set `N` to 1. If it is already today, increment only `N`.
+- `verify_package.py --pre` and `--post` must reject a release whose version date is not the current local date.
 - Do not hand-edit a second version string into README or source code.
 - Run the full test suite and pre-build verification before packaging:
 

@@ -59,7 +59,7 @@ def _default_profile():
             "设计人员": None,
         },
         "projects": ["1818", "1907", "1915", "1916", "2011", "2016", "2026", "2306", "2416"],
-        "projects_standard_filter": ["1907", "2016"],
+        "projects_standard_filter": ["1907", "2016", "2026"],
         "role_table_file": "excel_bin/姓名角色表.xlsx",
         "default_folder_path": (
             r"//10.102.2.7/文件服务器/建筑结构所"
@@ -205,9 +205,9 @@ def get_projects_standard_filter():
     用于 ``core/main.py`` 中文件2的筛选分支判断。
     返回示例::
 
-        ["1907", "2016"]
+        ["1907", "2016", "2026"]
     """
-    return get_active_profile().get("projects_standard_filter", ["1907", "2016"])
+    return get_active_profile().get("projects_standard_filter", ["1907", "2016", "2026"])
 
 
 def get_role_table_file():

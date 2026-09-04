@@ -44,7 +44,7 @@ def test_help_document_contains_current_fu_and_registry_workflow():
     help_path = Path(__file__).resolve().parents[1] / "document" / "4_使用说明.md"
     content = help_path.read_text(encoding="utf-8")
 
-    assert "版本**: 2026.09.02.1" in content
+    assert "版本**: 以程序右下角显示为准" in content
     assert "### 1.1 三分钟快速上手" in content
     assert "刷新文件列表 → 开始处理 → 完成/指派/审查 → 导出结果" in content
     assert "点击该行 **是否已完成** 方框" in content

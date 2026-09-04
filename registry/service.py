@@ -5,6 +5,9 @@
 """
 import json
 import os
+import sqlite3
+import threading
+import time
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from .db import get_connection, get_read_connection, close_connection_after_use
@@ -18,6 +21,143 @@ CONFIRMED_ARCHIVE_REASONS = frozenset({
     "completed_in_new_source",
 })
 AUTO_CONFIRMED_BY_SOURCE_UPDATE = "源文件更新自动确认"
+_RECOVERY_BACKUP_LOCK = threading.Lock()
+_RECOVERY_BACKUPS = {}
+
+
+def _ensure_verified_recovery_backup(db_path: str) -> str:
+    """首次恢复误归档前创建可回滚的 SQLite 一致性备份。"""
+    normalized_path = os.path.normcase(os.path.abspath(os.fspath(db_path)))
+    with _RECOVERY_BACKUP_LOCK:
+        existing = _RECOVERY_BACKUPS.get(normalized_path)
+        if existing and os.path.isfile(existing):
+            return existing
+
+        backup_dir = os.path.join(os.path.dirname(db_path), "backups")
+        os.makedirs(backup_dir, exist_ok=True)
+        backup_path = os.path.join(
+            backup_dir,
+            "registry_before_missing_restore_{}_{}_{}.db".format(
+                time.strftime("%Y%m%d_%H%M%S", time.localtime()),
+                os.getpid(),
+                threading.get_ident(),
+            ),
+        )
+
+        source = sqlite3.connect(db_path, timeout=30.0)
+        target = None
+        try:
+            target = sqlite3.connect(backup_path, timeout=30.0)
+            source.backup(target)
+            target.commit()
+            source_check = source.execute("PRAGMA quick_check").fetchone()[0]
+            target_check = target.execute("PRAGMA quick_check").fetchone()[0]
+            source_counts = tuple(
+                source.execute("SELECT COUNT(*) FROM " + table).fetchone()[0]
+                for table in ("tasks", "events", "ignored_snapshots")
+            )
+            target_counts = tuple(
+                target.execute("SELECT COUNT(*) FROM " + table).fetchone()[0]
+                for table in ("tasks", "events", "ignored_snapshots")
+            )
+            if source_check != "ok" or target_check != "ok" or source_counts != target_counts:
+                raise RuntimeError(
+                    "Registry 恢复备份校验失败: source={!r}, backup={!r}, counts={!r}/{!r}".format(
+                        source_check, target_check, source_counts, target_counts
+                    )
+                )
+        except Exception:
+            if target is not None:
+                target.close()
+            try:
+                os.remove(backup_path)
+            except OSError:
+                pass
+            raise
+        else:
+            target.close()
+        finally:
+            source.close()
+
+        _RECOVERY_BACKUPS[normalized_path] = backup_path
+        print(f"[Registry恢复] 已创建并校验备份: {backup_path}")
+        return backup_path
+
+
+def _has_recoverable_archives(conn, business_ids) -> bool:
+    unique_ids = list(dict.fromkeys(str(value or "") for value in business_ids if value))
+    for start in range(0, len(unique_ids), 400):
+        chunk = unique_ids[start:start + 400]
+        placeholders = ", ".join("?" for _ in chunk)
+        row = conn.execute(
+            f"""
+            SELECT 1 FROM tasks
+            WHERE business_id IN ({placeholders})
+              AND status = 'archived'
+              AND archive_reason = 'missing_from_source'
+              AND confirmed_at IS NULL
+            LIMIT 1
+            """,
+            chunk,
+        ).fetchone()
+        if row:
+            return True
+    return False
+
+
+def _is_recoverable_missing_archive(task: Optional[Dict[str, Any]]) -> bool:
+    """判断任务是否只是被“源文件消失”逻辑误归档。"""
+    if not task:
+        return False
+    return (
+        str(task.get("status") or "").strip().lower() == Status.ARCHIVED
+        and str(task.get("archive_reason") or "").strip() == "missing_from_source"
+        and not task.get("confirmed_at")
+    )
+
+
+def _restore_missing_archive_fields(
+    old_task: Dict[str, Any],
+    fields: Dict[str, Any],
+) -> None:
+    """根据当前 Excel 值恢复误归档任务，保留指派和已完成轨迹。"""
+    completed_value = str(fields.get("_completed_col_value") or "").strip()
+    was_completed = bool(old_task.get("completed_at"))
+    if completed_value and was_completed:
+        fields["status"] = Status.COMPLETED
+        previous_display = str(old_task.get("display_status") or "").strip()
+        fields["display_status"] = (
+            previous_display
+            if previous_display and previous_display != "已审查"
+            else "待审查"
+        )
+        fields["completed_at"] = old_task.get("completed_at")
+        fields["completed_by"] = old_task.get("completed_by")
+    else:
+        fields["status"] = Status.OPEN
+        previous_display = str(old_task.get("display_status") or "").strip()
+        fields["display_status"] = (
+            previous_display
+            if previous_display and previous_display != "已审查"
+            else fields.get("display_status", "待完成")
+        )
+        fields["completed_at"] = None
+        fields["completed_by"] = None
+
+    fields["confirmed_at"] = None
+    fields["confirmed_by"] = None
+    for name in ("assigned_by", "assigned_at", "responsible_person"):
+        if old_task.get(name):
+            fields[name] = old_task.get(name)
+    if old_task.get("ignored"):
+        for name in (
+            "ignored",
+            "ignored_at",
+            "ignored_by",
+            "interface_time_when_ignored",
+            "ignored_reason",
+        ):
+            fields[name] = old_task.get(name)
 
 
 def _task_activity_timestamp(task: Optional[Dict[str, Any]]) -> str:
@@ -103,6 +243,8 @@ def find_task_by_business_id(
             "confirmed_at",
             "first_seen_at",
             "last_seen_at",
+            "archive_reason",
+            "archived_at",
             "ignored",
             "ignored_at",
             "ignored_by",
@@ -115,7 +257,23 @@ def find_task_by_business_id(
 
         where_sql = "business_id = ?" if "business_id" in select_available_columns(conn, "tasks", ["business_id"]) else "file_type = ? AND project_id = ? AND interface_id = ?"
         params = (business_id,) if "business_id" in where_sql else (file_type, project_id, interface_id)
-        status_filter = " AND status != 'archived'" if "status" in selected_columns or "status" in select_available_columns(conn, "tasks", ["status"]) else ""
+        status_filter = ""
+        has_status = "status" in selected_columns or "status" in select_available_columns(conn, "tasks", ["status"])
+        if has_status:
+            available = set(selected_columns)
+            if {"archive_reason", "confirmed_at"}.issubset(available):
+                status_filter = """
+                    AND (
+                        status != 'archived'
+                        OR (
+                            status = 'archived'
+                            AND archive_reason = 'missing_from_source'
+                            AND confirmed_at IS NULL
+                        )
+                    )
+                """
+            else:
+                status_filter = " AND status != 'archived'"
         order_by = "last_seen_at DESC" if "last_seen_at" in select_available_columns(conn, "tasks", ["last_seen_at"]) else "rowid DESC"
         cursor = conn.execute(
             f"""
@@ -145,6 +303,8 @@ def find_task_by_business_id(
                     "confirmed_at": None,
                     "first_seen_at": None,
                     "last_seen_at": None,
+                    "archive_reason": None,
+                    "archived_at": None,
                     "source_revision": None,
                     "ignored": 0,
                     "ignored_at": None,
@@ -1739,104 +1899,129 @@ def get_display_status(
         print(f"[Registry] get_display_status内部错误: {e}")
         return {}
 
-def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int) -> None:
-    """
-    完成扫描，标记缺失任务并归档超期项
-    
-    阶段1：标记消失
-    - 遍历所有 status='open' 或 'completed' 的任务
-    - 如果 last_seen_at 不是本次扫描时间，且 missing_since 为空
-    - 则标记 missing_since = 当前时间
-    
-    阶段2：自动归档
-    - 遍历所有已标记 missing_since 的任务
-    - 如果距离现在超过 missing_keep_days 天
-    - 则归档：status='archived', archive_reason='missing_from_source'
-    
-    阶段3：确认后7天归档
-    - 遍历所有 status='confirmed' 的任务
-    - 如果确认时间超过7天
-    - 则归档：status='archived', archive_reason='confirmed_expired'
-    
-    参数:
-        db_path: 数据库路径
-        wal: 是否使用WAL模式
-        now: 当前扫描时间
-        missing_keep_days: 消失后保持天数（超过则归档）
-    """
+def _normalize_scanned_sources(scanned_sources) -> List[tuple]:
+    """将已完整扫描的来源规范为 (file_type, project_id, basename)。"""
+    normalized = []
+    seen = set()
+    for item in scanned_sources or []:
+        if isinstance(item, dict):
+            file_type = item.get("file_type")
+            project_id = item.get("project_id")
+            source_file = item.get("source_file")
+        else:
+            try:
+                file_type, project_id, source_file = item
+            except (TypeError, ValueError):
+                continue
+        try:
+            scope = (
+                int(file_type),
+                str(project_id or "").strip(),
+                os.path.basename(str(source_file or "")),
+            )
+        except (TypeError, ValueError):
+            continue
+        if not scope[1] or not scope[2] or scope in seen:
+            continue
+        seen.add(scope)
+        normalized.append(scope)
+    return normalized
+
+
+def _scan_scope_sql(scopes: List[tuple]) -> tuple:
+    if not scopes:
+        return "", []
+    sql = " AND (" + " OR ".join(
+        "(file_type = ? AND project_id = ? AND source_file = ?)"
+        for _ in scopes
+    ) + ")"
+    params = [value for scope in scopes for value in scope]
+    return sql, params
+
+
+def finalize_scan(
+    db_path: str,
+    wal: bool,
+    now: datetime,
+    missing_keep_days: int,
+    scanned_sources=None,
+) -> Dict[str, int]:
+    """完成扫描；源文件消失归档只作用于本轮完整扫描的来源。"""
+    stats = {"marked_missing": 0, "archived_missing": 0, "archived_confirmed": 0}
     try:
         conn = get_connection(db_path, wal)
         now_str = now.isoformat()
-        
-        # 阶段1：标记消失的任务
-        cursor = conn.execute("""
-            SELECT id, interface_id FROM tasks
-            WHERE status IN ('open', 'completed')
-              AND DATE(last_seen_at) < DATE(?)
-              AND missing_since IS NULL
-        """, (now_str,))
-        
-        missing_tasks = cursor.fetchall()
-        
-        if missing_tasks:
-            for task_id, interface_id in missing_tasks:
-                conn.execute("""
-                    UPDATE tasks
-                    SET missing_since = ?
-                    WHERE id = ?
-                """, (now_str, task_id))
-            
-            conn.commit()
-            print(f"[Registry归档] 标记{len(missing_tasks)}个消失的任务")
-        
-        # 阶段2：归档超期任务（消失任务）
-        from datetime import timedelta
-        cutoff_date = (now - timedelta(days=missing_keep_days)).isoformat()
-        
-        cursor = conn.execute("""
-            SELECT id, interface_id, missing_since FROM tasks
-            WHERE missing_since IS NOT NULL
-              AND missing_since < ?
-              AND status != 'archived'
-        """, (cutoff_date,))
-        
-        archive_tasks = cursor.fetchall()
-        
-        if archive_tasks:
-            for task_id, interface_id, missing_since in archive_tasks:
-                conn.execute("""
-                    UPDATE tasks
-                    SET status = 'archived',
-                        archive_reason = 'missing_from_source',
-                        archived_at = ?
-                    WHERE id = ?
-                """, (now_str, task_id))
-                
-                # 写入归档事件
-                write_event(db_path, wal, EventType.ARCHIVED, {
-                    'task_id': task_id,
-                    'interface_id': interface_id,
-                    'extra': {
-                        'reason': 'missing_from_source',
-                        'missing_since': missing_since
-                    }
-                }, now, conn=conn)
-            
-            conn.commit()
-            print(f"[Registry归档] 归档{len(archive_tasks)}个超过{missing_keep_days}天未见的任务")
-        
-        # 阶段3：确认后7天归档
+        scopes = _normalize_scanned_sources(scanned_sources)
+        scope_sql, scope_params = _scan_scope_sql(scopes)
+
+        if scopes:
+            cursor = conn.execute(
+                f"""
+                SELECT id, interface_id FROM tasks
+                WHERE status IN ('open', 'completed')
+                  AND DATE(last_seen_at) < DATE(?)
+                  AND missing_since IS NULL
+                  {scope_sql}
+                """,
+                [now_str] + scope_params,
+            )
+            missing_tasks = cursor.fetchall()
+            if missing_tasks:
+                for task_id, _interface_id in missing_tasks:
+                    conn.execute(
+                        "UPDATE tasks SET missing_since = ? WHERE id = ?",
+                        (now_str, task_id),
+                    )
+                conn.commit()
+                stats["marked_missing"] = len(missing_tasks)
+                print(f"[Registry归档] 标记{len(missing_tasks)}个消失的任务")
+
+            from datetime import timedelta
+            cutoff_date = (now - timedelta(days=missing_keep_days)).isoformat()
+            cursor = conn.execute(
+                f"""
+                SELECT id, interface_id, missing_since FROM tasks
+                WHERE missing_since IS NOT NULL
+                  AND missing_since < ?
+                  AND status IN ('open', 'completed')
+                  {scope_sql}
+                """,
+                [cutoff_date] + scope_params,
+            )
+            archive_tasks = cursor.fetchall()
+            if archive_tasks:
+                for task_id, interface_id, missing_since in archive_tasks:
+                    conn.execute("""
+                        UPDATE tasks
+                        SET status = 'archived',
+                            archive_reason = 'missing_from_source',
+                            archived_at = ?
+                        WHERE id = ?
+                    """, (now_str, task_id))
+                    write_event(db_path, wal, EventType.ARCHIVED, {
+                        'task_id': task_id,
+                        'interface_id': interface_id,
+                        'extra': {
+                            'reason': 'missing_from_source',
+                            'missing_since': missing_since
+                        }
+                    }, now, conn=conn)
+                conn.commit()
+                stats["archived_missing"] = len(archive_tasks)
+                print(f"[Registry归档] 归档{len(archive_tasks)}个超过{missing_keep_days}天未见的任务")
+        else:
+            from datetime import timedelta
+            print("[Registry归档] 本轮无已完整扫描来源，跳过 missing_from_source 处理")
+
+        # 确认超过7天的终态归档与源文件扫描范围无关，仍全局处理。
         confirmed_cutoff_date = (now - timedelta(days=7)).isoformat()
-        
         cursor = conn.execute("""
             SELECT id, interface_id, confirmed_at FROM tasks
             WHERE status = 'confirmed'
               AND confirmed_at IS NOT NULL
               AND confirmed_at < ?
         """, (confirmed_cutoff_date,))
-        
         confirmed_archive_tasks = cursor.fetchall()
-        
         if confirmed_archive_tasks:
             for task_id, interface_id, confirmed_at in confirmed_archive_tasks:
                 conn.execute("""
@@ -1846,8 +2031,6 @@ def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int
                         archived_at = ?
                     WHERE id = ?
                 """, (now_str, task_id))
-                
-                # 写入归档事件
                 write_event(db_path, wal, EventType.ARCHIVED, {
                     'task_id': task_id,
                     'interface_id': interface_id,
@@ -1856,16 +2039,18 @@ def finalize_scan(db_path: str, wal: bool, now: datetime, missing_keep_days: int
                         'confirmed_at': confirmed_at
                     }
                 }, now, conn=conn)
-            
             conn.commit()
+            stats["archived_confirmed"] = len(confirmed_archive_tasks)
             print(f"[Registry归档] 归档{len(confirmed_archive_tasks)}个确认超过7天的任务")
-        
+
         close_connection_after_use()
+        return stats
     except Exception as e:
         print(f"[Registry] finalize_scan失败: {e}")
         import traceback
         traceback.print_exc()
         close_connection_after_use()
+        raise
 
 def _prefetch_batch_business_states(conn, business_ids):
     """Fetch active and confirmed-archive state for unique business IDs in chunks.
@@ -1906,7 +2091,10 @@ def _prefetch_batch_business_states(conn, business_ids):
             (
                 task
                 for task in candidates
-                if str(task.get("status") or "").strip().lower() != Status.ARCHIVED
+                if (
+                    str(task.get("status") or "").strip().lower() != Status.ARCHIVED
+                    or _is_recoverable_missing_archive(task)
+                )
             ),
             key=lambda task: (
                 str(task.get("last_seen_at") or ""),
@@ -1938,6 +2126,142 @@ def _prefetch_batch_business_states(conn, business_ids):
     return states
 
 
+def batch_touch_scanned_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime) -> Dict[str, int]:
+    """快速刷新缓存命中任务的扫描存活状态。
+
+    已有任务只做分块 UPDATE，避免对公共盘 Registry 逐行执行完整状态流程。
+    缺失的任务回退到 batch_upsert_tasks，保证局部丢数据时仍能自愈。
+    """
+    if not tasks_data:
+        return {"seen": 0, "touched": 0, "restored": 0, "created": 0}
+
+    unique_items = {}
+    for item in tasks_data:
+        key = item["key"]
+        task_id = make_task_id(
+            key["file_type"],
+            key["project_id"],
+            key["interface_id"],
+            key["source_file"],
+            key["row_index"],
+        )
+        unique_items[task_id] = item
+
+    conn = get_connection(db_path, wal)
+    now_str = now.isoformat()
+    required_columns = {
+        "id",
+        "status",
+        "archive_reason",
+        "confirmed_at",
+        "completed_at",
+        "completed_by",
+        "display_status",
+        "last_seen_at",
+        "missing_since",
+        "archived_at",
+    }
+    available = set(select_available_columns(conn, "tasks", list(required_columns) + ["source_revision"]))
+    if not required_columns.issubset(available):
+        close_connection_after_use()
+        created = batch_upsert_tasks(db_path, wal, list(unique_items.values()), now)
+        return {"seen": len(unique_items), "touched": 0, "restored": 0, "created": created}
+
+    existing = {}
+    task_ids = list(unique_items)
+    for start in range(0, len(task_ids), 400):
+        chunk = task_ids[start:start + 400]
+        placeholders = ", ".join("?" for _ in chunk)
+        rows = conn.execute(
+            f"""
+            SELECT id, status, archive_reason, confirmed_at, completed_at,
+                   completed_by, display_status
+            FROM tasks
+            WHERE id IN ({placeholders})
+            """,
+            chunk,
+        ).fetchall()
+        for row in rows:
+            existing[str(row[0])] = {
+                "id": row[0],
+                "status": row[1],
+                "archive_reason": row[2],
+                "confirmed_at": row[3],
+                "completed_at": row[4],
+                "completed_by": row[5],
+                "display_status": row[6],
+            }
+
+    if any(_is_recoverable_missing_archive(task) for task in existing.values()):
+        _ensure_verified_recovery_backup(db_path)
+
+    restored = 0
+    try:
+        conn.execute("BEGIN TRANSACTION")
+        existing_ids = list(existing)
+        for start in range(0, len(existing_ids), 400):
+            chunk = existing_ids[start:start + 400]
+            placeholders = ", ".join("?" for _ in chunk)
+            conn.execute(
+                f"""
+                UPDATE tasks
+                SET last_seen_at = ?, missing_since = NULL
+                WHERE id IN ({placeholders})
+                """,
+                [now_str] + chunk,
+            )
+
+        for task_id, old_task in existing.items():
+            if not _is_recoverable_missing_archive(old_task):
+                continue
+            fields = dict(unique_items[task_id].get("fields") or {})
+            _restore_missing_archive_fields(old_task, fields)
+            conn.execute(
+                """
+                UPDATE tasks
+                SET status = ?, display_status = ?,
+                    completed_at = ?, completed_by = ?,
+                    confirmed_at = NULL, confirmed_by = NULL,
+                    last_seen_at = ?, missing_since = NULL,
+                    archive_reason = NULL, archived_at = NULL,
+                    source_revision = COALESCE(?, source_revision)
+                WHERE id = ?
+                  AND status = 'archived'
+                  AND archive_reason = 'missing_from_source'
+                  AND confirmed_at IS NULL
+                """,
+                (
+                    fields.get("status", Status.OPEN),
+                    fields.get("display_status", "待完成"),
+                    fields.get("completed_at"),
+                    fields.get("completed_by"),
+                    now_str,
+                    fields.get("_source_revision"),
+                    task_id,
+                ),
+            )
+            restored += int(conn.execute("SELECT changes()").fetchone()[0] or 0)
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        close_connection_after_use()
+        raise
+
+    close_connection_after_use()
+    missing_items = [
+        item for task_id, item in unique_items.items()
+        if task_id not in existing
+    ]
+    created = batch_upsert_tasks(db_path, wal, missing_items, now) if missing_items else 0
+    return {
+        "seen": len(unique_items),
+        "touched": len(existing),
+        "restored": restored,
+        "created": created,
+    }
+
+
 def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime) -> int:
     """
     批量创建或更新任务（带事务优化）
@@ -1953,7 +2277,15 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
     """
     if not tasks_data:
         return 0
-    
+
+    business_ids = [
+        make_business_id(
+            item["key"]["file_type"],
+            item["key"]["project_id"],
+            item["key"]["interface_id"],
+        )
+        for item in tasks_data
+    ]
     conn = get_connection(db_path, wal)
     now_str = now.isoformat()
     count = 0
@@ -1965,17 +2297,15 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
     auto_confirmed_count = 0
     
     try:
+        try:
+            recovery_needed = _has_recoverable_archives(conn, business_ids)
+        except sqlite3.OperationalError:
+            recovery_needed = False
+        if recovery_needed:
+            _ensure_verified_recovery_backup(db_path)
+
         # 开启事务
         conn.execute("BEGIN TRANSACTION")
-
-        business_ids = [
-            make_business_id(
-                item["key"]["file_type"],
-                item["key"]["project_id"],
-                item["key"]["interface_id"],
-            )
-            for item in tasks_data
-        ]
         business_id_counts = {}
         for business_id in business_ids:
             business_id_counts[business_id] = business_id_counts.get(business_id, 0) + 1
@@ -2172,12 +2502,20 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
             if old_task:
                 new_completed_val = fields.get('_completed_col_value', '')
                 old_completed_val = '有值' if old_task['completed_at'] else ''
-            
+
+                # 源 Excel 中仍存在的任务不应继续保持 missing_from_source 归档。
+                # 仅恢复未确认的误归档项；真正的确认归档仍由闭环逻辑抑制。
+                recovering_missing_archive = _is_recoverable_missing_archive(old_task)
+                if recovering_missing_archive:
+                    _restore_missing_archive_fields(old_task, fields)
+                
                 # 检查是否因为时间变化取消了忽略
                 need_force_reset = time_changed_due_to_ignore
-            
+                
                 # 【关键修复】优先检查接口时间是否变化（预期时间变化应该触发归档和重置）
-                if should_reset_task_status(old_task['interface_time'], fields.get('interface_time', ''), 
+                if recovering_missing_archive:
+                    pass
+                elif should_reset_task_status(old_task['interface_time'], fields.get('interface_time', ''), 
                                            old_completed_val, new_completed_val):
                     # 【新增】如果有完整数据链（completed_at和confirmed_at都存在），归档旧记录
                     if old_task.get('completed_at') and old_task.get('confirmed_at'):
@@ -2397,7 +2735,10 @@ def batch_upsert_tasks(db_path: str, wal: bool, tasks_data: list, now: datetime)
                     ignored_at = COALESCE(excluded.ignored_at, ignored_at),
                     ignored_by = COALESCE(excluded.ignored_by, ignored_by),
                     interface_time_when_ignored = COALESCE(excluded.interface_time_when_ignored, interface_time_when_ignored),
-                    ignored_reason = COALESCE(excluded.ignored_reason, ignored_reason)
+                    ignored_reason = COALESCE(excluded.ignored_reason, ignored_reason),
+                    missing_since = NULL,
+                    archive_reason = NULL,
+                    archived_at = NULL
                 """,
                 (
                     tid,

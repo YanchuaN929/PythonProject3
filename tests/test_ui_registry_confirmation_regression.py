@@ -775,12 +775,17 @@ def test_scan_finalize_invalidates_registry_read_cache():
         "registry_wal": False,
         "registry_missing_keep_days": 7,
     }
+    scopes = [{"file_type": 7, "project_id": "2026", "source_file": "fu.xlsx"}]
     with patch.object(hooks, "_cfg", return_value=cfg), \
-            patch("registry.service.finalize_scan"), \
+            patch("registry.service.finalize_scan") as finalize_scan, \
             patch.object(hooks, "invalidate_cache") as invalidate_cache:
-        hooks.on_scan_finalize(batch_tag="20260723_120000")
+        assert hooks.on_scan_finalize(
+            batch_tag="20260723_120000",
+            scanned_sources=scopes,
+        ) is True
 
     invalidate_cache.assert_called_once()
+    assert finalize_scan.call_args.kwargs["scanned_sources"] == scopes
 
 
 def test_clear_viewer_metadata_only_removes_target_viewer_rows():

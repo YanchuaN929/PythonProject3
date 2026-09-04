@@ -23,6 +23,7 @@ from .service import (
     mark_completed,
     mark_confirmed,
     batch_upsert_tasks,
+    batch_touch_scanned_tasks,
     resolve_task_record,
     resolve_task_records,
 )
@@ -438,13 +439,24 @@ def _handle_maintenance_mode(error: Exception):
     except Exception:
         pass
 
+def _build_process_tasks_data(file_type, source_file, result_df):
+    source_revision = get_source_revision(source_file)
+    tasks_data = []
+    for _, row in result_df.iterrows():
+        key = build_task_key_from_row(row, file_type, source_file)
+        fields = build_task_fields_from_row(row, file_type)
+        fields['_source_revision'] = source_revision
+        tasks_data.append({'key': key, 'fields': fields})
+    return tasks_data
+
+
 def on_process_done(
     file_type: int, 
     project_id: str, 
     source_file: str, 
     result_df: pd.DataFrame, 
     now: Optional[datetime] = None
-) -> None:
+) -> bool:
     """
     处理完成钩子
     
@@ -462,23 +474,16 @@ def on_process_done(
         _ensure_data_folder_from_path(source_file)
         cfg = _cfg()
         if not _enabled(cfg):
-            return
+            return False
         
         if result_df is None or result_df.empty:
-            return
+            return True
         
         now = now or safe_now()
         db_path = cfg['registry_db_path']
         wal = bool(cfg.get('registry_wal', False))
         
-        # 批量构造任务数据
-        tasks_data = []
-        source_revision = get_source_revision(source_file)
-        for _, row in result_df.iterrows():
-            key = build_task_key_from_row(row, file_type, source_file)
-            fields = build_task_fields_from_row(row, file_type)
-            fields['_source_revision'] = source_revision
-            tasks_data.append({'key': key, 'fields': fields})
+        tasks_data = _build_process_tasks_data(file_type, source_file, result_df)
         
         # 【关键改进】使用重试机制执行批量upsert
         def do_batch_upsert():
@@ -502,9 +507,11 @@ def on_process_done(
         
         if count == 0:
             print(f"[Registry] ⚠ 文件{file_type}项目{project_id}: 写入0条（数据库可能未正确初始化）")
+        return True
         
     except MaintenanceModeError as e:
         _handle_maintenance_mode(e)
+        return False
     except Exception as e:
         print(f"[Registry] on_process_done 失败: {e}")
         import traceback
@@ -520,6 +527,71 @@ def on_process_done(
         )
         
         _handle_runtime_registry_error(e)
+        return False
+    finally:
+        close_connection_after_use()
+
+
+def on_cached_process_done(
+    file_type: int,
+    project_id: str,
+    source_file: str,
+    result_df: pd.DataFrame,
+    now: Optional[datetime] = None,
+) -> bool:
+    """缓存命中时批量刷新任务存活状态，不重读 Excel。"""
+    try:
+        _ensure_data_folder_from_path(source_file)
+        cfg = _cfg()
+        if not _enabled(cfg):
+            return False
+        if result_df is None or result_df.empty:
+            return True
+
+        now = now or safe_now()
+        db_path = cfg['registry_db_path']
+        wal = bool(cfg.get('registry_wal', False))
+        tasks_data = _build_process_tasks_data(file_type, source_file, result_df)
+        stats = _retry_on_lock(
+            "刷新缓存任务存活状态",
+            lambda: batch_touch_scanned_tasks(db_path, wal, tasks_data, now),
+        )
+
+        if stats.get("restored", 0) or stats.get("created", 0):
+            _retry_on_lock(
+                "记录缓存任务恢复",
+                lambda: write_event(db_path, wal, EventType.PROCESS_DONE, {
+                    'file_type': file_type,
+                    'project_id': normalize_project_id(project_id, file_type),
+                    'source_file': get_source_basename(source_file),
+                    'extra': {
+                        'count': stats.get("seen", 0),
+                        'cache_hit': True,
+                        'restored': stats.get("restored", 0),
+                        'created': stats.get("created", 0),
+                    }
+                }, now),
+            )
+            invalidate_cache()
+        return True
+    except MaintenanceModeError as e:
+        _handle_maintenance_mode(e)
+        return False
+    except Exception as e:
+        print(f"[Registry] on_cached_process_done 失败: {e}")
+        import traceback
+        tb_text = traceback.format_exc()
+        print(tb_text)
+        _diag_log(
+            "cached_process_done_error",
+            file_type=file_type,
+            project_id=normalize_project_id(project_id, file_type),
+            source_file=get_source_basename(source_file),
+            error=str(e),
+            traceback=tb_text,
+        )
+        _handle_runtime_registry_error(e)
+        return False
     finally:
         close_connection_after_use()
 
@@ -1073,8 +1145,9 @@ def on_unconfirmed_by_superior(
 def on_scan_finalize(
     batch_tag: str,
     now: Optional[datetime] = None,
-    missing_keep_days: Optional[int] = None
-) -> None:
+    missing_keep_days: Optional[int] = None,
+    scanned_sources=None,
+) -> bool:
     """
     扫描完成钩子
     
@@ -1090,7 +1163,7 @@ def on_scan_finalize(
     try:
         cfg = _cfg()
         if not _enabled(cfg):
-            return
+            return False
         
         now = now or safe_now()
         db_path = cfg['registry_db_path']
@@ -1099,16 +1172,25 @@ def on_scan_finalize(
         
         # 执行归档逻辑
         from .service import finalize_scan
-        finalize_scan(db_path, wal, now, days)
+        finalize_scan(
+            db_path,
+            wal,
+            now,
+            days,
+            scanned_sources=scanned_sources,
+        )
         invalidate_cache()
         
         print(f"[Registry] scan_finalize: batch={batch_tag}, missing_keep_days={days}")
+        return True
         
     except MaintenanceModeError as e:
         _handle_maintenance_mode(e)
+        return False
     except Exception as e:
         print(f"[Registry] on_scan_finalize 失败: {e}")
         _handle_runtime_registry_error(e)
+        return False
     finally:
         close_connection_after_use()
 
