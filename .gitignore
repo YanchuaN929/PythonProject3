@@ -39,8 +39,6 @@ update_log.txt
 .smoke_runtime/
 .pytest_tmp/
 .coverage
-scripts/run_pending_review_smoke.py
-tests/test_registry_pending_and_window_consistency.py
 .coverage.*
 htmlcov/
 .ruff_cache/
@@ -64,6 +62,7 @@ result_cache/write_tasks_state.json
 # =========================
 .vscode/
 .idea/
+.workbuddy/
 *.code-workspace
 backup/
 *.swp
@@ -79,6 +78,7 @@ desktop.ini
 *.log
 *.tmp
 .tmp_*
+probe_log.txt
 post_update_log.txt
 /post_update_stub.bat
 
