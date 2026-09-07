@@ -12,7 +12,6 @@ import pandas as pd
 import os
 import re
 import sys
-import uuid
 from utils.date_utils import is_date_overdue
 
 try:
@@ -22,12 +21,6 @@ except ImportError:
         return "建筑结构所"
 
 from write_tasks.task_panel import TaskRecordPanel
-from write_tasks.models import WriteTask, utc_now_iso
-
-try:
-    from write_tasks.shared_log import upsert_task as shared_log_upsert_task
-except Exception:
-    shared_log_upsert_task = None
 
 # 导入数据库状态显示器
 try:
@@ -649,6 +642,8 @@ class WindowManager:
 
     def show_empty_message(self, viewer, message):
         """在viewer中显示提示信息"""
+        if hasattr(self, "_render_requests"):
+            self._render_requests.pop(viewer, None)
         # 清空现有内容
         self._clear_viewer_metadata(viewer)
         for item in viewer.get_children():
@@ -672,7 +667,7 @@ class WindowManager:
         empty_values = [message] + [""] * (len(default_columns) - 1)
         viewer.insert("", "end", text="", values=empty_values)
     
-    def display_excel_data(self, viewer, df, tab_name, show_all=False, original_row_numbers=None, source_files=None, file_manager=None, current_user_roles=None):
+    def display_excel_data(self, viewer, df, tab_name, show_all=False, original_row_numbers=None, source_files=None, file_manager=None, current_user_roles=None, _registry_state=None):
         """
         在viewer中显示Excel数据
         
@@ -693,11 +688,6 @@ class WindowManager:
             original_row_numbers: 原始Excel行号列表（可选）
             current_user_roles: 当前用户的角色列表（用于筛选显示，如["设计人员", "2016接口工程师"]）
         """
-        # 清空现有内容
-        self._clear_viewer_metadata(viewer)
-        for item in viewer.get_children():
-            viewer.delete(item)
-        
         if df is None or df.empty:
             self.show_empty_message(viewer, f"无{tab_name}数据")
             return
@@ -799,10 +789,33 @@ class WindowManager:
                     task_keys_only = [tk[1] for tk in task_keys]
                     # 【新增】传递当前用户角色列表
                     user_roles_str = ','.join(current_user_roles) if current_user_roles else ''
+                    if _registry_state is None:
+                        from ui.background_io import run_background
+                        if not hasattr(self, "_render_requests"):
+                            self._render_requests = {}
+                        token = object()
+                        self._render_requests[viewer] = token
+                        user = getattr(self.app, "user_name", "")
+                        epoch = getattr(self, "_business_epoch", 0)
+                        def render_ready(state):
+                            if (self._render_requests.get(viewer) is not token
+                                    or getattr(self.app, "user_name", "") != user):
+                                return
+                            if getattr(self, "_business_epoch", 0) != epoch:
+                                self.display_excel_data(viewer, df, tab_name, show_all, original_row_numbers,
+                                                        source_files, file_manager, current_user_roles)
+                                return
+                            self.display_excel_data(
+                                viewer, df, tab_name, show_all, original_row_numbers,
+                                source_files, file_manager, current_user_roles, _registry_state=state)
+                        run_background(viewer,
+                                       lambda: registry_hooks.get_display_state(task_keys_only, user_roles_str),
+                                       render_ready)
+                        return
                     (
                         registry_status_map_raw,
                         registry_snapshot_map,
-                    ) = registry_hooks.get_display_state(task_keys_only, user_roles_str)
+                    ) = _registry_state
                     current_user_name = getattr(self.app, 'user_name', '').strip()
 
                     # 映射回display_df的索引（取第一个匹配的状态）
@@ -835,6 +848,10 @@ class WindowManager:
                             )
         except Exception as e:
             print(f"[Registry] 状态查询失败（不影响主流程）: {e}")
+
+        self._clear_viewer_metadata(viewer)
+        for item in viewer.get_children():
+            viewer.delete(item)
         
         # 【关键修复】根据registry_confirmed_map更新勾选框状态
         if registry_confirmed_map and "是否已完成" in display_df.columns:
@@ -1192,59 +1209,6 @@ class WindowManager:
             'task_key': task_key,
         }, None
 
-    def _record_confirmation_task_log(self, confirmations, user_name):
-        """把上级审查确认写入右上角“写入任务记录”的共享日志。"""
-        if not confirmations or not shared_log_upsert_task:
-            return
-
-        submitted_by = (user_name or "").strip() or "未知用户"
-        submitted_at = utc_now_iso()
-        count = len(confirmations)
-        first_interface = str(confirmations[0].get("interface_id", "") or "").strip()
-        if count == 1:
-            description = f"{submitted_by} 审查确认 {first_interface}"
-        else:
-            description = f"{submitted_by} 批量审查确认 {count} 条（首条 {first_interface}）"
-
-        task = WriteTask(
-            task_id=str(uuid.uuid4()),
-            task_type="confirmation",
-            payload={"confirmations": confirmations},
-            submitted_by=submitted_by,
-            description=description,
-            submitted_at=submitted_at,
-            status="completed",
-            started_at=submitted_at,
-            completed_at=submitted_at,
-        )
-
-        try:
-            from registry import hooks as registry_hooks
-            cfg = registry_hooks._cfg()
-            if not cfg.get("registry_enabled", True):
-                return
-            db_path = cfg.get("registry_db_path")
-            if not db_path:
-                return
-            wal = bool(cfg.get("registry_wal", False))
-            from registry.db import open_isolated_connection
-
-            conn = open_isolated_connection(db_path, wal)
-            try:
-                shared_log_upsert_task(conn, task)
-            finally:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
-        except Exception as exc:
-            print(f"[WriteTaskLog] 审查确认记录写入失败(已忽略): {exc}")
-
-        try:
-            if hasattr(self, "task_panel") and self.task_panel:
-                self.task_panel.refresh_tasks()
-        except Exception:
-            pass
 
     def _submit_fu_completion(
         self,
@@ -1302,6 +1266,7 @@ class WindowManager:
             })
         except Exception as cache_error:
             print(f"[PendingCache] 记录FU任务失败: {cache_error}")
+        get_pending_cache().on_task_status_changed(task)
 
         callback = getattr(self.app, "_handle_response_submitted", None)
         if callable(callback):
@@ -1447,157 +1412,29 @@ class WindowManager:
                         if context_error:
                             print(f"[错误] {context_error}")
                             return
-                        task_key = context['task_key']
-                        interface_id_clean = context['interface_id_clean']
-                        
-                        if is_currently_checked:
-                            # 兼容旧数据：确认后尚未归档的记录仍允许单行取消确认。
-                            task_snapshot = registry_hooks.get_task_snapshot(task_key)
-                            if not task_snapshot:
-                                import tkinter.messagebox as messagebox
-                                messagebox.showwarning("提示", f"找不到任务记录：{interface_id_clean}")
-                                return
-                            task_status = task_snapshot.get("status")
-                            if task_status == 'archived':
-                                # 旧缓存可能让已归档行短暂残留；Registry 终态不可再取消确认。
-                                try:
-                                    viewer.delete(item_id)
-                                except Exception:
-                                    pass
-                                if hasattr(self, '_item_metadata'):
-                                    self._item_metadata.pop((viewer, item_id), None)
-                                if hasattr(self, 'app') and self.app:
-                                    viewer.after(100, self.app.refresh_current_tab_display)
-                                print(f"[Registry] 已移除界面中残留的归档任务：{interface_id_clean}")
-                                return
-                            if task_status != 'confirmed':
-                                print(f"[Registry] 错误：任务状态不是已确认，无法取消确认 (status={task_status})")
-                                import tkinter.messagebox as messagebox
-                                messagebox.showwarning("操作失败", f"该任务状态不是已确认，无法取消确认\n当前状态：{task_status}")
-                                return
-                            
-                            unconfirm_ok = registry_hooks.on_unconfirmed_by_superior(
-                                key=task_key,
-                                user_name=user_name
-                            )
-                            if unconfirm_ok is False:
-                                import tkinter.messagebox as messagebox
-                                messagebox.showwarning("操作失败", f"取消确认写入失败，请稍后重试\n接口号：{interface_id_clean}")
-                                return
-                            print(f"[Registry] 取消确认：{interface_id_clean}")
-                            
-                            # 更新UI
-                            current_values[checkbox_col_idx] = "☐"
-                            viewer.item(item_id, values=current_values)
-                        else:
-                            target_items = self._selected_confirmation_items(viewer, item_id)
-                            confirmed_items = []
-                            confirmed_log_items = []
-                            failed_messages = []
-                            skipped_count = 0
-
-                            for target_item_id in target_items:
-                                target_values = list(viewer.item(target_item_id, "values"))
-                                if checkbox_col_idx < len(target_values) and target_values[checkbox_col_idx] == "☑":
-                                    skipped_count += 1
-                                    continue
-
-                                target_context, target_error = self._build_checkbox_task_context(
-                                    viewer,
-                                    target_item_id,
-                                    original_df,
-                                    original_row_numbers,
-                                    source_files,
-                                    file_type,
-                                )
-                                if target_error:
-                                    failed_messages.append(target_error)
-                                    continue
-
-                                target_key = target_context['task_key']
-                                target_interface = target_context['interface_id_clean']
-                                task_snapshot = registry_hooks.get_task_snapshot(target_key)
-                                if not task_snapshot:
-                                    failed_messages.append(f"找不到任务记录：{target_interface}")
-                                    continue
-
-                                task_status = task_snapshot.get("status")
-                                if task_status != 'completed':
-                                    if task_status == 'open':
-                                        failed_messages.append(f"{target_interface}: 尚未完成，不能审查确认")
-                                    elif task_status == 'confirmed':
-                                        skipped_count += 1
-                                    else:
-                                        failed_messages.append(f"{target_interface}: 状态异常({task_status})")
-                                    continue
-
-                                confirm_ok = registry_hooks.on_confirmed_by_superior(
-                                    file_type=file_type,
-                                    file_path=target_context['source_file'],
-                                    row_index=target_context['original_row'],
-                                    user_name=user_name,
-                                    project_id=target_context['project_id'],
-                                    interface_id=target_interface
-                                )
-                                if confirm_ok is False:
-                                    failed_messages.append(f"{target_interface}: Registry写入失败")
-                                    continue
-
-                                confirmed_items.append((target_item_id, target_interface))
-                                confirmed_log_items.append({
-                                    "file_type": file_type,
-                                    "file_path": target_context['source_file'],
-                                    "source_file": target_context['source_file'],
-                                    "row_index": target_context['original_row'],
-                                    "project_id": target_context['project_id'],
-                                    "interface_id": target_interface,
-                                })
-
-                            for confirmed_item_id, _target_interface in confirmed_items:
-                                if _should_hide_registry_row_for_roles("已审查", user_roles):
-                                    try:
-                                        viewer.delete(confirmed_item_id)
-                                    except Exception:
-                                        pass
-                                    if hasattr(self, '_item_metadata'):
-                                        self._item_metadata.pop((viewer, confirmed_item_id), None)
-                                else:
-                                    item_values = list(viewer.item(confirmed_item_id, "values"))
-                                    if checkbox_col_idx < len(item_values):
-                                        item_values[checkbox_col_idx] = "☑"
-                                        viewer.item(confirmed_item_id, values=item_values)
-
-                            if confirmed_items:
-                                print(f"[Registry] 批量确认并归档成功：{len(confirmed_items)} 条")
-                                self._record_confirmation_task_log(confirmed_log_items, user_name)
-
-                            if failed_messages:
-                                import tkinter.messagebox as messagebox
-                                details = "\n".join(failed_messages[:8])
-                                remaining = len(failed_messages) - min(len(failed_messages), 8)
-                                if remaining > 0:
-                                    details += f"\n...另有 {remaining} 条失败"
-                                messagebox.showwarning(
-                                    "部分确认失败" if confirmed_items else "操作失败",
-                                    f"成功确认并归档：{len(confirmed_items)} 条\n跳过：{skipped_count} 条\n\n{details}"
-                                )
-                            elif not confirmed_items:
-                                import tkinter.messagebox as messagebox
-                                messagebox.showinfo("提示", "没有可确认的选中任务")
-                                return
-                        
-                        # 【关键修复】确认/取消确认后，延迟刷新整个tab显示
-                        # 这样已确认的任务会被过滤掉，不再显示
-                        if hasattr(self, 'app') and self.app:
-                            # 使用after延迟100ms执行，确保Registry操作完成
-                            viewer.after(100, self.app.refresh_current_tab_display)
-                            print("[Registry] 已触发刷新显示")
-                        else:
-                            # 兜底：至少刷新UI
-                            viewer.update_idletasks()
+                        selected = [item_id] if is_currently_checked else self._selected_confirmation_items(viewer, item_id)
+                        items = []
+                        for selected_id in selected:
+                            target, error = self._build_checkbox_task_context(
+                                viewer, selected_id, original_df, original_row_numbers, source_files, file_type)
+                            if error:
+                                raise ValueError(error)
+                            items.append({
+                                "file_type": file_type, "file_path": target["source_file"],
+                                "source_file": target["source_file"], "row_index": target["original_row"],
+                                "project_id": target["project_id"], "interface_id": target["interface_id_clean"],
+                            })
+                        from write_tasks.manager import get_write_task_manager
+                        manager = get_write_task_manager()
+                        task = manager.submit_registry_action(
+                            "unconfirmation" if is_currently_checked else "confirmation",
+                            items, user_name, " ".join(user_roles), registry_hooks.get_data_folder())
+                        self._watch_registry_action(viewer, selected, task, user_name, checkbox_col_idx, columns)
                         
                     except Exception as e:
                         print(f"[Registry] 确认/取消确认失败: {e}")
+                        from tkinter import messagebox
+                        messagebox.showwarning("提交失败", str(e), parent=viewer)
                         import traceback
                         traceback.print_exc()
                 else:
@@ -1629,6 +1466,129 @@ class WindowManager:
         # 绑定到这个特定标签，不使用add="+"
         viewer.bind_class(bind_tag, "<Button-1>", on_click)
     
+    def apply_business_task_progress(self, task):
+        """Update existing Tk rows only; never query Registry or Excel here."""
+        if not hasattr(self, "_observed_business_tasks"):
+            self._observed_business_tasks = set()
+        if task.status in ("submitting", "pending", "running"):
+            self._observed_business_tasks.add(task.task_id)
+        if task.task_id not in self._observed_business_tasks or task.task_type == "registry_sync":
+            return
+        self._business_epoch = getattr(self, "_business_epoch", 0) + 1
+        payload = task.payload or {}
+        items = payload.get("_submitted_items") or payload.get("items") or payload.get("assignments") or [payload]
+        if items and items[0].get("force_lookup"):
+            items = payload.get("assignments") or items
+        active = task.status in ("submitting", "pending", "running")
+        if not hasattr(self, "_business_row_originals"):
+            self._business_row_originals = {}
+        for item in items:
+            ft = int(item.get("file_type", 7 if task.task_type.startswith("fu_completion") else 0) or 0)
+            viewer = self.viewers.get("tab{}".format(ft))
+            if viewer is None:
+                continue
+            columns = list(viewer["columns"])
+            for (row_viewer, iid), meta in list(getattr(self, "_item_metadata", {}).items()):
+                if row_viewer is not viewer or not viewer.exists(iid):
+                    continue
+                if str(meta.get("original_row")) != str(item.get("requested_row_index", item.get("row_index"))):
+                    continue
+                if os.path.basename(str(meta.get("source_file", ""))).lower() != os.path.basename(str(item.get("file_path") or item.get("source_file") or "")).lower():
+                    continue
+                if str(meta.get("project_id", "")) != str(item.get("project_id", "")):
+                    continue
+                identity = (str(meta.get("source_file")), str(meta.get("original_row")),
+                            str(meta.get("interface_id")), str(meta.get("project_id")))
+                saved_key = (task.task_id, viewer, iid, identity)
+                values = list(viewer.item(iid, "values"))
+                def set_value(name, value):
+                    if name in columns:
+                        values[columns.index(name)] = value
+                if active:
+                    self._business_row_originals.setdefault(saved_key, list(values))
+                    set_value("状态", {"submitting": "提交中", "pending": "排队中", "running": "执行中"}[task.status])
+                else:
+                    values = self._business_row_originals.pop(saved_key, values)
+                    succeeded = task.status == "completed"
+                    if task.task_type == "assignment" and task.status == "failed":
+                        succeeded = any(
+                            x.get("file_path") == item.get("file_path")
+                            and x.get("interface_id") == item.get("interface_id")
+                            for x in (payload.get("_result") or {}).get("successful_assignments", []))
+                    if task.task_type in ("response_batch", "fu_completion_batch"):
+                        results = payload.get("_result") or {}
+                        successful = results.get("successful_items", [])
+                        succeeded = any(
+                            str(x.get("requested_row_index", x.get("row_index"))) == str(item.get("row_index"))
+                            and x.get("file_path") == item.get("file_path") for x in successful)
+                    if task.task_type in ("ignore", "confirmation", "unconfirmation"):
+                        succeeded = item in payload.get("succeeded_items", [])
+                    if succeeded:
+                        if task.task_type in ("ignore", "confirmation") or (
+                            task.task_type not in ("assignment", "unconfirmation") and task.submitted_by == getattr(self.app, "user_name", "")):
+                            viewer.delete(iid)
+                            self._item_metadata.pop((viewer, iid), None)
+                            continue
+                        if task.task_type == "assignment":
+                            set_value("责任人", item.get("assigned_name", ""))
+                            meta["responsible"] = item.get("assigned_name", "")
+                            set_value("状态", "待完成")
+                        elif task.task_type == "unconfirmation":
+                            set_value("状态", "待审查")
+                            set_value("是否已完成", "☐")
+                        else:
+                            set_value("状态", "待审查")
+                            set_value("回文单号", item.get("response_number", ""))
+                            set_value("实际FU日期", item.get("completion_date", ""))
+                viewer.item(iid, values=values)
+
+    def _watch_registry_action(self, viewer, item_ids, task, user_name, checkbox_col, columns):
+        """Poll memory on Tk; only successful business outcomes change the rows."""
+        original = {iid: tuple(viewer.item(iid, "values")) for iid in item_ids}
+        status_col = columns.index("状态") if "状态" in columns else None
+        def poll():
+            if not viewer.winfo_exists():
+                return
+            if getattr(self.app, "user_name", "") != user_name:
+                return
+            active = task.status in ("submitting", "pending", "running")
+            for index, iid in enumerate(item_ids):
+                if not viewer.exists(iid):
+                    continue
+                values = list(viewer.item(iid, "values"))
+                before = list(original[iid])
+                # A re-render may have reused a Tk row ID for another business row.
+                if any(values[i] != before[i] for i in range(min(len(values), len(before)))
+                       if i != status_col):
+                    continue
+                if active:
+                    if status_col is not None:
+                        values[status_col] = {"submitting": "提交中", "pending": "排队中",
+                                              "running": "执行中"}[task.status]
+                        viewer.item(iid, values=values)
+                else:
+                    item = task.payload["items"][index]
+                    if item in task.payload.get("succeeded_items", []):
+                        if task.task_type == "confirmation":
+                            viewer.delete(iid)
+                            if hasattr(self, "_item_metadata"):
+                                self._item_metadata.pop((viewer, iid), None)
+                        else:
+                            before[checkbox_col] = "☐"
+                            viewer.item(iid, values=before)
+                    else:
+                        viewer.item(iid, values=before)
+            if active:
+                viewer.after(100, poll)
+            elif task.status == "failed":
+                from tkinter import messagebox
+                messagebox.showwarning("业务执行失败", task.error or "请查看写入任务记录", parent=viewer)
+            else:
+                signatures = getattr(self.app, "_tab_render_signatures", {})
+                for item in task.payload.get("items", []):
+                    signatures.pop(int(item["file_type"]) - 1, None)
+        poll()
+
     def _find_source_file(self, original_df, item_index, source_files):
         """
         从多个源文件中找到当前行对应的文件

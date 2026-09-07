@@ -105,6 +105,10 @@ class PendingCache:
             elif key_base in self._assignments:
                 info = self._assignments[key_base]
             if info:
+                if info.get("status") != "completed":
+                    if '状态' in df.columns:
+                        df.at[idx, '状态'] = "执行中" if info.get("status") == "running" else "排队中"
+                    continue
                 if '责任人' in df.columns:
                     df.at[idx, '责任人'] = info.get('assigned_name', '')
                 if '状态' in df.columns and info.get('assigned_name'):
@@ -116,6 +120,10 @@ class PendingCache:
             elif key_base in self._responses:
                 info = self._responses[key_base]
             if info:
+                if info.get("status") != "completed":
+                    if '状态' in df.columns:
+                        df.at[idx, '状态'] = "执行中" if info.get("status") == "running" else "排队中"
+                    continue
                 if '回文单号' in df.columns:
                     df.at[idx, '回文单号'] = info.get('response_number', '')
                 if '是否已完成' in df.columns:

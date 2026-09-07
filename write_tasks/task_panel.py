@@ -217,8 +217,18 @@ class TaskRecordPanel(ttk.LabelFrame):
         copy_text(self, "\n".join(uniq).strip())
 
     def _on_double_click(self, event=None):
-        # 仅对指派类任务：双击弹窗展示明细
-        self.open_selected_assignment_detail()
+        from tkinter import messagebox
+        selected = self.tree.selection()
+        task = self._task_by_iid.get(selected[0]) if selected else None
+        if task and (task.error or (task.payload or {}).get("_shared_log_error")):
+            messagebox.showinfo("任务执行详情",
+                                "\n".join(filter(None, [task.description, task.error,
+                                                         (task.payload or {}).get("_shared_log_error")])),
+                                parent=self)
+        elif task and task.task_type in ("response", "response_batch"):
+            self.open_selected_response_detail()
+        else:
+            self.open_selected_assignment_detail()
 
     def open_selected_assignment_detail(self):
         sel = list(self.tree.selection())
@@ -405,6 +415,7 @@ class TaskRecordPanel(ttk.LabelFrame):
                 # the Tk-side poller starts the refresh on the main thread.
                 with self._refresh_lock:
                     self._refresh_requested = True
+                    self._local_changed = True
 
             manager.register_listener(_listener)
         except Exception:
@@ -469,6 +480,16 @@ class TaskRecordPanel(ttk.LabelFrame):
         if self._destroyed:
             return
 
+        if getattr(self, "_local_changed", False) and self.manager:
+            self._local_changed = False
+            merged = {task.task_id: task for task in self._last_task_snapshot}
+            merged.update({task.task_id: task for task in self.manager.get_tasks()})
+            tasks = sorted(merged.values(), key=lambda task: task.submitted_at or "", reverse=True)
+            if self.only_mine_var.get():
+                current_user = (self.get_current_user() or "").strip()
+                tasks = [task for task in tasks if task.submitted_by == current_user]
+            self._populate_tree(tasks[:100])
+
         latest = None
         while True:
             try:
@@ -484,6 +505,13 @@ class TaskRecordPanel(ttk.LabelFrame):
                 self._refresh_requested = False
 
             if tasks is not None:
+                if self.manager:
+                    merged = {task.task_id: task for task in tasks}
+                    current_user = (self.get_current_user() or "").strip()
+                    for task in self.manager.get_tasks():
+                        if not self.only_mine_var.get() or task.submitted_by == current_user:
+                            merged[task.task_id] = task
+                    tasks = sorted(merged.values(), key=lambda task: task.submitted_at or "", reverse=True)[:100]
                 self._last_task_snapshot = list(tasks)
                 self._populate_tree(tasks)
                 if warning:
@@ -528,6 +556,12 @@ class TaskRecordPanel(ttk.LabelFrame):
         )
         # 共享读取成功且有数据：直接使用共享数据
         if isinstance(shared_tasks, list) and len(shared_tasks) > 0:
+            if self.manager:
+                merged = {task.task_id: task for task in shared_tasks}
+                for task in self.manager.get_tasks():
+                    if not only_mine or task.submitted_by == current_user:
+                        merged[task.task_id] = task
+                shared_tasks = sorted(merged.values(), key=lambda task: task.submitted_at or "", reverse=True)[:100]
             return shared_tasks, "shared", ""
         # 共享读取成功但为空：如果本机队列存在，则回退显示本机（避免首次运行空窗）
         if isinstance(shared_tasks, list) and len(shared_tasks) == 0 and self.manager:
@@ -615,9 +649,12 @@ class TaskRecordPanel(ttk.LabelFrame):
             "fu_completion": "FU完成",
             "fu_completion_batch": "批量FU完成",
             "confirmation": "审查确认",
+            "unconfirmation": "取消确认",
+            "ignore": "忽略延期",
             "registry_sync": "Registry补偿",
         }
         status_map = {
+            "submitting": "提交中",
             "pending": "待执行",
             "running": "执行中",
             "completed": "完成",
@@ -629,6 +666,8 @@ class TaskRecordPanel(ttk.LabelFrame):
             count += 1
             display_type = type_map.get(task.task_type, task.task_type)
             status = status_map.get(task.status, task.status)
+            if (task.payload or {}).get("_shared_log_error"):
+                status += "（日志待同步）"
             if task.task_type == "registry_sync":
                 if task.status == "pending":
                     status = "待补偿"

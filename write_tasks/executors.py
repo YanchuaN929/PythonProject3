@@ -33,7 +33,29 @@ def execute_assignment_task(payload: Dict[str, Any]) -> Dict[str, Any]:
         pass
 
     assignments = payload.get("assignments", [])
+    if assignments and assignments[0].get("force_lookup"):
+        from registry import hooks
+        from registry.service import find_tasks_for_force_assign
+        from services.distribution import ForceAssignDialog
+        request = assignments[0]
+        cfg = hooks._cfg()
+        tasks = find_tasks_for_force_assign(cfg["registry_db_path"], cfg.get("registry_wal", False),
+                                           request["file_type"], request["project_id"], request["interface_id"])
+        if not tasks:
+            raise ValueError("未找到匹配的指派任务")
+        folder = payload.get("data_folder") or ForceAssignDialog._resolve_data_folder(cfg["registry_db_path"])
+        assignments = []
+        for task in tasks:
+            path = ForceAssignDialog._find_source_file(folder, task["source_file"], request["file_type"])
+            if not path:
+                raise ValueError("无法定位源文件：{}".format(task["source_file"]))
+            item = dict(request)
+            item.pop("force_lookup", None)
+            item.update(file_path=path, row_index=task["row_index"], status_text="待完成")
+            assignments.append(item)
+        payload["assignments"] = assignments
     result = save_assignments_batch(assignments)
+    payload["_result"] = result
     registry_compensations = []
     for failure in (result.get("registry_failures") or []):
         failure = failure or {}
@@ -410,6 +432,14 @@ EXECUTOR_MAP = {
     "fu_completion_batch": execute_fu_completion_batch_task,
     "registry_sync": execute_registry_sync_task,
 }
+
+from .registry_actions import execute_registry_action
+
+EXECUTOR_MAP.update({
+    "confirmation": lambda payload: execute_registry_action(payload, "confirmation"),
+    "unconfirmation": lambda payload: execute_registry_action(payload, "unconfirmation"),
+    "ignore": lambda payload: execute_registry_action(payload, "ignore"),
+})
 
 
 def get_executor(task_type: str):

@@ -1636,6 +1636,8 @@ class ExcelProcessorApp:
     def show_empty_message(self, viewer, message):
         """在viewer中显示提示信息"""
         # 使用WindowManager的show_empty_message方法
+        if hasattr(self, "_display_filter_requests"):
+            self._display_filter_requests.pop(viewer, None)
         self.window_manager.show_empty_message(viewer, message)
 
     @staticmethod
@@ -1904,7 +1906,7 @@ class ExcelProcessorApp:
         )
         print(f"{tab_name}数据预览已加载：显示前20行")
 
-    def display_excel_data_with_original_rows(self, viewer, df, tab_name, original_row_numbers, source_files=None):
+    def display_excel_data_with_original_rows(self, viewer, df, tab_name, original_row_numbers, source_files=None, _filtered=False):
         """
         在viewer中显示Excel数据，使用原始Excel行号（处理结果-显示全部数据）
         
@@ -1932,18 +1934,31 @@ class ExcelProcessorApp:
             # 【修复】获取项目号到源文件的映射（支持多项目）
             project_source_map = self._get_project_source_file_map(tab_name)
             
-            if file_type and (project_source_map or source_files):
-                # 调用过滤函数，传入项目号到源文件的映射
-                original_count = len(df)
-                df = self._exclude_pending_confirmation_rows(df, source_files[0], file_type, None, project_source_map)
-                filtered_count = original_count - len(df)
-                
-                if filtered_count > 0:
-                    print(f"[显示过滤] {tab_name}: 已过滤{filtered_count}行已完成/已确认任务，剩余{len(df)}行")
-                    
-                    # 更新original_row_numbers以匹配过滤后的df
-                    if "原始行号" in df.columns:
-                        original_row_numbers = list(df["原始行号"])
+            if file_type and (project_source_map or source_files) and not _filtered:
+                from types import SimpleNamespace
+                from functools import partial
+                from ui.background_io import run_background
+                context = SimpleNamespace(config=dict(self.config),
+                                          user_roles=list(getattr(self, "user_roles", []) or []),
+                                          user_role=getattr(self, "user_role", ""))
+                context._apply_overdue_filter = partial(ExcelProcessorApp._apply_overdue_filter, context)
+                if not hasattr(self, "_display_filter_requests"):
+                    self._display_filter_requests = {}
+                token = object()
+                self._display_filter_requests[viewer] = token
+                user = self.user_name
+                epoch = getattr(self.window_manager, "_business_epoch", 0)
+                def ready(filtered):
+                    if self._display_filter_requests.get(viewer) is not token or self.user_name != user:
+                        return
+                    if getattr(self.window_manager, "_business_epoch", 0) != epoch:
+                        self.display_excel_data_with_original_rows(viewer, df, tab_name, original_row_numbers, source_files)
+                        return
+                    rows = list(filtered["原始行号"]) if "原始行号" in filtered.columns else original_row_numbers
+                    self.display_excel_data_with_original_rows(viewer, filtered, tab_name, rows, source_files, _filtered=True)
+                run_background(viewer, lambda: ExcelProcessorApp._exclude_pending_confirmation_rows(
+                    context, df, source_files[0], file_type, None, project_source_map), ready)
+                return
         
         # 【新增】获取当前用户的角色列表
         user_roles = getattr(self, 'user_roles', [])
@@ -2671,7 +2686,7 @@ class ExcelProcessorApp:
         values = []
         if task_type in ("response", "fu_completion"):
             values.append(payload.get("file_type", 7 if task_type == "fu_completion" else None))
-        elif task_type in ("response_batch", "fu_completion_batch"):
+        elif task_type in ("response_batch", "fu_completion_batch", "confirmation", "unconfirmation", "ignore"):
             values.extend(
                 (item or {}).get(
                     "file_type", 7 if task_type == "fu_completion_batch" else None
@@ -2755,44 +2770,18 @@ class ExcelProcessorApp:
         self.start_processing()
 
     def _handle_response_submitted(self, file_path: str, row_index: int, file_type: int):
-        """回文单号异步提交后的UI刷新。"""
-        try:
-            self._refresh_views_with_pending_cache({int(file_type)})
-        except Exception as e:
-            print(f"[PendingCache] 回文提交后刷新失败: {e}")
+        """Render queue state from memory; no synchronous workbook/Registry refresh."""
+        for task in self.write_task_manager.get_tasks():
+            if task.status in ("submitting", "pending", "running", "completed", "failed"):
+                self.window_manager.apply_business_task_progress(task)
 
     def _on_write_task_status_changed(self, task):
-        """Registry补偿完成后使本机视图缓存失效，并在Tk主线程刷新当前页。"""
-        task_type = getattr(task, "task_type", "")
-        task_status = getattr(task, "status", "")
-        should_refresh = (
-            (task_type == "registry_sync" and task_status == "completed")
-            or (
-                task_type in ("response_batch", "fu_completion_batch")
-                and task_status in ("completed", "failed")
-            )
-        )
-        if not should_refresh:
-            return
-
-        def refresh_after_compensation():
-            affected_types = self._file_types_from_write_task(task)
-            if not affected_types:
-                self._tab_render_signatures = {}
-                self.refresh_current_tab_display()
-                return
-            signatures = getattr(self, "_tab_render_signatures", {})
-            for file_type in affected_types:
-                signatures.pop(file_type - 1, None)
-            self._tab_render_signatures = signatures
-            try:
-                selected_type = self.notebook.index(self.notebook.select()) + 1
-            except Exception:
-                selected_type = None
-            if selected_type in affected_types:
-                self._refresh_views_with_pending_cache({selected_type})
-
-        self._post_ui_task(refresh_after_compensation)
+        def apply_progress():
+            self.window_manager.apply_business_task_progress(task)
+            if task.status in ("completed", "failed"):
+                for ft in self._file_types_from_write_task(task):
+                    getattr(self, "_tab_render_signatures", {}).pop(ft - 1, None)
+        self._post_ui_task(apply_progress)
 
     def _parse_interface_engineer_role(self, role: str):
         """
@@ -8089,41 +8078,7 @@ class ExcelProcessorApp:
             )
             
             if result:
-                # 现在指派
-                name_list = distribution.get_name_list()
-                if not name_list:
-                    messagebox.showwarning("警告", f"无法读取姓名列表，请检查{get_role_table_file()}", parent=self.root)
-                    return
-                
-                dialog = distribution.AssignmentDialog(
-                    self.root,
-                    unassigned,
-                    name_list,
-                    user_name=self.user_name,  # 传递用户姓名
-                    user_roles=self.user_roles  # 传递用户角色
-                )
-                
-                # 等待对话框关闭
-                dialog.wait_window()
-                
-                # 【修复】只有在成功指派后才刷新
-                # 检查对话框的结果（需要在AssignmentDialog中添加标记）
-                if hasattr(dialog, 'assignment_successful') and dialog.assignment_successful:
-                    try:
-                        # 指派后仅清理涉及源文件的 .pkl 缓存，避免误触发“所有文件变化”
-                        payload = getattr(dialog, "assignment_payload", None) or []
-                        touched = sorted({(a or {}).get("file_path", "") for a in payload if (a or {}).get("file_path")})
-                        self.file_manager.clear_file_caches_only(touched or None)
-                    except Exception:
-                        payload = []
-                    affected_types = {
-                        int((item or {}).get("file_type"))
-                        for item in payload
-                        if str((item or {}).get("file_type", "")).isdigit()
-                    }
-                    self._refresh_views_with_pending_cache(affected_types or None)
-                else:
-                    print("[指派] 用户取消或未完成指派，不刷新")
+                self._on_assignment_button_click()
             else:
                 # 用户在提醒弹窗点击"否" - 不打开指派对话框
                 print("[指派] 用户选择暂不指派")
@@ -8134,15 +8089,33 @@ class ExcelProcessorApp:
             traceback.print_exc()
     
     
-    def _on_assignment_button_click(self):
+    def _on_assignment_button_click(self, _names=None, _user=None):
         """指派任务按钮点击"""
         try:
             if not distribution:
                 return
+
+            if _names is None:
+                if getattr(self, "_assignment_names_loading", False):
+                    return
+                from ui.background_io import run_background
+                self._assignment_names_loading = True
+                user = self.user_name
+                def ready(names):
+                    self._assignment_names_loading = False
+                    if self.user_name == user:
+                        self._on_assignment_button_click(names, user)
+                def failed(exc):
+                    self._assignment_names_loading = False
+                    messagebox.showwarning("读取失败", str(exc), parent=self.root)
+                run_background(self.root, distribution.get_name_list, ready, failed)
+                return
+            if self.user_name != _user:
+                return
             
             unassigned = self._check_unassigned_tasks() or []
             
-            name_list = distribution.get_name_list()
+            name_list = _names
             if not name_list:
                 messagebox.showwarning("警告", f"无法读取姓名列表，请检查{get_role_table_file()}", parent=self.root)
                 return
@@ -8161,7 +8134,7 @@ class ExcelProcessorApp:
                 try:
                     payload = getattr(dialog, "assignment_payload", None) or []
                     touched = sorted({(a or {}).get("file_path", "") for a in payload if (a or {}).get("file_path")})
-                    self.file_manager.clear_file_caches_only(touched or None)
+                    threading.Thread(target=self.file_manager.clear_file_caches_only, args=(touched or None,), daemon=True).start()
                 except Exception:
                     payload = []
                 affected_types = {
@@ -8169,7 +8142,7 @@ class ExcelProcessorApp:
                     for item in payload
                     if str((item or {}).get("file_type", "")).isdigit()
                 }
-                self._refresh_views_with_pending_cache(affected_types or None)
+                self._handle_response_submitted("", 0, 0)
             else:
                 print("[指派] 用户取消或未完成指派，不刷新")
                 
@@ -8269,7 +8242,7 @@ class ExcelProcessorApp:
         except Exception:
             pass
     
-    def _on_ignore_overdue_button_click(self):
+    def _on_ignore_overdue_button_click(self, _tasks=None, _user=None):
         """忽略延期项按钮点击"""
         try:
             from tkinter import messagebox
@@ -8287,7 +8260,24 @@ class ExcelProcessorApp:
                 return
             
             # 2. 收集所有已延期的任务
-            overdue_tasks = self._collect_overdue_tasks()
+            if _tasks is None:
+                if getattr(self, "_overdue_loading", False):
+                    return
+                from ui.background_io import run_background
+                self._overdue_loading = True
+                user = self.user_name
+                def ready(tasks):
+                    self._overdue_loading = False
+                    if self.user_name == user:
+                        self._on_ignore_overdue_button_click(tasks, user)
+                def failed(exc):
+                    self._overdue_loading = False
+                    messagebox.showwarning("读取失败", str(exc), parent=self.root)
+                run_background(self.root, self._collect_overdue_tasks, ready, failed)
+                return
+            if self.user_name != _user:
+                return
+            overdue_tasks = _tasks
             
             if not overdue_tasks:
                 messagebox.showinfo("提示", "当前没有已延期的任务", parent=self.root)
@@ -8300,7 +8290,8 @@ class ExcelProcessorApp:
             dialog = IgnoreOverdueDialog(
                 self.root,
                 overdue_tasks,
-                user_name
+                user_name,
+                user_role=" ".join(all_roles),
             )
             dialog.wait_window()
             
@@ -8316,7 +8307,7 @@ class ExcelProcessorApp:
             import traceback
             traceback.print_exc()
     
-    def _show_ignore_overdue_reminder(self):
+    def _show_ignore_overdue_reminder(self, _tasks=None, _user=None):
         """所领导角色：显示忽略延期任务提示"""
         try:
             # 【新增】如果开启了自动过滤，不弹出手动忽略提示
@@ -8334,7 +8325,15 @@ class ExcelProcessorApp:
                 return
             
             # 收集延期任务
-            overdue_tasks = self._collect_overdue_tasks()
+            if _tasks is None:
+                from ui.background_io import run_background
+                user = self.user_name
+                run_background(self.root, self._collect_overdue_tasks,
+                               lambda tasks: self._show_ignore_overdue_reminder(tasks, user))
+                return
+            if self.user_name != _user:
+                return
+            overdue_tasks = _tasks
             
             if overdue_tasks and len(overdue_tasks) > 0:
                 # 询问是否要批量忽略
@@ -8353,7 +8352,8 @@ class ExcelProcessorApp:
                     dialog = IgnoreOverdueDialog(
                         self.root,
                         overdue_tasks,
-                        user_name
+                        user_name,
+                        user_role=" ".join(all_roles),
                     )
                     dialog.wait_window()
                     

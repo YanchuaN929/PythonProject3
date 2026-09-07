@@ -1486,6 +1486,8 @@ def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, 
     """
     owns_conn = conn is None
     conn = conn or get_connection(db_path, wal)
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
     
     task = resolve_task_record(db_path, wal, key, conn=conn)
     if not task:
@@ -1496,6 +1498,11 @@ def mark_confirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime, 
 
     if str(task.get("status") or "").strip().lower() == Status.ARCHIVED:
         print(f"[Registry] mark_confirmed警告: 任务已经归档 {key['interface_id']}")
+        if owns_conn:
+            close_connection_after_use()
+        return None
+
+    if task.get("status") not in (Status.COMPLETED, Status.CONFIRMED):
         if owns_conn:
             close_connection_after_use()
         return None
@@ -1574,10 +1581,15 @@ def mark_unconfirmed(db_path: str, wal: bool, key: Dict[str, Any], now: datetime
     tid = task["id"]
     
     # 取消确认：清除confirmed_at和confirmed_by，status改回COMPLETED，display_status改回"待审查"
-    conn.execute(
-        "UPDATE tasks SET status = ?, confirmed_at = NULL, confirmed_by = NULL, display_status = ? WHERE id = ?",
-        (Status.COMPLETED, '待审查', tid)
+    cursor = conn.execute(
+        "UPDATE tasks SET status = ?, confirmed_at = NULL, confirmed_by = NULL, display_status = ? WHERE id = ? AND status = ?",
+        (Status.COMPLETED, '待审查', tid, Status.CONFIRMED)
     )
+    if cursor.rowcount != 1:
+        conn.rollback()
+        if owns_conn:
+            close_connection_after_use()
+        raise RuntimeError("任务状态已变化，不能取消确认")
     conn.commit()
     print(f"[Registry] 已取消确认任务: {key['interface_id']}")
     if owns_conn:

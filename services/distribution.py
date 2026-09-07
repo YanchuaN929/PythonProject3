@@ -828,6 +828,7 @@ def save_assignments_batch(assignments):
         'failed_tasks': failed_tasks,
         'registry_updates': registry_updates,
         'registry_failures': registry_failures,
+        'successful_assignments': successful_assignments,
     }
 
 
@@ -1172,6 +1173,7 @@ class AssignmentDialog(tk.Toplevel):
             try:
                 pending_cache = get_pending_cache()
                 pending_cache.add_assignment_entries(task.task_id, assignments)
+                pending_cache.on_task_status_changed(task)
             except Exception as cache_error:
                 print(f"[PendingCache] 记录指派任务失败: {cache_error}")
             processing_label.destroy()
@@ -1358,111 +1360,24 @@ class ForceAssignDialog(tk.Toplevel):
             messagebox.showerror("错误", "文件类型格式错误", parent=self)
             return
 
-        # 从Registry数据库查找匹配的任务
         try:
-            from registry.service import find_tasks_for_force_assign
-            from registry.config import get_config
-
-            cfg = get_config()
-            db_path = cfg.get('registry_db_path')
-            wal = cfg.get('registry_wal', False)
-
-            if not db_path:
-                messagebox.showerror("错误", "未配置Registry数据库路径", parent=self)
-                return
-
-            tasks = find_tasks_for_force_assign(db_path, wal, file_type, project_id, interface_id)
-
-            if not tasks:
-                messagebox.showwarning(
-                    "未找到任务",
-                    f"未找到匹配的任务：\n"
-                    f"文件类型：{self.FILE_TYPE_NAMES.get(file_type, file_type)}\n"
-                    f"项目号：{project_id}\n"
-                    f"接口号：{interface_id}\n\n"
-                    f"请检查输入是否正确。",
-                    parent=self
-                )
-                return
-
-            # 构建指派人信息
+            from registry import hooks
             assigned_by = self.user_name
             if self.user_roles:
-                role = self.user_roles[0] if self.user_roles else ""
-                assigned_by = f"{self.user_name}（{role}）"
-
-            # 构建指派列表（可能有多个源文件中的相同任务）
-            assignments = []
-            for task in tasks:
-                # 需要根据 source_file（文件名）找到完整的文件路径
-                # 由于数据库中只存储文件名，需要从配置中获取数据文件夹路径
-                source_file = task['source_file']
-                data_folder = self._resolve_data_folder(db_path)
-
-                # 尝试在数据文件夹中查找匹配的文件
-                file_path = self._find_source_file(data_folder, source_file, file_type)
-
-                if file_path:
-                    assignments.append({
-                        'file_type': file_type,
-                        'file_path': file_path,
-                        'row_index': task['row_index'],
-                        'assigned_name': assigned_name,
-                        'assigned_by': assigned_by,
-                        'interface_id': interface_id,
-                        'project_id': project_id,
-                        'status_text': '待完成',
-                    })
-
-            if not assignments:
-                messagebox.showwarning(
-                    "无法定位源文件",
-                    f"找到了 {len(tasks)} 个匹配的任务记录，但无法定位源Excel文件。\n"
-                    f"源文件名：{tasks[0]['source_file']}\n\n"
-                    f"请确保数据文件夹配置正确且文件存在。",
-                    parent=self
-                )
-                return
-
-            # 提交指派任务
-            manager = get_write_task_manager()
-            desc = f"{self.user_name} 强制指派 {interface_id} -> {assigned_name}"
-            write_task = manager.submit_assignment_task(
-                assignments=assignments,
+                assigned_by += "（{}）".format(self.user_roles[0])
+            task = get_write_task_manager().submit_assignment_task(
+                assignments=[{"force_lookup": True, "file_type": file_type,
+                              "project_id": project_id, "interface_id": interface_id,
+                              "assigned_name": assigned_name, "assigned_by": assigned_by}],
                 submitted_by=self.user_name,
-                description=desc,
-            )
-
-            # 记录到待处理缓存
-            try:
-                pending_cache = get_pending_cache()
-                pending_cache.add_assignment_entries(write_task.task_id, assignments)
-            except Exception as cache_error:
-                print(f"[PendingCache] 记录强制指派任务失败: {cache_error}")
-
-            # 保存到指派记忆
-            try:
-                from services.assignment_memory import save_memory
-                save_memory(file_type, project_id, interface_id, assigned_name)
-            except Exception as mem_error:
-                print(f"[AssignmentMemory] 保存指派记忆失败: {mem_error}")
-
-            messagebox.showinfo(
-                "已提交",
-                f"已提交强制指派任务：\n"
-                f"接口号：{interface_id}\n"
-                f"指派给：{assigned_name}\n"
-                f"涉及 {len(assignments)} 个源文件。",
-                parent=self
-            )
+                description="{} 强制指派 {} -> {}".format(self.user_name, interface_id, assigned_name))
+            messagebox.showinfo("已提交", "后台将查找任务、定位源文件并执行指派，请查看写入任务记录。", parent=self)
             self.destroy()
+        except Exception as exc:
+            messagebox.showerror("提交失败", str(exc), parent=self)
 
-        except Exception as e:
-            messagebox.showerror("错误", f"强制指派失败：\n{str(e)}", parent=self)
-            import traceback
-            traceback.print_exc()
-
-    def _resolve_data_folder(self, db_path: str) -> str:
+    @staticmethod
+    def _resolve_data_folder(db_path: str) -> str:
         """
         解析数据文件夹路径（用于强制指派时定位源文件）。
 
@@ -1485,7 +1400,8 @@ class ForceAssignDialog(tk.Toplevel):
 
         return data_folder
 
-    def _find_source_file(self, data_folder, source_file, file_type):
+    @staticmethod
+    def _find_source_file(data_folder, source_file, file_type):
         """
         在数据文件夹中查找源文件
 

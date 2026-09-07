@@ -487,26 +487,37 @@ class InterfaceInputDialog(tk.Toplevel):
         self.existing_response = None  # 存储已填写的回文单号
         self.completed_info = None     # 存储完成信息
 
-        # 优先从主程序配置中获取 data_folder，并同步到 registry hooks
+        # Show a lightweight dialog immediately; Registry discovery is background I/O.
+        import queue
+        import threading
+        self.title("回文单号")
+        self.geometry("400x200")
+        loading = ttk.Label(self, text="正在读取当前回文状态…")
+        loading.pack(pady=40)
+        result_queue = queue.Queue()
         data_folder = self._resolve_data_folder_from_app()
-        if data_folder:
+        def load():
             try:
-                from registry import hooks as registry_hooks
-                registry_hooks.set_data_folder(data_folder)
-            except Exception:
-                pass
-        else:
-            # 兜底：从当前文件路径推导（寻找 .registry）
+                from registry import hooks
+                if data_folder:
+                    hooks.set_data_folder(data_folder)
+                else:
+                    hooks._ensure_data_folder_from_path(self.file_path)
+                self._load_existing_response()
+            finally:
+                result_queue.put(True)
+        def poll():
+            if not self.winfo_exists():
+                return
             try:
-                from registry import hooks as registry_hooks
-                registry_hooks._ensure_data_folder_from_path(self.file_path)
-            except Exception:
-                pass
-        
-        # 查询Registry中是否已填写回文单号
-        self._load_existing_response()
-        
-        self.setup_ui()
+                result_queue.get_nowait()
+            except queue.Empty:
+                self.after(100, poll)
+                return
+            loading.destroy()
+            self.setup_ui()
+        threading.Thread(target=load, name="ResponseStateRead", daemon=True).start()
+        self.after(100, poll)
 
     def _resolve_data_folder_from_app(self) -> str:
         """从主程序配置中解析数据文件夹路径。"""
@@ -710,6 +721,7 @@ class InterfaceInputDialog(tk.Toplevel):
                         "has_assignor": self.has_assignor,
                     },
                 )
+                cache.on_task_status_changed(task)
             except Exception as cache_error:
                 print(f"[PendingCache] 记录回文单号任务失败: {cache_error}")
             messagebox.showinfo("已提交", "回文单号写入任务已提交，后台将自动执行。", parent=self)

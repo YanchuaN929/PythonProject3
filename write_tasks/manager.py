@@ -5,6 +5,7 @@ import threading
 import uuid
 import os
 import sys
+import copy
 from pathlib import Path
 from typing import Dict, Iterable, Optional
 
@@ -109,7 +110,16 @@ class WriteTaskManager:
         self._stop_event = threading.Event()
         self._listeners = []
         self._queue_lock = threading.Lock()
+        self._persist_lock = threading.Lock()
+        self._admission_queue = queue.Queue()
+        self._log_queue = queue.Queue()
+        self._log_pending = {}
+        self._log_lock = threading.Lock()
         self._load_existing_tasks()
+        self._admission_thread = threading.Thread(target=self._admission_loop, daemon=True)
+        self._log_thread = threading.Thread(target=self._log_loop, daemon=True)
+        self._admission_thread.start()
+        self._log_thread.start()
         self._worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
         self._worker_thread.start()
 
@@ -118,10 +128,14 @@ class WriteTaskManager:
     # ------------------------------------------------------------------ #
     def _load_existing_tasks(self):
         for task in self.cache.load():
-            if task.status in ("pending", "running"):
+            if task.status == "running" and task.task_type != "registry_sync":
+                task.status = "failed"
+                task.error = "上次执行被中断，可能已写入；请核验Excel/Registry实际结果后再提交"
+            if task.status in ("submitting", "pending", "running"):
                 task.status = "pending"
                 self._queue.put(task.task_id)
             self.tasks[task.task_id] = task
+            self._sync_to_shared_log(task)
 
     # ------------------------------------------------------------------ #
     # Submission API
@@ -270,11 +284,7 @@ class WriteTaskManager:
             submitted_by=submitted_by,
             origin_task_id=origin_task_id,
         )
-        self.tasks[task.task_id] = task
-        self.cache.save(self.tasks.values())
-        self._sync_to_shared_log(task)
-        self._queue.put(task.task_id)
-        return task
+        return self._admit(task)
 
     @staticmethod
     def _build_registry_sync_task(
@@ -313,11 +323,111 @@ class WriteTaskManager:
             submitted_by=submitted_by or "未知用户",
             description=description,
         )
-        self.tasks[task.task_id] = task
-        self.cache.save(self.tasks.values())
-        self._sync_to_shared_log(task)
-        self._queue.put(task.task_id)
+        return self._admit(task)
+
+    def submit_registry_action(self, operation, items, user_name, role, data_folder=None, reason=""):
+        if operation not in ("confirmation", "unconfirmation", "ignore"):
+            raise ValueError("未知业务操作")
+        return self._submit(operation, {
+            "items": [dict(item) for item in items], "user_name": user_name,
+            "role": role, "data_folder": data_folder, "reason": reason,
+        }, user_name, "{} {} {} 条".format(user_name, {
+            "confirmation": "审查确认", "unconfirmation": "取消确认", "ignore": "忽略延期",
+        }[operation], len(items)))
+
+    @staticmethod
+    def _resource_keys(task):
+        if task.task_type == "registry_sync":
+            return set()
+        payload = task.payload
+        items = payload.get("_submitted_items") or payload.get("items") or payload.get("assignments") or [payload]
+        row_keys = {(str(item.get("file_type", 7 if task.task_type.startswith("fu_completion") else "")),
+                 str(item.get("project_id", "")),
+                 os.path.basename(str(item.get("file_path") or item.get("source_file") or "")).lower(),
+                 str(item.get("row_index", ""))) for item in items}
+        business_keys = {("business", str(item.get("file_type", 7 if task.task_type.startswith("fu_completion") else "")),
+                          str(item.get("project_id", "")), str(item.get("interface_id", "")).split("(")[0].strip())
+                         for item in items if item.get("interface_id")}
+        return row_keys | business_keys
+
+    def _admit(self, task):
+        # UI admission is memory-only. Disk/network work belongs to the admission worker.
+        task.payload = copy.deepcopy(task.payload)
+        task.payload["_submitted_items"] = copy.deepcopy(
+            task.payload.get("items") or task.payload.get("assignments") or [task.payload])
+        task.status = "submitting"
+        keys = self._resource_keys(task)
+        with self._queue_lock:
+            for existing in self.tasks.values():
+                if existing.status in ("submitting", "pending", "running") and keys & self._resource_keys(existing):
+                    raise ValueError("该接口已有提交中或执行中的任务，请等待完成后再操作")
+            self.tasks[task.task_id] = task
+        self._admission_queue.put(task.task_id)
+        self._notify_listeners(task)
         return task
+
+    def _persist(self):
+        with self._persist_lock:
+            with self._queue_lock:
+                snapshot = copy.deepcopy(list(self.tasks.values()))
+            self.cache.save(snapshot)
+            if getattr(self.cache, "_disabled", False):
+                raise RuntimeError("任务持久化失败：" + str(self.cache._disabled_reason))
+
+    def _admission_loop(self):
+        while not self._stop_event.is_set():
+            try:
+                task_id = self._admission_queue.get(timeout=0.2)
+            except queue.Empty:
+                continue
+            task = self.tasks[task_id]
+            try:
+                self._persist()
+                task.status = "pending"
+                self._notify_listeners(task)
+                self._sync_to_shared_log(task)
+                self._queue.put(task_id)
+            except Exception as exc:
+                task.status = "failed"
+                task.error = "提交失败，业务未执行：{}".format(exc)
+                task.completed_at = utc_now_iso()
+                self._notify_listeners(task)
+            finally:
+                self._admission_queue.task_done()
+
+    def _log_loop(self):
+        while not self._stop_event.is_set():
+            try:
+                task = self._log_queue.get(timeout=0.2)
+            except queue.Empty:
+                continue
+            try:
+                with self._log_lock:
+                    snapshot = self._log_pending.get(task)
+                if snapshot is None:
+                    continue
+                success = self._write_shared_log(snapshot)
+                original = self.tasks.get(task)
+                if original is not None:
+                    previous_error = original.payload.get("_shared_log_error")
+                    with self._queue_lock:
+                        updated_payload = dict(original.payload)
+                        if success is False:
+                            updated_payload["_shared_log_error"] = snapshot.payload.get("_shared_log_error", "共享日志等待同步")
+                        else:
+                            updated_payload.pop("_shared_log_error", None)
+                        original.payload = updated_payload
+                    if previous_error != original.payload.get("_shared_log_error"):
+                        self._notify_listeners(original)
+                with self._log_lock:
+                    if success is not False and self._log_pending.get(task) is snapshot:
+                        self._log_pending.pop(task, None)
+                    retry = task in self._log_pending
+                if retry:
+                    self._stop_event.wait(1.0)
+                    self._log_queue.put(task)
+            finally:
+                self._log_queue.task_done()
 
     # ------------------------------------------------------------------ #
     # Worker loop
@@ -339,21 +449,38 @@ class WriteTaskManager:
             except Exception as e:
                 task.status = "failed"
                 task.error = f"无法找到执行器: {e}"
-                self.cache.save(self.tasks.values())
+                self._persist()
                 self._notify_listeners(task)
                 self._queue.task_done()
                 continue
 
             task.status = "running"
             task.started_at = utc_now_iso()
-            self.cache.save(self.tasks.values())
+            try:
+                self._persist()
+            except Exception as exc:
+                task.status = "failed"
+                task.error = "执行前保存失败，业务未执行：{}".format(exc)
+                self._notify_listeners(task)
+                self._queue.task_done()
+                continue
             self._notify_listeners(task)
             self._sync_to_shared_log(task)
 
             retry_delay = None
             compensation_tasks = []
+            partial_error = None
             try:
-                result = executor(task.payload)
+                execution_payload = copy.deepcopy(task.payload)
+                try:
+                    from registry.hooks import task_data_folder
+                    with task_data_folder(execution_payload.get("data_folder")):
+                        result = executor(execution_payload)
+                finally:
+                    with self._queue_lock:
+                        if task.payload.get("_shared_log_error"):
+                            execution_payload["_shared_log_error"] = task.payload["_shared_log_error"]
+                        task.payload = execution_payload
                 if result is False:
                     raise RuntimeError("写入任务执行失败，返回 False")
 
@@ -383,7 +510,7 @@ class WriteTaskManager:
                                 first_reason = str(ft.get("reason", "") or "")
                         except Exception:
                             first_reason = ""
-                        raise RuntimeError(
+                        partial_error = (
                             f"指派写入失败: success_count={success_count}"
                             f"{f'/{expected_total}' if expected_total else ''}, "
                             f"failed={failed_count}"
@@ -411,8 +538,9 @@ class WriteTaskManager:
                         )
                         for compensation_item in compensations
                     ]
-                    for compensation_task in compensation_tasks:
-                        self.tasks[compensation_task.task_id] = compensation_task
+                    with self._queue_lock:
+                        for compensation_task in compensation_tasks:
+                            self.tasks[compensation_task.task_id] = compensation_task
                     compensation_message = (
                         f"Excel写入已成功；{len(compensation_tasks)}条Registry同步已转补偿队列"
                     )
@@ -422,6 +550,8 @@ class WriteTaskManager:
                 else:
                     task.error = result_message or None
                 task.status = "completed"
+                if partial_error:
+                    raise RuntimeError(partial_error)
             except Exception as e:
                 if task.task_type == "registry_sync":
                     retry_count = int((task.payload or {}).get("_retry_count", 0) or 0) + 1
@@ -442,7 +572,10 @@ class WriteTaskManager:
             finally:
                 if task.status in ("completed", "failed"):
                     task.completed_at = utc_now_iso()
-                self.cache.save(self.tasks.values())
+                try:
+                    self._persist()
+                except Exception as exc:
+                    task.error = "{}；执行结果保存失败，重启前需核验实际业务结果：{}".format(task.error or "", exc)
                 self._notify_listeners(task)
                 self._sync_to_shared_log(task)
                 self._queue.task_done()
@@ -470,13 +603,14 @@ class WriteTaskManager:
     def has_pending_tasks(self, include_registry_sync: bool = False) -> bool:
         """Registry补偿不阻塞新一轮Excel处理，两类任务使用彼此独立的等待语义。"""
         return any(
-            task.status in ("pending", "running")
+            task.status in ("submitting", "pending", "running")
             and (include_registry_sync or task.task_type != "registry_sync")
-            for task in self.tasks.values()
+            for task in self.get_tasks()
         )
 
     def get_tasks(self) -> Iterable[WriteTask]:
-        return list(self.tasks.values())
+        with self._queue_lock:
+            return copy.deepcopy(list(self.tasks.values()))
 
     def wait_until_empty(self, check_interval: float = 1.0):
         """供自动模式使用：阻塞直到队列清空或停止。"""
@@ -486,6 +620,8 @@ class WriteTaskManager:
     def shutdown(self):
         self._stop_event.set()
         self._worker_thread.join(timeout=2)
+        self._admission_thread.join(timeout=1)
+        self._log_thread.join(timeout=1)
 
     def register_listener(self, callback):
         if callback not in self._listeners:
@@ -494,11 +630,18 @@ class WriteTaskManager:
     def _notify_listeners(self, task: WriteTask):
         for callback in list(self._listeners):
             try:
-                callback(task)
+                callback(copy.deepcopy(task))
             except Exception as e:
                 print(f"[WriteTaskManager] listener 调用失败: {e}")
 
     def _sync_to_shared_log(self, task: WriteTask):
+        with self._log_lock:
+            is_new = task.task_id not in self._log_pending
+            self._log_pending[task.task_id] = copy.deepcopy(task)
+        if is_new:
+            self._log_queue.put(task.task_id)
+
+    def _write_shared_log(self, task: WriteTask):
         """
         将任务状态同步到公共盘 registry.db 的全局写入任务日志表。
         - 仅在registry模块可用且已启用时执行
@@ -507,7 +650,11 @@ class WriteTaskManager:
         if not registry_hooks or not _shared_log_upsert_task:
             return
         try:
-            cfg = registry_hooks._cfg()
+            if task.payload.get("data_folder"):
+                from registry.config import load_config
+                cfg = load_config(data_folder=task.payload["data_folder"], ensure_registry_dir=False)
+            else:
+                cfg = registry_hooks._cfg()
             if not cfg.get("registry_enabled", True):
                 return
             db_path = cfg.get("registry_db_path")
@@ -525,7 +672,9 @@ class WriteTaskManager:
                 except Exception:
                     pass
         except Exception as e:
-            print(f"[WriteTaskManager] 同步全局任务日志失败(已忽略): {e}")
+            task.payload["_shared_log_error"] = str(e)
+            print(f"[WriteTaskManager] 共享日志等待后台重试: {e}")
+            return False
 
 
 # ---------------------------------------------------------------------- #

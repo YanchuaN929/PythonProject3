@@ -13,7 +13,7 @@ from typing import List, Dict, Any
 class IgnoreOverdueDialog(tk.Toplevel):
     """批量忽略延期任务对话框"""
     
-    def __init__(self, parent, overdue_tasks: List[Dict[str, Any]], user_name: str):
+    def __init__(self, parent, overdue_tasks: List[Dict[str, Any]], user_name: str, user_role: str = ""):
         """
         初始化对话框
         
@@ -35,6 +35,7 @@ class IgnoreOverdueDialog(tk.Toplevel):
         
         self.overdue_tasks = overdue_tasks
         self.user_name = user_name
+        self.user_role = user_role
         self.selected_indices = set()  # 选中的任务索引
         self.ignore_reason_var = tk.StringVar()  # 忽略原因
         self.ignore_successful = False  # 标记是否成功忽略
@@ -459,78 +460,14 @@ class IgnoreOverdueDialog(tk.Toplevel):
         if not messagebox.askyesno("确认忽略", msg, parent=self):
             return
         
-        # 显示处理中提示
-        processing_label = ttk.Label(
-            self,
-            text="正在批量忽略，请稍候...",
-            font=('Arial', 12)
-        )
-        processing_label.pack(pady=10)
-        self.update()
-        
-        # 执行批量忽略
         try:
-            # 准备任务列表
-            selected_tasks = [
-                self.overdue_tasks[idx] for idx in self.selected_indices
-            ]
-            
-            # 调用Registry服务
-            from registry import service as registry_service
-            from registry import hooks as registry_hooks
-            
-            cfg = registry_hooks._cfg()
-            db_path = cfg['registry_db_path']
-            wal = cfg.get('registry_wal', False)
-            
-            task_keys = []
-            for task in selected_tasks:
-                task_keys.append({
-                    'file_type': task['file_type'],
-                    'project_id': task['project_id'],
-                    'interface_id': task['interface_id'],
-                    'source_file': task['source_file'],
-                    'row_index': task['row_index'],
-                    'interface_time': task['interface_time']
-                })
-            
-            result = registry_service.mark_ignored_batch(
-                db_path=db_path,
-                wal=wal,
-                task_keys=task_keys,
-                ignored_by=self.user_name,
-                ignored_reason=reason
-            )
-            
-            # 隐藏处理中提示
-            processing_label.destroy()
-            
-            # 显示结果
-            success_count = result['success_count']
-            failed_tasks = result['failed_tasks']
-            
-            if success_count > 0:
-                msg = f"成功忽略 {success_count} 个延期任务"
-                if failed_tasks:
-                    msg += f"\n\n失败 {len(failed_tasks)} 个任务：\n"
-                    msg += "\n".join([
-                        f"- {t['interface_id']}: {t['reason']}" 
-                        for t in failed_tasks[:5]
-                    ])
-                    if len(failed_tasks) > 5:
-                        msg += f"\n... 等共{len(failed_tasks)}个失败"
-                
-                messagebox.showinfo("忽略结果", msg, parent=self)
-                
-                if not failed_tasks:
-                    self.ignore_successful = True
-                    self.destroy()
-            else:
-                messagebox.showerror("失败", "所有任务忽略失败，请查看控制台日志", parent=self)
-                
-        except Exception as e:
-            processing_label.destroy()
-            messagebox.showerror("错误", f"忽略过程中发生错误：\n{str(e)}", parent=self)
-            import traceback
-            traceback.print_exc()
+            from write_tasks.manager import get_write_task_manager
+            from registry import hooks
+            task = get_write_task_manager().submit_registry_action(
+                "ignore", [dict(self.overdue_tasks[idx]) for idx in self.selected_indices],
+                self.user_name, self.user_role, hooks.get_data_folder(), reason)
+            messagebox.showinfo("已提交", "忽略任务已提交后台，执行结果请查看写入任务记录。", parent=self)
+            self.destroy()
+        except Exception as exc:
+            messagebox.showerror("提交失败", str(exc), parent=self)
 

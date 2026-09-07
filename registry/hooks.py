@@ -95,6 +95,25 @@ def _retry_on_lock(operation_name: str, func, max_retries: int = 8):
 
 # 【多用户协作】全局数据文件夹路径，用于确定共享数据库位置
 _DATA_FOLDER = None
+_TASK_CONTEXT = threading.local()
+
+
+def task_data_folder(folder):
+    """Bind queued operations to their submitted data folder without changing the UI folder."""
+    from contextlib import contextmanager
+    @contextmanager
+    def scoped():
+        had_folder = hasattr(_TASK_CONTEXT, "folder")
+        previous = getattr(_TASK_CONTEXT, "folder", None)
+        _TASK_CONTEXT.folder = folder or get_data_folder()
+        try:
+            yield
+        finally:
+            if had_folder:
+                _TASK_CONTEXT.folder = previous
+            else:
+                del _TASK_CONTEXT.folder
+    return scoped()
 _DISABLED_NOTIFIED = False
 _RUNTIME_DISABLED_REASON = ""
 _RUNTIME_DISABLE_NOTIFIED = False
@@ -156,7 +175,7 @@ def _ensure_data_folder_from_path(source_path: Optional[str]) -> None:
     此函数是一个后备机制，用于处理某些边缘情况。
     """
     # 【关键】如果 _DATA_FOLDER 已经设置，不再尝试推导（避免覆盖用户选择的路径）
-    if _DATA_FOLDER:
+    if get_data_folder():
         return
     
     if not source_path:
@@ -215,6 +234,9 @@ def set_data_folder(folder_path: str):
         folder_path: 数据文件夹的绝对路径
     """
     global _DATA_FOLDER, _RUNTIME_DISABLED_REASON, _RUNTIME_DISABLE_NOTIFIED
+    if hasattr(_TASK_CONTEXT, "folder"):
+        _TASK_CONTEXT.folder = folder_path
+        return
     _DATA_FOLDER = folder_path
     _RUNTIME_DISABLED_REASON = ""
     _RUNTIME_DISABLE_NOTIFIED = False
@@ -249,7 +271,7 @@ def get_data_folder() -> Optional[str]:
     返回:
         当前的 _DATA_FOLDER 值，如果未设置则返回 None
     """
-    return _DATA_FOLDER
+    return getattr(_TASK_CONTEXT, "folder", _DATA_FOLDER)
 
 def get_display_status(task_keys: List[Dict[str, Any]], current_user_roles_str: str = None) -> Dict[str, str]:
     """
@@ -357,7 +379,7 @@ def get_task_snapshot(key: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 def _cfg():
     """加载配置（内部辅助函数）"""
-    return load_config(data_folder=_DATA_FOLDER)
+    return load_config(data_folder=get_data_folder())
 
 def _enabled(cfg: dict) -> bool:
     """检查registry是否启用（内部辅助函数）"""

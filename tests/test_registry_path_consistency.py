@@ -214,6 +214,8 @@ class TestWriteTasksManager:
                 manager.tasks = {}
                 manager.cache = MagicMock()
                 manager._queue = MagicMock()
+                manager._queue_lock = __import__("threading").Lock()
+                manager._admission_queue = MagicMock()
                 manager._listeners = []
                 
                 # Mock _sync_to_shared_log
@@ -246,6 +248,8 @@ class TestWriteTasksManager:
                 manager.tasks = {}
                 manager.cache = MagicMock()
                 manager._queue = MagicMock()
+                manager._queue_lock = __import__("threading").Lock()
+                manager._admission_queue = MagicMock()
                 manager._listeners = []
                 manager._sync_to_shared_log = MagicMock()
                 
@@ -479,6 +483,8 @@ class TestEndToEndPathConsistency:
                 manager.tasks = {}
                 manager.cache = MagicMock()
                 manager._queue = MagicMock()
+                manager._queue_lock = __import__("threading").Lock()
+                manager._admission_queue = MagicMock()
                 manager._listeners = []
                 manager._sync_to_shared_log = MagicMock()
                 
@@ -521,6 +527,8 @@ class TestEndToEndPathConsistency:
                 manager.tasks = {}
                 manager.cache = MagicMock()
                 manager._queue = MagicMock()
+                manager._queue_lock = __import__("threading").Lock()
+                manager._admission_queue = MagicMock()
                 manager._listeners = []
                 manager._sync_to_shared_log = MagicMock()
                 

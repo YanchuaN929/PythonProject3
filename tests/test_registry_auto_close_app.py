@@ -31,7 +31,7 @@ def test_write_task_manager_sync_closes_registry_connection(tmp_path, monkeypatc
     monkeypatch.setattr(wt_manager, "registry_hooks", _DummyHooks())
     monkeypatch.setattr(wt_manager, "_shared_log_upsert_task", lambda conn, task: conn.execute("SELECT 1"))
 
-    mgr = wt_manager.WriteTaskManager()
+    mgr = wt_manager.WriteTaskManager(tmp_path / "tasks.json")
     try:
         task = WriteTask(
             task_id="t1",
@@ -42,6 +42,11 @@ def test_write_task_manager_sync_closes_registry_connection(tmp_path, monkeypatc
         )
 
         mgr._sync_to_shared_log(task)
+        import time
+        deadline = time.monotonic() + 3
+        while mgr._log_queue.unfinished_tasks and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert mgr._log_queue.unfinished_tasks == 0
 
         assert registry_db._CONN is None
     finally:
