@@ -491,7 +491,9 @@ class InterfaceInputDialog(tk.Toplevel):
         import queue
         import threading
         self.title("回文单号")
-        self.geometry("400x200")
+        self.geometry("450x280")
+        self.resizable(False, False)
+        self.transient(self.master)
         loading = ttk.Label(self, text="正在读取当前回文状态…")
         loading.pack(pady=40)
         result_queue = queue.Queue()
@@ -641,7 +643,7 @@ class InterfaceInputDialog(tk.Toplevel):
         else:
             # 【未填写回文单号】显示输入界面（原有逻辑）
             self.title("回文单号输入")
-            self.geometry("400x200")
+            self.geometry("450x280")
             self.resizable(False, False)
             
             # 标题

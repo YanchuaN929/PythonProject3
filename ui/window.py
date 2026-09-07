@@ -849,6 +849,10 @@ class WindowManager:
         except Exception as e:
             print(f"[Registry] 状态查询失败（不影响主流程）: {e}")
 
+        # Capture presentation only, after asynchronous state discovery has finished.
+        previous_columns = tuple(viewer["columns"])
+        previous_widths = {col: viewer.column(col) for col in ("#0",) + previous_columns}
+        previous_xview, previous_yview = viewer.xview(), viewer.yview()
         self._clear_viewer_metadata(viewer)
         for item in viewer.get_children():
             viewer.delete(item)
@@ -936,7 +940,9 @@ class WindowManager:
         # 【新增】保留"接口时间"列用于GUI显示
         columns = list(display_df.columns)
         
-        viewer["columns"] = columns
+        same_schema = previous_columns == tuple(columns)
+        if not same_schema:
+            viewer["columns"] = columns
         viewer["show"] = "tree headings"
         
         # 配置数据列（使用固定列宽方案）
@@ -966,7 +972,8 @@ class WindowManager:
         # 配置序号列（宽度与接口号列一致）
         # 如果有项目号列，接口号在第二列(索引1)；否则在第一列(索引0)
         row_number_width = 80 if tab_name == "FU" else 60
-        viewer.column("#0", width=row_number_width, minwidth=row_number_width)
+        if not same_schema:
+            viewer.column("#0", width=row_number_width, minwidth=row_number_width)
         viewer.heading("#0", text="原始行号" if tab_name == "FU" else "行号")
         
         # 配置列对齐方式
@@ -992,7 +999,8 @@ class WindowManager:
             viewer.heading(col, text=str(col), 
                          command=lambda c=col: self._sort_by_column(viewer, c, tab_name))
             
-            viewer.column(col, width=col_width, minwidth=col_width, anchor=alignment)
+            if not same_schema:
+                viewer.column(col, width=col_width, minwidth=col_width, anchor=alignment)
         
         # 配置延期数据的标签（在插入数据前配置）
         # 【重要】ttk.Treeview在Windows系统主题下的限制：
@@ -1155,6 +1163,14 @@ class WindowManager:
                 self._sort_by_column(viewer, default_time_column, tab_name)
             except Exception as sort_e:
                 print(f"[默认排序] 排序失败: {sort_e}")
+        if same_schema:
+            for col, options in previous_widths.items():
+                viewer.column(col, width=options["width"], minwidth=options["minwidth"],
+                              stretch=options["stretch"])
+            if previous_xview:
+                viewer.xview_moveto(previous_xview[0])
+            if previous_yview:
+                viewer.yview_moveto(previous_yview[0])
     
     def _selected_confirmation_items(self, viewer, clicked_item_id):
         """返回本次勾选应处理的 Treeview item：蓝色选中多行优先，否则只处理当前行。"""

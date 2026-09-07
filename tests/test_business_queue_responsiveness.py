@@ -281,6 +281,14 @@ def test_fu_async_render_preserves_rows_and_reloads_stale_snapshot(monkeypatch, 
         assert manager._item_metadata[(viewer, iid)]["source_file"] == "fu.xlsx"
         assert len(calls) == 2
         assert all(tid != threading.get_ident() for tid in calls)
+        viewer.column("内部编码", width=413, minwidth=90, stretch=False)
+        manager.display_excel_data(viewer, frame, "FU", True, [42], ["fu.xlsx"],
+                                   current_user_roles=["设计人员"], _registry_state=({}, {}))
+        assert viewer.column("内部编码", "width") == 413
+        assert viewer.column("内部编码", "minwidth") == 90
+        assert len(viewer.get_children()) == 1
+        iid = viewer.get_children()[0]
+        assert manager._item_metadata[(viewer, iid)]["source_file"] == "fu.xlsx"
     finally:
         release.set()
         viewer.destroy()

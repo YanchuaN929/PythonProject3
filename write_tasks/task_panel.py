@@ -52,8 +52,10 @@ class TaskRecordPanel(ttk.LabelFrame):
         self._refresh_poll_job = self.after(100, self._poll_refresh_results)
 
     def _build_ui(self):
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(1, weight=1)
         control_frame = ttk.Frame(self)
-        control_frame.pack(fill=tk.X, padx=2, pady=(0, 4))
+        control_frame.grid(row=0, column=0, columnspan=2, sticky="ew", padx=2, pady=(0, 4))
 
         only_mine_cb = ttk.Checkbutton(
             control_frame,
@@ -92,9 +94,9 @@ class TaskRecordPanel(ttk.LabelFrame):
         x_scroll = ttk.Scrollbar(self, orient="horizontal", command=self.tree.xview)
         self.tree.configure(xscrollcommand=x_scroll.set)
 
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+        self.tree.grid(row=1, column=0, sticky="nsew")
+        tree_scroll.grid(row=1, column=1, sticky="ns")
+        x_scroll.grid(row=2, column=0, sticky="ew")
 
         # 复制：Ctrl+C / 右键菜单
         self.tree.bind("<Control-c>", self._on_copy)
@@ -106,8 +108,8 @@ class TaskRecordPanel(ttk.LabelFrame):
         self._menu.add_command(label="查看指派明细", command=self.open_selected_assignment_detail)
         self._menu.add_command(label="查看回文单号明细", command=self.open_selected_response_detail)
 
-        self.status_label = ttk.Label(self, textvariable=self.status_var, anchor="w", foreground="gray")
-        self.status_label.pack(fill=tk.X, pady=(4, 0))
+        self.status_label = ttk.Label(self, textvariable=self.status_var, width=1, anchor="w", foreground="gray")
+        self.status_label.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(4, 0))
 
     def _on_context_menu(self, event):
         # 右键时自动选中鼠标所在行（否则用户未先左键选中时，菜单动作会因 selection 为空而“无反应”）
@@ -638,8 +640,10 @@ class TaskRecordPanel(ttk.LabelFrame):
             # 共享读取失败时不阻塞，回退到本机显示
             return None, str(exc)
     def _populate_tree(self, tasks: Iterable):
-        for item in self.tree.get_children():
-            self.tree.delete(item)
+        old_items = list(self.tree.get_children())
+        retained = set()
+        scroll_y = self.tree.yview()
+        scroll_x = self.tree.xview()
         self._task_by_iid = {}
 
         type_map = {
@@ -680,20 +684,31 @@ class TaskRecordPanel(ttk.LabelFrame):
                 if failed_count:
                     status = f"部分成功 {success_count}/{success_count + failed_count}"
             submitted_time = task.submitted_at or ""
-            iid = str(getattr(task, "task_id", "")) or None
-            inserted = self.tree.insert(
-                "",
-                tk.END,
-                iid=iid,
-                values=(
+            iid = str(getattr(task, "task_id", "")) or "anonymous-{}".format(count)
+            values = (
                     submitted_time,
                     task.submitted_by or "",
                     display_type,
                     task.description or "",
                     status,
-                ),
             )
-            self._task_by_iid[inserted] = task
+            if self.tree.exists(iid):
+                if tuple(self.tree.item(iid, "values")) != values:
+                    self.tree.item(iid, values=values)
+                if self.tree.index(iid) != count - 1:
+                    self.tree.move(iid, "", count - 1)
+            else:
+                self.tree.insert("", count - 1, iid=iid, values=values)
+            retained.add(iid)
+            self._task_by_iid[iid] = task
+
+        for iid in old_items:
+            if iid not in retained:
+                self.tree.delete(iid)
+        if scroll_y:
+            self.tree.yview_moveto(scroll_y[0])
+        if scroll_x:
+            self.tree.xview_moveto(scroll_x[0])
 
         if count == 0:
             self.status_var.set("暂无写入任务")
